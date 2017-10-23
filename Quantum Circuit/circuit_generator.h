@@ -13,43 +13,34 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <list>
 #include <complex>
 #include <algorithm>
 #include "matrix.h"
+#include "circuit_simulation.h"
 
 using namespace std;
-
-class gate {
-public:
-    vector<vector<complex<double>>> rows;
-    
-    gate(vector<vector<complex<double>>>& g): rows(g) {}
-    gate(){}
-};
-
-class circuit {
-public:
-    vector<vector<complex<double>>> qubits;
-    vector<complex<double>> state_vector;
-    vector<vector<int>> gate_rec;
-    vector<vector<shared_ptr<gate>>> gates;
-};
 
 typedef shared_ptr<gate> (*func_t) (void);
 typedef shared_ptr<gate> (*rot_f) (int);
 
+/*
+ This is a ciruit generator which provides functionality for creating most,
+ if not all of the common gates.
+ 
+ The CNOT gate is counted as 2 gates and the Toffolli is counted as 3 gates.
+ This format is reflected in the way the data structures in the circuit class
+ are populated.
+ */
 class circuit_generator {
 
 public:
-    static double c;
     
     /*
      * 0 : Hadamard
      * 1 : X
      * 2 : Y
      * 3 : Z
-     * 4 : Control
+     * 4 : CNot
      * 5 : random
      * 6 : toffolli
      */
@@ -80,21 +71,12 @@ public:
     static inline shared_ptr<gate> create_gate(const complex<double>& a, const complex<double>& b,
                                         const complex<double>& c, const complex<double>& d);
     
-    static inline void initialize_gates();
-    
-    void create_circuit(int qubits, int num_gates);
-    
+    void create_rand_circuit(int qubits, int num_gates);
     void write_circuit_to_file(const string& input_file);
-    circuit* read_input_file(const string& input_file);
+    void read_input_file(const string& input_file);
+    void print_state();
     
-    circuit_generator(){}
-    
-    circuit_generator(const circuit_generator& g) = delete;
-    circuit_generator& operator=(const circuit_generator& g) = delete;
-    
-    circuit_generator(circuit_generator&&);
-    circuit_generator& operator=(circuit_generator&&);
-    
+    circuit_generator();
     
     ~circuit_generator(){}
 };

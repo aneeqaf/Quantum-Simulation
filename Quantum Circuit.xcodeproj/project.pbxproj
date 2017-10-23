@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		B2725F0B1F985CBE001A54AF /* circuit_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2725F0A1F985CBE001A54AF /* circuit_generator.cpp */; };
+		B2725F171F9BEF47001A54AF /* matrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2725F161F9BEF47001A54AF /* matrix.cpp */; };
+		B2725F191F9BEFEF001A54AF /* circuit_simulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2725F181F9BEFEF001A54AF /* circuit_simulation.cpp */; };
 		B2EE38D01F92ED8A0046199F /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2EE38CF1F92ED8A0046199F /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -27,9 +29,11 @@
 		B2725F091F9858DB001A54AF /* circuit_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = circuit_generator.h; sourceTree = "<group>"; };
 		B2725F0A1F985CBE001A54AF /* circuit_generator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = circuit_generator.cpp; sourceTree = "<group>"; };
 		B2725F111F990874001A54AF /* matrix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = matrix.h; sourceTree = "<group>"; };
+		B2725F141F9BEE32001A54AF /* circuit_simulation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = circuit_simulation.h; sourceTree = "<group>"; };
+		B2725F161F9BEF47001A54AF /* matrix.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = matrix.cpp; sourceTree = "<group>"; };
+		B2725F181F9BEFEF001A54AF /* circuit_simulation.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = circuit_simulation.cpp; sourceTree = "<group>"; };
 		B2EE38CC1F92ED8A0046199F /* Quantum Circuit */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Quantum Circuit"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B2EE38CF1F92ED8A0046199F /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		B2EE38D61F92EDCC0046199F /* quantum_circuits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = quantum_circuits.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,10 +67,12 @@
 			isa = PBXGroup;
 			children = (
 				B2EE38CF1F92ED8A0046199F /* main.cpp */,
-				B2EE38D61F92EDCC0046199F /* quantum_circuits.h */,
 				B2725F091F9858DB001A54AF /* circuit_generator.h */,
 				B2725F0A1F985CBE001A54AF /* circuit_generator.cpp */,
+				B2725F141F9BEE32001A54AF /* circuit_simulation.h */,
+				B2725F181F9BEFEF001A54AF /* circuit_simulation.cpp */,
 				B2725F111F990874001A54AF /* matrix.h */,
+				B2725F161F9BEF47001A54AF /* matrix.cpp */,
 			);
 			path = "Quantum Circuit";
 			sourceTree = "<group>";
@@ -130,6 +136,8 @@
 			files = (
 				B2EE38D01F92ED8A0046199F /* main.cpp in Sources */,
 				B2725F0B1F985CBE001A54AF /* circuit_generator.cpp in Sources */,
+				B2725F191F9BEFEF001A54AF /* circuit_simulation.cpp in Sources */,
+				B2725F171F9BEF47001A54AF /* matrix.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
