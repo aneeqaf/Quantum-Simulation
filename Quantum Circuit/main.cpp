@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
         }
         
         new_circuit.q_circuit -> simulate();
-        new_circuit.print_state();
+        new_circuit.q_circuit -> print_state();
         
     }
     if(create) {
@@ -133,11 +133,18 @@ int main(int argc, char *argv[]) {
             }
             
             new_circuit.q_circuit -> simulate();
-            new_circuit.print_state();
+            new_circuit.q_circuit -> print_state();
         }
     }
     if(test) {
-        test_circuit.test(*(new_circuit.q_circuit));
+        if( test_circuit.test(*(new_circuit.q_circuit)) == 1) {
+            cout << "Pass!\n";
+        }
+        else {
+            test_circuit.print_state();
+            new_circuit.q_circuit -> print_state();
+            cout << "Fail!\n";
+        }
     }
     
     return 0;

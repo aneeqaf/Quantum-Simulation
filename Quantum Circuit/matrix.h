@@ -20,5 +20,6 @@ extern vector<complex<double>> matrix_v_mult(vector<vector<complex<double>>>& ma
 extern vector<complex<double>> tensor_v_product(vector<complex<double>>& first, vector<complex<double>>& second);
 extern vector<vector<complex<double>>> tensor_product(vector<vector<complex<double>>>& first, vector<vector<complex<double>>>& second);
 extern vector<vector<complex<double>>> matrix_inv(vector<vector<complex<double>>>& g);
+extern vector<vector<complex<double>>> tensor_c(vector<vector<complex<double>>>& first, vector<vector<complex<double>>>& second, complex<double> c);
 
 #endif /* matrix_h */

@@ -70,11 +70,31 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-c 4 6 -o quantum6"
+            argument = "-c 20 100 -o quantum90"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-c 10 2 -o quantum10"
+            argument = "-i quantum60.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-i quantum200.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-c 5 1000 -o quantum20"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-c 4 4 -o quantum6"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-c 10 5 -o quantum10 "
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-i quantum100.txt -t"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument

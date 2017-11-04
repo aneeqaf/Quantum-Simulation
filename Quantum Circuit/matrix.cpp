@@ -16,7 +16,8 @@
 
 using namespace std;
 
-vector<vector<complex<double>>> matrix_mult(vector<vector<complex<double>>>& g1, vector<vector<complex<double>>>& g2) {
+vector<vector<complex<double>>> matrix_mult(vector<vector<complex<double>>>& g1,
+                                            vector<vector<complex<double>>>& g2) {
     
     vector<vector<complex<double>>> product;
     
@@ -34,7 +35,8 @@ vector<vector<complex<double>>> matrix_mult(vector<vector<complex<double>>>& g1,
     return product;
 }
 
-vector<complex<double>> matrix_v_mult(vector<vector<complex<double>>>& matrix, vector<complex<double>>& vector1) {
+vector<complex<double>> matrix_v_mult(vector<vector<complex<double>>>& matrix,
+                                      vector<complex<double>>& vector1) {
     
     vector<complex<double>> product;
     
@@ -48,7 +50,8 @@ vector<complex<double>> matrix_v_mult(vector<vector<complex<double>>>& matrix, v
     return product;
 }
 
-vector<complex<double>> tensor_v_product(vector<complex<double>>& first, vector<complex<double>>& second) {
+vector<complex<double>> tensor_v_product(vector<complex<double>>& first,
+                                         vector<complex<double>>& second) {
     
     vector<complex<double>> tensor;
     
@@ -60,7 +63,8 @@ vector<complex<double>> tensor_v_product(vector<complex<double>>& first, vector<
     return tensor;
 }
 
-vector<vector<complex<double>>> tensor_product(vector<vector<complex<double>>>& first, vector<vector<complex<double>>>& second) {
+vector<vector<complex<double>>> tensor_product(vector<vector<complex<double>>>& first,
+                                               vector<vector<complex<double>>>& second) {
     
     vector<vector<complex<double>>> tensor;
     
@@ -78,12 +82,41 @@ vector<vector<complex<double>>> tensor_product(vector<vector<complex<double>>>& 
     return tensor;
 }
 
+vector<vector<complex<double>>> tensor_c(vector<vector<complex<double>>>& first,
+                                         vector<vector<complex<double>>>& second, complex<double> c)
+{
+    vector<vector<complex<double>>> tensor;
+    
+    for (int i = 0; i < first.size(); ++i) {
+        for (int j = 0; j < second.size(); ++j){
+            vector<complex<double>> row;
+            for(int k = 0; k < first[i].size(); ++k){
+                for(int l = 0; l < second[j].size(); ++l) {
+                    if(first[i][k] == c) {
+                        if(j == l) {
+                            row.push_back(first[i][k] * complex<double>(1,0));
+                        }
+                        else {
+                            row.push_back(0);
+                        }
+                    }
+                    else {
+                        row.push_back(first[i][k] * second[j][l]);
+                    }
+                }
+            }
+            tensor.push_back(row);
+        }
+    }
+    return tensor;
+}
+
 vector<vector<complex<double>>> matrix_inv(vector<vector<complex<double>>>& g) {
     
     vector<vector<complex<double>>> inv = g;
     
-    inv[0][1] = g[1][0];
-    inv[1][0] = g[0][1];
+    inv[0][1] = -g[1][0];
+    inv[1][0] = -g[0][1];
     
     complex<double> determinant = complex<double>(1,0) / (g[0][0]*g[1][1] - g[0][1]*g[1][0]) ;
     

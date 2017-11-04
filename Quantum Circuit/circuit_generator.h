@@ -15,13 +15,14 @@
 #include <vector>
 #include <complex>
 #include <algorithm>
+#include <random>
 #include "matrix.h"
 #include "circuit_simulation.h"
 
 using namespace std;
 
 typedef shared_ptr<gate> (*func_t) (void);
-typedef shared_ptr<gate> (*rot_f) (int);
+typedef shared_ptr<gate> (*rot_f) (double);
 
 /*
  This is a ciruit generator which provides functionality for creating most,
@@ -35,14 +36,13 @@ class circuit_generator {
 
 public:
     
+    static complex<double> c;
     /*
-     * 0 : Hadamard
-     * 1 : X
-     * 2 : Y
-     * 3 : Z
-     * 4 : CNot
-     * 5 : random
-     * 6 : toffolli
+     * 0:Hadamard
+     * 1:X
+     * 2:Y
+     * 3:Z
+     * 4:random
      */
     static vector<func_t> gates;
     
@@ -53,6 +53,7 @@ public:
      * 3 : Phase
      */
     static vector<rot_f> rot_gates;
+    vector<vector<complex<double>>> test_bits;
     
     shared_ptr<circuit> q_circuit;
     
@@ -61,20 +62,21 @@ public:
     static inline shared_ptr<gate> create_Y();
     static inline shared_ptr<gate> create_Z();
     static inline shared_ptr<gate> create_I();
-    static inline shared_ptr<gate> create_C();
     static shared_ptr<gate> random_gate();
     
-    static inline shared_ptr<gate> phase_gate(int theta);
-    static inline shared_ptr<gate> X_rotation(int theta);
-    static inline shared_ptr<gate> Y_rotation(int theta);
-    static inline shared_ptr<gate> Z_rotation(int theta);
+    static inline shared_ptr<gate> control_target(vector<int>& control_bits, vector<int>& targets,
+                                                  vector<shared_ptr<gate>>& target_gates);
+    
+    static inline shared_ptr<gate> phase_gate(double theta);
+    static inline shared_ptr<gate> X_rotation(double theta);
+    static inline shared_ptr<gate> Y_rotation(double theta);
+    static inline shared_ptr<gate> Z_rotation(double theta);
     static inline shared_ptr<gate> create_gate(const complex<double>& a, const complex<double>& b,
                                         const complex<double>& c, const complex<double>& d);
     
     void create_rand_circuit(int qubits, int num_gates);
     void write_circuit_to_file(const string& input_file);
     void read_input_file(const string& input_file);
-    void print_state();
     
     circuit_generator();
     
