@@ -65,6 +65,7 @@ public:
     static inline shared_ptr<gate> create_Z();
     static inline shared_ptr<gate> create_I();
     static shared_ptr<gate> random_gate();
+    static inline shared_ptr<gate> create_T();
     
     static inline shared_ptr<gate> control_target(vector<int>& control_bits, vector<int>& targets,
                                                   vector<shared_ptr<gate>>& target_gates);
