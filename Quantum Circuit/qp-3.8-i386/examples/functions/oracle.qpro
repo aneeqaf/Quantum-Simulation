@@ -1,0 +1,2 @@
+function new_state = oracle(curr_state)
+  new_state = cu_gate(sigma_x(1), "ccx")*curr_state;

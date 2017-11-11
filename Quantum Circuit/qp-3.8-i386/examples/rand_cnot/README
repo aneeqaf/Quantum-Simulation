@@ -1,0 +1,33 @@
+This directory contains a QuIDDPro script which simulates a randomly
+generated circuit consisting of CNOT gates.  A program to generate
+other random circuits of this form is also included.
+
+The program is called "rand_cnot."  It takes two command-line
+arguments.  The first argument is the number of desired qubits in the
+circuit (must be greater than 1).  The second argument is the number
+of desired gates in the circuit.  The generated QuIDDPro script is
+simply sent to standard out.  So, to store the generated QuIDDPro
+script to a file, redirect standard out to a file.  For example,
+
+./rand_cnot 200 1000 > cnot200.qpro
+
+will create a 200-qubit random circuit with 1000 gates consisting of
+CNOT gates.
+
+Scripts
+-------
+
+cnot200_1.qpro: A 100-qubit random circuit with 1000 gates consisting of
+                CNOT gates
+
+cnot200_2.qpro: A 100-qubit random circuit with 1000 gates consisting of
+                CNOT gates
+
+cnot200_3.qpro: A 100-qubit random circuit with 1000 gates consisting of
+                CNOT gates
+
+cnot200_4.qpro: A 100-qubit random circuit with 1000 gates consisting of
+                CNOT gates
+
+cnot200_5.qpro: A 100-qubit random circuit with 1000 gates consisting of
+                CNOT gates

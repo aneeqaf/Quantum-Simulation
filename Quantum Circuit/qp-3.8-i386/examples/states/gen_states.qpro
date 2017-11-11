@@ -1,0 +1,14 @@
+# This script creates simple instances of each of the states
+# created by the various functions in this directory.
+
+# Create a small cat state.
+|cs:> = create_cat_state(3)
+
+# Create a small W state.
+|ws:> = create_w_state(3)
+
+# Create a small equal superposition state in which the
+# phases of the even qubits are changed conditional on
+# the odd qubits.
+|eeo:> = create_equal_even_odd(3)
+

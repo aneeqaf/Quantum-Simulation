@@ -16,11 +16,13 @@
 #include <complex>
 #include <algorithm>
 #include <random>
+#include <map>
 #include "matrix.h"
 #include "circuit_simulation.h"
 
 using namespace std;
 
+using cplx = std::complex<float>;
 typedef shared_ptr<gate> (*func_t) (void);
 typedef shared_ptr<gate> (*rot_f) (double);
 
@@ -33,10 +35,10 @@ typedef shared_ptr<gate> (*rot_f) (double);
  are populated.
  */
 class circuit_generator {
-
 public:
+    static vector<string> quiddpro_func;
     
-    static complex<double> c;
+    static cplx c;
     /*
      * 0:Hadamard
      * 1:X
@@ -53,7 +55,7 @@ public:
      * 3 : Phase
      */
     static vector<rot_f> rot_gates;
-    vector<vector<complex<double>>> test_bits;
+    vector<int> test_bits;
     
     shared_ptr<circuit> q_circuit;
     
@@ -71,11 +73,13 @@ public:
     static inline shared_ptr<gate> X_rotation(double theta);
     static inline shared_ptr<gate> Y_rotation(double theta);
     static inline shared_ptr<gate> Z_rotation(double theta);
-    static inline shared_ptr<gate> create_gate(const complex<double>& a, const complex<double>& b,
-                                        const complex<double>& c, const complex<double>& d);
+    static inline shared_ptr<gate> create_gate(const cplx& a, const cplx& b,
+                                        const cplx& c, const cplx& d);
     
     void create_rand_circuit(int qubits, int num_gates);
+    void create_google_rand_circuit(int qubits, int num_gates);
     void write_circuit_to_file(const string& input_file);
+    void create_quiddpro_script(const string& input_file);
     void read_input_file(const string& input_file);
     
     circuit_generator();

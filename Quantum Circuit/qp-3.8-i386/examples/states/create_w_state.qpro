@@ -1,0 +1,10 @@
+# This function creates an n-qubit W state.
+function |ws:> = create_w_state(n)
+  |ws:> = |1:>_n;
+  j = 1;
+  while (j < n)
+    |ws:> += |2^j:>_n;
+    j++;
+  end
+  |ws:> /= sqrt(n);
+

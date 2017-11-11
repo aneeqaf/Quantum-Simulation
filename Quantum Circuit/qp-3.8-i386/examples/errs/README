@@ -1,0 +1,38 @@
+This directory contains scripts which simulate errors and error
+correction for various quantum circuits.  All of these simulations use
+the density matrix representation.  Please see our related paper which
+can be found at http://arxiv.org/abs/quant-ph/0403114
+
+Scripts
+-------
+
+css1.qpro: Encodes a single qubit using the CSS code.  A bit-flip
+	   error on the third physical qubit is introduced and
+	   detected.
+
+css2.qpro: Encodes a single qubit using the CSS code.  A phase-flip
+	   error on the fifth physical qubit is introduced and
+	   detected.
+
+css3.qpro: Encodes a single qubit in the state 0.866025|0> + 0.5|1>
+	   using the 7-qubit CSS code.  A bit-flip error on the third
+	   physical qubit is introduced and detected.
+
+grover_s1.qpro: An implementation of Grover's quantum search algorithm
+		for 2 logical data qubits and 1 logical oracle qubit.
+		Each logical qubit is encoded with the 7-qubit CSS
+		code.  No error is introduced in this circuit.
+
+grover_s_bf1.qpro: An implementation of Grover's quantum search
+		   algorithm for 2 logical data qubits and 1 logical
+		   oracle qubit.  Each logical qubit is encoded with
+		   the 7-qubit CSS code.  A bit-flip error on the
+		   third physical qubit of the logical oracle qubit is
+		   introduced, detected, and corrected.
+
+grover_s_pf1.qpro: An implementation of Grover's quantum search
+		   algorithm for 2 logical data qubits and 1 logical
+		   oracle qubit.  Each logical qubit is encoded with
+		   the 7-qubit CSS code.  A phase-flip error on the
+		   third physical qubit of the logical oracle qubit is
+		   introduced, detected, and corrected.

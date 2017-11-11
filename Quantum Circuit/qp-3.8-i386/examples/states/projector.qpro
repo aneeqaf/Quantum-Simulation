@@ -1,0 +1,7 @@
+# This script computes the probabilities of measuring
+# a 0 or 1 for a single qubit using inner and outer
+# products in the Dirac-style syntax.
+|psi:> = [0.8; 0.6];
+p_0 = <:psi|0:><:0|psi:>
+p_1 = <:psi|1:><:1|psi:>
+

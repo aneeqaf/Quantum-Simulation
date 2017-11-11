@@ -1,0 +1,198 @@
+# Author: George F. Viamontes
+#
+# This script simulates a reversible half-adder using qubits encoded
+# in the 7-qubit CSS code.  A bit-flip error is simulated on the
+# seventh physical qubit of the first logical qubit.  This error is
+# detected and corrected.  Finally, the behavior of the half-adder is
+# checked after the error is corrected.
+
+tic
+
+# Initialize a |O>L qubit with the CSS code
+
+q_logic_0 = cb("0000000")*cb("0000000")';
+# H can be used instead of hadamard in version 3.1 and higher.
+tmp_op = kron(identity(4), hadamard(3));
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x4c7", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x2c7", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x1c7", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x4c6", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x3c6", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x1c6", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x4c5", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x3c5", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x2c5", 7);
+q_logic_0 = tmp_op*q_logic_0*tmp_op';
+
+# Initialize a |1>L qubit with the CSS code
+
+bit_flip = sigma_x(7);
+q_logic_1 = bit_flip*q_logic_0*bit_flip';
+
+# Initialize the half-adder inputs a, b, and c to |1>L, |1>L, and
+# |0>L, respectively
+
+ha_inputs = kron(kron(q_logic_1, q_logic_1), q_logic_0);
+
+
+# Bit-flip physical qubit 7 of a
+bit_flip_a = cu_gate(sigma_x(1), "x7", 21);
+ha_outputs = bit_flip_a*ha_inputs*bit_flip_a';
+
+# Check the error syndrome of a
+syn_state = cb("000")*cb("000")';
+ha_outputs = kron(ha_outputs, syn_state);
+
+# Calculate syndrome qubit 1
+tmp_op = cu_gate(sigma_x(1), "c4x22", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c5x22", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c6x22", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x22", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+
+# Calculate syndrome qubit 2
+tmp_op = cu_gate(sigma_x(1), "c2x23", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c3x23", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c6x23", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x23", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+
+# Calculate syndrome qubit 3
+tmp_op = cu_gate(sigma_x(1), "c1x24", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c3x24", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c5x24", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x24", 24);
+ha_outputs = tmp_op*ha_outputs*tmp_op';
+
+# Measure the syndrome qubits to determine if an error occurred
+syn1_value = pmeasure(22, ha_outputs);
+syn2_value = pmeasure(23, ha_outputs);
+syn3_value = pmeasure(24, ha_outputs);
+
+# Generate the error correcting gates which use the syndrome qubits
+
+# Gate to fix physical qubit 1 of logical qubit a
+fix_a1 = cu_gate(sigma_x(1), "x1n22n23c24", 24);
+
+# Gate to fix physical qubit 2 of logical qubit a
+fix_a2 = cu_gate(sigma_x(1), "x2n22c23n24", 24);
+
+# Gate to fix physical qubit 3 of logical qubit a
+fix_a3 = cu_gate(sigma_x(1), "x3n22c23c24", 24);
+
+# Gate to fix physical qubit 4 of logical qubit a
+fix_a4 = cu_gate(sigma_x(1), "x4c22n23n24", 24);
+
+# Gate to fix physical qubit 5 of logical qubit a
+fix_a5 = cu_gate(sigma_x(1), "x5c22n23c24", 24);
+
+# Gate to fix physical qubit 6 of logical qubit a
+fix_a6 = cu_gate(sigma_x(1), "x6c22c23n24", 24);
+
+# Gate to fix physical qubit 7 of logical qubit a
+fix_a7 = cu_gate(sigma_x(1), "x7c22c23c24", 24);
+
+if ((syn1_value == 0) && (syn2_value == 0) && (syn3_value == 0))
+  echo("No error occurred")
+else
+  echo("Bit-flip error occurred on the following qubit")
+  bad_qubit = syn3_value + 2*syn2_value + 4*syn1_value
+
+  # Correct the error
+  ha_outputs = fix_a1*ha_outputs*fix_a1';
+  ha_outputs = fix_a2*ha_outputs*fix_a2';
+  ha_outputs = fix_a3*ha_outputs*fix_a3';
+  ha_outputs = fix_a4*ha_outputs*fix_a4';
+  ha_outputs = fix_a5*ha_outputs*fix_a5';
+  ha_outputs = fix_a6*ha_outputs*fix_a6';
+  ha_outputs = fix_a7*ha_outputs*fix_a7';
+
+  echo("Error corrected.")
+end
+
+ha_outputs = ptrace(22, ha_outputs);
+ha_outputs = ptrace(22, ha_outputs);
+ha_outputs = ptrace(22, ha_outputs);
+
+# Generate and apply the encoded Toffoli gate transversely
+
+trans_toff = cu_gate(sigma_x(1), "c1c8x15", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+trans_toff = cu_gate(sigma_x(1), "c2c9x16", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+trans_toff = cu_gate(sigma_x(1), "c3c10x17", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+trans_toff = cu_gate(sigma_x(1), "c4c11x18", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+trans_toff = cu_gate(sigma_x(1), "c5c12x19", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+trans_toff = cu_gate(sigma_x(1), "c6c13x20", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+trans_toff = cu_gate(sigma_x(1), "c7c14x21", 21);
+ha_outputs = trans_toff*ha_outputs*trans_toff';
+
+# To check the outcome of the half-adder, simply check the parity of
+# the third logical qubit (c).  In this case, its parity should be 1,
+# indicating that c was flipped to |1>L, which is the correct
+# behavior.
+
+# First isolate the state of c with the partial trace
+
+count = 0;
+c_output = ha_outputs;
+while (count < 14)
+  c_output = ptrace(1, c_output);
+  count = count + 1;
+end
+
+# Use an ancilla qubit initialized to |0> to check the parity on c
+
+c_output = kron(c_output, cb("0")*cb("0")');
+
+# Check the parity on c
+
+tmp_op = cu_gate(sigma_x(1), "c1x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c2x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c3x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c4x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c5x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c6x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x8", 8);
+c_output = tmp_op*c_output*tmp_op';
+
+# Measure the ancilla qubit to find the parity.  A result of 1
+# indicates the half-adder worked correctly
+
+c_logic_value = pmeasure(8, c_output);
+
+if (c_logic_value == 1)
+  echo("Half-adder functioned correctly.  c is 1.")
+else
+  echo("Half-adder functioned incorrectly.  c is 0.")
+end
+
+toc

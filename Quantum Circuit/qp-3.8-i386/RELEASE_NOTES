@@ -1,0 +1,181 @@
+Changes from 3.5 to 3.8
+
+New features
+
+  - Support for construction of Phase matrices directly using a built-in function. 
+    This is particularly useful for simulating stabilizer circuits.
+
+  - Batch-mode options for simulating a UMICH 1.0 quantum circuit description file 
+    using an optimized version of the QuIDDPro simulator.
+
+Bug fixes
+  
+  - Fixed a bug that crashed the application when a user typed tab or backspace during 
+    interactive mode.
+
+Changes from 3.1 to 3.5
+
+New features
+
+  - Support for left-multiplication via =*.
+ 
+  - Compilation mode for generating a quantum circuit description file
+    from a QuIDDPro script.
+
+New example scripts
+
+  - qft directory in examples/ contains functions for calculating the
+    QFT and inverse QFT.
+
+Changes from 3.1 to 3.1.1
+
+Bug fixes
+
+  - Fixed a bug which causes expressions passed to user-defined functions
+    to not be evaluated correctly.
+
+Changes from 2.1.5 to 3.1
+
+New features
+
+  - Efficient functions for checking equivalence up to global
+    and relative phase of operators and states. The phase factors are
+    also computed by most of these functions. See the User's
+    Guide for details. The algorithms that these
+    functions are based on are described in George Viamontes' thesis.
+    Example scripts may be found in examples/phase_checks/
+
+  - Support for Dirac-style notation. See the User's Guide
+    for examples and details.  Example scripts may be found in
+    examples/states/
+
+  - Support for string data types, including variable storage
+    and string manipulation, has been added. The User's Guide
+    has examples of this feature. This feature also makes
+    the cu_gate function much easier to use.
+
+  - New operators including +=, -=, *=, and /=
+
+  - Bit manipulation operators including << and >>. Also functions
+    to get and set individual bits of an integer variable have been
+    added.
+
+  - Binary integer expressions are now supported using the bn syntax.
+
+  - The abs function has been added, which implements the complex
+    modulus operation.
+
+  - Alternate syntax for the kron function in the form of the (X)
+    operator, which makes writing Dirac-style expressions more natural.
+
+  - Alternate syntax for the hadamard function. H is now syntactic
+    short-hand for it.
+
+  - Changed the matrix produced by sigma_z.  It differs by a mutiple
+    of -1 from the old matrix produced.  This is only a global phase
+    change, but several requests indicated that this version would
+    be preferred.
+
+New example scripts
+
+  - New example scripts have been added which demonstrate all
+    of the new features.
+
+C++ compatibility
+
+  - A C++ library and API are available to use QuIDDPro in C++
+    programs.
+
+Bug fixes
+
+  - A bug which degraded runtime and memory performance when
+    using loops and function calls within tight loops has been fixed.
+
+  - In some cases when multiplying a call to cu_gate with a state
+    vector, the state vector was modified incorrectly. This bug has
+    been fixed.
+
+  - Fixed the cnot and toffoli functions, which previously would
+    incorrectly modify state vectors in certain cases.
+
+Changes from 2.1.4 to 2.1.5
+
+- Fixed a bug in which variations of Toffoli gates (i.e.
+  controlled-NOT gates with two controls) would not modify
+  state vectors properly.
+
+- Improved numerical precision.
+
+Changes from 2.1.3 to 2.1.4
+
+- Fixed a bug in which lazily created cu_gate operators
+  were all treated as controlled-NOT gates even if the
+  action specified in the cu_gate call was not X.
+
+Changes from 2.1.2 to 2.1.3
+
+- Improved performance on a few benchmarks, particularly
+  grover_density.qpro, by changing the DD hashing function
+  of terminal values.
+
+- Fixed a bug which caused some imaginary values of complex
+  numbers within a matrix or vector to be off by -i or take
+  on slightly incorrect values.  This fix in particular
+  affected calls to the rz function.
+
+Changes from 2.1.1 to 2.1.2
+
+- Fixed a bug which caused imaginary values of complex numbers within
+  a matrix or vector to be set to 0 when the real value was 0.
+
+Changes from 2.1 to 2.1.1
+
+- Fixed a bug which periodically caused the parser to crash when
+  certain calls to the state vector normalization function were made.
+
+- Fixed a bug which caused incorrect values to be generated for state
+  vector normalization.
+
+Changes from 2.0 to 2.1
+
+- Performance has been dramatically improved.
+
+Changes from 1.2.1 to 2.0
+
+Support for libraries
+
+  - Support for user-defined functions has been added.  See Section 3
+    of the User's Guide for details.
+
+  - The run command has been added which executes the script code
+    contained in a separate file.  This command is ideal for declaring
+    variables which may be re-used in multiple projects.  See Section 3
+    of the User's Guide for details.
+
+New functions
+
+  - A swap function has been added which efficiently swaps two qubits
+    in a state vector.  This function is much faster than swapping
+    the qubits explicitly using CNOT and Hadamard gates.
+
+  - A dump_dot function has been added which outputs a file that can
+    be converted into the graphical representation of the QuIDD.  
+    Making use of this function requires the freely available 
+    Graphviz package which can be obtained at http://www.graphviz.org/.
+
+  - A quidd_info function has been added which outputs information
+    about an operator or density matrix.  See section 4 of the 
+    User's Guide for more details.
+
+Extended syntax
+
+  - Column entries in a matrix may be separated either by commas
+    or whitespace.
+
+New example scripts
+
+  - Examples have been added demonstrating user-defined functions
+    and the run command.
+
+Send bug reports to gviamont@eecs.umich.edu
+

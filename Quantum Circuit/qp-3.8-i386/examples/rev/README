@@ -1,0 +1,107 @@
+This directory contains scripts which simulate a variety of reversible
+logic circuits with and without errors and error correction. All of
+these simulations use the density matrix representation.  Please see
+our related paper which can be found at
+http://arxiv.org/abs/quant-ph/0403114
+
+The functionality of the 9sym and ham15 circuits comes from
+"Reversible Logic Synthesis Benchmarks Page"
+(http://www.cs.uvic.ca/~dmaslov/)
+
+Scripts
+-------
+
+9sym1.qpro: A reversible logic circuit which outputs a |1> on the
+	    final qubit if the number of |1>'s in the input qubits is
+	    3, 4, 5, or 6.  The input qubits are initialized to
+	    contain 3 |1>'s.
+
+9sym2.qpro: A reversible logic circuit which outputs a |1> on the
+	    final qubit if the number of |1>'s in the input qubits is
+	    3, 4, 5, or 6.  The input qubits are initialized to
+	    contain 4 |1>'s.
+
+9sym3.qpro: A reversible logic circuit which outputs a |1> on the
+	    final qubit if the number of |1>'s in the input qubits is
+	    3, 4, 5, or 6.  The input qubits are initialized to
+	    contain 5 |1>'s.
+
+9sym4.qpro: A reversible logic circuit which outputs a |1> on the
+	    final qubit if the number of |1>'s in the input qubits is
+	    3, 4, 5, or 6.  The input qubits are initialized to
+	    contain 6 |1>'s.
+
+9sym5.qpro: A reversible logic circuit which outputs a |1> on the
+	    final qubit if the number of |1>'s in the input qubits is
+	    3, 4, 5, or 6.  The input qubits are initialized to
+	    contain 7 |1>'s.
+
+hadder_bf1.qpro: A reversible half-adder that uses qubits encoded in
+		 the 7-qubit CSS code.  A bit-flip error is simulated
+		 on the third physical qubit of the first logical
+		 qubit.  This error is detected and corrected.
+		 Finally, the behavior of the half-adder is checked
+		 after the error is corrected.
+
+hadder_bf2.qpro: A reversible half-adder that uses qubits encoded in
+		 the 7-qubit CSS code.  A bit-flip error is simulated
+		 on the fifth physical qubit of the first logical
+		 qubit.  This error is detected and corrected.
+		 Finally, the behavior of the half-adder is checked
+		 after the error is corrected.
+
+hadder_bf3.qpro: A reversible half-adder that uses qubits encoded in
+		 the 7-qubit CSS code.  A bit-flip error is simulated
+		 on the seventh physical qubit of the first logical
+		 qubit.  This error is detected and corrected.
+		 Finally, the behavior of the half-adder is checked
+		 after the error is corrected.
+
+hadder_pf1.qpro: A reversible half-adder that uses qubits encoded in
+		 the 7-qubit CSS code.  A phase-flip error is
+		 simulated on the third physical qubit of the first
+		 logical qubit.  This error is detected and corrected.
+		 Finally, the behavior of the half-adder is checked
+		 after the error is corrected.
+
+hadder_pf2.qpro: A reversible half-adder that uses qubits encoded in
+		 the 7-qubit CSS code.  A phase-flip error is
+		 simulated on the fifth physical qubit of the first
+		 logical qubit.  This error is detected and corrected.
+		 Finally, the behavior of the half-adder is checked
+		 after the error is corrected.
+
+hadder_pf3.qpro: A reversible half-adder that uses qubits encoded in
+		 the 7-qubit CSS code.  A phase-flip error is
+		 simulated on the seventh physical qubit of the first
+		 logical qubit.  This error is detected and corrected.
+		 Finally, the behavior of the half-adder is checked
+		 after the error is corrected.
+
+ham15_1.qpro: A reversible logic circuit implementation of the size 15
+	      Hamming optimal coding function.  The input to this
+	      circuit is 100100101010001.
+
+ham15_2.qpro: A reversible logic circuit implementation of the size 15
+	      Hamming optimal coding function.  The input to this
+	      circuit is 111101001010101.
+
+ham15_3.qpro: A reversible logic circuit implementation of the size 15
+	      Hamming optimal coding function.  The input to this
+	      circuit is 001010001000101.
+
+rc_adder1.qpro: A 16-qubit reversible ripple carry adder which can
+		perform the addition of 4-bit numbers.  This circuit
+		computes 14 + 5.
+
+rc_adder2.qpro: A 16-qubit reversible ripple carry adder which can
+		perform the addition of 4-bit numbers.  This circuit
+		computes 2 + 11.
+
+rc_adder3.qpro: A 16-qubit reversible ripple carry adder which can
+		perform the addition of 4-bit numbers.  This circuit
+		computes 15 + 15.
+
+rc_adder4.qpro: A 16-qubit reversible ripple carry adder which can
+		perform the addition of 4-bit numbers.  This circuit
+		computes 4 + 5.

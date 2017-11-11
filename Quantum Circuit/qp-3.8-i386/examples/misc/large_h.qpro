@@ -1,0 +1,69 @@
+# Author: George F. Viamontes
+#
+# This example demonstrates the performance of QuIDDPro in simulation
+# with a large number of qubits.  A 50-qubit Hadamard operator is applied
+# to a 50 qubit density matrix initialized to the state
+# (1/sqrt(2))*(|00100...> + 1/sqrt(2)|00000...>)*(<00100...| + 
+# <00000...|)*(1/sqrt(2))
+# Upon initialization, the third qubit will be in the state
+# (1/sqrt(2))*(|1> + |0>)*(<1| + <0|)*(1/sqrt(2)), whereas all other
+# qubits will be in the state |0><0|. After applying the Hadamard,
+# the third qubit will be in the state |0><0|, whereas all other
+# quibts will be in the state (1/sqrt(2))*(|1> + |0>)*(<1| + <0|)*(1/sqrt(2)).
+# Deterministic measurement of the third qubit verifies the outcome.
+#
+# On most computers with reasonable processing power, this simulation will
+# likely take less than 10 seconds to run.  
+
+# Start the timer/memory usage measurement
+tic
+
+# First intialize the density state of the 50 qubits
+
+# Separately initialize the portion of the state where the third qubit is 
+# a |1> and the portion of the state where the third qubit is a |0>
+
+q0 = cb("0");
+q1 = cb("1");
+first_portion = 1;
+second_portion = 1;
+
+q_count = 1;
+while (q_count <= 50)
+  if (q_count ~= 3)
+    first_portion = kron(first_portion, q0);
+  else
+    first_portion = kron(first_portion, q1);
+  end
+  second_portion = kron(second_portion, q0);
+  q_count = q_count + 1;
+end
+
+# Apply the probability amplitudes
+first_portion = 1/r2*first_portion;
+second_portion = 1/r2*second_portion;
+
+# Combine both portions into the density matrix
+density_state = first_portion + second_portion;
+density_state = density_state*density_state';
+
+# Now apply a 50-qubit Hadamard operator to the density state.  H
+# can be used instead of hadamard in 3.1 and later.
+h_op = hadamard(50);
+density_state = h_op*density_state*h_op';
+
+# Trace over all qubits except for the third
+trace_3 = density_state;
+q_count = 50;
+while (q_count > 0)
+  if (q_count ~= 3)
+    trace_3 = ptrace(q_count, trace_3);
+  end
+  q_count = q_count - 1;
+end
+echo("The density state after tracing over all qubits except for the third:")
+trace_3
+
+echo("Deterministic measurement of the state:");
+measure(1, trace_3)
+toc

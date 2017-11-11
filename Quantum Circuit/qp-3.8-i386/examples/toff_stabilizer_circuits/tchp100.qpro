@@ -1,0 +1,1336 @@
+tic
+phase = [1 0; 0 i];
+state_vec = cb("0");
+count = 1;
+while (count < 100)
+  state_vec = kron(state_vec, cb("0"));
+  count = count + 1;
+end
+
+# Gate: 1
+gate = cu_gate(sigma_x(1), "c11x75", 100);
+state_vec =* gate;
+
+# Gate: 2
+gate = cu_gate(sigma_x(1), "c98c18x66", 100);
+state_vec =* gate;
+
+# Gate: 3
+gate = cu_gate(phase, "x94", 100);
+state_vec =* gate;
+
+# Gate: 4
+m_info = pmeasure_norm_sv(95, state_vec);
+echo("Outcome of measuring qubit: 95")
+m_info(1,1)
+state_vec = measure_sv(95, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 5
+gate = cu_gate(phase, "x19", 100);
+state_vec =* gate;
+
+# Gate: 6
+gate = cu_gate(sigma_x(1), "c59x19", 100);
+state_vec =* gate;
+
+# Gate: 7
+gate = cu_gate(sigma_x(1), "c98x70", 100);
+state_vec =* gate;
+
+# Gate: 8
+m_info = pmeasure_norm_sv(90, state_vec);
+echo("Outcome of measuring qubit: 90")
+m_info(1,1)
+state_vec = measure_sv(90, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 9
+gate = cu_gate(hadamard(1), "x29", 100);
+state_vec =* gate;
+
+# Gate: 10
+gate = cu_gate(sigma_x(1), "c55x72", 100);
+state_vec =* gate;
+
+# Gate: 11
+m_info = pmeasure_norm_sv(92, state_vec);
+echo("Outcome of measuring qubit: 92")
+m_info(1,1)
+state_vec = measure_sv(92, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 12
+gate = cu_gate(phase, "x1", 100);
+state_vec =* gate;
+
+# Gate: 13
+gate = cu_gate(phase, "x11", 100);
+state_vec =* gate;
+
+# Gate: 14
+gate = cu_gate(sigma_x(1), "c39c14x9", 100);
+state_vec =* gate;
+
+# Gate: 15
+gate = cu_gate(hadamard(1), "x80", 100);
+state_vec =* gate;
+
+# Gate: 16
+gate = cu_gate(phase, "x50", 100);
+state_vec =* gate;
+
+# Gate: 17
+gate = cu_gate(phase, "x67", 100);
+state_vec =* gate;
+
+# Gate: 18
+gate = cu_gate(sigma_x(1), "c92c98x70", 100);
+state_vec =* gate;
+
+# Gate: 19
+gate = cu_gate(sigma_x(1), "c21c68x80", 100);
+state_vec =* gate;
+
+# Gate: 20
+gate = cu_gate(sigma_x(1), "c57c25x34", 100);
+state_vec =* gate;
+
+# Gate: 21
+m_info = pmeasure_norm_sv(80, state_vec);
+echo("Outcome of measuring qubit: 80")
+m_info(1,1)
+state_vec = measure_sv(80, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 22
+gate = cu_gate(sigma_x(1), "c89c72x82", 100);
+state_vec =* gate;
+
+# Gate: 23
+m_info = pmeasure_norm_sv(36, state_vec);
+echo("Outcome of measuring qubit: 36")
+m_info(1,1)
+state_vec = measure_sv(36, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 24
+m_info = pmeasure_norm_sv(100, state_vec);
+echo("Outcome of measuring qubit: 100")
+m_info(1,1)
+state_vec = measure_sv(100, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 25
+gate = cu_gate(phase, "x5", 100);
+state_vec =* gate;
+
+# Gate: 26
+gate = cu_gate(sigma_x(1), "c30c84x81", 100);
+state_vec =* gate;
+
+# Gate: 27
+gate = cu_gate(phase, "x58", 100);
+state_vec =* gate;
+
+# Gate: 28
+gate = cu_gate(hadamard(1), "x90", 100);
+state_vec =* gate;
+
+# Gate: 29
+gate = cu_gate(hadamard(1), "x46", 100);
+state_vec =* gate;
+
+# Gate: 30
+gate = cu_gate(hadamard(1), "x59", 100);
+state_vec =* gate;
+
+# Gate: 31
+gate = cu_gate(phase, "x27", 100);
+state_vec =* gate;
+
+# Gate: 32
+gate = cu_gate(sigma_x(1), "c72x83", 100);
+state_vec =* gate;
+
+# Gate: 33
+gate = cu_gate(phase, "x6", 100);
+state_vec =* gate;
+
+# Gate: 34
+gate = cu_gate(phase, "x44", 100);
+state_vec =* gate;
+
+# Gate: 35
+gate = cu_gate(sigma_x(1), "c60c15x93", 100);
+state_vec =* gate;
+
+# Gate: 36
+gate = cu_gate(hadamard(1), "x50", 100);
+state_vec =* gate;
+
+# Gate: 37
+m_info = pmeasure_norm_sv(49, state_vec);
+echo("Outcome of measuring qubit: 49")
+m_info(1,1)
+state_vec = measure_sv(49, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 38
+gate = cu_gate(sigma_x(1), "c90x57", 100);
+state_vec =* gate;
+
+# Gate: 39
+gate = cu_gate(hadamard(1), "x74", 100);
+state_vec =* gate;
+
+# Gate: 40
+gate = cu_gate(sigma_x(1), "c33x31", 100);
+state_vec =* gate;
+
+# Gate: 41
+m_info = pmeasure_norm_sv(22, state_vec);
+echo("Outcome of measuring qubit: 22")
+m_info(1,1)
+state_vec = measure_sv(22, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 42
+gate = cu_gate(phase, "x31", 100);
+state_vec =* gate;
+
+# Gate: 43
+m_info = pmeasure_norm_sv(39, state_vec);
+echo("Outcome of measuring qubit: 39")
+m_info(1,1)
+state_vec = measure_sv(39, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 44
+m_info = pmeasure_norm_sv(7, state_vec);
+echo("Outcome of measuring qubit: 7")
+m_info(1,1)
+state_vec = measure_sv(7, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 45
+gate = cu_gate(phase, "x69", 100);
+state_vec =* gate;
+
+# Gate: 46
+m_info = pmeasure_norm_sv(41, state_vec);
+echo("Outcome of measuring qubit: 41")
+m_info(1,1)
+state_vec = measure_sv(41, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 47
+gate = cu_gate(phase, "x61", 100);
+state_vec =* gate;
+
+# Gate: 48
+m_info = pmeasure_norm_sv(85, state_vec);
+echo("Outcome of measuring qubit: 85")
+m_info(1,1)
+state_vec = measure_sv(85, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 49
+gate = cu_gate(sigma_x(1), "c98c77x69", 100);
+state_vec =* gate;
+
+# Gate: 50
+gate = cu_gate(hadamard(1), "x62", 100);
+state_vec =* gate;
+
+# Gate: 51
+gate = cu_gate(sigma_x(1), "c70c51x74", 100);
+state_vec =* gate;
+
+# Gate: 52
+gate = cu_gate(sigma_x(1), "c24x12", 100);
+state_vec =* gate;
+
+# Gate: 53
+gate = cu_gate(hadamard(1), "x54", 100);
+state_vec =* gate;
+
+# Gate: 54
+m_info = pmeasure_norm_sv(77, state_vec);
+echo("Outcome of measuring qubit: 77")
+m_info(1,1)
+state_vec = measure_sv(77, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 55
+gate = cu_gate(sigma_x(1), "c27x58", 100);
+state_vec =* gate;
+
+# Gate: 56
+gate = cu_gate(phase, "x23", 100);
+state_vec =* gate;
+
+# Gate: 57
+gate = cu_gate(phase, "x48", 100);
+state_vec =* gate;
+
+# Gate: 58
+m_info = pmeasure_norm_sv(53, state_vec);
+echo("Outcome of measuring qubit: 53")
+m_info(1,1)
+state_vec = measure_sv(53, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 59
+m_info = pmeasure_norm_sv(65, state_vec);
+echo("Outcome of measuring qubit: 65")
+m_info(1,1)
+state_vec = measure_sv(65, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 60
+gate = cu_gate(sigma_x(1), "c71c49x33", 100);
+state_vec =* gate;
+
+# Gate: 61
+gate = cu_gate(phase, "x26", 100);
+state_vec =* gate;
+
+# Gate: 62
+gate = cu_gate(sigma_x(1), "c16c87x18", 100);
+state_vec =* gate;
+
+# Gate: 63
+m_info = pmeasure_norm_sv(38, state_vec);
+echo("Outcome of measuring qubit: 38")
+m_info(1,1)
+state_vec = measure_sv(38, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 64
+m_info = pmeasure_norm_sv(9, state_vec);
+echo("Outcome of measuring qubit: 9")
+m_info(1,1)
+state_vec = measure_sv(9, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 65
+gate = cu_gate(phase, "x3", 100);
+state_vec =* gate;
+
+# Gate: 66
+gate = cu_gate(phase, "x15", 100);
+state_vec =* gate;
+
+# Gate: 67
+m_info = pmeasure_norm_sv(40, state_vec);
+echo("Outcome of measuring qubit: 40")
+m_info(1,1)
+state_vec = measure_sv(40, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 68
+gate = cu_gate(hadamard(1), "x25", 100);
+state_vec =* gate;
+
+# Gate: 69
+m_info = pmeasure_norm_sv(19, state_vec);
+echo("Outcome of measuring qubit: 19")
+m_info(1,1)
+state_vec = measure_sv(19, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 70
+gate = cu_gate(hadamard(1), "x62", 100);
+state_vec =* gate;
+
+# Gate: 71
+gate = cu_gate(phase, "x39", 100);
+state_vec =* gate;
+
+# Gate: 72
+gate = cu_gate(sigma_x(1), "c54c4x27", 100);
+state_vec =* gate;
+
+# Gate: 73
+gate = cu_gate(sigma_x(1), "c52x60", 100);
+state_vec =* gate;
+
+# Gate: 74
+m_info = pmeasure_norm_sv(78, state_vec);
+echo("Outcome of measuring qubit: 78")
+m_info(1,1)
+state_vec = measure_sv(78, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 75
+gate = cu_gate(phase, "x8", 100);
+state_vec =* gate;
+
+# Gate: 76
+gate = cu_gate(phase, "x79", 100);
+state_vec =* gate;
+
+# Gate: 77
+m_info = pmeasure_norm_sv(2, state_vec);
+echo("Outcome of measuring qubit: 2")
+m_info(1,1)
+state_vec = measure_sv(2, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 78
+gate = cu_gate(phase, "x2", 100);
+state_vec =* gate;
+
+# Gate: 79
+gate = cu_gate(phase, "x72", 100);
+state_vec =* gate;
+
+# Gate: 80
+gate = cu_gate(phase, "x77", 100);
+state_vec =* gate;
+
+# Gate: 81
+gate = cu_gate(phase, "x5", 100);
+state_vec =* gate;
+
+# Gate: 82
+gate = cu_gate(sigma_x(1), "c95x2", 100);
+state_vec =* gate;
+
+# Gate: 83
+gate = cu_gate(hadamard(1), "x43", 100);
+state_vec =* gate;
+
+# Gate: 84
+gate = cu_gate(phase, "x8", 100);
+state_vec =* gate;
+
+# Gate: 85
+m_info = pmeasure_norm_sv(77, state_vec);
+echo("Outcome of measuring qubit: 77")
+m_info(1,1)
+state_vec = measure_sv(77, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 86
+gate = cu_gate(phase, "x85", 100);
+state_vec =* gate;
+
+# Gate: 87
+gate = cu_gate(sigma_x(1), "c85c37x63", 100);
+state_vec =* gate;
+
+# Gate: 88
+gate = cu_gate(phase, "x14", 100);
+state_vec =* gate;
+
+# Gate: 89
+gate = cu_gate(sigma_x(1), "c86x78", 100);
+state_vec =* gate;
+
+# Gate: 90
+gate = cu_gate(sigma_x(1), "c79c80x70", 100);
+state_vec =* gate;
+
+# Gate: 91
+gate = cu_gate(phase, "x41", 100);
+state_vec =* gate;
+
+# Gate: 92
+gate = cu_gate(hadamard(1), "x45", 100);
+state_vec =* gate;
+
+# Gate: 93
+gate = cu_gate(sigma_x(1), "c11c49x41", 100);
+state_vec =* gate;
+
+# Gate: 94
+gate = cu_gate(sigma_x(1), "c50c83x49", 100);
+state_vec =* gate;
+
+# Gate: 95
+gate = cu_gate(sigma_x(1), "c90c30x89", 100);
+state_vec =* gate;
+
+# Gate: 96
+gate = cu_gate(hadamard(1), "x15", 100);
+state_vec =* gate;
+
+# Gate: 97
+m_info = pmeasure_norm_sv(35, state_vec);
+echo("Outcome of measuring qubit: 35")
+m_info(1,1)
+state_vec = measure_sv(35, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 98
+gate = cu_gate(hadamard(1), "x54", 100);
+state_vec =* gate;
+
+# Gate: 99
+gate = cu_gate(sigma_x(1), "c65c76x97", 100);
+state_vec =* gate;
+
+# Gate: 100
+gate = cu_gate(hadamard(1), "x77", 100);
+state_vec =* gate;
+
+# Gate: 101
+gate = cu_gate(phase, "x22", 100);
+state_vec =* gate;
+
+# Gate: 102
+gate = cu_gate(hadamard(1), "x56", 100);
+state_vec =* gate;
+
+# Gate: 103
+gate = cu_gate(phase, "x88", 100);
+state_vec =* gate;
+
+# Gate: 104
+m_info = pmeasure_norm_sv(80, state_vec);
+echo("Outcome of measuring qubit: 80")
+m_info(1,1)
+state_vec = measure_sv(80, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 105
+m_info = pmeasure_norm_sv(48, state_vec);
+echo("Outcome of measuring qubit: 48")
+m_info(1,1)
+state_vec = measure_sv(48, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 106
+gate = cu_gate(sigma_x(1), "c5x98", 100);
+state_vec =* gate;
+
+# Gate: 107
+gate = cu_gate(sigma_x(1), "c53c10x93", 100);
+state_vec =* gate;
+
+# Gate: 108
+m_info = pmeasure_norm_sv(98, state_vec);
+echo("Outcome of measuring qubit: 98")
+m_info(1,1)
+state_vec = measure_sv(98, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 109
+gate = cu_gate(hadamard(1), "x98", 100);
+state_vec =* gate;
+
+# Gate: 110
+m_info = pmeasure_norm_sv(77, state_vec);
+echo("Outcome of measuring qubit: 77")
+m_info(1,1)
+state_vec = measure_sv(77, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 111
+gate = cu_gate(hadamard(1), "x42", 100);
+state_vec =* gate;
+
+# Gate: 112
+m_info = pmeasure_norm_sv(13, state_vec);
+echo("Outcome of measuring qubit: 13")
+m_info(1,1)
+state_vec = measure_sv(13, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 113
+gate = cu_gate(sigma_x(1), "c85c56x95", 100);
+state_vec =* gate;
+
+# Gate: 114
+gate = cu_gate(phase, "x77", 100);
+state_vec =* gate;
+
+# Gate: 115
+gate = cu_gate(hadamard(1), "x16", 100);
+state_vec =* gate;
+
+# Gate: 116
+gate = cu_gate(sigma_x(1), "c30x15", 100);
+state_vec =* gate;
+
+# Gate: 117
+gate = cu_gate(sigma_x(1), "c28c63x40", 100);
+state_vec =* gate;
+
+# Gate: 118
+gate = cu_gate(sigma_x(1), "c61x43", 100);
+state_vec =* gate;
+
+# Gate: 119
+m_info = pmeasure_norm_sv(70, state_vec);
+echo("Outcome of measuring qubit: 70")
+m_info(1,1)
+state_vec = measure_sv(70, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 120
+gate = cu_gate(sigma_x(1), "c69x68", 100);
+state_vec =* gate;
+
+# Gate: 121
+gate = cu_gate(phase, "x66", 100);
+state_vec =* gate;
+
+# Gate: 122
+gate = cu_gate(hadamard(1), "x53", 100);
+state_vec =* gate;
+
+# Gate: 123
+gate = cu_gate(sigma_x(1), "c98c41x26", 100);
+state_vec =* gate;
+
+# Gate: 124
+gate = cu_gate(sigma_x(1), "c26c81x10", 100);
+state_vec =* gate;
+
+# Gate: 125
+m_info = pmeasure_norm_sv(58, state_vec);
+echo("Outcome of measuring qubit: 58")
+m_info(1,1)
+state_vec = measure_sv(58, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 126
+gate = cu_gate(hadamard(1), "x2", 100);
+state_vec =* gate;
+
+# Gate: 127
+m_info = pmeasure_norm_sv(81, state_vec);
+echo("Outcome of measuring qubit: 81")
+m_info(1,1)
+state_vec = measure_sv(81, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 128
+gate = cu_gate(sigma_x(1), "c16c9x80", 100);
+state_vec =* gate;
+
+# Gate: 129
+gate = cu_gate(hadamard(1), "x41", 100);
+state_vec =* gate;
+
+# Gate: 130
+gate = cu_gate(sigma_x(1), "c98x27", 100);
+state_vec =* gate;
+
+# Gate: 131
+gate = cu_gate(sigma_x(1), "c32c95x77", 100);
+state_vec =* gate;
+
+# Gate: 132
+gate = cu_gate(sigma_x(1), "c60c32x61", 100);
+state_vec =* gate;
+
+# Gate: 133
+gate = cu_gate(phase, "x30", 100);
+state_vec =* gate;
+
+# Gate: 134
+gate = cu_gate(sigma_x(1), "c99c45x27", 100);
+state_vec =* gate;
+
+# Gate: 135
+gate = cu_gate(phase, "x55", 100);
+state_vec =* gate;
+
+# Gate: 136
+gate = cu_gate(sigma_x(1), "c37c6x15", 100);
+state_vec =* gate;
+
+# Gate: 137
+gate = cu_gate(sigma_x(1), "c86x31", 100);
+state_vec =* gate;
+
+# Gate: 138
+gate = cu_gate(hadamard(1), "x94", 100);
+state_vec =* gate;
+
+# Gate: 139
+gate = cu_gate(sigma_x(1), "c5c35x50", 100);
+state_vec =* gate;
+
+# Gate: 140
+gate = cu_gate(sigma_x(1), "c61c59x35", 100);
+state_vec =* gate;
+
+# Gate: 141
+gate = cu_gate(hadamard(1), "x35", 100);
+state_vec =* gate;
+
+# Gate: 142
+gate = cu_gate(hadamard(1), "x15", 100);
+state_vec =* gate;
+
+# Gate: 143
+gate = cu_gate(phase, "x4", 100);
+state_vec =* gate;
+
+# Gate: 144
+m_info = pmeasure_norm_sv(97, state_vec);
+echo("Outcome of measuring qubit: 97")
+m_info(1,1)
+state_vec = measure_sv(97, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 145
+gate = cu_gate(sigma_x(1), "c87c41x32", 100);
+state_vec =* gate;
+
+# Gate: 146
+gate = cu_gate(phase, "x96", 100);
+state_vec =* gate;
+
+# Gate: 147
+gate = cu_gate(hadamard(1), "x3", 100);
+state_vec =* gate;
+
+# Gate: 148
+gate = cu_gate(sigma_x(1), "c59c37x87", 100);
+state_vec =* gate;
+
+# Gate: 149
+m_info = pmeasure_norm_sv(86, state_vec);
+echo("Outcome of measuring qubit: 86")
+m_info(1,1)
+state_vec = measure_sv(86, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 150
+gate = cu_gate(phase, "x99", 100);
+state_vec =* gate;
+
+# Gate: 151
+m_info = pmeasure_norm_sv(14, state_vec);
+echo("Outcome of measuring qubit: 14")
+m_info(1,1)
+state_vec = measure_sv(14, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 152
+gate = cu_gate(hadamard(1), "x93", 100);
+state_vec =* gate;
+
+# Gate: 153
+gate = cu_gate(phase, "x7", 100);
+state_vec =* gate;
+
+# Gate: 154
+gate = cu_gate(sigma_x(1), "c30x41", 100);
+state_vec =* gate;
+
+# Gate: 155
+gate = cu_gate(phase, "x44", 100);
+state_vec =* gate;
+
+# Gate: 156
+gate = cu_gate(sigma_x(1), "c73c32x4", 100);
+state_vec =* gate;
+
+# Gate: 157
+gate = cu_gate(phase, "x18", 100);
+state_vec =* gate;
+
+# Gate: 158
+gate = cu_gate(hadamard(1), "x9", 100);
+state_vec =* gate;
+
+# Gate: 159
+m_info = pmeasure_norm_sv(41, state_vec);
+echo("Outcome of measuring qubit: 41")
+m_info(1,1)
+state_vec = measure_sv(41, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 160
+gate = cu_gate(hadamard(1), "x86", 100);
+state_vec =* gate;
+
+# Gate: 161
+gate = cu_gate(hadamard(1), "x11", 100);
+state_vec =* gate;
+
+# Gate: 162
+gate = cu_gate(sigma_x(1), "c27x99", 100);
+state_vec =* gate;
+
+# Gate: 163
+gate = cu_gate(sigma_x(1), "c7c98x21", 100);
+state_vec =* gate;
+
+# Gate: 164
+gate = cu_gate(hadamard(1), "x91", 100);
+state_vec =* gate;
+
+# Gate: 165
+m_info = pmeasure_norm_sv(52, state_vec);
+echo("Outcome of measuring qubit: 52")
+m_info(1,1)
+state_vec = measure_sv(52, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 166
+gate = cu_gate(sigma_x(1), "c25c93x87", 100);
+state_vec =* gate;
+
+# Gate: 167
+gate = cu_gate(phase, "x100", 100);
+state_vec =* gate;
+
+# Gate: 168
+gate = cu_gate(hadamard(1), "x99", 100);
+state_vec =* gate;
+
+# Gate: 169
+gate = cu_gate(sigma_x(1), "c37c17x49", 100);
+state_vec =* gate;
+
+# Gate: 170
+gate = cu_gate(hadamard(1), "x100", 100);
+state_vec =* gate;
+
+# Gate: 171
+m_info = pmeasure_norm_sv(98, state_vec);
+echo("Outcome of measuring qubit: 98")
+m_info(1,1)
+state_vec = measure_sv(98, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 172
+m_info = pmeasure_norm_sv(30, state_vec);
+echo("Outcome of measuring qubit: 30")
+m_info(1,1)
+state_vec = measure_sv(30, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 173
+gate = cu_gate(sigma_x(1), "c8c57x7", 100);
+state_vec =* gate;
+
+# Gate: 174
+gate = cu_gate(sigma_x(1), "c64c4x13", 100);
+state_vec =* gate;
+
+# Gate: 175
+m_info = pmeasure_norm_sv(49, state_vec);
+echo("Outcome of measuring qubit: 49")
+m_info(1,1)
+state_vec = measure_sv(49, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 176
+gate = cu_gate(sigma_x(1), "c79c100x21", 100);
+state_vec =* gate;
+
+# Gate: 177
+gate = cu_gate(sigma_x(1), "c92c8x71", 100);
+state_vec =* gate;
+
+# Gate: 178
+m_info = pmeasure_norm_sv(68, state_vec);
+echo("Outcome of measuring qubit: 68")
+m_info(1,1)
+state_vec = measure_sv(68, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 179
+gate = cu_gate(phase, "x96", 100);
+state_vec =* gate;
+
+# Gate: 180
+gate = cu_gate(sigma_x(1), "c87c45x49", 100);
+state_vec =* gate;
+
+# Gate: 181
+m_info = pmeasure_norm_sv(33, state_vec);
+echo("Outcome of measuring qubit: 33")
+m_info(1,1)
+state_vec = measure_sv(33, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 182
+gate = cu_gate(hadamard(1), "x72", 100);
+state_vec =* gate;
+
+# Gate: 183
+gate = cu_gate(phase, "x54", 100);
+state_vec =* gate;
+
+# Gate: 184
+gate = cu_gate(phase, "x19", 100);
+state_vec =* gate;
+
+# Gate: 185
+gate = cu_gate(hadamard(1), "x94", 100);
+state_vec =* gate;
+
+# Gate: 186
+m_info = pmeasure_norm_sv(64, state_vec);
+echo("Outcome of measuring qubit: 64")
+m_info(1,1)
+state_vec = measure_sv(64, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 187
+gate = cu_gate(sigma_x(1), "c66c12x11", 100);
+state_vec =* gate;
+
+# Gate: 188
+gate = cu_gate(hadamard(1), "x12", 100);
+state_vec =* gate;
+
+# Gate: 189
+gate = cu_gate(sigma_x(1), "c48x4", 100);
+state_vec =* gate;
+
+# Gate: 190
+gate = cu_gate(sigma_x(1), "c18x96", 100);
+state_vec =* gate;
+
+# Gate: 191
+gate = cu_gate(sigma_x(1), "c88c91x10", 100);
+state_vec =* gate;
+
+# Gate: 192
+gate = cu_gate(phase, "x36", 100);
+state_vec =* gate;
+
+# Gate: 193
+gate = cu_gate(hadamard(1), "x60", 100);
+state_vec =* gate;
+
+# Gate: 194
+gate = cu_gate(phase, "x5", 100);
+state_vec =* gate;
+
+# Gate: 195
+gate = cu_gate(sigma_x(1), "c31x58", 100);
+state_vec =* gate;
+
+# Gate: 196
+gate = cu_gate(sigma_x(1), "c49c18x4", 100);
+state_vec =* gate;
+
+# Gate: 197
+gate = cu_gate(sigma_x(1), "c81x10", 100);
+state_vec =* gate;
+
+# Gate: 198
+m_info = pmeasure_norm_sv(93, state_vec);
+echo("Outcome of measuring qubit: 93")
+m_info(1,1)
+state_vec = measure_sv(93, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 199
+gate = cu_gate(sigma_x(1), "c41x5", 100);
+state_vec =* gate;
+
+# Gate: 200
+gate = cu_gate(hadamard(1), "x88", 100);
+state_vec =* gate;
+
+# Gate: 201
+gate = cu_gate(sigma_x(1), "c90c6x3", 100);
+state_vec =* gate;
+
+# Gate: 202
+m_info = pmeasure_norm_sv(93, state_vec);
+echo("Outcome of measuring qubit: 93")
+m_info(1,1)
+state_vec = measure_sv(93, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 203
+m_info = pmeasure_norm_sv(6, state_vec);
+echo("Outcome of measuring qubit: 6")
+m_info(1,1)
+state_vec = measure_sv(6, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 204
+gate = cu_gate(phase, "x29", 100);
+state_vec =* gate;
+
+# Gate: 205
+gate = cu_gate(phase, "x26", 100);
+state_vec =* gate;
+
+# Gate: 206
+m_info = pmeasure_norm_sv(69, state_vec);
+echo("Outcome of measuring qubit: 69")
+m_info(1,1)
+state_vec = measure_sv(69, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 207
+gate = cu_gate(hadamard(1), "x28", 100);
+state_vec =* gate;
+
+# Gate: 208
+gate = cu_gate(sigma_x(1), "c66x77", 100);
+state_vec =* gate;
+
+# Gate: 209
+gate = cu_gate(hadamard(1), "x69", 100);
+state_vec =* gate;
+
+# Gate: 210
+gate = cu_gate(sigma_x(1), "c25c79x3", 100);
+state_vec =* gate;
+
+# Gate: 211
+gate = cu_gate(sigma_x(1), "c99c43x22", 100);
+state_vec =* gate;
+
+# Gate: 212
+gate = cu_gate(hadamard(1), "x30", 100);
+state_vec =* gate;
+
+# Gate: 213
+gate = cu_gate(sigma_x(1), "c40x35", 100);
+state_vec =* gate;
+
+# Gate: 214
+gate = cu_gate(sigma_x(1), "c35x28", 100);
+state_vec =* gate;
+
+# Gate: 215
+gate = cu_gate(sigma_x(1), "c41x94", 100);
+state_vec =* gate;
+
+# Gate: 216
+gate = cu_gate(hadamard(1), "x4", 100);
+state_vec =* gate;
+
+# Gate: 217
+gate = cu_gate(sigma_x(1), "c52c73x76", 100);
+state_vec =* gate;
+
+# Gate: 218
+gate = cu_gate(phase, "x99", 100);
+state_vec =* gate;
+
+# Gate: 219
+gate = cu_gate(hadamard(1), "x56", 100);
+state_vec =* gate;
+
+# Gate: 220
+gate = cu_gate(hadamard(1), "x9", 100);
+state_vec =* gate;
+
+# Gate: 221
+gate = cu_gate(phase, "x68", 100);
+state_vec =* gate;
+
+# Gate: 222
+m_info = pmeasure_norm_sv(64, state_vec);
+echo("Outcome of measuring qubit: 64")
+m_info(1,1)
+state_vec = measure_sv(64, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 223
+m_info = pmeasure_norm_sv(86, state_vec);
+echo("Outcome of measuring qubit: 86")
+m_info(1,1)
+state_vec = measure_sv(86, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 224
+gate = cu_gate(sigma_x(1), "c7c35x36", 100);
+state_vec =* gate;
+
+# Gate: 225
+gate = cu_gate(sigma_x(1), "c74x71", 100);
+state_vec =* gate;
+
+# Gate: 226
+gate = cu_gate(phase, "x9", 100);
+state_vec =* gate;
+
+# Gate: 227
+m_info = pmeasure_norm_sv(95, state_vec);
+echo("Outcome of measuring qubit: 95")
+m_info(1,1)
+state_vec = measure_sv(95, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 228
+gate = cu_gate(hadamard(1), "x92", 100);
+state_vec =* gate;
+
+# Gate: 229
+gate = cu_gate(hadamard(1), "x54", 100);
+state_vec =* gate;
+
+# Gate: 230
+gate = cu_gate(sigma_x(1), "c2c26x87", 100);
+state_vec =* gate;
+
+# Gate: 231
+m_info = pmeasure_norm_sv(24, state_vec);
+echo("Outcome of measuring qubit: 24")
+m_info(1,1)
+state_vec = measure_sv(24, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 232
+gate = cu_gate(sigma_x(1), "c36x67", 100);
+state_vec =* gate;
+
+# Gate: 233
+gate = cu_gate(sigma_x(1), "c97x34", 100);
+state_vec =* gate;
+
+# Gate: 234
+gate = cu_gate(sigma_x(1), "c61x19", 100);
+state_vec =* gate;
+
+# Gate: 235
+gate = cu_gate(sigma_x(1), "c67c26x43", 100);
+state_vec =* gate;
+
+# Gate: 236
+gate = cu_gate(sigma_x(1), "c62c17x73", 100);
+state_vec =* gate;
+
+# Gate: 237
+gate = cu_gate(sigma_x(1), "c26x71", 100);
+state_vec =* gate;
+
+# Gate: 238
+gate = cu_gate(sigma_x(1), "c75x63", 100);
+state_vec =* gate;
+
+# Gate: 239
+gate = cu_gate(phase, "x28", 100);
+state_vec =* gate;
+
+# Gate: 240
+gate = cu_gate(phase, "x75", 100);
+state_vec =* gate;
+
+# Gate: 241
+gate = cu_gate(hadamard(1), "x60", 100);
+state_vec =* gate;
+
+# Gate: 242
+gate = cu_gate(hadamard(1), "x77", 100);
+state_vec =* gate;
+
+# Gate: 243
+m_info = pmeasure_norm_sv(91, state_vec);
+echo("Outcome of measuring qubit: 91")
+m_info(1,1)
+state_vec = measure_sv(91, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 244
+gate = cu_gate(hadamard(1), "x23", 100);
+state_vec =* gate;
+
+# Gate: 245
+m_info = pmeasure_norm_sv(78, state_vec);
+echo("Outcome of measuring qubit: 78")
+m_info(1,1)
+state_vec = measure_sv(78, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 246
+gate = cu_gate(hadamard(1), "x48", 100);
+state_vec =* gate;
+
+# Gate: 247
+m_info = pmeasure_norm_sv(53, state_vec);
+echo("Outcome of measuring qubit: 53")
+m_info(1,1)
+state_vec = measure_sv(53, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 248
+gate = cu_gate(sigma_x(1), "c22c96x17", 100);
+state_vec =* gate;
+
+# Gate: 249
+m_info = pmeasure_norm_sv(13, state_vec);
+echo("Outcome of measuring qubit: 13")
+m_info(1,1)
+state_vec = measure_sv(13, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 250
+m_info = pmeasure_norm_sv(14, state_vec);
+echo("Outcome of measuring qubit: 14")
+m_info(1,1)
+state_vec = measure_sv(14, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 251
+gate = cu_gate(sigma_x(1), "c60x38", 100);
+state_vec =* gate;
+
+# Gate: 252
+gate = cu_gate(sigma_x(1), "c23c12x40", 100);
+state_vec =* gate;
+
+# Gate: 253
+m_info = pmeasure_norm_sv(87, state_vec);
+echo("Outcome of measuring qubit: 87")
+m_info(1,1)
+state_vec = measure_sv(87, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 254
+m_info = pmeasure_norm_sv(56, state_vec);
+echo("Outcome of measuring qubit: 56")
+m_info(1,1)
+state_vec = measure_sv(56, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 255
+gate = cu_gate(hadamard(1), "x70", 100);
+state_vec =* gate;
+
+# Gate: 256
+gate = cu_gate(hadamard(1), "x32", 100);
+state_vec =* gate;
+
+# Gate: 257
+gate = cu_gate(sigma_x(1), "c65c19x91", 100);
+state_vec =* gate;
+
+# Gate: 258
+gate = cu_gate(sigma_x(1), "c66c87x63", 100);
+state_vec =* gate;
+
+# Gate: 259
+m_info = pmeasure_norm_sv(8, state_vec);
+echo("Outcome of measuring qubit: 8")
+m_info(1,1)
+state_vec = measure_sv(8, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 260
+gate = cu_gate(hadamard(1), "x97", 100);
+state_vec =* gate;
+
+# Gate: 261
+m_info = pmeasure_norm_sv(70, state_vec);
+echo("Outcome of measuring qubit: 70")
+m_info(1,1)
+state_vec = measure_sv(70, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 262
+m_info = pmeasure_norm_sv(4, state_vec);
+echo("Outcome of measuring qubit: 4")
+m_info(1,1)
+state_vec = measure_sv(4, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 263
+gate = cu_gate(sigma_x(1), "c47c42x20", 100);
+state_vec =* gate;
+
+# Gate: 264
+gate = cu_gate(phase, "x54", 100);
+state_vec =* gate;
+
+# Gate: 265
+gate = cu_gate(hadamard(1), "x64", 100);
+state_vec =* gate;
+
+# Gate: 266
+gate = cu_gate(sigma_x(1), "c53x19", 100);
+state_vec =* gate;
+
+# Gate: 267
+m_info = pmeasure_norm_sv(22, state_vec);
+echo("Outcome of measuring qubit: 22")
+m_info(1,1)
+state_vec = measure_sv(22, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 268
+gate = cu_gate(phase, "x12", 100);
+state_vec =* gate;
+
+# Gate: 269
+gate = cu_gate(sigma_x(1), "c25x31", 100);
+state_vec =* gate;
+
+# Gate: 270
+gate = cu_gate(sigma_x(1), "c34x96", 100);
+state_vec =* gate;
+
+# Gate: 271
+gate = cu_gate(sigma_x(1), "c96c77x20", 100);
+state_vec =* gate;
+
+# Gate: 272
+gate = cu_gate(hadamard(1), "x73", 100);
+state_vec =* gate;
+
+# Gate: 273
+gate = cu_gate(sigma_x(1), "c23c59x14", 100);
+state_vec =* gate;
+
+# Gate: 274
+gate = cu_gate(sigma_x(1), "c5x56", 100);
+state_vec =* gate;
+
+# Gate: 275
+gate = cu_gate(hadamard(1), "x74", 100);
+state_vec =* gate;
+
+# Gate: 276
+gate = cu_gate(sigma_x(1), "c9c37x48", 100);
+state_vec =* gate;
+
+# Gate: 277
+gate = cu_gate(phase, "x56", 100);
+state_vec =* gate;
+
+# Gate: 278
+gate = cu_gate(sigma_x(1), "c83x17", 100);
+state_vec =* gate;
+
+# Gate: 279
+gate = cu_gate(sigma_x(1), "c18x41", 100);
+state_vec =* gate;
+
+# Gate: 280
+gate = cu_gate(phase, "x44", 100);
+state_vec =* gate;
+
+# Gate: 281
+gate = cu_gate(phase, "x66", 100);
+state_vec =* gate;
+
+# Gate: 282
+gate = cu_gate(hadamard(1), "x70", 100);
+state_vec =* gate;
+
+# Gate: 283
+gate = cu_gate(hadamard(1), "x75", 100);
+state_vec =* gate;
+
+# Gate: 284
+gate = cu_gate(sigma_x(1), "c15x84", 100);
+state_vec =* gate;
+
+# Gate: 285
+gate = cu_gate(hadamard(1), "x74", 100);
+state_vec =* gate;
+
+# Gate: 286
+m_info = pmeasure_norm_sv(77, state_vec);
+echo("Outcome of measuring qubit: 77")
+m_info(1,1)
+state_vec = measure_sv(77, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 287
+gate = cu_gate(phase, "x53", 100);
+state_vec =* gate;
+
+# Gate: 288
+gate = cu_gate(sigma_x(1), "c52x62", 100);
+state_vec =* gate;
+
+# Gate: 289
+gate = cu_gate(sigma_x(1), "c89x9", 100);
+state_vec =* gate;
+
+# Gate: 290
+m_info = pmeasure_norm_sv(45, state_vec);
+echo("Outcome of measuring qubit: 45")
+m_info(1,1)
+state_vec = measure_sv(45, state_vec, m_info(1,1), m_info(1,2));
+
+# Gate: 291
+gate = cu_gate(sigma_x(1), "c79x61", 100);
+state_vec =* gate;
+
+# Gate: 292
+gate = cu_gate(phase, "x97", 100);
+state_vec =* gate;
+
+# Gate: 293
+gate = cu_gate(sigma_x(1), "c47c40x76", 100);
+state_vec =* gate;
+
+# Gate: 294
+gate = cu_gate(sigma_x(1), "c95c46x54", 100);
+state_vec =* gate;
+
+# Gate: 295
+gate = cu_gate(phase, "x70", 100);
+state_vec =* gate;
+
+# Gate: 296
+gate = cu_gate(phase, "x53", 100);
+state_vec =* gate;
+
+# Gate: 297
+gate = cu_gate(sigma_x(1), "c43c50x92", 100);
+state_vec =* gate;
+
+# Gate: 298
+gate = cu_gate(sigma_x(1), "c3x18", 100);
+state_vec =* gate;
+
+# Gate: 299
+gate = cu_gate(phase, "x64", 100);
+state_vec =* gate;
+
+# Gate: 300
+gate = cu_gate(hadamard(1), "x61", 100);
+state_vec =* gate;
+
+toc

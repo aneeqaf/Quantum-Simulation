@@ -1,0 +1,20 @@
+phase = [1 0; 0 i];
+state_vec = cb("0");
+count = 1;
+while (count < 2)
+  state_vec = kron(state_vec, cb("0"));
+  count = count + 1;
+end
+
+# H can be used instead of hadamard in version 3.1 and higher.
+gate = cu_gate(hadamard(1), "x1", 2);
+state_vec =* gate;
+
+gate = cu_gate(sigma_x(1), "c1x2", 2);
+state_vec =* gate;
+
+m_info = pmeasure_norm_sv(2, state_vec);
+echo("Outcome of measuring qubit 1: ")
+m_info(1,1)
+state_vec = measure_sv(2, state_vec, m_info(1,1), m_info(1,2));
+

@@ -130,6 +130,7 @@ int main(int argc, char *argv[]) {
             
             if(to_write) {
                 new_circuit.write_circuit_to_file(out_file + to_string(i) + ".txt");
+                new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
             }
             
             new_circuit.q_circuit -> simulate();

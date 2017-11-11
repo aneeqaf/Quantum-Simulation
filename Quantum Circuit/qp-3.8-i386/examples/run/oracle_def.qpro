@@ -1,0 +1,1 @@
+oracle = cu_gate(sigma_x(1), "ccx");

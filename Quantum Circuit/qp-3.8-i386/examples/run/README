@@ -1,0 +1,12 @@
+This directory contains a QuIDDPro script which simulates a small
+instance of Grover's quantum search algorithm.  The script
+demonstrates how to use the run command.
+
+Scripts
+-------
+
+simple_grover.qpro: A 3-qubit instance of Grover's quantum search
+                    algorithm which utilizes the run command
+
+oracle_def.qpro: The definition for an oracle which marks the last 
+		 index in the search space

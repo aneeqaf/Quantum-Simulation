@@ -1,0 +1,40 @@
+state = cb("0");
+q2 = cb("1");
+q3 = cb("1");
+q4 = cb("0");
+state = kron(state, q2);
+state = kron(state, q3);
+state = kron(state, q4) ;
+op = cu_gate(sigma_z(1), "iixi"); 
+state = op*state;
+op1 = cu_gate(rz(0.242578, 1), "iiix"); 
+op2 = cu_gate(rx(0.383139, 1), "iiix"); 
+op3 = cu_gate(rz(0.0134696, 1), "iiix");
+op = op1*op2*op3;
+state = op*state;
+op1 = cu_gate(rz(0.242578, 1), "iixi"); 
+op2 = cu_gate(rx(0.383139, 1), "iixi"); 
+op3 = cu_gate(rz(0.0134696, 1), "iixi");
+op = op1*op2*op3;
+state = op*state;
+
+
+state1 = cb("0");
+q2 = cb("1");
+state1 = kron(state1, q2); 
+op = cu_gate(hadamard(1), "xi"); 
+state1 = op*state1;
+op = cu_gate(hadamard(1), "ix"); 
+state1 = op*state1;
+
+state2 = cb("0");
+q2 = cb("1");
+q3 = cb("0");
+q4 = cb("0");
+state2 = kron(state2, q2);
+state2 = kron(state2, q3);
+state2 = kron(state2, q4) 
+op = cu_gate(hadamard(1), "iixi"); 
+state2 = op*state2;
+op = cu_gate(rx(0.583785, 1), "iiix");
+state2 = op*state2

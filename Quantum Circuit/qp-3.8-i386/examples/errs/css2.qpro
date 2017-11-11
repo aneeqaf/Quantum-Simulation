@@ -1,0 +1,83 @@
+# Author: George F. Viamontes
+#
+# This simulation encodes a single qubit using the 7-qubit CSS code.
+# A phase-flip error on the fifth physical qubit is introduced and
+# detected.
+
+tic
+# Initialize a qubit with the CSS code
+
+q_css = cb("0000000")*cb("0000000")';
+# H can be used instead of hadamard in version 3.1 and higher.
+tmp_op = kron(identity(4), hadamard(3)); 
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x4c7", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x2c7", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x1c7", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x4c6", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x3c6", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x1c6", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x4c5", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x3c5", 7);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "x2c5", 7);
+q_css = tmp_op*q_css*tmp_op';
+
+# Introduce an error
+tmp_op = cu_gate(sigma_z(1), "x5", 7);
+q_css = tmp_op*q_css*tmp_op';
+
+# Calculate the syndrome (check for phase flip error)
+tmp_op = hadamard(7);
+q_css = tmp_op*q_css*tmp_op';
+s0_2 = cb("000")*cb("000")';
+q_css = kron(q_css, s0_2);
+
+tmp_op = cu_gate(sigma_x(1), "c4x8", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c5x8", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c6x8", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x8", 10);
+q_css = tmp_op*q_css*tmp_op';
+
+tmp_op = cu_gate(sigma_x(1), "c2x9", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c3x9", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c6x9", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x9", 10);
+q_css = tmp_op*q_css*tmp_op';
+
+tmp_op = cu_gate(sigma_x(1), "c1x10", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c3x10", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c5x10", 10);
+q_css = tmp_op*q_css*tmp_op';
+tmp_op = cu_gate(sigma_x(1), "c7x10", 10);
+q_css = tmp_op*q_css*tmp_op';
+
+# Measure the syndrome ancilla qubits and determine if an error occurred
+tmp_op = kron(hadamard(7), identity(3));
+q_css = tmp_op*q_css*tmp_op';
+s0_value = pmeasure(8, q_css);
+s1_value = pmeasure(9, q_css);
+s2_value = pmeasure(10, q_css);
+
+if ((s0_value == 0) && (s1_value == 0) && (s2_value == 0))
+  echo("No error occurred!");
+else
+  echo("Phase flip error occurred on the following qubit");
+  s2_value + 2*s1_value + 4*s0_value
+end
+toc

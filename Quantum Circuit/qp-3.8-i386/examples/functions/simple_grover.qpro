@@ -1,0 +1,11 @@
+state = cb("001");
+state = hadamard(3)*state;  # H can be used instead of hadamard in
+			    # version 3.1 and higher
+state = oracle(state);
+state = cu_gate(hadamard(1), "xxi")*state;
+state = cu_gate(sigma_x(1), "xxi")*state;
+state = cu_gate(hadamard(1), "ixi")*state;
+state = cu_gate(sigma_x(1), "cxi")*state;
+state = cu_gate(hadamard(1), "ixi")*state;
+state = cu_gate(sigma_x(1), "xxi")*state;
+state = hadamard(3)*state

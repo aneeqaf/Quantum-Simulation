@@ -1,0 +1,560 @@
+# Authors: Dmitri Maslov, Gerhard Dueck, and Nathan Scott
+# Converted by: George F. Viamontes
+#
+# Reversible logic circuit implementation of the size 15 Hamming
+# optimal coding function.  The functionality of this circuit comes
+# from "Reversible Logic Synthesis Benchmarks Page"
+# (http://www.cs.uvic.ca/~dmaslov/)
+
+tic
+
+# Initialize the state
+density_state = cb("111101001010101")*cb("111101001010101")';
+
+# Gate 1
+op = cu_gate(sigma_x(1), "ixiiiciiicccccc");
+density_state = op*density_state*op';
+
+# Gate 2
+op = cu_gate(sigma_x(1), "ixiiiciiicicccc");
+density_state = op*density_state*op';
+
+# Gate 3
+op = cu_gate(sigma_x(1), "ixiiiiiiicicccc");
+density_state = op*density_state*op';
+
+# Gate 4
+op = cu_gate(sigma_x(1), "ixiiiiiiiciiccc");
+density_state = op*density_state*op';
+
+# Gate 5
+op = cu_gate(sigma_x(1), "ixciiiiiiciiccc");
+density_state = op*density_state*op';
+
+# Gate 6
+op = cu_gate(sigma_x(1), "ixciiiiiiiiiccc");
+density_state = op*density_state*op';
+
+# Gate 7
+op = cu_gate(sigma_x(1), "ixciiciiiiiiccc");
+density_state = op*density_state*op';
+
+# Gate 8
+op = cu_gate(sigma_x(1), "iixiiiiiiiccccc");
+density_state = op*density_state*op';
+
+# Gate 9
+op = cu_gate(sigma_x(1), "iixiiciiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 10
+op = cu_gate(sigma_x(1), "ixciiiiiicicicc");
+density_state = op*density_state*op';
+
+# Gate 11
+op = cu_gate(sigma_x(1), "ixciiiiiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 12
+op = cu_gate(sigma_x(1), "ixciiciiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 13
+op = cu_gate(sigma_x(1), "ixiiiiiciiiiccc");
+density_state = op*density_state*op';
+
+# Gate 14
+op = cu_gate(sigma_x(1), "iiiiiiixiiiiccc");
+density_state = op*density_state*op';
+
+# Gate 15
+op = cu_gate(sigma_x(1), "iiiiiiixiiicccc");
+density_state = op*density_state*op';
+
+# Gate 16
+op = cu_gate(sigma_x(1), "ixiiiiiciiiiccc");
+density_state = op*density_state*op';
+
+# Gate 17
+op = cu_gate(sigma_x(1), "iiixiiiiiiicccc");
+density_state = op*density_state*op';
+
+# Gate 18
+op = cu_gate(sigma_x(1), "iiixiiiiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 19
+op = cu_gate(sigma_x(1), "iiixiciiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 20
+op = cu_gate(sigma_x(1), "iiiiiiiiiiicxcc");
+density_state = op*density_state*op';
+
+# Gate 21
+op = cu_gate(sigma_x(1), "ixiiiiiiiiiiccc");
+density_state = op*density_state*op';
+
+# Gate 22
+op = cu_gate(sigma_x(1), "ixiiiciiicccicc");
+density_state = op*density_state*op';
+
+# Gate 23
+op = cu_gate(sigma_x(1), "ixiiiciiiiccicc");
+density_state = op*density_state*op';
+
+# Gate 24
+op = cu_gate(sigma_x(1), "ixiiiiiiiiccicc");
+density_state = op*density_state*op';
+
+# Gate 25
+op = cu_gate(sigma_x(1), "ixiiiiiiicccicc");
+density_state = op*density_state*op';
+
+# Gate 26
+op = cu_gate(sigma_x(1), "iiiiiiiiixicccc");
+density_state = op*density_state*op';
+
+# Gate 27
+op = cu_gate(sigma_x(1), "iiiiiiiiiixiccc");
+density_state = op*density_state*op';
+
+# Gate 28
+op = cu_gate(sigma_x(1), "iixiiiiiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 29
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiccxc");
+density_state = op*density_state*op';
+
+# Gate 30
+op = cu_gate(sigma_x(1), "iixiiciiiicccic");
+density_state = op*density_state*op';
+
+# Gate 31
+op = cu_gate(sigma_x(1), "iixiiiiiiicccic");
+density_state = op*density_state*op';
+
+# Gate 32
+op = cu_gate(sigma_x(1), "iiixiiiiiiiccic");
+density_state = op*density_state*op';
+
+# Gate 33
+op = cu_gate(sigma_x(1), "ixciiiiiiciccic");
+density_state = op*density_state*op';
+
+# Gate 34
+op = cu_gate(sigma_x(1), "ixiiiiiiiciccic");
+density_state = op*density_state*op';
+
+# Gate 35
+op = cu_gate(sigma_x(1), "ixiiiiiiiciicic");
+density_state = op*density_state*op';
+
+# Gate 36
+op = cu_gate(sigma_x(1), "iiiiiciiiixccic");
+density_state = op*density_state*op';
+
+# Gate 37
+op = cu_gate(sigma_x(1), "ixciiciiiiiccic");
+density_state = op*density_state*op';
+
+# Gate 38
+op = cu_gate(sigma_x(1), "iiiiixiiiiicccc");
+density_state = op*density_state*op';
+
+# Gate 39
+op = cu_gate(sigma_x(1), "iixiiciiiiicicc");
+density_state = op*density_state*op';
+
+# Gate 40
+op = cu_gate(sigma_x(1), "ixciiciiiciicic");
+density_state = op*density_state*op';
+
+# Gate 41
+op = cu_gate(sigma_x(1), "ixiiiciiiciicic");
+density_state = op*density_state*op';
+
+# Gate 42
+op = cu_gate(sigma_x(1), "ixciiiiiiiiiicc");
+density_state = op*density_state*op';
+
+# Gate 43
+op = cu_gate(sigma_x(1), "xiiiiiiiiiicccc");
+density_state = op*density_state*op';
+
+# Gate 44
+op = cu_gate(sigma_x(1), "iiiiiciiiiiicxc");
+density_state = op*density_state*op';
+
+# Gate 45
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixccc");
+density_state = op*density_state*op';
+
+# Gate 46
+op = cu_gate(sigma_x(1), "ixiiiciiiiiccic");
+density_state = op*density_state*op';
+
+# Gate 47
+op = cu_gate(sigma_x(1), "iiiiiiiiiixcicc");
+density_state = op*density_state*op';
+
+# Gate 48
+op = cu_gate(sigma_x(1), "ixciiiiiiciicic");
+density_state = op*density_state*op';
+
+# Gate 49
+op = cu_gate(sigma_x(1), "iixiiiiiiiiccic");
+density_state = op*density_state*op';
+
+# Gate 50
+op = cu_gate(sigma_x(1), "iiiiiciiixiicic");
+density_state = op*density_state*op';
+
+# Gate 51
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiixcc");
+density_state = op*density_state*op';
+
+# Gate 52
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiicxc");
+density_state = op*density_state*op';
+
+# Gate 53
+op = cu_gate(sigma_x(1), "ixciiiiiiiiicic");
+density_state = op*density_state*op';
+
+# Gate 54
+op = cu_gate(sigma_x(1), "iixiiiiiiiiicic");
+density_state = op*density_state*op';
+
+# Gate 55
+op = cu_gate(sigma_x(1), "iiiiiiiiixiiccc");
+density_state = op*density_state*op';
+
+# Gate 56
+op = cu_gate(sigma_x(1), "ixciiiiiiciiccc");
+density_state = op*density_state*op';
+
+# Gate 57
+op = cu_gate(sigma_x(1), "iiciiiiiiiicxic");
+density_state = op*density_state*op';
+
+# Gate 58
+op = cu_gate(sigma_x(1), "iiciiiiiiiccxic");
+density_state = op*density_state*op';
+
+# Gate 59
+op = cu_gate(sigma_x(1), "iiiiiiiiiiccxic");
+density_state = op*density_state*op';
+
+# Gate 60
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixcic");
+density_state = op*density_state*op';
+
+# Gate 61
+op = cu_gate(sigma_x(1), "iixiiiiiiiiicic");
+density_state = op*density_state*op';
+
+# Gate 62
+op = cu_gate(sigma_x(1), "iiiiiiiiiiicxic");
+density_state = op*density_state*op';
+
+# Gate 63
+op = cu_gate(sigma_x(1), "iiiiiiiiiixicic");
+density_state = op*density_state*op';
+
+# Gate 64
+op = cu_gate(sigma_x(1), "iixiiiiiiicccic");
+density_state = op*density_state*op';
+
+# Gate 65
+op = cu_gate(sigma_x(1), "iiciiiiiiicxcic");
+density_state = op*density_state*op';
+
+# Gate 66
+op = cu_gate(sigma_x(1), "iiiiiciiiiixiic");
+density_state = op*density_state*op';
+
+# Gate 67
+op = cu_gate(sigma_x(1), "iiiiiciiiiiixic");
+density_state = op*density_state*op';
+
+# Gate 68
+op = cu_gate(sigma_x(1), "iiixiciiiiiccic");
+density_state = op*density_state*op';
+
+# Gate 69
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiixic");
+density_state = op*density_state*op';
+
+# Gate 70
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixcic");
+density_state = op*density_state*op';
+
+# Gate 71
+op = cu_gate(sigma_x(1), "iiixiiiiiiiccic");
+density_state = op*density_state*op';
+
+# Gate 72
+op = cu_gate(sigma_x(1), "iiiiiiiiiiicccx");
+density_state = op*density_state*op';
+
+# Gate 73
+op = cu_gate(sigma_x(1), "iiiiixiiiiiiicc");
+density_state = op*density_state*op';
+
+# Gate 74
+op = cu_gate(sigma_x(1), "iiiixiiiiiicccc");
+density_state = op*density_state*op';
+
+# Gate 75
+op = cu_gate(sigma_x(1), "iiiiiciiiiiiccx");
+density_state = op*density_state*op';
+
+# Gate 76
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiixic");
+density_state = op*density_state*op';
+
+# Gate 77
+op = cu_gate(sigma_x(1), "iiiiixiiiiiiicc");
+density_state = op*density_state*op';
+
+# Gate 78
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiiccx");
+density_state = op*density_state*op';
+
+# Gate 79
+op = cu_gate(sigma_x(1), "iiiiixiiiiiiccc");
+density_state = op*density_state*op';
+
+# Gate 80
+op = cu_gate(sigma_x(1), "iiiiiciiiiiixic");
+density_state = op*density_state*op';
+
+# Gate 81
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiiixc");
+density_state = op*density_state*op';
+
+# Gate 82
+op = cu_gate(sigma_x(1), "iiiiiiiiiiicicx");
+density_state = op*density_state*op';
+
+# Gate 83
+op = cu_gate(sigma_x(1), "iiiiiiiiiixcici");
+density_state = op*density_state*op';
+
+# Gate 84
+op = cu_gate(sigma_x(1), "iiiiiiiiiiicxci");
+density_state = op*density_state*op';
+
+# Gate 86
+op = cu_gate(sigma_x(1), "iiiiiiiiixiccci");
+density_state = op*density_state*op';
+
+# Gate 87
+op = cu_gate(sigma_x(1), "iiiiiixiiiicccc");
+density_state = op*density_state*op';
+
+# Gate 88
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiicxc");
+density_state = op*density_state*op';
+
+# Gate 89
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixcic");
+density_state = op*density_state*op';
+
+# Gate 90
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiiicx");
+density_state = op*density_state*op';
+
+# Gate 91
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixiic");
+density_state = op*density_state*op';
+
+# Gate 92
+op = cu_gate(sigma_x(1), "iiiiiiixiiicicc");
+density_state = op*density_state*op';
+
+# Gate 93
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiccix");
+density_state = op*density_state*op';
+
+# Gate 94
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiiicx");
+density_state = op*density_state*op';
+
+# Gate 95
+op = cu_gate(sigma_x(1), "iiiiiiiixiicccc");
+density_state = op*density_state*op';
+
+# Gate 96
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiciix");
+density_state = op*density_state*op';
+
+# Gate 97
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixiic");
+density_state = op*density_state*op';
+
+# Gate 98
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiicxi");
+density_state = op*density_state*op';
+
+# Gate 99
+op = cu_gate(sigma_x(1), "iiiiiiiiiiciiix");
+density_state = op*density_state*op';
+
+# Gate 100
+op = cu_gate(sigma_x(1), "iiiiiiiiixiicci");
+density_state = op*density_state*op';
+
+# Gate 101
+op = cu_gate(sigma_x(1), "iiiiiiiiiiiixci");
+density_state = op*density_state*op';
+
+# Gate 102
+op = cu_gate(sigma_x(1), "iiiiiiiiiiciixi");
+density_state = op*density_state*op';
+
+# Gate 103
+op = cu_gate(sigma_x(1), "iiiiiiiiixiiici");
+density_state = op*density_state*op';
+
+# Gate 104
+op = cu_gate(sigma_x(1), "iiiiiiiiiciiixi");
+density_state = op*density_state*op';
+
+# Gate 105
+op = cu_gate(sigma_x(1), "iiiiiiiiiciixii");
+density_state = op*density_state*op';
+
+# Gate 106
+op = cu_gate(sigma_x(1), "iiiiiiiixiiicii");
+density_state = op*density_state*op';
+
+# Gate 107
+op = cu_gate(sigma_x(1), "iiiiiiiiciiixii");
+density_state = op*density_state*op';
+
+# Gate 108
+op = cu_gate(sigma_x(1), "iiiiiiiiiiixcii");
+density_state = op*density_state*op';
+
+# Gate 109
+op = cu_gate(sigma_x(1), "iiiiiiiiicixiii");
+density_state = op*density_state*op';
+
+# Gate 110
+op = cu_gate(sigma_x(1), "iiiiiiixiiiciii");
+density_state = op*density_state*op';
+
+# Gate 111
+op = cu_gate(sigma_x(1), "iiiiiiiciiixiii");
+density_state = op*density_state*op';
+
+# Gate 112
+op = cu_gate(sigma_x(1), "iiiiiiiciixiiii");
+density_state = op*density_state*op';
+
+# Gate 113
+op = cu_gate(sigma_x(1), "iiiiiixiiiciiii");
+density_state = op*density_state*op';
+
+# Gate 114
+op = cu_gate(sigma_x(1), "iiiiiiciiixiiii");
+density_state = op*density_state*op';
+
+# Gate 115
+op = cu_gate(sigma_x(1), "iiiiiiciixiiiii");
+density_state = op*density_state*op';
+
+# Gate 116
+op = cu_gate(sigma_x(1), "iiiiixiiiciiiii");
+density_state = op*density_state*op';
+
+# Gate 117
+op = cu_gate(sigma_x(1), "iiiiiciiixiiiii");
+density_state = op*density_state*op';
+
+# Gate 118
+op = cu_gate(sigma_x(1), "iiiiiciixiiiiii");
+density_state = op*density_state*op';
+
+# Gate 119
+op = cu_gate(sigma_x(1), "iiiixiiiciiiiii");
+density_state = op*density_state*op';
+
+# Gate 120
+op = cu_gate(sigma_x(1), "iiiiciiixiiiiii");
+density_state = op*density_state*op';
+
+# Gate 121
+op = cu_gate(sigma_x(1), "iiiiciixiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 122
+op = cu_gate(sigma_x(1), "iiixiiiciiiiiii");
+density_state = op*density_state*op';
+
+# Gate 123
+op = cu_gate(sigma_x(1), "iiiciiixiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 124
+op = cu_gate(sigma_x(1), "iiiciixiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 125
+op = cu_gate(sigma_x(1), "iixiiiciiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 126
+op = cu_gate(sigma_x(1), "iiciiixiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 127
+op = cu_gate(sigma_x(1), "iiciixiiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 128
+op = cu_gate(sigma_x(1), "ixiiiciiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 129
+op = cu_gate(sigma_x(1), "iciiixiiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 130
+op = cu_gate(sigma_x(1), "iciixiiiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 131
+op = cu_gate(sigma_x(1), "xiiiciiiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 132
+op = cu_gate(sigma_x(1), "ciiixiiiiiiiiii");
+density_state = op*density_state*op';
+
+# Gate 133
+op = cu_gate(sigma_x(1), "ciixiiiiiiiiiii");
+density_state = op*density_state*op';
+
+# Measure each qubit and output its value
+echo("The 15-bit Hamming encoding is:")
+a = pmeasure(1, density_state)
+b = pmeasure(2, density_state)
+c = pmeasure(3, density_state)
+d = pmeasure(4, density_state)
+e = pmeasure(5, density_state)
+f = pmeasure(6, density_state)
+g = pmeasure(7, density_state)
+h = pmeasure(8, density_state)
+i = pmeasure(9, density_state)
+j = pmeasure(10, density_state)
+k = pmeasure(11, density_state)
+l = pmeasure(12, density_state)
+m = pmeasure(13, density_state)
+n = pmeasure(14, density_state)
+o = pmeasure(15, density_state)
+
+toc
