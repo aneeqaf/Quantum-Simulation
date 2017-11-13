@@ -17,7 +17,7 @@ using namespace std;
 vector<func_t> circuit_generator::gates{};
 vector<rot_f> circuit_generator::rot_gates{};
 vector<string> circuit_generator::quiddpro_func;
-cplx circuit_generator::c = cplx(-0.99989190,0);
+cmplx circuit_generator::c = cmplx(-0.99989190,0);
 
 
 circuit_generator::circuit_generator(): q_circuit(new circuit()){
@@ -28,10 +28,11 @@ circuit_generator::circuit_generator(): q_circuit(new circuit()){
     gates.push_back(create_Z);
     gates.push_back(random_gate);
     
-    rot_gates.push_back(X_rotation);
-    rot_gates.push_back(Y_rotation);
-    rot_gates.push_back(Z_rotation);
-    rot_gates.push_back(phase_gate);
+    rot_gates.push_back(create_X_rotation);
+    rot_gates.push_back(create_Y_rotation);
+    rot_gates.push_back(create_Z_rotation);
+    rot_gates.push_back(create_phase_gate);
+//     gates.push_back(create_T);
     
     quiddpro_func.push_back("hadamard");
     quiddpro_func.push_back("sigma_x");
@@ -42,14 +43,15 @@ circuit_generator::circuit_generator(): q_circuit(new circuit()){
     quiddpro_func.push_back("ry");
     quiddpro_func.push_back("rz");
     quiddpro_func.push_back("phase");
+    
 }
 
-inline shared_ptr<gate> circuit_generator::create_gate(const cplx& a, const cplx& b,
-                                          const cplx& c, const cplx& d)
+inline shared_ptr<gate> circuit_generator::create_gate(const cmplx& a, const cmplx& b,
+                                          const cmplx& c, const cmplx& d)
 {
-    vector<cplx> row2;
-    vector<cplx> row1;
-    vector<vector<cplx>> g;
+    vector<cmplx> row2;
+    vector<cmplx> row1;
+    vector<vector<cmplx>> g;
     
     row1.push_back(a);
     row1.push_back(b);
@@ -63,42 +65,42 @@ inline shared_ptr<gate> circuit_generator::create_gate(const cplx& a, const cplx
 
 inline shared_ptr<gate> circuit_generator::create_hadamard()
 {
-    return create_gate(cplx(1/sqrt(2), 0),
-                       cplx(1/sqrt(2), 0),
-                       cplx(1/sqrt(2), 0),
-                       cplx(-1/sqrt(2), 0));
+    return create_gate(cmplx(1/sqrt(2), 0),
+                       cmplx(1/sqrt(2), 0),
+                       cmplx(1/sqrt(2), 0),
+                       cmplx(-1/sqrt(2), 0));
 }
 
 inline shared_ptr<gate> circuit_generator::create_X()
 {
-    return create_gate(cplx(0, 0),
-                       cplx(1, 0),
-                       cplx(1, 0),
-                       cplx(0, 0));
+    return create_gate(cmplx(0, 0),
+                       cmplx(1, 0),
+                       cmplx(1, 0),
+                       cmplx(0, 0));
 }
 
 inline shared_ptr<gate> circuit_generator::create_Y()
 {
-    return create_gate(cplx(0, 0),
-                       cplx(0, -1),
-                       cplx(0, 1),
-                       cplx(0, 0));
+    return create_gate(cmplx(0, 0),
+                       cmplx(0, -1),
+                       cmplx(0, 1),
+                       cmplx(0, 0));
 }
 
 inline shared_ptr<gate> circuit_generator::create_Z()
 {
-    return create_gate(cplx(1, 0),
-                       cplx(0, 0),
-                       cplx(0, 0),
-                       cplx(-1, 0));
+    return create_gate(cmplx(1, 0),
+                       cmplx(0, 0),
+                       cmplx(0, 0),
+                       cmplx(-1, 0));
 }
 
 inline shared_ptr<gate> circuit_generator::create_I()
 {
-    return create_gate(cplx(1, 0),
-                       cplx(0, 0),
-                       cplx(0, 0),
-                       cplx(1, 0));
+    return create_gate(cmplx(1, 0),
+                       cmplx(0, 0),
+                       cmplx(0, 0),
+                       cmplx(1, 0));
 }
 
 shared_ptr<gate> circuit_generator::random_gate()
@@ -107,28 +109,28 @@ shared_ptr<gate> circuit_generator::random_gate()
     vector<shared_ptr<gate>> rotation_gates;
     
    double theta = ((double)rand())/double(RAND_MAX), theta1, theta2;
-    rotation_gates.push_back(Z_rotation(theta));
+    rotation_gates.push_back(create_Z_rotation(theta));
     
     theta2 = (double)rand()/double(RAND_MAX);
-    shared_ptr<gate> rand_gate = Z_rotation(theta2);
-    rand_gate -> gate_identification.push_back(7);
+    shared_ptr<gate> rand_gate = create_Z_rotation(theta2);
+    rand_gate -> gate_identification.push_back(gate::Gates::Z_rotation);
     rand_gate -> theta.push_back(theta);
     
     theta1 = (double)rand()/double(RAND_MAX);
-    int xy = rand() % 2;
+    int xy = rand() % NUM_BASIS_STATES;
     
     if (xy == 0) {
-        rand_gate -> gate_identification.push_back(5);
+        rand_gate -> gate_identification.push_back(gate::Gates::X_rotation);
         rand_gate -> theta.push_back(theta1);
-        rotation_gates.push_back(X_rotation(theta1));
+        rotation_gates.push_back(create_X_rotation(theta1));
     }
     else {
-        rand_gate -> gate_identification.push_back(6);
+        rand_gate -> gate_identification.push_back(gate::Gates::Y_rotation);
         rand_gate -> theta.push_back(theta1);
-        rotation_gates.push_back(Y_rotation(theta1));
+        rotation_gates.push_back(create_Y_rotation(theta1));
     }
     
-    rand_gate -> gate_identification.push_back(7);
+    rand_gate -> gate_identification.push_back(gate::Gates::Z_rotation);
     rand_gate -> theta.push_back(theta2);
     rotation_gates.push_back(rand_gate);
     
@@ -139,37 +141,45 @@ shared_ptr<gate> circuit_generator::random_gate()
     return rand_gate;
 }
 
-inline shared_ptr<gate> circuit_generator::X_rotation(double theta)
+inline shared_ptr<gate> circuit_generator::create_X_rotation(double theta)
 {
-    return create_gate(cplx(cos(theta/2), 0),
-                      cplx(0, -sin(theta/2)),
-                      cplx(0, -sin(theta/2)),
-                      cplx(cos(theta/2), 0));
+    return create_gate(cmplx(cos(theta/2), 0),
+                      cmplx(0, -sin(theta/2)),
+                      cmplx(0, -sin(theta/2)),
+                      cmplx(cos(theta/2), 0));
 }
 
-inline shared_ptr<gate> circuit_generator::Y_rotation(double theta)
+inline shared_ptr<gate> circuit_generator::create_Y_rotation(double theta)
 {
-    return create_gate(cplx(cos(theta/2), 0),
-                        cplx(-sin(theta/2),0),
-                        cplx(sin(theta/2),0),
-                        cplx(cos(theta/2), 0));
+    return create_gate(cmplx(cos(theta/2), 0),
+                        cmplx(-sin(theta/2),0),
+                        cmplx(sin(theta/2),0),
+                        cmplx(cos(theta/2), 0));
 }
 
-inline shared_ptr<gate> circuit_generator::Z_rotation(double theta)
+inline shared_ptr<gate> circuit_generator::create_Z_rotation(double theta)
 {
-    return create_gate(exp(cplx(0,-theta/2)),
-                      cplx(0, 0),
-                      cplx(0, 0),
-                      exp(cplx(0,theta/2)));
+    return create_gate(exp(cmplx(0,-theta/2)),
+                      cmplx(0, 0),
+                      cmplx(0, 0),
+                      exp(cmplx(0,theta/2)));
 }
 
-inline shared_ptr<gate> circuit_generator::phase_gate(double theta)
+inline shared_ptr<gate> circuit_generator::create_phase_gate(double theta)
 {
-    return create_gate(cplx(1,0),
-                      cplx(0, 0),
-                      cplx(0, 0),
-                      cplx(0,1));
-//exp(cplx(0, theta * M_PI * 2))
+    return create_gate(cmplx(1,0),
+                      cmplx(0, 0),
+                      cmplx(0, 0),
+                      cmplx(0,1));
+//exp(cmplx(0, theta * M_PI * 2))
+}
+
+inline shared_ptr<gate> circuit_generator::create_T()
+{
+    return create_gate(cmplx(1,0),
+                       cmplx(0, 0),
+                       cmplx(0, 0),
+                       exp(cmplx(0,M_PI/4)));
 }
 
 void circuit_generator::create_rand_circuit(int qubits, int num_gates)
@@ -182,24 +192,24 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
     q_circuit -> qubits = qubits;
     for (int i = 0; i < qubits; ++i) {
         int q = rand() % 2;
-        vector<cplx> bits;
+        vector<cmplx> bits;
         
         if (q == 0) {
-            bits.push_back(cplx(1,0));
-            bits.push_back(cplx(0,0));
+            bits.push_back(cmplx(1,0));
+            bits.push_back(cmplx(0,0));
         }
         else {
-            bits.push_back(cplx(0,0));
-            bits.push_back(cplx(1,0));
+            bits.push_back(cmplx(0,0));
+            bits.push_back(cmplx(1,0));
         }
      
-        test_bits.push_back(q);
+        classical_bits.push_back(q);
         
         if (i > 0) {
-            q_circuit -> state_vector = tensor_v_product(q_circuit -> state_vector, bits);
+            q_circuit -> circuit_state -> state_vector = tensor_v_product(q_circuit -> circuit_state -> state_vector, bits);
         }
         else {
-            q_circuit -> state_vector = bits;
+            q_circuit -> circuit_state -> state_vector = bits;
         }
     }
     
@@ -207,21 +217,19 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
     
     for (int i = 0 ; i < num_gates; ++i) {
         int q = rand() % qubits;
-        int g = rand() % 10;
+        gate::Gates g = static_cast<gate::Gates>(rand() % NUM_GATES);
         
         shared_ptr<gate> temp = shared_ptr<gate>(new gate());
-        //change this to include any number of controls for many targets, but only one target gate.
-        //Introduce a new gate that does that. If there are multiple target gates for the same control,
-        //must be on a different line
-        if (g == 9) {
-            vector<int> num_c(rand() % (qubits-1) + 1, -1); //change 3 to qubits
-            vector<int> num_t(1, -1); // change to rand() % qubits - num_c - 1
+        
+        if (g == gate::Gates::Control) {
+            vector<short> num_c(rand() % (qubits-1) + 1, -1); //change 3 to qubits
+            vector<short> num_t(1, -1); // change to rand() % qubits - num_c - 1
             q = -1;
             
             temp -> gate_identification.push_back(g);
             temp -> theta.push_back(0);
             temp -> num_controls = (int)num_c.size();
-            g = rand() % 9;
+            g = static_cast<gate::Gates>(rand() % gate::Gates::Control);
             
             auto check_reoccurance = [&num_c, &num_t](int i) {
                 for(auto n : num_c) {
@@ -237,7 +245,7 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
                 return true;
             };
             
-            auto rand_bit_gen = [&check_reoccurance, &qubits](vector<int>& to_gen) {
+            auto rand_bit_gen = [&check_reoccurance, &qubits](vector<short>& to_gen) {
                 int rbg = rand() % qubits;
                 for(auto& gen : to_gen) {
                     while(!check_reoccurance(rbg)) {
@@ -256,8 +264,8 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
             q_circuit -> gates_to_qubits[i].insert(q_circuit -> gates_to_qubits[i].end(), num_t.begin(), num_t.end());
         }
         
-        if ( g < 5 ) {
-            if(g == 4) {
+        if ( g <= gate::Gates::Random) {
+            if(g == gate::Gates::Random) {
                 shared_ptr<gate> rand_temp = gates[g]();
                 temp -> gate_identification.insert(temp -> gate_identification.end(),
                                                    rand_temp -> gate_identification.begin(),
@@ -275,13 +283,10 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
                 q_circuit -> gates_to_qubits[i].push_back(q);
             }
         }
-        else if (g < 9) {
+        else if (g < gate::Gates::Control) {
             double theta = (double)rand() / double(RAND_MAX);
-            temp -> rows = rot_gates[g-5](theta) -> rows;
+            temp -> rows = rot_gates[g - (gate::Gates::X_rotation)](theta) -> rows;
             temp -> gate_identification.push_back(g);
-            if (q == -1) {
-                temp -> theta.push_back(0);
-            }
             temp -> theta.push_back(theta);
             q_circuit -> gates.push_back(temp);
             if (q != -1) {
@@ -291,15 +296,206 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
     }
 }
 
+void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
+{
+    srand(time(NULL));
+    
+    q_circuit -> google = true;
+    enum GS_gates : int {X, Y, T};
+    
+    int GS_gates_num = 3;
+    
+    auto check_reoccurance = [](vector<short>& to_check, short q, short q1) {
+        for(int i = 0; i < to_check.size(); ++i) {
+            if(to_check[i] == q && to_check[++i] == q1) {
+                return false;
+            }
+        }
+        return true;
+    };
+    
+    auto check_reoccurance1 = [](vector<short>& to_check, short q) {
+        for(int i = 0; i < to_check.size(); ++i) {
+            if(to_check[i] == q) {
+                return false;
+            }
+        }
+        return true;
+    };
+    
+    //Each row represents a qubit. This is to keep track of the
+    //gates applied to this qubit.
+    vector<vector<gate::Gates>> qubit_to_gates(qubits);
+    vector<bool> T_gate_allowed(qubits, true);
+    q_circuit -> qubits = qubits;
+    
+    auto count_wires_gate = [&qubit_to_gates](vector<short>& CZ_pairs) {
+        int count = 0;
+        for (int i = 0; i < qubit_to_gates.size(); ++i) {
+            if ( qubit_to_gates[i].back() == gate::Gates::Control) {
+                CZ_pairs.push_back(i);
+                ++count;
+            }
+        }
+        return count;
+    };
+    auto count_wires_gate1 = [&qubit_to_gates]() {
+        int count = 0;
+        for (int i = 0; i < qubit_to_gates.size(); ++i) {
+            if ( qubit_to_gates[i].back() == gate::Gates::Control) {
+                ++count;
+            }
+        }
+        return count;
+    };
+    
+    q_circuit -> circuit_state -> state_vector.push_back(cmplx(1,0));
+    for (int i = 1; i < pow(2, qubits); ++i) {
+        q_circuit -> circuit_state -> state_vector.push_back(cmplx(0,0));
+    }
+    
+    for (int i = 0; i < qubits; ++i) {
+        qubit_to_gates[i].push_back(gate::Gates::Hadamard);
+        classical_bits.push_back(0);
+    }
+    
+    q_circuit -> gates_to_qubits.resize(qubits);
+    //Start by applying Hadamard Gates
+    for (int i = 0; i < qubits; ++i) {
+        shared_ptr<gate> temp = create_hadamard();
+        temp -> gate_identification.push_back(gate::Gates::Hadamard);
+        q_circuit -> gates.push_back(temp);
+        q_circuit -> gates_to_qubits[i].push_back(i);
+    }
+    q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
+    
+    int g_t_q_size = 0;
+    for (int i = 0; i < clock_cycles; i+=2) {
+        vector<short> CZ_pairs;
+        vector<short> current_CZ_pairs;
+        if (count_wires_gate1()) {
+            current_CZ_pairs.resize(rand() % (qubits) * 2);
+        }
+        else {
+            current_CZ_pairs.resize((1 + (rand() % (qubits - 1))) * 2);
+        }
+        
+        int CZ_size = (int) current_CZ_pairs.size();
+        int CZ_q = abs(qubits - CZ_size/2);
+        CZ_q = rand() % CZ_q;
+        for (int j = 0; j < CZ_size; ++j) {
+//            int CZ_q = rand () % (qubits - 1) ;
+//            while(!check_reoccurance(current_CZ_pairs, CZ_q, CZ_q + 1)) {
+//                CZ_q = rand() % (qubits - 1);
+//            }
+            
+            current_CZ_pairs[j++] = CZ_q;
+            current_CZ_pairs[j] = CZ_q + 1;
+            qubit_to_gates[CZ_q].push_back(gate::Gates::Control);
+            qubit_to_gates[CZ_q++].push_back(gate::Gates::Control);
+        }
+        
+        
+        //control phase gate
+        g_t_q_size = (int)q_circuit -> gates_to_qubits.size();
+        q_circuit -> gates_to_qubits.resize(q_circuit -> gates_to_qubits.size() + current_CZ_pairs.size()/2);
+        int k = 0;
+        for (int j = 0; j < current_CZ_pairs.size()/2; ++j) {
+            shared_ptr<gate> temp = create_phase_gate(0.0);
+            temp -> gate_identification.push_back(gate::Gates::Control);
+            temp -> gate_identification.push_back(gate::Gates::Phase);
+            temp -> num_controls = 1;
+            q_circuit -> gates.push_back(temp);
+            q_circuit -> gates_to_qubits[g_t_q_size + j].push_back(current_CZ_pairs[k++]);
+            q_circuit -> gates_to_qubits[g_t_q_size + j].push_back(current_CZ_pairs[k++]);
+        }
+        
+        if (current_CZ_pairs.size() > 0) {
+            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
+        }
+        
+        /*
+         • Place a gate at qubit q only if this qubit is occupied by a CZ gate in the previous cycle.
+         • Place a T gate at qubit q if there are no single- qubit gates in the previous cycles at
+         qubit q except for the initial cycle of Hadamard gates.
+         • Any gate at qubit q should be different from the gate at qubit q in the previous cycle.
+         */
+        
+        int qubits_for_gates = rand() % count_wires_gate(CZ_pairs);
+        vector<short> complied_qubits(qubits_for_gates, -1);
+        g_t_q_size = (int)q_circuit -> gates_to_qubits.size();
+        q_circuit -> gates_to_qubits.resize(q_circuit -> gates_to_qubits.size() + qubits_for_gates);
+        
+        for (int j = 0; j < qubits_for_gates; ++j) {
+            int q = rand() % qubits_for_gates;
+            while(!check_reoccurance1(complied_qubits, q)) {
+                q = rand() % qubits_for_gates;
+            }
+            complied_qubits[j] = CZ_pairs[q];
+            
+            GS_gates gate_to_apply;
+            if (T_gate_allowed[CZ_pairs[q]]) {
+                gate_to_apply = static_cast<GS_gates>(rand() % GS_gates_num);
+                while (qubit_to_gates[CZ_pairs[q]].back() == (int)gate_to_apply) {
+                    gate_to_apply = static_cast<GS_gates>(rand() % GS_gates_num);
+                }
+                if (gate_to_apply == GS_gates::T) {
+                    T_gate_allowed[CZ_pairs[q]] = false;
+                }
+            }
+            else {
+                gate_to_apply = static_cast<GS_gates>(rand() % (GS_gates_num - 1));
+                while (qubit_to_gates[CZ_pairs[q]].back() == (int)gate_to_apply) {
+                    gate_to_apply = static_cast<GS_gates>(rand() % (GS_gates_num - 1));
+                }
+            }
+            
+            shared_ptr<gate> temp;
+            
+            if (gate_to_apply == GS_gates::X) {
+                temp = create_X_rotation(0.5);
+                temp -> gate_identification.push_back(gate::Gates::X_rotation);
+                temp -> theta.push_back(0.5);
+                qubit_to_gates[CZ_pairs[q]].push_back(gate::Gates::X_rotation);
+            }
+            else if (gate_to_apply == GS_gates::Y) {
+                temp = create_Y_rotation(0.5);
+                temp -> gate_identification.push_back(gate::Gates::Y_rotation);
+                temp -> theta.push_back(0.5);
+                qubit_to_gates[CZ_pairs[q]].push_back(gate::Gates::Y_rotation);
+            }
+            else if (gate_to_apply == GS_gates::T) {
+                temp = create_T();
+                temp -> gate_identification.push_back(gate::Gates::T);
+                qubit_to_gates[CZ_pairs[q]].push_back(gate::Gates::T);
+            }
+            q_circuit -> gates.push_back(temp);
+            q_circuit -> gates_to_qubits[g_t_q_size + j].push_back(CZ_pairs[q]);
+        }
+        if(qubits_for_gates > 0) {
+            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
+        }
+    }
+    
+    g_t_q_size = (int)q_circuit -> gates_to_qubits.size();
+    q_circuit -> gates_to_qubits.resize(q_circuit -> gates_to_qubits.size() + qubits);
+    for (int i = 0; i < qubits; ++i) {
+        shared_ptr<gate> temp = create_I();
+        temp -> gate_identification.push_back(gate::Gates::Measurement);
+        q_circuit -> gates.push_back(temp);
+        q_circuit -> gates_to_qubits[g_t_q_size + i].push_back(i);
+    }
+}
+
 void circuit_generator::create_quiddpro_script(const string& input_file)
 {
     ofstream file;
     file.open(input_file);
     
-    file << "state = cb(\"" + to_string((int)real(test_bits[0]))<< "\");\n";;
+    file << "state = cb(\"" + to_string((int)real(classical_bits[0]))<< "\");\n";;
     
-    for (int q = 1; q < test_bits.size(); ++q) {
-        file << "state = kron(state, cb(\"" + to_string(test_bits[q]) << "\"));\n";
+    for (int q = 1; q < classical_bits.size(); ++q) {
+        file << "state = kron(state, cb(\"" + to_string(classical_bits[q]) << "\"));\n";
     }
     
     for (int i = 0; i < q_circuit -> gates.size(); ++i) {
@@ -308,8 +504,17 @@ void circuit_generator::create_quiddpro_script(const string& input_file)
         }
         int op_count = 0;
         bool control = false;
+        bool continue_ = false;
         for (int gt = 0; gt < q_circuit -> gates[i] -> gate_identification.size(); ++gt) {
             auto g = q_circuit -> gates[i] -> gate_identification[gt];
+            
+            if ( g == 12) {
+                file << "measure_sv(" + to_string(q_circuit -> gates_to_qubits[i][0] + 1)
+                + ", state)";
+                continue_ = true;
+                continue;
+            }
+            
             if (g != 9 ) {
                 file << "op" + to_string(op_count++)  + " = cu_gate(" + quiddpro_func[g] + "(";
             }
@@ -338,6 +543,9 @@ void circuit_generator::create_quiddpro_script(const string& input_file)
             }
         }
         
+        if (continue_) {
+            continue;
+        }
         if(op_count > 1) {
             file << "op = ";
             for (int n = 0; n < op_count; ++n) {
@@ -371,7 +579,7 @@ void circuit_generator::create_quiddpro_script(const string& input_file)
  */
 void circuit_generator::write_circuit_to_file(const string& input_file)
 {
-    int size_q = (int) q_circuit -> state_vector.size();
+    int size_q = (int) q_circuit -> circuit_state -> state_vector.size();
     
     if ( size_q == 0) {
         throw "Create circuit first by entering qubits";
@@ -382,7 +590,7 @@ void circuit_generator::write_circuit_to_file(const string& input_file)
     file << q_circuit -> qubits << "\n";
     for (int i = 0; i < size_q; ++i) {
         
-        file << q_circuit -> state_vector[i];
+        file << q_circuit -> circuit_state -> state_vector[i];
         file << " " ;
     }
     
@@ -442,13 +650,13 @@ void circuit_generator::read_input_file(const string& input_file)
     getline(file, input);
     getline(file, input);
     
-    cplx amp;
+    cmplx amp;
     double theta;
     int q, gt;
     char delim = '_';
     istringstream ss(input);
     while (ss >> amp) {
-        q_circuit -> state_vector.push_back(amp);
+        q_circuit -> circuit_state -> state_vector.push_back(amp);
     }
     
     while(getline(file, input)) {
@@ -459,7 +667,7 @@ void circuit_generator::read_input_file(const string& input_file)
         delim = '_';
         shared_ptr<gate> g (new gate());
         
-        vector<cplx> row;
+        vector<cmplx> row;
         while(iss >> re) {
             
             if(delim == '&' || sign == '&') {
@@ -476,7 +684,7 @@ void circuit_generator::read_input_file(const string& input_file)
                 iss >> delim;
             }
             
-            cplx c1(re, im);
+            cmplx c1(re, im);
             row.push_back(c1);
         }
         
@@ -505,7 +713,7 @@ void circuit_generator::read_input_file(const string& input_file)
         
         getline(file, input);
         istringstream qis(input);
-        vector<int> qs;
+        vector<short> qs;
         qis >> type;
         if (type == 'q') {
             while(qis >> q) {

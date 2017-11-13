@@ -7,13 +7,7 @@
 
 /*
  * Input File Format:
- * <Number of qubits in the systems>
- * <value of qubit 1> <value of qubit 2> ...
- * <gate to be applied to the below qubits>
- * <qubit number> <qubit number>
- * <gate to be applied to the below qubits>
- * <qubit number> <qubit number>
- *  .... so on. Rest of file follows same format.
+ * 
  */
 
 #include <sstream>
@@ -38,20 +32,22 @@ int main(int argc, char *argv[]) {
     static struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "create",    required_argument,       nullptr, 'c' },
+        { "google",    required_argument,       nullptr, 'g' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "test",    no_argument,       nullptr, 't' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     int c = 0;
-    bool inputfile = false, create = false, to_write = false, test = false;
+    bool inputfile = false, create = false, to_write = false,
+    test = false, google = false;;
     int idx = 0;
     
     string input_filename = "", out_file = "";
     int numQ = 0, numG = 0;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:c:o:t", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:c:o:g:t", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
@@ -63,6 +59,8 @@ int main(int argc, char *argv[]) {
                 input_filename = string(optarg);
                 break;
             }
+            case 'g':
+                google = true;
             case 'c': {
                 create = true;
                 if (argc < 3) {
@@ -71,7 +69,7 @@ int main(int argc, char *argv[]) {
                 }
                 string opt = "";
                 int i = 0;
-                for (; optarg[i] != '-' && i < argc && optarg[i] != '_'; ++i) {
+                for (; optarg[i] != '-' && optarg[i] != '_'; ++i) {
                     if(optarg[i] == '\0')
                         opt += " ";
                     else
@@ -116,13 +114,20 @@ int main(int argc, char *argv[]) {
             test_circuit = *(new_circuit.q_circuit);
         }
         
-        new_circuit.q_circuit -> simulate();
+        new_circuit.q_circuit -> simulate(out_file);
         new_circuit.q_circuit -> print_state();
-        
+        new_circuit.q_circuit -> print_probabilities(out_file);
     }
     if(create) {
         for (int i = 0; i < num_qubits.size(); ++i){
-            new_circuit.create_rand_circuit(num_qubits[i], num_gates[i]);
+            if (google) {
+                new_circuit.create_google_rand_circuit(num_qubits[i], num_gates[i]);
+               // new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
+            }
+            else {
+                new_circuit.create_rand_circuit(num_qubits[i], num_gates[i]);
+                new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
+            }
             
             if(test) {
                 test_circuit = *(new_circuit.q_circuit);
@@ -130,23 +135,23 @@ int main(int argc, char *argv[]) {
             
             if(to_write) {
                 new_circuit.write_circuit_to_file(out_file + to_string(i) + ".txt");
-                new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
             }
             
-            new_circuit.q_circuit -> simulate();
+            new_circuit.q_circuit -> simulate(out_file);
             new_circuit.q_circuit -> print_state();
+            new_circuit.q_circuit -> print_probabilities(out_file);
         }
     }
-    if(test) {
-        if( test_circuit.test(*(new_circuit.q_circuit)) == 1) {
-            cout << "Pass!\n";
-        }
-        else {
-            test_circuit.print_state();
-            new_circuit.q_circuit -> print_state();
-            cout << "Fail!\n";
-        }
-    }
+//    if(test) {
+//        if( test_circuit.test(*(new_circuit.q_circuit)) == 1) {
+//            cout << "Pass!\n";
+//        }
+//        else {
+//            test_circuit.print_state();
+//            new_circuit.q_circuit -> print_state();
+//            cout << "Fail!\n";
+//        }
+//    }
     
     return 0;
     

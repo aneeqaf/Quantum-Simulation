@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <complex>
+#include <ctime>
 #include <algorithm>
 #include <random>
 #include <map>
@@ -22,9 +23,11 @@
 
 using namespace std;
 
-using cplx = std::complex<float>;
+using cmplx = std::complex<float>;
 typedef shared_ptr<gate> (*func_t) (void);
 typedef shared_ptr<gate> (*rot_f) (double);
+const int NUM_GATES = 10;
+const int NUM_BASIS_STATES = 2;
 
 /*
  This is a ciruit generator which provides functionality for creating most,
@@ -36,9 +39,10 @@ typedef shared_ptr<gate> (*rot_f) (double);
  */
 class circuit_generator {
 public:
+    
     static vector<string> quiddpro_func;
     
-    static cplx c;
+    static cmplx c;
     /*
      * 0:Hadamard
      * 1:X
@@ -55,9 +59,8 @@ public:
      * 3 : Phase
      */
     static vector<rot_f> rot_gates;
-    vector<int> test_bits;
-    
     shared_ptr<circuit> q_circuit;
+    vector<int> classical_bits;
     
     static inline shared_ptr<gate> create_hadamard();
     static inline shared_ptr<gate> create_X();
@@ -70,12 +73,12 @@ public:
     static inline shared_ptr<gate> control_target(vector<int>& control_bits, vector<int>& targets,
                                                   vector<shared_ptr<gate>>& target_gates);
     
-    static inline shared_ptr<gate> phase_gate(double theta);
-    static inline shared_ptr<gate> X_rotation(double theta);
-    static inline shared_ptr<gate> Y_rotation(double theta);
-    static inline shared_ptr<gate> Z_rotation(double theta);
-    static inline shared_ptr<gate> create_gate(const cplx& a, const cplx& b,
-                                        const cplx& c, const cplx& d);
+    static inline shared_ptr<gate> create_phase_gate(double theta);
+    static inline shared_ptr<gate> create_X_rotation(double theta);
+    static inline shared_ptr<gate> create_Y_rotation(double theta);
+    static inline shared_ptr<gate> create_Z_rotation(double theta);
+    static inline shared_ptr<gate> create_gate(const cmplx& a, const cmplx& b,
+                                        const cmplx& c, const cmplx& d);
     
     void create_rand_circuit(int qubits, int num_gates);
     void create_google_rand_circuit(int qubits, int num_gates);

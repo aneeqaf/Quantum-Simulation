@@ -16,15 +16,15 @@
 
 using namespace std;
 
-vector<vector<cplx>> matrix_mult(vector<vector<cplx>>& g1,
-                                            vector<vector<cplx>>& g2) {
+vector<vector<cmplx>> matrix_mult(vector<vector<cmplx>>& g1,
+                                            vector<vector<cmplx>>& g2) {
     
-    vector<vector<cplx>> product;
+    vector<vector<cmplx>> product;
     
     for (int i = 0; i < g1.size(); ++i) {
-        vector<cplx> row;
+        vector<cmplx> row;
         for (int k = 0; k < g2[0].size(); ++k){
-            cplx sum = 0;
+            cmplx sum = 0;
             for (int j = 0; j < g2.size(); ++j) {
                 sum += g1[i][j] * g2[j][k];
             }
@@ -35,13 +35,13 @@ vector<vector<cplx>> matrix_mult(vector<vector<cplx>>& g1,
     return product;
 }
 
-vector<cplx> matrix_v_mult(vector<vector<cplx>>& matrix,
-                                      vector<cplx>& vector1) {
+vector<cmplx> matrix_v_mult(vector<vector<cmplx>>& matrix,
+                                      vector<cmplx>& vector1) {
     
-    vector<cplx> product;
+    vector<cmplx> product;
     
     for (int i = 0; i < matrix.size(); ++i) {
-        cplx sum = 0;
+        cmplx sum = 0;
         for (int j = 0; j < vector1.size(); ++j) {
             sum += matrix[i][j] * vector1[j];
         }
@@ -50,13 +50,13 @@ vector<cplx> matrix_v_mult(vector<vector<cplx>>& matrix,
     return product;
 }
 
-vector<cplx> matrix_v_mult_diag(vector<vector<cplx>>& matrix,
-                                      vector<cplx>& vector1) {
+vector<cmplx> matrix_v_mult_diag(vector<vector<cmplx>>& matrix,
+                                      vector<cmplx>& vector1) {
     
-    vector<cplx> product;
+    vector<cmplx> product;
     
     for (int i = 0; i < matrix.size(); ++i) {
-        cplx sum = 0;
+        cmplx sum = 0;
         sum += matrix[i][i] * vector1[i];
         product.push_back(sum);
     }
@@ -64,10 +64,10 @@ vector<cplx> matrix_v_mult_diag(vector<vector<cplx>>& matrix,
 }
 
 
-vector<cplx> tensor_v_product(vector<cplx>& first,
-                                         vector<cplx>& second) {
+vector<cmplx> tensor_v_product(vector<cmplx>& first,
+                                         vector<cmplx>& second) {
     
-    vector<cplx> tensor;
+    vector<cmplx> tensor;
     
     for (int i = 0; i < first.size(); ++i) {
         for (int j = 0; j < second.size(); ++j){
@@ -77,14 +77,14 @@ vector<cplx> tensor_v_product(vector<cplx>& first,
     return tensor;
 }
 
-vector<vector<cplx>> tensor_product(vector<vector<cplx>>& first,
-                                               vector<vector<cplx>>& second) {
+vector<vector<cmplx>> tensor_product(vector<vector<cmplx>>& first,
+                                               vector<vector<cmplx>>& second) {
     
-    vector<vector<cplx>> tensor;
+    vector<vector<cmplx>> tensor;
     
     for (int i = 0; i < first.size(); ++i) {
         for (int j = 0; j < second.size(); ++j){
-            vector<cplx> row;
+            vector<cmplx> row;
             for(int k = 0; k < first[i].size(); ++k){
                 for(int l = 0; l < second[j].size(); ++l) {
                     row.push_back(first[i][k] * second[j][l]);
@@ -96,19 +96,19 @@ vector<vector<cplx>> tensor_product(vector<vector<cplx>>& first,
     return tensor;
 }
 
-vector<vector<cplx>> tensor_c(vector<vector<cplx>>& first,
-                                         vector<vector<cplx>>& second, cplx c)
+vector<vector<cmplx>> tensor_c(vector<vector<cmplx>>& first,
+                                         vector<vector<cmplx>>& second, cmplx c)
 {
-    vector<vector<cplx>> tensor;
+    vector<vector<cmplx>> tensor;
     
     for (int i = 0; i < first.size(); ++i) {
         for (int j = 0; j < second.size(); ++j){
-            vector<cplx> row;
+            vector<cmplx> row;
             for(int k = 0; k < first[i].size(); ++k){
                 for(int l = 0; l < second[j].size(); ++l) {
                     if(first[i][k] == c) {
                         if(j == l) {
-                            row.push_back(first[i][k] * cplx(1,0));
+                            row.push_back(first[i][k] * cmplx(1,0));
                         }
                         else {
                             row.push_back(0);
@@ -125,14 +125,14 @@ vector<vector<cplx>> tensor_c(vector<vector<cplx>>& first,
     return tensor;
 }
 
-vector<vector<cplx>> matrix_inv(vector<vector<cplx>>& g) {
+vector<vector<cmplx>> matrix_inv(vector<vector<cmplx>>& g) {
     
-    vector<vector<cplx>> inv = g;
+    vector<vector<cmplx>> inv = g;
     
     inv[0][1] = -g[1][0];
     inv[1][0] = -g[0][1];
     
-    cplx determinant = cplx(1,0) / (g[0][0]*g[1][1] - g[0][1]*g[1][0]) ;
+    cmplx determinant = cmplx(1,0) / (g[0][0]*g[1][1] - g[0][1]*g[1][0]) ;
     
     for (int i = 0; i < g.size(); ++i) {
         inv[i][0] = determinant * inv[i][0];
