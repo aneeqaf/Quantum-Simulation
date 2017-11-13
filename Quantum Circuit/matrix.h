@@ -14,14 +14,14 @@
 #include <stdio.h>
 
 using namespace std;
-using cplx = std::complex<float>;
+using cmplx = std::complex<float>;
 
-extern vector<vector<cplx>> matrix_mult(vector<vector<cplx>>& g1, vector<vector<cplx>>& g2);
-extern vector<cplx> matrix_v_mult(vector<vector<cplx>>& matrix, vector<cplx>& vector1);
-extern vector<cplx> matrix_v_mult_diag(vector<vector<cplx>>& matrix, vector<cplx>& vector1);
-extern vector<cplx> tensor_v_product(vector<cplx>& first, vector<cplx>& second);
-extern vector<vector<cplx>> tensor_product(vector<vector<cplx>>& first, vector<vector<cplx>>& second);
-extern vector<vector<cplx>> matrix_inv(vector<vector<cplx>>& g);
-extern vector<vector<cplx>> tensor_c(vector<vector<cplx>>& first, vector<vector<cplx>>& second, cplx c);
+extern vector<vector<cmplx>> matrix_mult(vector<vector<cmplx>>& g1, vector<vector<cmplx>>& g2);
+extern vector<cmplx> matrix_v_mult(vector<vector<cmplx>>& matrix, vector<cmplx>& vector1);
+extern vector<cmplx> matrix_v_mult_diag(vector<vector<cmplx>>& matrix, vector<cmplx>& vector1);
+extern vector<cmplx> tensor_v_product(vector<cmplx>& first, vector<cmplx>& second);
+extern vector<vector<cmplx>> tensor_product(vector<vector<cmplx>>& first, vector<vector<cmplx>>& second);
+extern vector<vector<cmplx>> matrix_inv(vector<vector<cmplx>>& g);
+extern vector<vector<cmplx>> tensor_c(vector<vector<cmplx>>& first, vector<vector<cmplx>>& second, cmplx c);
 
 #endif /* matrix_h */
