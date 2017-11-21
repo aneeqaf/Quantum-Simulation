@@ -33,13 +33,14 @@ int main(int argc, char *argv[]) {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "create",    required_argument,       nullptr, 'c' },
         { "google",    required_argument,       nullptr, 'g' },
+        { "googleInput",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "test",    no_argument,       nullptr, 't' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     int c = 0;
-    bool inputfile = false, create = false, to_write = false,
+    bool inputfile = false, googleInput = false, create = false, to_write = false,
     test = false, google = false;;
     int idx = 0;
     
@@ -47,11 +48,20 @@ int main(int argc, char *argv[]) {
     int numQ = 0, numG = 0;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:c:o:g:t", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:c:o:g:h:t", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
                 inputfile = true;
+                if (argc < 2) {
+                    cerr << "Please enter filename\n";
+                    exit(1);
+                }
+                input_filename = string(optarg);
+                break;
+            }
+            case 'h': {
+                googleInput = true;
                 if (argc < 2) {
                     cerr << "Please enter filename\n";
                     exit(1);
@@ -86,7 +96,7 @@ int main(int argc, char *argv[]) {
             }
             case 'o': {
                 to_write = true;
-                if (create == false) {
+                if (create == false && inputfile == false && googleInput == false) {
                     cerr << "Please specify what circuit to create first\n";
                     exit(1);
                 }
@@ -107,36 +117,40 @@ int main(int argc, char *argv[]) {
     
     circuit test_circuit;
     circuit_generator new_circuit;
-    if (inputfile) {
-        new_circuit.read_input_file(input_filename);
+    if (inputfile || googleInput) {
         
-        if(test) {
-            test_circuit = *(new_circuit.q_circuit);
+        if (inputfile) {
+            new_circuit.read_input_file(input_filename);
+        }
+        else {
+            new_circuit.read_google_input_files(input_filename);
         }
         
+        new_circuit.create_quiddpro_script(out_file + ".qpro");
+//        new_circuit.q_circuit -> circuit_preprocessing();
         new_circuit.q_circuit -> simulate(out_file);
         new_circuit.q_circuit -> print_state();
         new_circuit.q_circuit -> print_probabilities(out_file);
     }
-    if(create) {
+    else if(create) {
         for (int i = 0; i < num_qubits.size(); ++i){
             if (google) {
                 new_circuit.create_google_rand_circuit(num_qubits[i], num_gates[i]);
-               // new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
             }
             else {
                 new_circuit.create_rand_circuit(num_qubits[i], num_gates[i]);
-                new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
             }
             
             if(test) {
                 test_circuit = *(new_circuit.q_circuit);
             }
             
-            if(to_write) {
+            if(to_write && num_qubits[0] <= 20) {
                 new_circuit.write_circuit_to_file(out_file + to_string(i) + ".txt");
+                new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
             }
             
+//            new_circuit.q_circuit -> circuit_preprocessing();
             new_circuit.q_circuit -> simulate(out_file);
             new_circuit.q_circuit -> print_state();
             new_circuit.q_circuit -> print_probabilities(out_file);

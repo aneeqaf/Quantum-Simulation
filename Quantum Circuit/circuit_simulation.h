@@ -20,6 +20,8 @@
 #include <utility>
 #include <ctime>
 #include <cassert>
+#include <deque>
+#include <bitset>
 #include "matrix.h"
 
 using namespace std;
@@ -30,39 +32,24 @@ class gate {
 public:
     enum Gates : int { Hadamard, X, Y, Z, Random, X_rotation, Y_rotation,
         Z_rotation, Phase, Control, Identity, T, Measurement};
-    /*
-   * 0:Hadamard
-   * 1:X
-   * 2:Y
-   * 3:Z
-   * 4:random
-   * 5:X_rotation
-   * 6:Y_rotation
-   * 7:Z_rotation
-   * 8:phase
-   * 9:control
-   * 10:identity
-   */
  
-    vector<int> gate_identification;
-    vector<double> theta;
-    int num_controls;
-    
-    //Only fill the rows when reading from the input file
     vector<vector<cmplx>> rows;
+    vector<short> qubits;
+    vector<short> gate_identification;
+    vector<float> theta;
+    short num_controls;
     
-    gate(vector<vector<cmplx>>& g): num_controls(0), rows(g) {}
+    gate(vector<vector<cmplx>>& g): num_controls(0), rows(g), qubits({}) {}
     gate(): num_controls(0){}
+    gate(const gate& rhs);
+    gate& operator=(const gate& rhs);
 };
 
 class state {
 public:
     vector<cmplx> state_vector;
-    map<int, cmplx> amplitudes;
+    map<int, cmplx> amp_apply_gate;
     vector<cmplx> apply_gate;
-    
-    map<int, cmplx>::iterator* iterator;
-    map<int, cmplx>::iterator* iterator1;
     
     void operator*(shared_ptr<gate> matrix);
     
@@ -81,13 +68,15 @@ private:
     class circuit_simulation;
 public:
     
-    vector<vector<short>> gates_to_qubits;
     vector<shared_ptr<gate>> gates;
-    vector<int> clock_cycles;
+    vector<vector<int>> qubit_to_gates;
+    vector<short> clock_cycles;
     state* circuit_state;
-    int qubits;
+    short qubits;
     bool google;
+    bool circuit_preprocessed;
     
+    void circuit_preprocessing();
     void simulate(string& outfile);
     int test(circuit& result);
     void print_state();
@@ -101,19 +90,23 @@ public:
 
 class circuit::circuit_simulation {
 public:
+    vector<bool> iterated;
     circuit* cir;
-    int t_bits;
-    int c_bits;
     
-    void initialize_control(int& index, int i);
-    void control_Not_opt();
-    void control_Z_opt(int i);
-    void control_Phase_opt(int i);
-    void control_rand_opt(int i);
-    void non_control_sim(vector<bool>& iterated, int i, int n, int num_bits);
-    template <typename Iterator> inline Iterator find_target(vector<bool>& iterated, Iterator iter, int count);
+    void initialize_control(int& index, int i, int c_bits);
+    template <typename function>
+        vector<int> initialize_control_set(int& index, int& i,
+                                           gate::Gates I, function& tp);
+    void control_sim(int i, int num_bits, int c_bits);
+    void rand_sim(vector<bool>& iterated, int i, int num_bits, int index);
     
-    circuit_simulation(circuit* c): cir(c), t_bits(0), c_bits(0) {};
+    template <typename Iterator> inline Iterator find_control_target(vector<bool>& iterated,
+                                                             Iterator iter, int c, int t_bits);
+    
+    template<typename function>
+    void control_opt(vector<int>& cbits, int i, function& gate_specific_opt);
+    
+    circuit_simulation(circuit* c): cir(c) {};
     ~circuit_simulation();
 };
 

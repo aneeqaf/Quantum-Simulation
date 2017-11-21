@@ -85,6 +85,7 @@ public:
     void write_circuit_to_file(const string& input_file);
     void create_quiddpro_script(const string& input_file);
     void read_input_file(const string& input_file);
+    void read_google_input_files(const string& input_file);
     
     circuit_generator();
     
