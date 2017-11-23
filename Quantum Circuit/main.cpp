@@ -120,17 +120,19 @@ int main(int argc, char *argv[]) {
     if (inputfile || googleInput) {
         
         if (inputfile) {
-            new_circuit.read_input_file(input_filename);
+            new_circuit.read_input_file("input/" + input_filename);
         }
         else {
-            new_circuit.read_google_input_files(input_filename);
+            new_circuit.read_google_input_files("random_circuits_examples/" + input_filename);
         }
         
-        new_circuit.create_quiddpro_script(out_file + ".qpro");
+        if(googleInput) {
+           new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + ".qpro");
+        }
+        
 //        new_circuit.q_circuit -> circuit_preprocessing();
-        new_circuit.q_circuit -> simulate(out_file);
-        new_circuit.q_circuit -> print_state();
-        new_circuit.q_circuit -> print_probabilities(out_file);
+        new_circuit.q_circuit -> simulate("probabilities/" + out_file);
+        new_circuit.q_circuit -> print_state("state/" + out_file);
     }
     else if(create) {
         for (int i = 0; i < num_qubits.size(); ++i){
@@ -146,14 +148,13 @@ int main(int argc, char *argv[]) {
             }
             
             if(to_write && num_qubits[0] <= 20) {
-                new_circuit.write_circuit_to_file(out_file + to_string(i) + ".txt");
-                new_circuit.create_quiddpro_script(out_file + to_string(i) + ".qpro");
+                new_circuit.write_circuit_to_file("input/" + out_file + to_string(i) + ".txt");
+                new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
             
 //            new_circuit.q_circuit -> circuit_preprocessing();
-            new_circuit.q_circuit -> simulate(out_file);
-            new_circuit.q_circuit -> print_state();
-            new_circuit.q_circuit -> print_probabilities(out_file);
+            new_circuit.q_circuit -> simulate("probabilities/" + out_file);
+            new_circuit.q_circuit -> print_state("state/" + out_file);
         }
     }
 //    if(test) {

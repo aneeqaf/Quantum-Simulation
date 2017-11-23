@@ -23,7 +23,6 @@
 
 using namespace std;
 
-using cmplx = std::complex<float>;
 typedef shared_ptr<gate> (*func_t) (void);
 typedef shared_ptr<gate> (*rot_f) (double);
 const int NUM_GATES = 10;

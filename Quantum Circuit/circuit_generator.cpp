@@ -65,10 +65,10 @@ inline shared_ptr<gate> circuit_generator::create_gate(const cmplx& a, const cmp
 
 inline shared_ptr<gate> circuit_generator::create_hadamard()
 {
-    shared_ptr<gate> g =  create_gate(cmplx(1/sqrt(2), 0),
-                           cmplx(1/sqrt(2), 0),
-                           cmplx(1/sqrt(2), 0),
-                           cmplx(-1/sqrt(2), 0));
+    shared_ptr<gate> g =  create_gate(cmplx(1, 0),
+                           cmplx(1, 0),
+                           cmplx(1, 0),
+                           cmplx(-1, 0));
     g -> gate_identification.push_back(gate::Gates::Hadamard);
     return g;
 }
@@ -153,10 +153,10 @@ shared_ptr<gate> circuit_generator::random_gate()
 
 inline shared_ptr<gate> circuit_generator::create_X_rotation(double theta)
 {
-    shared_ptr<gate> g = create_gate(cmplx(cos(theta/2), 0),
-                          cmplx(0, -sin(theta/2)),
-                          cmplx(0, -sin(theta/2)),
-                          cmplx(cos(theta/2), 0));
+    shared_ptr<gate> g = create_gate(cmplx(cos(theta*M_PI/2), 0),
+                          cmplx(0, -sin(theta*M_PI/2)),
+                          cmplx(0, -sin(theta*M_PI/2)),
+                          cmplx(cos(theta*M_PI/2), 0));
     g -> theta.push_back(theta);
     g -> gate_identification.push_back(gate::Gates::X_rotation);
     return g;
@@ -164,10 +164,10 @@ inline shared_ptr<gate> circuit_generator::create_X_rotation(double theta)
 
 inline shared_ptr<gate> circuit_generator::create_Y_rotation(double theta)
 {
-    shared_ptr<gate> g = create_gate(cmplx(cos(theta/2), 0),
-                            cmplx(-sin(theta/2),0),
-                            cmplx(sin(theta/2),0),
-                            cmplx(cos(theta/2), 0));
+    shared_ptr<gate> g = create_gate(cmplx(cos(theta*M_PI/2), 0),
+                            cmplx(-sin(theta*M_PI/2),0),
+                            cmplx(sin(theta*M_PI/2),0),
+                            cmplx(cos(theta*M_PI/2), 0));
     g -> theta.push_back(theta);
     g -> gate_identification.push_back(gate::Gates::Y_rotation);
     return g;
@@ -175,10 +175,10 @@ inline shared_ptr<gate> circuit_generator::create_Y_rotation(double theta)
 
 inline shared_ptr<gate> circuit_generator::create_Z_rotation(double theta)
 {
-    shared_ptr<gate> g = create_gate(exp(cmplx(0,-theta/2)),
+    shared_ptr<gate> g = create_gate(exp(cmplx(0,-theta*M_PI/2)),
                           cmplx(0, 0),
                           cmplx(0, 0),
-                          exp(cmplx(0,theta/2)));
+                          exp(cmplx(0,theta*M_PI/2)));
     g -> theta.push_back(theta);
     g -> gate_identification.push_back(gate::Gates::Z_rotation);
     return g;
@@ -522,7 +522,7 @@ void circuit_generator::create_quiddpro_script(const string& input_file)
                     file << "1), \"";
                 }
                 else if (g < gate::Gates::Control) {
-                    file << to_string(q_circuit -> gates[i] -> theta[gt]) + ", 1), \"";
+                    file << to_string(q_circuit -> gates[i] -> theta[gt]) + " * pi, 1), \"";
                 }
             }
             

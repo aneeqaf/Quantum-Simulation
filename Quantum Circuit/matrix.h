@@ -14,7 +14,7 @@
 #include <stdio.h>
 
 using namespace std;
-using cmplx = std::complex<float>;
+using cmplx = complex<float>;
 
 extern vector<vector<cmplx>> matrix_mult(vector<vector<cmplx>>& g1, vector<vector<cmplx>>& g2);
 extern vector<cmplx> matrix_v_mult(vector<vector<cmplx>>& matrix, vector<cmplx>& vector1);
