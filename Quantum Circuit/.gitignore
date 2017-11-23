@@ -7,3 +7,8 @@ qp-3.8-i386.tar.gz
 ../.DS_Store 
 env/
 random_circuits_examples/
+input/
+qpro_scripts/
+state/
+probabilities/
+sftp-config.json
