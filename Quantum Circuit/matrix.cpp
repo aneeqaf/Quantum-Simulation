@@ -35,8 +35,8 @@ vector<vector<cmplx>> matrix_mult(vector<vector<cmplx>>& g1,
     return product;
 }
 
-vector<cmplx> matrix_v_mult(vector<vector<cmplx>>& matrix,
-                                      vector<cmplx>& vector1) {
+vector<cmplx> matrix_v_mult(const vector<vector<cmplx>>& matrix,
+                            const vector<cmplx>& vector1) {
     
     vector<cmplx> product;
     

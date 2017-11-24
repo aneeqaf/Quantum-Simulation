@@ -17,8 +17,9 @@ using namespace std;
 using cmplx = complex<float>;
 
 extern vector<vector<cmplx>> matrix_mult(vector<vector<cmplx>>& g1, vector<vector<cmplx>>& g2);
-extern vector<cmplx> matrix_v_mult(vector<vector<cmplx>>& matrix, vector<cmplx>& vector1);
-extern vector<cmplx> matrix_v_mult_diag(vector<vector<cmplx>>& matrix, vector<cmplx>& vector1);
+extern vector<cmplx> matrix_v_mult(const vector<vector<cmplx>>& matrix,
+                                   const vector<cmplx>& vector1);
+extern vector<cmplx> matrix_v_mult_diag(vector<vector<cmplx>> matrix, vector<cmplx> vector1);
 extern vector<cmplx> tensor_v_product(vector<cmplx>& first, vector<cmplx>& second);
 extern vector<vector<cmplx>> tensor_product(vector<vector<cmplx>>& first, vector<vector<cmplx>>& second);
 extern vector<vector<cmplx>> matrix_inv(vector<vector<cmplx>>& g);

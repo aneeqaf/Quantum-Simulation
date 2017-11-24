@@ -22,11 +22,14 @@
 #include <cassert>
 #include <deque>
 #include <algorithm>
+#include <functional>
 #include "matrix.h"
 
 using namespace std;
 
 const float HADAMARD_CONST = 1/sqrt(2);
+extern bool google;
+extern float H_related_gates;
 
 using index_size = size_t;
 
@@ -41,8 +44,8 @@ public:
     vector<float> theta;
     short num_controls;
     
-    gate(vector<vector<cmplx>>& g): num_controls(0), rows(g), qubits({}) {}
-    gate(): num_controls(0){}
+    gate(vector<vector<cmplx>> g);
+    gate();
     gate(const gate& rhs);
     gate& operator=(const gate& rhs);
 };
@@ -52,9 +55,8 @@ public:
     vector<cmplx> state_vector;
     map<index_size, cmplx> amp_apply_gate;
     vector<cmplx> apply_gate;
-    int i_count = 0;
     
-    void operator*(shared_ptr<gate> matrix);
+    void operator*(const gate& matrix);
     
     cmplx measure_0(short qubit);
     cmplx measure_1(short qubit);
@@ -68,15 +70,14 @@ public:
 
 class circuit {
 private:
-    class circuit_simulation;
+   class circuit_simulation;
 public:
     
-    vector<shared_ptr<gate>> gates;
+    vector<gate> gates;
     vector<vector<int>> qubit_to_gates;
     vector<short> clock_cycles;
     state* circuit_state;
     short qubits;
-    bool google;
     bool circuit_preprocessed;
     
     void circuit_preprocessing();
@@ -94,22 +95,26 @@ public:
 
 class circuit::circuit_simulation {
 public:
-    circuit* cir;
+    const circuit& cir;
+    int gate_i;
     
-    void initialize_control(index_size& index, int i, index_size c_bits);
-    void control_rand_sim(int gate_i, int num_bits, index_size c_bits);
-    void rand_sim(vector<bool>& iterated, int gate_i, int num_bits, index_size index);
+    void initialize_control(index_size& index, index_size c_bits);
+    inline void control_rand_sim(index_size c_bits);
+    inline void rand_sim(vector<bool>& iterated,int g_i, int num_bits, index_size index);
+    inline int CX_opt();
+    inline int CZ_opt();
+    inline int Phase_opt();
+    inline int T_opt();
+    inline int H_google_opt();
+    inline void non_control_sim();
     
     template <typename Iterator> inline Iterator find_control_target(vector<bool>& iterated,
                                                              Iterator iter, int c, index_size t_bits);
-    template<typename function>
-    void block_gate_opt(vector<index_size>& cbits, int i, function& gate_specific_opt);
-    template <typename function>
-    vector<index_size> initialize_gate_set(index_size& index, int& gate_i,
-                                              gate::Gates I, function& tp);
+    template<typename blockType, typename function>
+    void block_gate_opt(vector<blockType>& cbits, function& gate_specific_opt);
+    vector<index_size> initialize_gate_set(index_size& index, gate::Gates I);
     
-    circuit_simulation(circuit* c): cir(c) {};
-    ~circuit_simulation();
+    circuit_simulation(const circuit& c, int gate_i);
 };
 
 #endif /* circuit_simulation_h */

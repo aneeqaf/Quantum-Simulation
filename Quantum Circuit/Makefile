@@ -1,7 +1,7 @@
 TARGET = quantum
 LIBS = -lm -lstdc++
-CC = g++
-CFLAGS = -O3 -Wall -std=c++17 -std=gnu++17 -stdlib=libc++17
+CC = gcc-7
+CFLAGS = -g -Wall -std=c++17
 
 .PHONY: default all clean
 
@@ -11,7 +11,7 @@ all: default
 OBJECTS = $(patsubst %.cpp, %.o, $(wildcard *.cpp))
 HEADERS = $(wildcard *.h)
 
-%.o: %.c $(HEADERS)
+%.o: %.cpp $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PRECIOUS: $(TARGET) $(OBJECTS)

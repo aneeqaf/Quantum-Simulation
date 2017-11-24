@@ -20,6 +20,8 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
     
+    google = false;
+    
 #ifdef __APPLE__
     if (getenv("STDIN")) {
         if (!freopen(getenv("STDIN"), "r", stdin)) {
@@ -41,7 +43,7 @@ int main(int argc, char *argv[]) {
     
     int c = 0;
     bool inputfile = false, googleInput = false, create = false, to_write = false,
-    test = false, google = false;;
+    test = false, google_c = false;;
     int idx = 0;
     
     string input_filename = "", out_file = "";
@@ -70,7 +72,7 @@ int main(int argc, char *argv[]) {
                 break;
             }
             case 'g':
-                google = true;
+                google_c = true;
             case 'c': {
                 create = true;
                 if (argc < 3) {
@@ -116,8 +118,10 @@ int main(int argc, char *argv[]) {
     } // while
     
     circuit test_circuit;
-    circuit_generator new_circuit;
+    circuit_generator new_circuit = {};
     if (inputfile || googleInput) {
+        
+         google = true;
         
         if (inputfile) {
             new_circuit.read_input_file("input/" + input_filename);
@@ -136,15 +140,11 @@ int main(int argc, char *argv[]) {
     }
     else if(create) {
         for (int i = 0; i < num_qubits.size(); ++i){
-            if (google) {
+            if (google_c) {
                 new_circuit.create_google_rand_circuit(num_qubits[i], num_gates[i]);
             }
             else {
                 new_circuit.create_rand_circuit(num_qubits[i], num_gates[i]);
-            }
-            
-            if(test) {
-                test_circuit = *(new_circuit.q_circuit);
             }
             
             if(to_write && num_qubits[0] <= 20) {
@@ -157,17 +157,6 @@ int main(int argc, char *argv[]) {
             new_circuit.q_circuit -> print_state("state/" + out_file);
         }
     }
-//    if(test) {
-//        if( test_circuit.test(*(new_circuit.q_circuit)) == 1) {
-//            cout << "Pass!\n";
-//        }
-//        else {
-//            test_circuit.print_state();
-//            new_circuit.q_circuit -> print_state();
-//            cout << "Fail!\n";
-//        }
-//    }
-    
     return 0;
     
 }
