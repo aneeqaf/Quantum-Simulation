@@ -23,8 +23,8 @@
 
 using namespace std;
 
-typedef shared_ptr<gate> (*func_t) (void);
-typedef shared_ptr<gate> (*rot_f) (double);
+typedef gate (*func_t) (void);
+typedef gate (*rot_f) (double);
 const int NUM_GATES = 10;
 const int NUM_BASIS_STATES = 2;
 
@@ -58,25 +58,25 @@ public:
      * 3 : Phase
      */
     static vector<rot_f> rot_gates;
-    shared_ptr<circuit> q_circuit;
+    unique_ptr<circuit> q_circuit;
     vector<int> classical_bits;
     
-    static inline shared_ptr<gate> create_hadamard();
-    static inline shared_ptr<gate> create_X();
-    static inline shared_ptr<gate> create_Y();
-    static inline shared_ptr<gate> create_Z();
-    static inline shared_ptr<gate> create_I();
-    static shared_ptr<gate> random_gate();
-    static inline shared_ptr<gate> create_T();
+    static inline gate create_hadamard();
+    static inline gate create_X();
+    static inline gate create_Y();
+    static inline gate create_Z();
+    static inline gate create_I();
+    static gate random_gate();
+    static inline gate create_T();
     
-    static inline shared_ptr<gate> control_target(vector<int>& control_bits, vector<int>& targets,
-                                                  vector<shared_ptr<gate>>& target_gates);
+    static inline gate control_target(vector<int>& control_bits, vector<int>& targets,
+                                                  vector<gate>& target_gates);
     
-    static inline shared_ptr<gate> create_phase_gate(double theta);
-    static inline shared_ptr<gate> create_X_rotation(double theta);
-    static inline shared_ptr<gate> create_Y_rotation(double theta);
-    static inline shared_ptr<gate> create_Z_rotation(double theta);
-    static inline shared_ptr<gate> create_gate(const cmplx& a, const cmplx& b,
+    static inline gate create_phase_gate(double theta);
+    static inline gate create_X_rotation(double theta);
+    static inline gate create_Y_rotation(double theta);
+    static inline gate create_Z_rotation(double theta);
+    static inline gate create_gate(const cmplx& a, const cmplx& b,
                                         const cmplx& c, const cmplx& d);
     
     void create_rand_circuit(int qubits, int num_gates);
@@ -88,7 +88,6 @@ public:
     
     circuit_generator();
     
-    ~circuit_generator(){}
 };
 
 #endif /* circuit_input__generator_h */
