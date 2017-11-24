@@ -55,6 +55,7 @@ public:
     vector<cmplx> state_vector;
     map<index_size, cmplx> amp_apply_gate;
     vector<cmplx> apply_gate;
+    vector<index_size> indices_for_ag;
     
     void operator*(const gate& matrix);
     

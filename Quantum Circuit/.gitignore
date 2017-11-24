@@ -12,3 +12,4 @@ qpro_scripts/
 state/
 probabilities/
 sftp-config.json
+*.txt
