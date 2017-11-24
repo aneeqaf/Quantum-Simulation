@@ -101,21 +101,21 @@ initialize_gate_set(index_size& index, gate::Gates I)
 inline void circuit::circuit_simulation::
 rand_sim(vector<bool>& iterated, int g_i, int num_bits, index_size index)
 {
-    cir.circuit_state -> amp_apply_gate[index] =
-                cir.circuit_state -> state_vector[index];
+    cir.circuit_state -> apply_gate.push_back(cir.circuit_state -> state_vector[index]);
+    cir.circuit_state -> indices_for_ag.push_back(index);
     
     index_size temp_index = 0;
     int target = cir.gates[g_i].num_controls;
+    assert(abs(target-num_bits) == 1);
+    
     for (int j = target ; j < num_bits; ++j) {
-        map<index_size, cmplx> temp;
-        for (const auto& a : cir.circuit_state -> amp_apply_gate) {
-            temp_index = a.first + pow(2, abs(cir.gates[g_i].qubits[j] -
+        temp_index = index + pow(2, abs(cir.gates[g_i].qubits[j] -
                                               abs(cir.qubits - 1)));
-            assert(temp_index < cir.circuit_state -> state_vector.size());
-            temp[temp_index] = cir.circuit_state -> state_vector[temp_index];
-            iterated[temp_index] = true;
-        }
-        cir.circuit_state -> amp_apply_gate.insert(temp.begin(), temp.end());
+        assert(temp_index < cir.circuit_state -> state_vector.size());
+        cir.circuit_state -> apply_gate.push_back(
+                            cir.circuit_state -> state_vector[temp_index]);
+        iterated[temp_index] = true;
+        cir.circuit_state -> indices_for_ag.push_back(temp_index);
     }
 }
 
@@ -379,8 +379,8 @@ void circuit::simulate(string outfile)
         timing_and_probability(i);
         
         sim.gate_i = i;
-        circuit_state -> amp_apply_gate.clear();
         circuit_state -> apply_gate.clear();
+        circuit_state -> indices_for_ag.clear();
         
         if(gates[i].qubits.size() > 1 &&
            gates[i].gate_identification[0] != gate::Gates::Control) {
@@ -517,13 +517,14 @@ void circuit::print_state(string outfile)
 }
 
 state::state():state_vector({}), amp_apply_gate({}),
-                apply_gate({}) {}
+        apply_gate({}), indices_for_ag({}) {}
 
 state::state(const state& rhs)
 {
     state_vector = rhs.state_vector;
     amp_apply_gate = rhs.amp_apply_gate;
     apply_gate = rhs.apply_gate;
+    indices_for_ag = rhs.indices_for_ag;
 }
 
 state& state::operator=(const state& rhs)
@@ -532,15 +533,12 @@ state& state::operator=(const state& rhs)
     swap(state_vector, temp.state_vector);
     swap(amp_apply_gate, temp.amp_apply_gate);
     swap(apply_gate, temp.apply_gate);
+    swap(indices_for_ag, temp.indices_for_ag);
     return *this;
 }
 
 void state::operator*(const gate& q_gate)
 {
-    for(const auto& a : amp_apply_gate) {
-        apply_gate.push_back(a.second);
-    }
-    
     if (!(apply_gate[0] == cmplx(0,0) && apply_gate[1] == cmplx(0,0))) {
         assert(apply_gate.size() == 2);
         
@@ -581,13 +579,13 @@ void state::operator*(const gate& q_gate)
             apply_gate = matrix_v_mult(q_gate.rows, apply_gate);
         }
         
-       int c = 0;
-        for(const auto& a : amp_apply_gate) {
-            state_vector[a.first] = apply_gate[c++];
+        int c = 0;
+        for(const auto& a : indices_for_ag) {
+            state_vector[a] = apply_gate[c++];
         }
     }
     apply_gate.clear();
-    amp_apply_gate.clear();
+    indices_for_ag.clear();
 }
 
 //add optimization for 2n/2 iterations
