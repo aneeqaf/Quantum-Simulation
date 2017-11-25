@@ -53,7 +53,6 @@ public:
 class state {
 public:
     vector<cmplx> state_vector;
-    map<index_size, cmplx> amp_apply_gate;
     vector<cmplx> apply_gate;
     vector<index_size> indices_for_ag;
     
@@ -96,7 +95,11 @@ public:
 
 class circuit::circuit_simulation {
 public:
-    const circuit& cir;
+    circuit& cir;
+    vector<short> XY;
+    vector<short> YX;
+    vector<short> XX;
+    vector<short> YY;
     int gate_i;
     
     void initialize_control(index_size& index, index_size c_bits);
@@ -107,14 +110,21 @@ public:
     inline void Phase_opt(index_size index);
     inline void T_opt(index_size temp_index);
     inline int H_google_opt();
+    inline void XY_merge_opt();
+    inline void XY_merge_sim(short type);
+    inline void XX_opt();
+    inline void XY_opt();
+    inline void YY_opt();
+    inline void YX_opt();
     inline void non_control_sim();
     
-    template <typename Iterator> inline Iterator find_control_target(vector<bool>& iterated,
-                                                             Iterator iter, int c, index_size t_bits);
+    template <typename Iterator> inline Iterator find_control_target(
+                                                vector<bool>& iterated,
+                                                Iterator iter, int c, index_size t_bits);
     void block_gate_opt(vector<index_size>& cbits, int XT_gates);
     vector<index_size> initialize_gate_set(int& num_X_T_gates);
     
-    circuit_simulation(const circuit& c, int gate_i);
+    circuit_simulation(circuit& c, int gate_i);
 };
 
 #endif /* circuit_simulation_h */
