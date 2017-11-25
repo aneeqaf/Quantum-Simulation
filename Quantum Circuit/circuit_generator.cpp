@@ -322,7 +322,7 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
     srand(time(NULL));
     
     google = true;
-    enum GS_gates : int {X, Y, T};
+    short GS_gates[3] = {gate::Gates::X_rotation, gate::Gates::Y_rotation, gate::Gates::T};
     
     int GS_gates_num = 3;
     
@@ -344,12 +344,9 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
         int count = 0;
         for (int i = 0; i < q_circuit -> qubit_to_gates.size(); ++i) {
             if ( q_circuit -> gates[q_circuit -> qubit_to_gates[i].back()].
-                gate_identification[0]
-                                        == gate::Gates::Control) {
+                gate_identification[0] == gate::Gates::Control) {
                 CZ_pairs.push_back(i);
-                CZ_pairs.push_back(q_circuit -> gates[q_circuit -> qubit_to_gates[i].back()]
-                                   .qubits.front());
-                count += 2;
+                count += 1;
             }
         }
         return count;
@@ -384,14 +381,8 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
     q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
     
     for (int i = 0; i < clock_cycles; i+=2) {
-        vector<short> CZ_pairs;
         vector<short> current_CZ_pairs;
-        if (count_wires_gate1()) {
-            current_CZ_pairs.resize(rand() % (qubits) * 2);
-        }
-        else {
-            current_CZ_pairs.resize((1 + (rand() % (qubits - 1))) * 2);
-        }
+        current_CZ_pairs.resize((1 + (rand() % (qubits - 1))) * 2);
         
         int CZ_size = (int) current_CZ_pairs.size();
         int CZ_q = abs(qubits - CZ_size/2);
@@ -403,10 +394,11 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
 //            }
             
             current_CZ_pairs[j++] = CZ_q;
-            current_CZ_pairs[j] = CZ_q++ + 1;
-           
+            q_circuit -> qubit_to_gates[CZ_q].push_back((int)q_circuit -> gates.size());
+            
+            current_CZ_pairs[j] = ++CZ_q;
         }
-        
+            q_circuit -> qubit_to_gates[CZ_q].push_back((int)q_circuit -> gates.size());
         
         //control phase gate
         int k = 0;
@@ -416,10 +408,7 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
                                                , gate::Gates::Control);
             temp.num_controls = 1;
             temp.qubits.push_back(current_CZ_pairs[k++]);
-//            q_circuit -> qubit_to_gates[current_CZ_pairs[k++]].push_back((int)q_circuit -> gates.size());
-            temp.qubits.push_back(current_CZ_pairs[k]);
-            //problem for circuit preprocessing. fix it
-            q_circuit -> qubit_to_gates[current_CZ_pairs[k++]].push_back((int)q_circuit -> gates.size());
+            temp.qubits.push_back(current_CZ_pairs[k++]);
             q_circuit -> gates.push_back(move(temp));
         }
         
@@ -434,46 +423,49 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
          • Any gate at qubit q should be different from the gate at qubit q in the previous cycle.
          */
         
-        int qubits_for_gates = rand() % count_wires_gate(CZ_pairs);
+        vector<short> CZ_pairs;
+        int qubits_for_gates = 1 + rand() % (count_wires_gate(CZ_pairs) - 1);
         vector<short> complied_qubits(qubits_for_gates, -1);
         
         for (int j = 0; j < qubits_for_gates; ++j) {
             int q = rand() % qubits_for_gates;
-            while(!check_reoccurance(complied_qubits, q)) {
+            while(q_circuit -> gates[q_circuit ->
+                 qubit_to_gates[CZ_pairs[q]].back()].gate_identification[0]
+                  != gate::Gates::Control) {
                 q = rand() % qubits_for_gates;
             }
             complied_qubits[j] = CZ_pairs[q];
             
-            GS_gates gate_to_apply;
+            short gate_to_apply;
             if (T_gate_allowed[CZ_pairs[q]]) {
-                gate_to_apply = static_cast<GS_gates>(rand() % GS_gates_num);
+                gate_to_apply = rand() % GS_gates_num;
                 while (q_circuit -> gates[q_circuit ->
-                                    qubit_to_gates[CZ_pairs[q]].back()]. gate_identification[0]
-                                    == (int)gate_to_apply) {
-                    gate_to_apply = static_cast<GS_gates>(rand() % GS_gates_num);
+                      qubit_to_gates[CZ_pairs[q]].back()].gate_identification[0]
+                       == GS_gates[gate_to_apply]) {
+                    gate_to_apply = rand() % GS_gates_num;
                 }
-                if (gate_to_apply == GS_gates::T) {
+                if (gate_to_apply == 2) {
                     T_gate_allowed[CZ_pairs[q]] = false;
                 }
             }
             else {
-                gate_to_apply = static_cast<GS_gates>(rand() % (GS_gates_num - 1));
+                gate_to_apply = rand() % (GS_gates_num - 1);
                 while (q_circuit -> gates[q_circuit ->
-                                    qubit_to_gates[CZ_pairs[q]].back()]. gate_identification[0]
-                                    == (int)gate_to_apply) {
-                    gate_to_apply = static_cast<GS_gates>(rand() % (GS_gates_num - 1));
+                        qubit_to_gates[CZ_pairs[q]].back()]. gate_identification[0]
+                        == GS_gates[gate_to_apply]) {
+                    gate_to_apply = rand() % (GS_gates_num - 1);
                 }
             }
             
             gate temp;
             
-            if (gate_to_apply == GS_gates::X) {
+            if (gate_to_apply == 0) {
                 temp = create_X_rotation(0.5);
             }
-            else if (gate_to_apply == GS_gates::Y) {
+            else if (gate_to_apply == 1) {
                 temp = create_Y_rotation(0.5);
             }
-            else if (gate_to_apply == GS_gates::T) {
+            else if (gate_to_apply == 2) {
                 temp = create_T();
             }
             temp.qubits.push_back(CZ_pairs[q]);
