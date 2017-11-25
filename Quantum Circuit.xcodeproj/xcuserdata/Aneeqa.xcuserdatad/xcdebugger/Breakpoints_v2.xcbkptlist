@@ -202,12 +202,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/matrix.cpp"
-            timestampString = "532121324.139146"
+            timestampString = "533240520.033159"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "34"
             endingLineNumber = "34"
-            landmarkName = "matrix_mult(vector&lt;vector&lt;cplx&gt;&gt;&amp; g1, vector&lt;vector&lt;cplx&gt;&gt;&amp; g2)"
+            landmarkName = "matrix_mult(vector&lt;vector&lt;cmplx&gt;&gt;&amp; g1, vector&lt;vector&lt;cmplx&gt;&gt;&amp; g2)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -218,23 +218,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.139241"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "124"
-            endingLineNumber = "124"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.139302"
+            timestampString = "533253719.936135"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "95"
@@ -249,76 +233,12 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.139348"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "119"
-            endingLineNumber = "119"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.139392"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "137"
-            endingLineNumber = "137"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.139435"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "136"
-            endingLineNumber = "136"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.139477"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "132"
-            endingLineNumber = "132"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.139526"
+            timestampString = "533260448.925896"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "504"
-            endingLineNumber = "504"
+            startingLineNumber = "739"
+            endingLineNumber = "739"
             landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
             landmarkType = "7">
          </BreakpointContent>
@@ -330,11 +250,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.140176"
+            timestampString = "533260448.925973"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "454"
-            endingLineNumber = "454"
+            startingLineNumber = "688"
+            endingLineNumber = "688"
             landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
             landmarkType = "7">
          </BreakpointContent>
@@ -346,11 +266,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.140725"
+            timestampString = "533260448.926027"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "506"
-            endingLineNumber = "506"
+            startingLineNumber = "741"
+            endingLineNumber = "741"
             landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
             landmarkType = "7">
          </BreakpointContent>
@@ -362,11 +282,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.141254"
+            timestampString = "533260448.926075"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "462"
-            endingLineNumber = "462"
+            startingLineNumber = "696"
+            endingLineNumber = "696"
             landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
             landmarkType = "7">
          </BreakpointContent>
@@ -378,11 +298,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.141784"
+            timestampString = "533260448.926122"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "483"
-            endingLineNumber = "483"
+            startingLineNumber = "717"
+            endingLineNumber = "717"
             landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
             landmarkType = "7">
          </BreakpointContent>
@@ -394,11 +314,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.142301"
+            timestampString = "533260448.926168"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "177"
-            endingLineNumber = "177"
+            startingLineNumber = "212"
+            endingLineNumber = "212"
             landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
             landmarkType = "7">
          </BreakpointContent>
@@ -410,7 +330,183 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.142822"
+            timestampString = "533260448.926215"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "317"
+            endingLineNumber = "317"
+            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.926259"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "752"
+            endingLineNumber = "752"
+            landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/matrix.cpp"
+            timestampString = "533240520.034225"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "50"
+            endingLineNumber = "50"
+            landmarkName = "matrix_v_mult(const vector&lt;vector&lt;cmplx&gt;&gt;&amp; matrix, const vector&lt;cmplx&gt;&amp; vector1)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.926321"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "272"
+            endingLineNumber = "272"
+            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.926369"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "284"
+            endingLineNumber = "284"
+            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.926415"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "501"
+            endingLineNumber = "501"
+            landmarkName = "circuit_generator::create_quiddpro_script(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.926461"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "577"
+            endingLineNumber = "577"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.92651"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "55"
+            endingLineNumber = "55"
+            landmarkName = "circuit::circuit_simulation:: initialize_control(index_size&amp; index, index_size c_bits)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.927035"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "522"
+            endingLineNumber = "522"
+            landmarkName = "state::operator=(const state&amp; rhs)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.927494"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "299"
+            endingLineNumber = "299"
+            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.92755"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "313"
+            endingLineNumber = "313"
+            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.927598"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "291"
@@ -425,13 +521,61 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.143353"
+            filePath = "Quantum Circuit/main.cpp"
+            timestampString = "533253719.937844"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "209"
-            endingLineNumber = "209"
-            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            startingLineNumber = "82"
+            endingLineNumber = "82"
+            landmarkName = "main(int argc, char *argv[])"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.927666"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "518"
+            endingLineNumber = "518"
+            landmarkName = "state::operator=(const state&amp; rhs)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/main.cpp"
+            timestampString = "533253719.938302"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "64"
+            endingLineNumber = "64"
+            landmarkName = "main(int argc, char *argv[])"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.928126"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "322"
+            endingLineNumber = "322"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -442,11 +586,443 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.143889"
+            timestampString = "533260448.928179"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "517"
-            endingLineNumber = "517"
+            startingLineNumber = "376"
+            endingLineNumber = "376"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.928227"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "387"
+            endingLineNumber = "387"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.928273"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "412"
+            endingLineNumber = "412"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.928318"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "438"
+            endingLineNumber = "438"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.928366"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.928829"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "state::measure(short)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532206427.045618"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "406"
+                  endingLineNumber = "406"
+                  offsetFromSymbolStart = "4060">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "state::measure(short)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532206427.047167"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "406"
+                  endingLineNumber = "406"
+                  offsetFromSymbolStart = "4760">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.92936"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "state::measure(short)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532205299.342754"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "401"
+                  endingLineNumber = "401"
+                  offsetFromSymbolStart = "2687">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "state::measure(short)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532205299.344594"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "401"
+                  endingLineNumber = "401"
+                  offsetFromSymbolStart = "3401">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.929911"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.930541"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.931244"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.931865"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "405"
+            endingLineNumber = "405"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.931965"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "388"
+            endingLineNumber = "388"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932039"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "415"
+            endingLineNumber = "415"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932111"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "764"
+            endingLineNumber = "764"
+            landmarkName = "circuit_generator::read_google_input_files(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932183"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "375"
+            endingLineNumber = "375"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932252"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "510"
+            endingLineNumber = "510"
+            landmarkName = "circuit_generator::create_quiddpro_script(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932321"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "780"
+            endingLineNumber = "780"
+            landmarkName = "circuit_generator::read_google_input_files(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932391"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "803"
+            endingLineNumber = "803"
+            landmarkName = "circuit_generator::read_google_input_files(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932461"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "355"
+            endingLineNumber = "355"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932531"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "366"
+            endingLineNumber = "366"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932603"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "380"
+            endingLineNumber = "380"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.932673"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "344"
+            endingLineNumber = "344"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.932745"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "343"
+            endingLineNumber = "343"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.933433"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "731"
+            endingLineNumber = "731"
             landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
             landmarkType = "7">
          </BreakpointContent>
@@ -457,233 +1033,120 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/matrix.cpp"
-            timestampString = "532121324.144404"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.933493"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "50"
-            endingLineNumber = "50"
-            landmarkName = "matrix_v_mult(vector&lt;vector&lt;cplx&gt;&gt;&amp; matrix, vector&lt;cplx&gt;&amp; vector1)"
-            landmarkType = "9">
+            startingLineNumber = "532"
+            endingLineNumber = "532"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.144454"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "115"
-            endingLineNumber = "115"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.144504"
+            timestampString = "533260448.933959"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "185"
-            endingLineNumber = "185"
-            landmarkName = "circuit::simulate()"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.144583"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "177"
-            endingLineNumber = "177"
-            landmarkName = "circuit::simulate()"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/main.cpp"
-            timestampString = "532121324.144655"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "116"
-            endingLineNumber = "116"
-            landmarkName = "main(int argc, char *argv[])"
-            landmarkType = "9">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.144701"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "219"
-            endingLineNumber = "219"
-            landmarkName = "circuit::simulate()"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.144773"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "241"
-            endingLineNumber = "241"
-            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.145258"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "253"
-            endingLineNumber = "253"
-            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.145703"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "296"
-            endingLineNumber = "296"
-            landmarkName = "circuit_generator::create_quiddpro_script(const string&amp; input_file)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.146159"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "356"
-            endingLineNumber = "356"
-            landmarkName = "circuit_generator::create_quiddpro_script(const string&amp; input_file)"
+            startingLineNumber = "143"
+            endingLineNumber = "143"
+            landmarkName = "circuit::circuit_simulation:: block_gate_opt(vector&lt;index_size&gt;&amp; cbits, int XT_gates)"
             landmarkType = "7">
             <Locations>
                <Location
-                  shouldBeEnabled = "Yes"
+                  shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "circuit_generator::create_quiddpro_script(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; const&amp;)"
+                  symbolName = "void circuit::circuit_simulation::control_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_0&gt;(std::__1::vector&lt;int, std::__1::allocator&lt;int&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_0)"
                   moduleName = "Quantum Circuit"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_generator.cpp"
-                  timestampString = "532120852.439722"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532986045.161428"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "353"
-                  endingLineNumber = "353"
-                  offsetFromSymbolStart = "1637">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101"
+                  offsetFromSymbolStart = "52">
                </Location>
                <Location
-                  shouldBeEnabled = "Yes"
+                  shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "circuit_generator::create_quiddpro_script(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; const&amp;)"
+                  symbolName = "void circuit::circuit_simulation::control_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_1&gt;(std::__1::vector&lt;int, std::__1::allocator&lt;int&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_1)"
                   moduleName = "Quantum Circuit"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_generator.cpp"
-                  timestampString = "532120852.441373"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532986045.163288"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "353"
-                  endingLineNumber = "353"
-                  offsetFromSymbolStart = "1721">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101"
+                  offsetFromSymbolStart = "52">
                </Location>
                <Location
-                  shouldBeEnabled = "Yes"
+                  shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "circuit_generator::create_quiddpro_script(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; const&amp;)"
+                  symbolName = "void circuit::circuit_simulation::control_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_2&gt;(std::__1::vector&lt;int, std::__1::allocator&lt;int&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_2)"
                   moduleName = "Quantum Circuit"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_generator.cpp"
-                  timestampString = "532120852.443069"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532986045.165078"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "353"
-                  endingLineNumber = "353"
-                  offsetFromSymbolStart = "4280">
+                  startingLineNumber = "101"
+                  endingLineNumber = "101"
+                  offsetFromSymbolStart = "52">
                </Location>
                <Location
-                  shouldBeEnabled = "Yes"
+                  shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "circuit_generator::create_quiddpro_script(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; const&amp;)"
+                  symbolName = "void circuit::circuit_simulation::control_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_0&gt;(std::__1::vector&lt;int, std::__1::allocator&lt;int&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_0)::&apos;lambda&apos;(int)::operator()(int) const"
                   moduleName = "Quantum Circuit"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_generator.cpp"
-                  timestampString = "532120852.444953"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532986045.167665"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "353"
-                  endingLineNumber = "353"
-                  offsetFromSymbolStart = "5901">
+                  startingLineNumber = "102"
+                  endingLineNumber = "102"
+                  offsetFromSymbolStart = "19">
                </Location>
                <Location
-                  shouldBeEnabled = "Yes"
+                  shouldBeEnabled = "No"
                   ignoreCount = "0"
                   continueAfterRunningActions = "No"
-                  symbolName = "circuit_generator::create_quiddpro_script(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt; const&amp;)"
+                  symbolName = "void circuit::circuit_simulation::control_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_1&gt;(std::__1::vector&lt;int, std::__1::allocator&lt;int&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_1)::&apos;lambda&apos;(int)::operator()(int) const"
                   moduleName = "Quantum Circuit"
                   usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_generator.cpp"
-                  timestampString = "532120852.44683"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532986045.169547"
                   startingColumnNumber = "9223372036854775807"
                   endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "353"
-                  endingLineNumber = "353"
-                  offsetFromSymbolStart = "7861">
+                  startingLineNumber = "102"
+                  endingLineNumber = "102"
+                  offsetFromSymbolStart = "19">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::control_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_2&gt;(std::__1::vector&lt;int, std::__1::allocator&lt;int&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;&amp;)::$_2)::&apos;lambda&apos;(int)::operator()(int) const"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "532986045.172632"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "102"
+                  endingLineNumber = "102"
+                  offsetFromSymbolStart = "19">
                </Location>
             </Locations>
          </BreakpointContent>
@@ -691,32 +1154,16 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.146587"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.934408"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "22"
-            endingLineNumber = "22"
-            landmarkName = "circuit::circuit_simulation::initialize_control(int&amp; index, int i)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.14669"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "231"
-            endingLineNumber = "231"
-            landmarkName = "circuit::simulate()"
+            startingLineNumber = "411"
+            endingLineNumber = "411"
+            landmarkName = "circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -727,124 +1174,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.146753"
+            timestampString = "533260448.934464"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "136"
-            endingLineNumber = "136"
-            landmarkName = "circuit::circuit_simulation::find_target(vector&lt;bool&gt;&amp; iterated, Iterator iter, int c)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.146812"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "92"
-            endingLineNumber = "92"
-            landmarkName = "circuit::circuit_simulation::control_rand_opt(int i)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.146868"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "84"
-            endingLineNumber = "84"
-            landmarkName = "circuit::circuit_simulation::control_Z_opt(int i)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.146923"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "65"
-            endingLineNumber = "65"
-            landmarkName = "circuit::circuit_simulation::control_Not_opt()"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.146975"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "234"
-            endingLineNumber = "234"
-            landmarkName = "unknown"
-            landmarkType = "0">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.147027"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "96"
-            endingLineNumber = "96"
-            landmarkName = "circuit::circuit_simulation::control_rand_opt(int i)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.147078"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "237"
-            endingLineNumber = "237"
-            landmarkName = "circuit::test(circuit&amp; result)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "Yes"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "532121324.147122"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "72"
-            endingLineNumber = "72"
-            landmarkName = "circuit::circuit_simulation::control_Not_opt()"
+            startingLineNumber = "117"
+            endingLineNumber = "117"
+            landmarkName = "circuit::circuit_simulation:: rand_sim(vector&lt;bool&gt;&amp; iterated, int g_i, int num_bits, index_size index)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -855,12 +1190,760 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "532121324.147166"
+            timestampString = "533260448.934901"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "260"
-            endingLineNumber = "260"
-            landmarkName = "circuit_generator::create_rand_circuit(int qubits, int num_gates)"
+            startingLineNumber = "783"
+            endingLineNumber = "783"
+            landmarkName = "circuit_generator::read_google_input_files(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.934954"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "787"
+            endingLineNumber = "787"
+            landmarkName = "circuit_generator::read_google_input_files(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.935002"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "488"
+            endingLineNumber = "488"
+            landmarkName = "circuit::print_state(string outfile)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "circuit::print_state()"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533011863.472632"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "447"
+                  endingLineNumber = "447"
+                  offsetFromSymbolStart = "39">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "circuit::print_state()"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533011863.475202"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "447"
+                  endingLineNumber = "447"
+                  offsetFromSymbolStart = "446">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.935421"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "391"
+            endingLineNumber = "391"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533105764.454173"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "374"
+                  endingLineNumber = "374"
+                  offsetFromSymbolStart = "2860">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533105764.45609"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "374"
+                  endingLineNumber = "374"
+                  offsetFromSymbolStart = "2865">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.935847"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "533"
+            endingLineNumber = "533"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/main.cpp"
+            timestampString = "533253719.946169"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "130"
+            endingLineNumber = "130"
+            landmarkName = "main(int argc, char *argv[])"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.936305"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "776"
+            endingLineNumber = "776"
+            landmarkName = "circuit_generator::read_google_input_files(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.93636"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "120"
+            endingLineNumber = "120"
+            landmarkName = "circuit::circuit_simulation:: rand_sim(vector&lt;bool&gt;&amp; iterated, int g_i, int num_bits, index_size index)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.93681"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "670"
+            endingLineNumber = "670"
+            landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.936864"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "155"
+            endingLineNumber = "155"
+            landmarkName = "circuit::circuit_simulation:: block_gate_opt(vector&lt;index_size&gt;&amp; cbits, int XT_gates)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_1&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_1&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533176781.991172"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "137"
+                  endingLineNumber = "137"
+                  offsetFromSymbolStart = "246">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_2&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_2&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533176781.992563"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "137"
+                  endingLineNumber = "137"
+                  offsetFromSymbolStart = "246">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_3&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_3&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533176781.99427"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "137"
+                  endingLineNumber = "137"
+                  offsetFromSymbolStart = "246">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_4&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, int, circuit::simulate(std::__1::basic_string&lt;char, std::__1::char_traits&lt;char&gt;, std::__1::allocator&lt;char&gt; &gt;)::$_4&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533176781.997345"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "137"
+                  endingLineNumber = "137"
+                  offsetFromSymbolStart = "246">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.937287"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "563"
+            endingLineNumber = "563"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.937706"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "409"
+            endingLineNumber = "409"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.938122"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "377"
+            endingLineNumber = "377"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.938537"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "391"
+            endingLineNumber = "391"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.938951"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "394"
+            endingLineNumber = "394"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.939368"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "527"
+            endingLineNumber = "527"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "state::operator*(gate const&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533239349.351749"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "510"
+                  endingLineNumber = "510"
+                  offsetFromSymbolStart = "60">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "state::operator*(gate const&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533239349.353405"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "510"
+                  endingLineNumber = "510"
+                  offsetFromSymbolStart = "756">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.939789"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "694"
+            endingLineNumber = "694"
+            landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.939842"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "759"
+            endingLineNumber = "759"
+            landmarkName = "circuit_generator::read_input_file(const string&amp; input_file)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_generator.cpp"
+            timestampString = "533260448.93989"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "760"
+            endingLineNumber = "760"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.939935"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "337"
+            endingLineNumber = "337"
+            landmarkName = "circuit::~circuit()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.940344"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "37"
+            endingLineNumber = "37"
+            landmarkName = "gate::operator=(const gate&amp; rhs)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.940755"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "393"
+            endingLineNumber = "393"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.941168"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "218"
+            endingLineNumber = "218"
+            landmarkName = "circuit::circuit_simulation:: control_rand_sim(index_size c_bits)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.941586"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "241"
+            endingLineNumber = "241"
+            landmarkName = "circuit::circuit_simulation:: non_control_sim()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.942"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "121"
+            endingLineNumber = "121"
+            landmarkName = "circuit::circuit_simulation:: rand_sim(vector&lt;bool&gt;&amp; iterated, int g_i, int num_bits, index_size index)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.942413"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "255"
+            endingLineNumber = "255"
+            landmarkName = "circuit::circuit_simulation:: non_control_sim()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.942825"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "572"
+            endingLineNumber = "572"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.943241"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "564"
+            endingLineNumber = "564"
+            landmarkName = "state::operator*(const gate&amp; q_gate)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.943655"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "164"
+            endingLineNumber = "164"
+            landmarkName = "circuit::circuit_simulation:: block_gate_opt(vector&lt;index_size&gt;&amp; cbits, int XT_gates)"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;unsigned long, circuit::circuit_simulation::CX_opt()::&apos;lambda&apos;(unsigned long)&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, circuit::circuit_simulation::CX_opt()::&apos;lambda&apos;(unsigned long)&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533247853.503986"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "149"
+                  endingLineNumber = "149"
+                  offsetFromSymbolStart = "978">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;unsigned long, circuit::circuit_simulation::CZ_opt()::&apos;lambda&apos;(unsigned long)&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, circuit::circuit_simulation::CZ_opt()::&apos;lambda&apos;(unsigned long)&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533247853.505334"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "149"
+                  endingLineNumber = "149"
+                  offsetFromSymbolStart = "978">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;unsigned long, circuit::circuit_simulation::Phase_opt()::&apos;lambda&apos;(unsigned long)&gt;(std::__1::vector&lt;unsigned long, std::__1::allocator&lt;unsigned long&gt; &gt;&amp;, circuit::circuit_simulation::Phase_opt()::&apos;lambda&apos;(unsigned long)&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533247853.506737"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "149"
+                  endingLineNumber = "149"
+                  offsetFromSymbolStart = "978">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "void circuit::circuit_simulation::block_gate_opt&lt;bool, circuit::circuit_simulation::T_opt()::&apos;lambda&apos;(unsigned long)&gt;(std::__1::vector&lt;bool, std::__1::allocator&lt;bool&gt; &gt;&amp;, circuit::circuit_simulation::T_opt()::&apos;lambda&apos;(unsigned long)&amp;)"
+                  moduleName = "Quantum Circuit"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/Aneeqa/Documents/Quantum%20Research/Quantum%20Circuit/Quantum%20Circuit/circuit_simulation.cpp"
+                  timestampString = "533247853.508766"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "149"
+                  endingLineNumber = "149"
+                  offsetFromSymbolStart = "941">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.943982"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "222"
+            endingLineNumber = "222"
+            landmarkName = "circuit::circuit_simulation:: control_rand_sim(index_size c_bits)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.944293"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "294"
+            endingLineNumber = "294"
+            landmarkName = "circuit::circuit_simulation:: T_opt(index_size temp_index)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.944609"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "385"
+            endingLineNumber = "385"
+            landmarkName = "circuit::simulate(string outfile)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.944856"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "93"
+            endingLineNumber = "93"
+            landmarkName = "circuit::circuit_simulation:: initialize_gate_set(int&amp; num_X_T_gates)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Quantum Circuit/circuit_simulation.cpp"
+            timestampString = "533260448.945097"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "100"
+            endingLineNumber = "100"
+            landmarkName = "circuit::circuit_simulation:: initialize_gate_set(int&amp; num_X_T_gates)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

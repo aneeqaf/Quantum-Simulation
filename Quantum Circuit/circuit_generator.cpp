@@ -782,7 +782,7 @@ void circuit_generator::read_google_input_files(const string& input_file)
     while (file >> current_cycle >> gate_type) {
         
         if (prev_cycle != current_cycle) {
-            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size()-1);
+            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size());
             prev_cycle = current_cycle;
         }
         

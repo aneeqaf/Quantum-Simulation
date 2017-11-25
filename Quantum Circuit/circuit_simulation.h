@@ -102,18 +102,17 @@ public:
     void initialize_control(index_size& index, index_size c_bits);
     inline void control_rand_sim(index_size c_bits);
     inline void rand_sim(vector<bool>& iterated,int g_i, int num_bits, index_size index);
-    inline int CX_opt();
-    inline int CZ_opt();
-    inline int Phase_opt();
-    inline int T_opt();
+    inline void CX_opt(index_size index, index_size swap_index);
+    inline void CZ_opt(index_size index);
+    inline void Phase_opt(index_size index);
+    inline void T_opt(index_size temp_index);
     inline int H_google_opt();
     inline void non_control_sim();
     
     template <typename Iterator> inline Iterator find_control_target(vector<bool>& iterated,
                                                              Iterator iter, int c, index_size t_bits);
-    template<typename blockType, typename function>
-    void block_gate_opt(vector<blockType>& cbits, function& gate_specific_opt);
-    vector<index_size> initialize_gate_set(index_size& index, gate::Gates I);
+    void block_gate_opt(vector<index_size>& cbits, int XT_gates);
+    vector<index_size> initialize_gate_set(int& num_X_T_gates);
     
     circuit_simulation(const circuit& c, int gate_i);
 };
