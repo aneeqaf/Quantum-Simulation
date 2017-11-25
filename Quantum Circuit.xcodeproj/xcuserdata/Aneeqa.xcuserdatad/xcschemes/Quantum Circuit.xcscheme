@@ -70,15 +70,51 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-c 20 100 -o quantum90"
+            argument = "-i testquidd0.txt "
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-g 20 55 -o quantum20"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-g 5 20 -o testquidd"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-h inst_4_4_100_2 -o gtest1.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-h inst_5_4_100_5 -o gtest1.txt"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-g 30 55 -o quantum30"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-g 16 55 -o quantum165"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-c 10 100 -o q1"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-c 4 10 -o quantum6"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-c 20 500 -o quantum90"
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-i quantum60.txt"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i quantum200.txt"
+            argument = "-i quantum1650.txt"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -86,11 +122,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-c 4 4 -o quantum6"
+            argument = "-g 4 4 -o quantum7"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-c 10 5 -o quantum10 "
+            argument = "-g 16 50 -o quantum10 "
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -98,7 +134,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i quantum0.txt"
+            argument = "-i quantum900.txt"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>

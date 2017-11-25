@@ -73,22 +73,38 @@ initialize_control(index_size& index, index_size c_bits)
 }
 
 vector<index_size> circuit::circuit_simulation::
-initialize_gate_set(index_size& index, gate::Gates I)
+initialize_gate_set(int& num_X_T_gates)
 {
+    gate::Gates X = gate::Gates::X;
+    gate::Gates P = gate::Gates::Phase;
+    gate::Gates Z = gate::Gates::Z;
+    gate::Gates T = gate::Gates::T;
+    
+    auto check_diag_gates =[&](int g_i) {
+        return (cir.gates[g_i].gate_identification.back() == X ||
+                cir.gates[g_i].gate_identification.back() == P ||
+                cir.gates[g_i].gate_identification.back() == Z ||
+                cir.gates[g_i].gate_identification.back() == T);
+    };
+    
+    
     vector<index_size> bit_mask {};
     int g_i = gate_i;
-    for(; g_i < cir.gates.size() &&
-        cir.gates[g_i].gate_identification.back() == I; ++g_i ) {
+    for(; g_i < cir.gates.size() && check_diag_gates(g_i); ++g_i ) {
         timing_and_probability(g_i);
         index_size bits = 0;
-        if (I == gate::Gates::X) {
+        if (cir.gates[g_i].gate_identification.back() == gate::Gates::X) {
             for (int j = 0 ; j < cir.gates[g_i].num_controls; ++j) {
                 bits += pow(2, abs(cir.gates[g_i].qubits[j] - abs(cir.qubits - 1)));
             }
+            ++num_X_T_gates;
         }
         else {
             for (int j = 0 ; j < cir.gates[g_i].qubits.size(); ++j) {
                 bits += pow(2, abs(cir.gates[g_i].qubits[j] - abs(cir.qubits - 1)));
+            }
+            if (cir.gates[g_i].gate_identification.back() == gate::Gates::T) {
+                ++num_X_T_gates;
             }
         }
         
@@ -119,9 +135,8 @@ rand_sim(vector<bool>& iterated, int g_i, int num_bits, index_size index)
     }
 }
 
-template<typename blockType, typename function>
 void circuit::circuit_simulation::
-block_gate_opt(vector<blockType>& cbits, function& gate_specific_opt)
+block_gate_opt(vector<index_size>& cbits, int XT_gates)
 {
     auto find_smallest_non_control = [&](int j) {
         for(int cq = 0; cq < cir.gates[gate_i + j].num_controls; ++cq) {
@@ -132,41 +147,38 @@ block_gate_opt(vector<blockType>& cbits, function& gate_specific_opt)
         return -1;
     };
     vector<vector<bool>> iterated;
-    if (cir.gates[gate_i].gate_identification.back() == gate::Gates::X ||
-        cir.gates[gate_i].gate_identification.back() == gate::Gates::T) {
+    if (XT_gates > 0) {
             iterated.resize(cir.circuit_state -> state_vector.size(),
-                            vector<bool>(cbits.size(),false)) ;
+                            vector<bool>(XT_gates,false)) ;
     }
-    
     
     index_size size =  cir.circuit_state -> state_vector.size();
     
     for (index_size index = 0; index < size ; ++index) {
         int c_size = (int)cbits.size();
+        int iter_count = 0;
         
         for (int j = 0; j < c_size; ++j){
-            if(cir.gates[gate_i + j].gate_identification.back()
-               == gate::Gates::T) {
-                if (iterated[index][j] == false) {
-                    iterated[index][j] = true;
+            
+            if(cir.gates[gate_i + j].gate_identification.back() == gate::Gates::T) {
+                if (iterated[index][iter_count] == false) {
+                    iterated[index][iter_count] = true;
                     
                     index_size temp_index = index +
-                            pow(2, abs(cir.gates[gate_i + j].qubits[0] - abs(cir.qubits - 1)));
+                    pow(2, abs(cir.gates[gate_i + j].qubits[0] - abs(cir.qubits - 1)));
                     
-                    iterated[temp_index][j] = true;
+                    iterated[temp_index][iter_count] = true;
                     
-                    cir.circuit_state->state_vector[temp_index] *= HADAMARD_CONST;
-                    cir.circuit_state->state_vector[temp_index] =
-                        cmplx(real(cir.circuit_state->state_vector[temp_index]) +
-                              (-imag(cir.circuit_state->state_vector[temp_index])),
-                                real(cir.circuit_state->state_vector[temp_index]) +
-                               imag(cir.circuit_state->state_vector[temp_index]));
+                    if(cir.circuit_state->state_vector[temp_index] != cmplx(0,0)) {
+                        T_opt(temp_index);
+                    }
                 }
+                ++iter_count;
             }
             else if((index & cbits[j]) == cbits[j]) {
                 if (cir.gates[gate_i + j].gate_identification.back() == gate::Gates::X) {
-                    if (iterated[index][j] == false) {
-                        iterated[index][j] = true;
+                    if (iterated[index][iter_count] == false) {
+                        iterated[index][iter_count] = true;
                         
                         int smallest_non_control_bit = find_smallest_non_control(j);
                         if (smallest_non_control_bit == -1) {
@@ -175,18 +187,24 @@ block_gate_opt(vector<blockType>& cbits, function& gate_specific_opt)
                         
                         index_size swap_index = index +
                             pow(2, abs(smallest_non_control_bit - abs(cir.qubits - 1)));
-                        iterated[swap_index][j] = true;
+                        iterated[swap_index][iter_count] = true;
                         
                         if (!(cir.circuit_state -> state_vector[index] == cmplx(0,0) &&
                               cir.circuit_state -> state_vector[swap_index] == cmplx(0,0)))
                         {
-                            gate_specific_opt(swap_index);
+                            CX_opt(index, swap_index);
                         }
                     }
+                     ++iter_count;
                 }
-                else {
-                    if (!(cir.circuit_state -> state_vector[index] == cmplx(0,0))) {
-                        gate_specific_opt(index);
+                else if (cir.circuit_state -> state_vector[index] != cmplx(0,0)) {
+                    if (cir.gates[gate_i + j].gate_identification.back()
+                                                == gate::Gates::Phase) {
+                        Phase_opt(index);
+                    }
+                    else if (cir.gates[gate_i + j].gate_identification.back()
+                             == gate::Gates::Z) {
+                        CZ_opt(index);
                     }
                 }
             }
@@ -239,71 +257,40 @@ non_control_sim()
     }
 }
 
-inline int circuit::circuit_simulation::
-CX_opt()
+inline void circuit::circuit_simulation::
+CX_opt(index_size index, index_size swap_index)
 {
-    index_size index = pow(2, abs(cir.gates[gate_i].qubits[0] - abs(cir.qubits - 1)));
-    vector<index_size> bit_mask = initialize_gate_set(index, gate::Gates::X);
-    
-    auto X_opt = [&](index_size swap_index) {
-        if(!(cir.circuit_state -> state_vector[index] == cmplx(0,0)
+    if(!(cir.circuit_state -> state_vector[index] == cmplx(0,0)
              && cir.circuit_state -> state_vector[index] == cmplx(0,0))) {
             swap(cir.circuit_state -> state_vector[index],
                  cir.circuit_state -> state_vector[swap_index]);
-        }
-    };
-    
-    block_gate_opt(bit_mask, X_opt);
-    return (int)bit_mask.size();
-}
-
-inline int circuit::circuit_simulation::
-CZ_opt()
-{
-    index_size index = pow(2, abs(cir.gates[gate_i].qubits[0] - abs(cir.qubits - 1)));
-    vector<index_size> bit_mask = initialize_gate_set(index,gate::Gates::Z);
-    
-    auto Z_opt = [&](index_size index) {
-        cir.circuit_state -> state_vector[index] =
-                        -cir.circuit_state -> state_vector[index];
-    };
-    block_gate_opt(bit_mask, Z_opt);
-    return (int)bit_mask.size();
-}
-
-inline int circuit::circuit_simulation::
-Phase_opt()
-{
-    index_size index = pow(2, abs(cir.gates[gate_i].qubits[0] - abs(cir.qubits - 1)));
-    vector<index_size> bit_mask = initialize_gate_set(index, gate::Gates::Phase);
-    
-    auto Phase_opt = [&](index_size index) {
-        cir.circuit_state -> state_vector[index] =
-                                    cmplx(-imag(cir.circuit_state -> state_vector[index]),
-                                          real(cir.circuit_state -> state_vector[index]));
-    };
-    
-    block_gate_opt(bit_mask, Phase_opt);
-    return (int)bit_mask.size();
-}
-
-inline int circuit::circuit_simulation::
-T_opt()
-{
-    vector<bool> block;
-    
-    for(size_t i = gate_i; i < cir.gates.size() &&
-        cir.gates[i].gate_identification.back() == gate::Gates::T; ++i ) {
-        block.push_back(0);
-        timing_and_probability(i);
     }
-    
-    auto none = [](index_size index){};
-    
-    block_gate_opt(block, none);
-   // H_related_gates += block.size();
-    
-    return (int)block.size();
+}
+
+inline void circuit::circuit_simulation::
+CZ_opt(index_size index)
+{
+    cir.circuit_state -> state_vector[index] =
+                        -cir.circuit_state -> state_vector[index];
+}
+
+inline void circuit::circuit_simulation::
+Phase_opt(index_size index)
+{
+   cir.circuit_state -> state_vector[index] =
+                    cmplx(-imag(cir.circuit_state -> state_vector[index]),
+                    real(cir.circuit_state -> state_vector[index]));
+}
+
+inline void circuit::circuit_simulation::
+T_opt(index_size temp_index)
+{
+    cir.circuit_state->state_vector[temp_index] *= HADAMARD_CONST;
+    cir.circuit_state->state_vector[temp_index] =
+    cmplx(real(cir.circuit_state->state_vector[temp_index]) +
+          (-imag(cir.circuit_state->state_vector[temp_index])),
+          real(cir.circuit_state->state_vector[temp_index]) +
+          imag(cir.circuit_state->state_vector[temp_index]));
 }
 
 inline int circuit::circuit_simulation::
@@ -375,7 +362,7 @@ void circuit::simulate(string outfile)
                 begin = clock();
             }
         };
-    
+
         timing_and_probability(i);
         
         sim.gate_i = i;
@@ -386,20 +373,21 @@ void circuit::simulate(string outfile)
            gates[i].gate_identification[0] != gate::Gates::Control) {
             sort(gates[i].qubits.begin(), gates[i].qubits.end());
         }
-    
-        if(gates[i].gate_identification[0] == gate::Gates::Control) {
-           
-            if ( gates[i].gate_identification[1] == gate::Gates::X) {
-                int increment = sim.CX_opt();
-                i += increment - 1;
-            }
-            else if ( gates[i].gate_identification[1] == gate::Gates::Z) {
-                int increment = sim.CZ_opt();
-                i += increment - 1;
-            }
-            else if (gates[i].gate_identification[0] == gate::Gates::Phase) {
-                int increment = sim.Phase_opt();
-                i += increment - 1;
+        
+        if(gates[i].gate_identification[0] == gate::Gates::Control ||
+           gates[i].gate_identification[0] == gate::Gates::T) {
+            
+            if (gates[i].gate_identification[1] == gate::Gates::X ||
+                gates[i].gate_identification[0] == gate::Gates::T ||
+                gates[i].gate_identification[1] == gate::Gates::Z ||
+                gates[i].gate_identification[1] == gate::Gates::Phase) {
+                
+                index_size index = pow(2, abs(gates[i].qubits[0] - abs(qubits - 1)));
+                int XT_gates = 0;
+                vector<index_size> bit_mask = sim.initialize_gate_set(XT_gates);
+                
+                sim.block_gate_opt(bit_mask, XT_gates);
+                i += (int)bit_mask.size() - 1;
             }
             else {
                 index_size c_bits = 0;
@@ -408,10 +396,6 @@ void circuit::simulate(string outfile)
                 }
                 sim.control_rand_sim(c_bits);
             }
-        }
-        else if (gates[i].gate_identification[0] == gate::Gates::T) {
-            int increment = sim.T_opt();
-            i += increment - 1;
         }
         else if (gates[i].gate_identification[0] == gate::Gates::Measurement) {
             circuit_state -> measure(gates[i].qubits[0]);
@@ -462,8 +446,9 @@ void circuit::print_probabilities(string& out_file)
     file.open(out_file + to_string(count) + ".txt");
     
     for (auto state_v : circuit_state -> state_vector) {
-        state_v *= cmplx(pow(HADAMARD_CONST, qubits)) *
-                    conj(cmplx(pow(HADAMARD_CONST, qubits)) * state_v); /// cmplx(pow(2, qubits));
+        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));
+        state_v *= conj(state_v); /// cmplx(pow(2, qubits));
+        
         file << real(state_v) ;
         
         if (imag(state_v) > 0) {
@@ -481,8 +466,8 @@ void circuit::print_probabilities(string& out_file)
 void circuit::print_state()
 {
     for (auto state_v : circuit_state -> state_vector) {
-        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));// * cmplx(pow(cmplx(0, 1), circuit_state->i_count));
-       // cout << pow(cmplx(0, 1), cmplx(circuit_state->i_count));
+        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));
+        
         cout << real(state_v) ;
         
         if (imag(state_v) > 0) {
@@ -491,7 +476,7 @@ void circuit::print_state()
         else if (imag(state_v) < 0) {
             cout << imag(state_v) << "i";
         }
-        cout << " ";
+        cout << "\n";
     }
     cout << "\n\n";
 }
@@ -502,7 +487,7 @@ void circuit::print_state(string outfile)
     file.open(outfile + ".txt");
     
     for (auto state_v : circuit_state -> state_vector) {
-        state_v *= cmplx(pow(HADAMARD_CONST, qubits));
+        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));
         file << real(state_v) ;
         
         if (imag(state_v) > 0) {
@@ -511,7 +496,7 @@ void circuit::print_state(string outfile)
         else if (imag(state_v) < 0) {
             file << imag(state_v) << "i";
         }
-        file << " ";
+        file << "\n";
     }
     file << "\n\n";
 }
