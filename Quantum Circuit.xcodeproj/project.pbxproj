@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B229137D1FCA476300D02B46 /* circuit_gates.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B229137C1FCA476300D02B46 /* circuit_gates.cpp */; };
 		B2725F0B1F985CBE001A54AF /* circuit_generator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2725F0A1F985CBE001A54AF /* circuit_generator.cpp */; };
 		B2725F171F9BEF47001A54AF /* matrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2725F161F9BEF47001A54AF /* matrix.cpp */; };
 		B2725F191F9BEFEF001A54AF /* circuit_simulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B2725F181F9BEFEF001A54AF /* circuit_simulation.cpp */; };
@@ -26,6 +27,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B229137B1FCA476300D02B46 /* circuit_gates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = circuit_gates.h; sourceTree = "<group>"; };
+		B229137C1FCA476300D02B46 /* circuit_gates.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = circuit_gates.cpp; sourceTree = "<group>"; };
 		B2725F091F9858DB001A54AF /* circuit_generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = circuit_generator.h; sourceTree = "<group>"; };
 		B2725F0A1F985CBE001A54AF /* circuit_generator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = circuit_generator.cpp; sourceTree = "<group>"; };
 		B2725F111F990874001A54AF /* matrix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = matrix.h; sourceTree = "<group>"; };
@@ -66,6 +69,8 @@
 		B2EE38CE1F92ED8A0046199F /* Quantum Circuit */ = {
 			isa = PBXGroup;
 			children = (
+				B229137C1FCA476300D02B46 /* circuit_gates.cpp */,
+				B229137B1FCA476300D02B46 /* circuit_gates.h */,
 				B2EE38CF1F92ED8A0046199F /* main.cpp */,
 				B2725F091F9858DB001A54AF /* circuit_generator.h */,
 				B2725F0A1F985CBE001A54AF /* circuit_generator.cpp */,
@@ -138,6 +143,7 @@
 				B2725F0B1F985CBE001A54AF /* circuit_generator.cpp in Sources */,
 				B2725F191F9BEFEF001A54AF /* circuit_simulation.cpp in Sources */,
 				B2725F171F9BEF47001A54AF /* matrix.cpp in Sources */,
+				B229137D1FCA476300D02B46 /* circuit_gates.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
