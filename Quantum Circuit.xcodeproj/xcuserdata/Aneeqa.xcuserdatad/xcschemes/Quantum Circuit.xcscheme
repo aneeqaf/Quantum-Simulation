@@ -78,16 +78,16 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-g 5 20 -o testquidd"
+            argument = "-g 5 10 -o testquidd"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-h inst_4_4_100_2 -o gtest1.txt"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-h inst_5_4_100_5 -o gtest1.txt"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-g 30 55 -o quantum30"

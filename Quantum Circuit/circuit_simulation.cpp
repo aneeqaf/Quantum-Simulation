@@ -18,34 +18,81 @@ float H_related_gates = 0;
 
 function<void(int)> timing_and_probability;
 
-gate::gate(): rows({}), qubits({}), gate_identification({}),
-            theta({}), num_controls(0){}
-
-gate::gate(vector<vector<cmplx>> g): rows(g), qubits({}),
-    gate_identification({}),theta({}), num_controls(0){}
-
-gate::gate(const gate& rhs)
-{
-    rows = rhs.rows;
-    qubits = rhs.qubits;
-    gate_identification = rhs.gate_identification;
-    theta = rhs.theta;
-    num_controls = rhs.num_controls;
-}
-
-gate& gate::operator=(const gate& rhs)
-{
-    gate temp(rhs);
-    swap(rows, temp.rows);
-    swap(qubits, temp.qubits);
-    swap(gate_identification, temp.gate_identification);
-    swap(theta , temp.theta);
-    swap(num_controls , temp.num_controls);
-    return *this;
-}
-
 circuit::circuit_simulation::
 circuit_simulation(circuit& c, int gate_i): cir(c), gate_i(gate_i) {}
+
+void circuit::circuit_simulation::
+diagonalize_XY()
+{
+    enum to_CNOT : short {red, yellow, green};
+    int start_clock_cycle = 0;
+    gate H = create_hadamard();
+    
+    vector<vector<int>> qubit_HCZH(cir.qubits);
+    vector<int> gates_to_remove;
+    vector<int> r_qubits;
+    vector<int> l_qubits;
+    
+    auto check_green = [&](int i) {
+        if(qubit_HCZH[cir.gates[i].qubits.back()].size() == green) {
+            cir.gates[qubit_HCZH[cir.gates[i].qubits.back()].back()].gate_identification.back()
+                                                                = gate::Gates::X;
+            cir.gates[qubit_HCZH[cir.gates[i].qubits.back()].back()].rows = create_X().rows;
+            gates_to_remove.push_back(qubit_HCZH[cir.gates[i].qubits.back()].front());
+        }
+        qubit_HCZH[cir.gates[i].qubits.back()].clear();
+    };
+    
+    int i = 0;
+    for (auto& c : cir.clock_cycles) {
+        if (i < cir.qubits) {
+            i += c;
+            continue;
+        }
+        c += r_qubits.size() + l_qubits.size();
+        r_qubits.clear();
+        l_qubits.clear();
+        for (; i < c; ++i) {
+            
+                if (cir.gates[i].gate_identification.back() == gate::Gates::X_rotation) {
+                    check_green(i);
+                    cir.gates[i].gate_identification.back() = gate::Gates::D_X12;
+                    l_qubits.push_back(cir.gates[i].qubits.back());
+                    r_qubits.push_back(cir.gates[i].qubits.back());
+                }
+                else if (cir.gates[i].gate_identification.back() == gate::Gates::Y_rotation) {
+                    check_green(i);
+                    cir.gates[i].gate_identification.back() = gate::Gates::D_Y12;
+                    r_qubits.push_back(cir.gates[i].qubits.back());
+                }
+                else if (cir.gates[i].gate_identification.back() == gate::Gates::Phase) {
+                    if(qubit_HCZH[cir.gates[i].qubits.back()].size() == yellow) {
+                        qubit_HCZH[cir.gates[i].qubits.back()].push_back(i);
+                    }
+                }
+        }
+        
+        for (int j = 0; j < l_qubits.size(); ++j) {
+            H.qubits.push_back(l_qubits[j]);
+            cir.gates.insert(cir.gates.begin() + start_clock_cycle + j, H);
+            qubit_HCZH[l_qubits[j]].push_back(start_clock_cycle + j);
+            H.qubits.clear();
+            ++c;
+        }
+        for (int j = 0; j < r_qubits.size(); ++j) {
+            H.qubits.push_back(r_qubits[j]);
+            cir.gates.insert(cir.gates.begin() + c, H);
+            H.qubits.clear();
+            ++c;
+        }
+        
+        i += r_qubits.size() + l_qubits.size();
+        start_clock_cycle = c;
+    }
+    for (auto g : gates_to_remove) {
+        cir.gates.erase(cir.gates.begin() + g);
+    }
+}
 
 vector<index_size> circuit::circuit_simulation::
 initialize_gate_set(int& num_X_T_gates)
@@ -361,8 +408,8 @@ YX_opt()
     auto& temp_v = cir.circuit_state -> state_vector;
     auto& indices = cir.circuit_state -> indices_for_ag;
     
-    auto t = temp_v[indices[0]] -
-            cmplx(-imag(temp_v[indices[1]]), real(temp_v[indices[1]]));
+    auto t = temp_v[indices[0]]
+             - cmplx(-imag(temp_v[indices[1]]), real(temp_v[indices[1]]));
     auto t1 = -cmplx(-imag(temp_v[indices[0]]), real(temp_v[indices[0]]))
                 + temp_v[indices[1]];
     auto t2 = temp_v[indices[2]] -
@@ -489,6 +536,7 @@ void circuit::simulate(string outfile)
     int size = (int)gates.size();
     
     circuit_simulation sim (*this, 0);
+    sim.diagonalize_XY();
     
     for (int i = 0; i < size; ++i) {
         
@@ -543,15 +591,14 @@ void circuit::simulate(string outfile)
             circuit_state -> measure(gates[i].qubits[0]);
         }
         else {
-//            if (google && i < gates.size() - 1 &&
-//                (gates[i + 1].gate_identification[0] == gate::Gates::X_rotation ||
-//                           gates[i + 1].gate_identification[0] == gate::Gates::Y_rotation)) {
-//                sim.XY_merge_opt();
-////                print_state();
-//                ++i;
-//            }
-//            else
-            if(google && gates[i].gate_identification[0] == gate::Gates::Hadamard) {
+            if (google && i < gates.size() - 1 &&
+                (gates[i + 1].gate_identification[0] == gate::Gates::X_rotation ||
+                           gates[i + 1].gate_identification[0] == gate::Gates::Y_rotation)) {
+                sim.XY_merge_opt();
+//                print_state();
+                ++i;
+            }
+            else if(google && gates[i].gate_identification[0] == gate::Gates::Hadamard) {
                 int increment = sim.H_google_opt();
                 i += increment - 1;
             }

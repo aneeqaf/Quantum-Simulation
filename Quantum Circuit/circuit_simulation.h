@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <functional>
 #include "matrix.h"
+#include "circuit_gates.h"
 
 using namespace std;
 
@@ -32,23 +33,6 @@ extern bool google;
 extern float H_related_gates;
 
 using index_size = size_t;
-
-class gate {
-public:
-    enum Gates : int { Hadamard, X, Y, Z, Random, X_rotation, Y_rotation,
-        Z_rotation, Phase, Control, Identity, T, Measurement};
- 
-    vector<vector<cmplx>> rows;
-    vector<short> qubits;
-    vector<short> gate_identification;
-    vector<float> theta;
-    short num_controls;
-    
-    gate(vector<vector<cmplx>> g);
-    gate();
-    gate(const gate& rhs);
-    gate& operator=(const gate& rhs);
-};
 
 class state {
 public:
@@ -80,7 +64,6 @@ public:
     short qubits;
     bool circuit_preprocessed;
     
-    void circuit_preprocessing();
     void simulate(string outfile);
     int test(circuit& result);
     void print_state(string outfile);
@@ -96,12 +79,9 @@ public:
 class circuit::circuit_simulation {
 public:
     circuit& cir;
-    vector<short> XY;
-    vector<short> YX;
-    vector<short> XX;
-    vector<short> YY;
     int gate_i;
     
+    void diagonalize_XY();
     void initialize_control(index_size& index, index_size c_bits);
     inline void control_rand_sim(index_size c_bits);
     inline void rand_sim(vector<bool>& iterated,int g_i, int num_bits, index_size index);

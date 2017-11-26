@@ -21,12 +21,12 @@
 #include "matrix.h"
 #include "circuit_simulation.h"
 
+
 using namespace std;
 
 typedef gate (*func_t) (void);
 typedef gate (*rot_f) (double);
-const int NUM_GATES = 10;
-const int NUM_BASIS_STATES = 2;
+
 
 /*
  This is a ciruit generator which provides functionality for creating most,
@@ -60,24 +60,6 @@ public:
     static vector<rot_f> rot_gates;
     unique_ptr<circuit> q_circuit;
     vector<int> classical_bits;
-    
-    static inline gate create_hadamard();
-    static inline gate create_X();
-    static inline gate create_Y();
-    static inline gate create_Z();
-    static inline gate create_I();
-    static gate random_gate();
-    static inline gate create_T();
-    
-    static inline gate control_target(vector<int>& control_bits, vector<int>& targets,
-                                                  vector<gate>& target_gates);
-    
-    static inline gate create_phase_gate(double theta);
-    static inline gate create_X_rotation(double theta);
-    static inline gate create_Y_rotation(double theta);
-    static inline gate create_Z_rotation(double theta);
-    static inline gate create_gate(const cmplx& a, const cmplx& b,
-                                        const cmplx& c, const cmplx& d);
     
     void create_rand_circuit(int qubits, int num_gates);
     void create_google_rand_circuit(int qubits, int num_gates);
