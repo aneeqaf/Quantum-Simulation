@@ -216,10 +216,10 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
         gate temp = create_hadamard();
         temp.qubits.push_back(i);
         q_circuit -> gates.push_back(move(temp));
-        q_circuit -> qubit_to_gates[i].push_back((int)q_circuit -> gates.size() - 1);
+        q_circuit -> qubit_to_gates[i].push_back((int)q_circuit -> gates.size());
     }
     
-    q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
+    q_circuit -> clock_cycles.push_back(q_circuit -> gates.size());
     
     for (int i = 0; i < clock_cycles; i+=2) {
         vector<short> current_CZ_pairs;
@@ -254,7 +254,7 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
         }
         
         if (current_CZ_pairs.size() > 0) {
-            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
+            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size());
         }
         
         /*
@@ -314,7 +314,7 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
             q_circuit -> gates.push_back(move(temp));
         }
         if(qubits_for_gates > 0) {
-            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size() - 1);
+            q_circuit -> clock_cycles.push_back(q_circuit -> gates.size());
         }
     }
     
@@ -651,4 +651,5 @@ void circuit_generator::read_google_input_files(const string& input_file)
             q_circuit -> gates[q_circuit -> gates.size() - 1].qubits.push_back(q1);
         }
     }
+    q_circuit -> clock_cycles.push_back(q_circuit -> gates.size());
 }

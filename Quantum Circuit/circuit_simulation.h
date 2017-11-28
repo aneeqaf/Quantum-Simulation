@@ -10,6 +10,9 @@
 #define circuit_simulation_h
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <iomanip>
+#include <unistd.h> 
 #include <memory>
 #include <iostream>
 #include <fstream>
@@ -61,13 +64,20 @@ public:
     vector<vector<int>> qubit_to_gates;
     vector<short> clock_cycles;
     state* circuit_state;
+    short merged;
+    short X;
+    short Y;
+    short CZ_T;
     short qubits;
+    short num_cycles;
     bool circuit_preprocessed;
     
     void simulate(string outfile);
     int test(circuit& result);
     void print_state(string outfile);
     void print_state();
+    void print_stats(clock_t end, clock_t begin);
+    void print_stats(string& outfile, clock_t end, clock_t begin);
     void print_probabilities(string& out_file);
     
     circuit();
@@ -79,9 +89,11 @@ public:
 class circuit::circuit_simulation {
 public:
     circuit& cir;
+    int google_cycle;
     int gate_i;
     
     void diagonalize_XY();
+    void CZ_T_preprocess();
     void initialize_control(index_size& index, index_size c_bits);
     inline void control_rand_sim(index_size c_bits);
     inline void rand_sim(vector<bool>& iterated,int g_i, int num_bits, index_size index);
@@ -102,7 +114,8 @@ public:
                                                 vector<bool>& iterated,
                                                 Iterator iter, int c, index_size t_bits);
     void block_gate_opt(vector<index_size>& cbits, int XT_gates);
-    vector<index_size> initialize_gate_set(int& num_X_T_gates);
+    template<typename function>
+    vector<index_size> initialize_gate_set(int& num_X_T_gates, function comp);
     
     circuit_simulation(circuit& c, int gate_i);
 };

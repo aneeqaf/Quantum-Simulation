@@ -127,11 +127,12 @@ int main(int argc, char *argv[]) {
             new_circuit.read_input_file("input/" + input_filename);
         }
         else {
-            new_circuit.read_google_input_files("random_circuits_examples/" + input_filename);
+            new_circuit.read_google_input_files(input_filename);
         }
         
         if(googleInput) {
-           new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + ".qpro");
+            cout << "Google circuit file: " << input_filename << "\n\n";
+            new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + ".qpro");
         }
         
 //        new_circuit.q_circuit -> circuit_preprocessing();
@@ -151,6 +152,7 @@ int main(int argc, char *argv[]) {
                 new_circuit.write_circuit_to_file("input/" + out_file + to_string(i) + ".txt");
                 new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
+            
             
 //            new_circuit.q_circuit -> circuit_preprocessing();
             new_circuit.q_circuit -> simulate("probabilities/" + out_file);
