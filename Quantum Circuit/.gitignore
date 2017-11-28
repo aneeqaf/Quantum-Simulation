@@ -11,5 +11,6 @@ input/
 qpro_scripts/
 state/
 probabilities/
+simulation_stats/
 sftp-config.json
 *.txt

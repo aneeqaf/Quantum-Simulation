@@ -12,14 +12,18 @@
 
 using namespace std;
 
-vector<double> elapsed_secs;
+// 0:H, 1:CZ & T, 2:X, 3:Y, 4:Merged X & Y
+vector<double> gate_time(5,0);
+clock_t g_begin;
+clock_t g_end;
 bool google = false;
 float H_related_gates = 0;
 
 function<void(int)> timing_and_probability;
+function<void(int)> increment_cycle;
 
 circuit::circuit_simulation::
-circuit_simulation(circuit& c, int gate_i): cir(c), gate_i(gate_i) {}
+circuit_simulation(circuit& c, int gate_i): cir(c), gate_i(gate_i), google_cycle(0) {}
 
 void circuit::circuit_simulation::
 diagonalize_XY()
@@ -94,36 +98,35 @@ diagonalize_XY()
     }
 }
 
+template<typename function>
 vector<index_size> circuit::circuit_simulation::
-initialize_gate_set(int& num_X_T_gates)
+initialize_gate_set(int& num_X_T_gates, function comp)
 {
-    gate::Gates X = gate::Gates::X;
-    gate::Gates P = gate::Gates::Phase;
-    gate::Gates Z = gate::Gates::Z;
-    gate::Gates T = gate::Gates::T;
+    bool saw_xy = false;
     
-    auto check_diag_gates =[&](int g_i) {
-        return (cir.gates[g_i].gate_identification.back() == X ||
-                cir.gates[g_i].gate_identification.back() == P ||
-                cir.gates[g_i].gate_identification.back() == Z ||
-                cir.gates[g_i].gate_identification.back() == T);
+    auto check_xy = [&](int g_i) {
+        if ((g_i < cir.gates.size()) &&
+            (cir.gates[g_i].gate_identification[0] == gate::Gates::X_rotation ||
+            cir.gates[g_i].gate_identification[0] == gate::Gates::Y_rotation) ) {
+            saw_xy = true;
+        }
     };
-    
     
     vector<index_size> bit_mask {};
     int g_i = gate_i;
-    for(; g_i < cir.gates.size() && check_diag_gates(g_i); ++g_i ) {
-        timing_and_probability(g_i);
+    for(;(g_i < cir.gates.size()) && (comp(g_i)); ++g_i) {
+        
         index_size bits = 0;
+    
         if (cir.gates[g_i].gate_identification.back() == gate::Gates::X) {
             for (int j = 0 ; j < cir.gates[g_i].num_controls; ++j) {
-                bits += pow(2, abs(cir.gates[g_i].qubits[j] - abs(cir.qubits - 1)));
+                bits += (1 << abs(cir.gates[g_i].qubits[j] - abs(cir.qubits - 1)));
             }
             ++num_X_T_gates;
         }
         else {
             for (int j = 0 ; j < cir.gates[g_i].qubits.size(); ++j) {
-                bits += pow(2, abs(cir.gates[g_i].qubits[j] - abs(cir.qubits - 1)));
+                bits += ( 1 << abs(cir.gates[g_i].qubits[j] - abs(cir.qubits - 1)));
             }
             if (cir.gates[g_i].gate_identification.back() == gate::Gates::T) {
                 ++num_X_T_gates;
@@ -131,6 +134,10 @@ initialize_gate_set(int& num_X_T_gates)
         }
         
         bit_mask.push_back(bits);
+
+        if (!saw_xy) {
+            check_xy(g_i + 1);
+        }
     }
     
     return bit_mask;
@@ -139,8 +146,8 @@ initialize_gate_set(int& num_X_T_gates)
 inline void circuit::circuit_simulation::
 rand_sim(vector<bool>& iterated, int g_i, int num_bits, index_size index)
 {
-    index_size c = pow(2, num_bits);
-    cir.circuit_state -> apply_gate.resize(pow(2, num_bits));
+    index_size c = 1 << num_bits;
+    cir.circuit_state -> apply_gate.resize(1 << num_bits);
     cir.circuit_state -> apply_gate[0] = cir.circuit_state -> state_vector[index];
     cir.circuit_state -> indices_for_ag.push_back(index);
     
@@ -152,16 +159,18 @@ rand_sim(vector<bool>& iterated, int g_i, int num_bits, index_size index)
         short relative_pos = 1;
         short j = 0;
         for (int n = 0; n < cir.circuit_state -> indices_for_ag.size() &&
-             cir.circuit_state -> indices_for_ag.size() < pow(2, i+1); n += 2) {
+             cir.circuit_state -> indices_for_ag.size() < (1 << (i+1)); n += 2) {
             
-            temp_index = cir.circuit_state -> indices_for_ag[n] + pow(2, abs(cir.gates[g_i].qubits[i] - abs(cir.qubits - 1)));
+            temp_index = cir.circuit_state -> indices_for_ag[n] +
+                    (1 << abs(cir.gates[g_i].qubits[i] - abs(cir.qubits - 1)));
             
             assert(temp_index < cir.circuit_state -> state_vector.size());
             iterated[temp_index] = true;
             
-            cir.circuit_state -> indices_for_ag.insert( cir.circuit_state -> indices_for_ag.begin()
-                                                       + j + relative_pos, temp_index);
-            cir.circuit_state -> apply_gate[c/pow(2,c1) * (j + relative_pos)] =
+            cir.circuit_state -> indices_for_ag.insert(
+                               cir.circuit_state -> indices_for_ag.begin()
+                                + j + relative_pos, temp_index);
+            cir.circuit_state -> apply_gate[c/(1 << c1) * (j + relative_pos)] =
                     cir.circuit_state -> state_vector[temp_index];
             ++relative_pos;
             ++j;
@@ -192,6 +201,10 @@ block_gate_opt(vector<index_size>& cbits, int XT_gates)
     for (index_size index = 0; index < size ; ++index) {
         int c_size = (int)cbits.size();
         int iter_count = 0;
+        if (google_cycle % 5 == 0) {
+            cir.circuit_state -> state_vector[index] *=
+                        cmplx(pow(HADAMARD_CONST, H_related_gates));
+        }
         
         for (int j = 0; j < c_size; ++j){
             
@@ -200,7 +213,7 @@ block_gate_opt(vector<index_size>& cbits, int XT_gates)
                     iterated[index][iter_count] = true;
                     
                     index_size temp_index = index +
-                    pow(2, abs(cir.gates[gate_i + j].qubits[0] - abs(cir.qubits - 1)));
+                    (1 << abs(cir.gates[gate_i + j].qubits[0] - abs(cir.qubits - 1)));
                     
                     iterated[temp_index][iter_count] = true;
                     
@@ -221,7 +234,7 @@ block_gate_opt(vector<index_size>& cbits, int XT_gates)
                         }
                         
                         index_size swap_index = index +
-                            pow(2, abs(smallest_non_control_bit - abs(cir.qubits - 1)));
+                            (1 << abs(smallest_non_control_bit - abs(cir.qubits - 1)));
                         iterated[swap_index][iter_count] = true;
                         
                         if (!(cir.circuit_state -> state_vector[index] == cmplx(0,0) &&
@@ -245,6 +258,9 @@ block_gate_opt(vector<index_size>& cbits, int XT_gates)
             }
         }
     }
+    if (google_cycle % 5 == 0) {
+         H_related_gates = 0;
+    }
 }
 
 inline void circuit::circuit_simulation::
@@ -257,7 +273,7 @@ control_rand_sim(index_size c_bits)
     int num_controls = cir.gates[gate_i].num_controls;
     
     for (index_size index = 0; index < size &&
-         iter_count < pow(2, abs(cir.qubits - num_controls)); ++index) {
+         iter_count < (1 << abs(cir.qubits - num_controls)); ++index) {
         if (iterated[index] == false) {
             iterated[index] = true;
 
@@ -278,7 +294,7 @@ non_control_sim()
     index_size iter_count = 0;
     index_size size = cir.circuit_state -> state_vector.size();
     
-    for (index_size index = 0; index < size && iter_count < size/pow(2,num_bits); ++index) {
+    for (index_size index = 0; index < size && iter_count < size/(1 << num_bits); ++index) {
         if (iterated[index] == false) {
             iterated[index] = true;
             ++iter_count;
@@ -334,7 +350,6 @@ H_google_opt()
     int j = 0;
     for(; j < cir.gates.size() &&
         cir.gates[gate_i + j].gate_identification.back() == gate::Gates::Hadamard; ++j ) {
-        timing_and_probability(gate_i + j);
         ++H_related_gates;
     }
 
@@ -459,17 +474,32 @@ XY_merge_opt()
 void circuit::circuit_simulation::
 XY_merge_sim(short type)
 {
+    int smallest_non_control_bit = 0;
+    for(int cq = 0; cq < cir.gates[gate_i].num_controls; ++cq) {
+        if (cq != cir.gates[gate_i].qubits[cq]) {
+            smallest_non_control_bit = cq;
+        }
+    }
+
     int num_bits = (int)cir.gates[gate_i].qubits.size();
     vector<bool> iterated(cir.circuit_state -> state_vector.size(), false);
     index_size iter_count = 0;
     index_size size = cir.circuit_state -> state_vector.size();
     
-    for (index_size index = 0; index < size && iter_count < size/pow(2,num_bits); ++index) {
+    for (index_size index = 0; index < size && iter_count < size/(1 << num_bits); ++index) {
         if (iterated[index] == false) {
             iterated[index] = true;
             ++iter_count;
             
             rand_sim(iterated, gate_i, num_bits, index);
+            
+//#ifdef DO_PREFETCH
+//            int next_index = index + pow(2, smallest_non_control_bit);
+//            __builtin_prefetch(&cir.circuit_state -> state_vector[next_index],1,0);
+//            __builtin_prefetch(&cir.circuit_state -> state_vector[next_index],1,0);
+//            __builtin_prefetch(&cir.circuit_state -> state_vector[next_index],1,0);
+//            __builtin_prefetch(&cir.circuit_state -> state_vector[next_index],1,0);
+//#endif
             
             switch (type) {
                 case 0: {
@@ -501,8 +531,73 @@ XY_merge_sim(short type)
     H_related_gates += 2;
 }
 
+void circuit::circuit_simulation::
+CZ_T_preprocess()
+{
+    bool saw_xy = false;
+    int g_i = 0;
+    cir.num_cycles = cir.clock_cycles.size();
+    
+    for (int i = 2; i < cir.clock_cycles.size(); ++i) {
+        int last_CZT_gate = 0;
+        if (i % 2 == 1) {
+            g_i = cir.clock_cycles[i] - 1;
+        }
+        else {
+            g_i = cir.clock_cycles[i - 1];
+        }
+        for (int j = 0; j < cir.clock_cycles[i] - cir.clock_cycles[i-1]; ++j) {
+            int k = j;
+            if (i % 2 == 1) {
+                k = -j;
+            }
+            if (cir.gates[g_i + k].gate_identification[0] == gate::Gates::T ||
+                cir.gates[g_i + k].gate_identification[1] == gate::Gates::Phase) {
+                
+                if (i % 2 == 1) {
+                    if(saw_xy) {
+                        swap(cir.gates[g_i + k], cir.gates[g_i - last_CZT_gate]);
+                    }
+                }
+                else {
+                    if (saw_xy) {
+                        swap(cir.gates[g_i + k], cir.gates[g_i + last_CZT_gate]);
+                    }
+                }
+                ++last_CZT_gate;
+            }
+            else {
+                saw_xy = true;
+            }
+        }
+    }
+    
+//    int j = 0;
+//    for (int i = 0; i < cir.clock_cycles.size(); ++i) {
+//        cout << i << endl;
+//
+//        for(;j < cir.clock_cycles[i]; ++j) {
+//            auto& g = cir.gates[j];
+//            if(g.gate_identification.back() == gate::Gates::Phase)
+//                cout << "CZ ";
+//            else if (g.gate_identification.back() == gate::Gates::X_rotation)
+//                cout << "X ";
+//            else if (g.gate_identification.back() == gate::Gates::Y_rotation)
+//                cout << "Y ";
+//            else if (g.gate_identification.back() == gate::Gates::T)
+//                cout << "T ";
+//            else if (g.gate_identification.back() == gate::Gates::Hadamard)
+//                cout << "H ";
+//        }
+//        cout << endl;
+//    }
+//    cout << endl << endl;
+    cir.clock_cycles.clear();
+}
+
 circuit::circuit() : gates({}), qubit_to_gates({}), clock_cycles({}),
-    circuit_state(new state()), qubits(0), circuit_preprocessed(false) {}
+    circuit_state(new state()), merged(0), X(0), Y(0), CZ_T(0),
+    qubits(0), num_cycles(0), circuit_preprocessed(false) {}
 
 circuit::circuit(const circuit& g)
 {
@@ -531,30 +626,23 @@ circuit::~circuit()
 // TO DO: apply optimizations for diagonal gates, control Z, toffolli, and control X. 
 void circuit::simulate(string outfile)
 {
-    clock_t begin = clock();
-    int to_print = 0;
     int size = (int)gates.size();
     
     circuit_simulation sim (*this, 0);
-    sim.diagonalize_XY();
+    sim.CZ_T_preprocess();
+    int cycle_num = 0;
     
+    auto increment_cycle = [&](int g_i) {
+        if (google && !clock_cycles.empty() && g_i == clock_cycles[cycle_num] ) {
+            ++cycle_num;
+        }
+    };
+    
+    clock_t begin = clock();
     for (int i = 0; i < size; ++i) {
         
-        timing_and_probability = [&](int j) {
-            if (google && j == clock_cycles[to_print] ) {
-                clock_t end = clock();
-                double secs = double(end - begin) / CLOCKS_PER_SEC;
-                elapsed_secs.push_back(secs);
-                cout << secs << " secs for cycle " << to_print << "\n";
-                ++to_print;
-//                if (to_print % 20 == 0) {
-//                    print_probabilities(outfile);
-//                }
-                begin = clock();
-            }
-        };
-
-        timing_and_probability(i);
+        g_begin = clock();
+        increment_cycle(i);
         
         sim.gate_i = i;
         circuit_state -> apply_gate.clear();
@@ -565,27 +653,38 @@ void circuit::simulate(string outfile)
             sort(gates[i].qubits.begin(), gates[i].qubits.end());
         }
         
+        int XT_gates = 0;
+
         if(gates[i].gate_identification[0] == gate::Gates::Control ||
-           gates[i].gate_identification[0] == gate::Gates::T) {
+             gates[i].gate_identification[0] == gate::Gates::T) {
             
-            if (gates[i].gate_identification[1] == gate::Gates::X ||
-                gates[i].gate_identification[0] == gate::Gates::T ||
-                gates[i].gate_identification[1] == gate::Gates::Z ||
-                gates[i].gate_identification[1] == gate::Gates::Phase) {
-                
-                int XT_gates = 0;
-                vector<index_size> bit_mask = sim.initialize_gate_set(XT_gates);
-                
-                sim.block_gate_opt(bit_mask, XT_gates);
-                i += (int)bit_mask.size() - 1;
-            }
-            else {
-                index_size c_bits = 0;
-                for (int j = 0 ; j < gates[i].num_controls; ++j) {
-                    c_bits += pow(2, abs(gates[i].qubits[j] - abs(qubits - 1)));
+                vector<index_size> bit_mask;
+                if (gates[i].gate_identification[1] == gate::Gates::X ||
+                    gates[i].gate_identification[0] == gate::Gates::T ||
+                    gates[i].gate_identification[1] == gate::Gates::Z ||
+                    gates[i].gate_identification[1] == gate::Gates::Phase) {
+                    
+                    bit_mask = sim.initialize_gate_set(XT_gates,
+                    [&](int g_i) {
+                        return (gates[g_i].gate_identification[1] == gate::Gates::X ||
+                           gates[g_i].gate_identification[0] == gate::Gates::T ||
+                           gates[g_i].gate_identification[1] == gate::Gates::Z ||
+                           gates[g_i].gate_identification[1] == gate::Gates::Phase);});
+
+                    sim.block_gate_opt(bit_mask, XT_gates);
+                    i += bit_mask.size() - 1;
+//                    print_state();
+                    g_end = clock();
+                    gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                    CZ_T += bit_mask.size();
                 }
-                sim.control_rand_sim(c_bits);
-            }
+                else {
+                    index_size c_bits = 0;
+                    for (int j = 0 ; j < gates[i].num_controls; ++j) {
+                        c_bits += (1 << abs(gates[i].qubits[j] - abs(qubits - 1)));
+                    }
+                    sim.control_rand_sim(c_bits);
+                }
         }
         else if (gates[i].gate_identification[0] == gate::Gates::Measurement) {
             circuit_state -> measure(gates[i].qubits[0]);
@@ -593,35 +692,127 @@ void circuit::simulate(string outfile)
         else {
             if (google && i < gates.size() - 1 &&
                 (gates[i + 1].gate_identification[0] == gate::Gates::X_rotation ||
-                           gates[i + 1].gate_identification[0] == gate::Gates::Y_rotation)) {
-                sim.XY_merge_opt();
-//                print_state();
-                ++i;
+                gates[i + 1].gate_identification[0] == gate::Gates::Y_rotation)) {
+                    sim.XY_merge_opt();
+                    if (i + 1 == clock_cycles[cycle_num]) {
+                        assert(0!=1);
+                        //if true will have to modify cycle boundaries;
+                    }
+//                    print_state();
+                    ++i;
+                    g_end = clock();
+                    gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                    merged++;
             }
             else if(google && gates[i].gate_identification[0] == gate::Gates::Hadamard) {
                 int increment = sim.H_google_opt();
                 i += increment - 1;
+                g_end = clock();
+                gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
             else {
                 sim.non_control_sim();
+                g_end = clock();
+                
+                if(gates[i].gate_identification[0] == gate::Gates::X_rotation){
+                    gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                    X++;
+                }
+                else if(gates[i].gate_identification[0] == gate::Gates::Y_rotation) {
+                    gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                    Y++;
+                }
              }
         }
     }
     
     clock_t end = clock();
-    double secs = double(end - begin) / CLOCKS_PER_SEC;
-    elapsed_secs.push_back(secs);
-    cout << secs << " secs for cycle " << to_print << "\n";
-    
-    double sum = 0;
-    for (auto i : elapsed_secs) {
-        sum += i;
-    }
-    cout << "Total Time: " << sum << " secs\n";
-    
-    if (qubits < 10) {
+   
+    if (qubits <= 16) {
         print_state();
     }
+    
+     print_stats(end , begin);
+    
+}
+
+void circuit::print_stats(clock_t end, clock_t begin) {
+    double total_time = double(end - begin) / CLOCKS_PER_SEC;
+    cout << setprecision(3);
+    cout << "Total Time : " << total_time << "s\n\n";
+    
+    cout << "Runtimes by gate type\n";
+    cout << "   H (" << qubits << ") : " << gate_time[0]
+    << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
+    
+    cout << "   CZ & T (" << CZ_T << ") : " << gate_time[1]
+    << "s = " << (gate_time[1]/total_time) * 100 << "%\n";
+    
+    cout << "   X (" << X << ") : " << gate_time[2] << "s = "
+    << (gate_time[2]/total_time) * 100 << "%\n";
+    
+    cout << "   Y (" << Y << ") : " << gate_time[3]
+    << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
+    
+    cout << "   Merged X & Y (" << 2 * merged << ") : " << gate_time[4]
+    << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";;
+    
+    char hostname[20];
+    gethostname(hostname, 20);
+    cout << "Qubits : " << qubits << "\n";
+    cout << "Gates : " << gates.size() << "\n";
+    cout << "Cycles : " << num_cycles << "\n";
+    cout << "Hostname : ";
+    for(auto h : hostname) {
+        cout << h;
+    }
+    cout << "\n";
+    cout << "Compiler : " << __GNUC__ << "\n";
+    cout << "Compilation Time : " << __TIME__ << "\n";
+    cout << "Current Date : " << __DATE__ << "\n\n";
+
+}
+
+void circuit::print_stats(string& outfile, clock_t end, clock_t begin)
+{
+    ofstream file;
+    file.open("simulation_stats/" + outfile);
+    
+    double total_time = double(end - begin) / CLOCKS_PER_SEC;
+    file << setprecision(3);
+    file << "Total Time : " << total_time << "s\n\n";
+    
+    file << "Runtimes by gate type\n";
+    file << "   H (" << qubits << ") : " << gate_time[0]
+    << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
+    
+    file << "   CZ & T (" << CZ_T << ") : " << gate_time[1]
+    << "s = " << (gate_time[1]/total_time) * 100 << "%\n";
+    
+    file << "   X (" << X << ") : " << gate_time[2] << "s = "
+    << (gate_time[2]/total_time) * 100 << "%\n";
+    
+    file << "   Y (" << Y << ") : " << gate_time[3]
+    << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
+    
+    file << "   Merged X & Y (" << 2 * merged << ") : " << gate_time[4]
+    << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";;
+    
+    char hostname[20];
+    gethostname(hostname, 20);
+    file << "Qubits : " << qubits << "\n";
+    file << "Gates : " << gates.size() << "\n";
+    file << "Cycles : " << num_cycles << "\n";
+    file << "Hostname : ";
+    for(auto h : hostname) {
+        file << h;
+    }
+    file << "\n";
+    file << "Compiler : " << __GNUC__ << "\n";
+    file << "Compilation Time : " << __TIME__ << "\n";
+    file << "Current Date : " << __DATE__ << "\n\n";
+    
+    file.close();
 }
 
 
@@ -643,7 +834,7 @@ void circuit::print_probabilities(string& out_file)
     file.open(out_file + to_string(count) + ".txt");
     
     for (auto state_v : circuit_state -> state_vector) {
-        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));
+        state_v *= cmplx((HADAMARD_CONST, H_related_gates));
         state_v *= conj(state_v); /// cmplx(pow(2, qubits));
         
         file << real(state_v) ;
