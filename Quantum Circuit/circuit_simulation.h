@@ -124,5 +124,4 @@ public:
 };
 
 
-
 #endif /* circuit_simulation_h */

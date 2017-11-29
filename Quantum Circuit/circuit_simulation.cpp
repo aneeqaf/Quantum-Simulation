@@ -130,7 +130,7 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
                 }
             }
         }
-        
+
         if (i_count > 0)
             ApplyPhaseGate(i_count, idx);
         if (negate_Z)
@@ -156,6 +156,7 @@ ApplyRandomGate(vector<bool>& iterated,
                 const index_size idx)
 {
     index_size c = 1ull << num_bits;
+
     circuit_state -> apply_gate.resize(1ull << num_bits);
     circuit_state -> apply_gate[0] = circuit_state -> amp[idx];
     circuit_state -> indices_for_ag.push_back(idx);
@@ -187,7 +188,6 @@ ApplyRandomGate(vector<bool>& iterated,
         ++c1;
     }
 }
-
 
 inline void circuit::
 ApplyAnyCGate(const index_size c_bits,
@@ -452,6 +452,7 @@ Merge2QXYGates(index_size gate_i)
         b = gate_i++;
     }
     
+<<<<<<< HEAD
     if(gates[a].gate_identification.back() == gate::Gates::X_rotation &&
        gates[b].gate_identification.back() == gate::Gates::X_rotation)
         ApplyMergedXYGates(0, gate_i);
@@ -467,6 +468,23 @@ Merge2QXYGates(index_size gate_i)
     else if(gates[a].gate_identification.back() == gate::Gates::Y_rotation &&
        gates[b].gate_identification.back() == gate::Gates::Y_rotation)
         ApplyMergedXYGates(3, gate_i);
+=======
+    if(cir.gates[a].gate_identification.back() == gate::Gates::X_rotation &&
+       cir.gates[b].gate_identification.back() == gate::Gates::X_rotation)
+        XY_merge_sim(0);
+    
+    else if(cir.gates[a].gate_identification.back() == gate::Gates::X_rotation &&
+       cir.gates[b].gate_identification.back() == gate::Gates::Y_rotation)
+        XY_merge_sim(1);
+    
+    else if(cir.gates[a].gate_identification.back() == gate::Gates::Y_rotation &&
+       cir.gates[b].gate_identification.back() == gate::Gates::X_rotation)
+        XY_merge_sim(2);
+    
+    else if(cir.gates[a].gate_identification.back() == gate::Gates::Y_rotation &&
+       cir.gates[b].gate_identification.back() == gate::Gates::Y_rotation)
+        XY_merge_sim(3);
+>>>>>>> Buggy - T gate acting weird
 }
 
 void circuit::
@@ -474,6 +492,7 @@ ApplyMergedXYGates(const short type,
                    const index_size gate_i)
 {
     int smallest_non_control_bit = 0;
+
     for(int cq = 0; cq < gates[gate_i].num_controls; ++cq) {
         if (cq != gates[gate_i].qubits[cq])
             smallest_non_control_bit = cq;
@@ -572,7 +591,7 @@ GroupAlternateCycles()
     bool saw_xy = false;
     int g_i = 0;
     num_cycles = clock_cycles.size();
-    
+
     for (index_size i = 2; i < clock_cycles.size(); ++i) {
         int last_CZT_gate = 0;
         if (i % 2 == 1)
@@ -585,19 +604,17 @@ GroupAlternateCycles()
             int k = j;
             if (i % 2 == 1)
                 k = -j;
-            
+
             if (gates[g_i + k].gate_identification.back() == gate::Gates::T ||
                 gates[g_i + k].gate_identification.back() == gate::Gates::Phase) {
                 
                 if (i % 2 == 1) {
                     if(saw_xy)
                         swap(gates[g_i + k], gates[g_i - last_CZT_gate]);
-                    
                 }
                 else {
                     if (saw_xy)
                         swap(gates[g_i + k], gates[g_i + last_CZT_gate]);
-                    
                 }
                 ++last_CZT_gate;
             }
@@ -804,6 +821,8 @@ Simulate(const string& outfile)
                     gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     Y++;
                 }
+                
+               // print_state();
              }
         }
     }
@@ -993,8 +1012,7 @@ PrintStateVector(const string& outfile)
 }
 
 state::
-state():amp({}),
-        apply_gate({}), indices_for_ag({}) {}
+state():amp({}), apply_gate({}), indices_for_ag({}) {}
 
 state::
 state(const state& rhs)
@@ -1021,6 +1039,7 @@ operator*(const gate& q_gate)
 
         if (google &&
                 q_gate.gate_identification.back() == gate::Gates::X_rotation) {
+
             amp[indices_for_ag[1]] = -cmplx(-imag(apply_gate[0]), real(apply_gate[0]))
                                             + apply_gate[1];
             amp[indices_for_ag[0]] = apply_gate[0] -
@@ -1093,7 +1112,7 @@ measure_1(const short qubit)
     int m_bit = pow(2, ((sqrt(amp.size()) - 1) - qubit));
     map<int, cmplx> measurement_1;
     cmplx prob_1 = 0;
-    
+
     for (index_size i = 0; i < amp.size() ; ++i) {
         if ((i & m_bit) == m_bit) {
             measurement_1[i] = (amp[i] * conj(amp[i]));
