@@ -26,7 +26,7 @@ template<typename function>
 vector<index_size> circuit::
 FormBlockOfGates(int& num_X_gates,
                  index_size gate_i,
-                 index_size& T_bit_mask,
+                 vector<index_size>& T_bit_mask,
                  function comp)
 {
     vector<index_size> bit_mask {};
@@ -42,9 +42,23 @@ FormBlockOfGates(int& num_X_gates,
             
             bit_mask.push_back(bits);
         }
-        else if (gates[gate_i].gate_identification.back() == gate::Gates::T)
-            T_bit_mask |= (1ull << ((qubits - 1) - gates[gate_i].qubits[0]));
-        
+        else if (gates[gate_i].gate_identification.back() == gate::Gates::T) {
+            index_size t_mask = (1ull << ((qubits - 1) - gates[gate_i].qubits[0]));
+            if ((T_bit_mask.front() & t_mask) != t_mask)
+                T_bit_mask[0] |= t_mask;
+            
+            else {
+                bool found = false;
+                for (auto& t : T_bit_mask)
+                    if ((t & t_mask) != t_mask) {
+                        t |= t_mask;
+                        found = true;
+                    }
+                if (!found) {
+                    T_bit_mask.push_back(0 | t_mask);
+                }
+            }
+        }
         else if (gates[gate_i].gate_identification.back() == gate::Gates::X) {
             for (index_size j = 0 ; j < gates[gate_i].num_controls; ++j)
                 bits |= (1ull << ((qubits - 1) - gates[gate_i].qubits[j]));
@@ -59,7 +73,7 @@ FormBlockOfGates(int& num_X_gates,
 void circuit::
 ApplyBlockOfGates(const vector<index_size>& cbits,
                   const index_size gate_i,
-                  const index_size T_bit_mask,
+                  const vector<index_size>& T_bit_mask,
                   const int X_gates)
 {
     auto find_smallest_non_control = [&](index_size j) {
@@ -121,8 +135,11 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
             ApplyPhaseGate(i_count, idx);
         if (negate_Z)
             circuit_state -> amp[idx] = -circuit_state -> amp[idx];
-        if (T_bit_mask != 0 && circuit_state->amp[idx] != cmplx(0,0)) {
-            const index_size gate_c = __builtin_popcountll(idx & T_bit_mask);
+        if (T_bit_mask.front() != 0 && circuit_state->amp[idx] != cmplx(0,0)) {
+            index_size gate_c = 0;
+            for (auto t : T_bit_mask)
+                gate_c += __builtin_popcountll(idx & t);
+            
             if (gate_c > 0)
                 ApplyTGateKTimes(gate_c, idx);
         }
@@ -266,7 +283,7 @@ ApplyTGateKTimes(const index_size gate_c,
             //0.707106781 + 0.707106781 i
             circuit_state->amp[idx] *= HADAMARD_CONST;
             circuit_state->amp[idx] =
-            cmplx(real(circuit_state->amp[idx]) +
+            cmplx(real(circuit_state->amp[idx])
                   - imag(circuit_state->amp[idx]),
                   real(circuit_state->amp[idx])
                   + imag(circuit_state->amp[idx]));
@@ -642,7 +659,6 @@ GroupSimilarGates()
             }
         }
     PrintGatesAndCycles();
-    cout << "ok";
 }
 
 circuit::
@@ -682,11 +698,11 @@ Simulate(const string& outfile)
 {
     int size = (int)gates.size();
     
-    if (google) {
-        if (!clock_cycles.empty())
-            GroupAlternateCycles();
-        GroupSimilarGates();
-    }
+//    if (google) {
+//        if (!clock_cycles.empty())
+//            GroupAlternateCycles();
+//        GroupSimilarGates();
+//    }
     
     increment_cycle = [&](index_size g_i) {
         if (google && !clock_cycles.empty() && g_i == clock_cycles[current_google_cycle] )
@@ -720,28 +736,34 @@ Simulate(const string& outfile)
                     
                     int XT_gates = 0;
                     vector<index_size> bit_mask;
-                    index_size T_bit_mask = 0;
+                    vector<index_size> T_bit_mask(1, 0);
                     
                     bit_mask = FormBlockOfGates(XT_gates, i, T_bit_mask, comparator);
                     
-                    if ((bit_mask.size() == 0 && __builtin_popcountll(T_bit_mask) == 1) ||
-                        (bit_mask.size() == 1 && __builtin_popcountll(T_bit_mask) == 0)) {
-                        if (gates[i].gate_identification.back() == gate::Gates::T) {
-                            ApplySingleTGate(i);
-                        }
-                        else if (gates[i].gate_identification.back() == gate::Gates::Phase) {
-                            ApplySingleCZGate(i);
-                        }
-                    }
-                    else {
+//                    if ((bit_mask.size() == 0 && T_bit_mask.size() == 1
+//                         && __builtin_popcountll(T_bit_mask.front()) == 1) ||
+//                        (bit_mask.size() == 1 && __builtin_popcountll(T_bit_mask.front()) == 0)) {
+//                        if (gates[i].gate_identification.back() == gate::Gates::T) {
+//                            ApplySingleTGate(i);
+//                        }
+//                        else if (gates[i].gate_identification.back() == gate::Gates::Phase) {
+//                            ApplySingleCZGate(i);
+//                        }
+//                    }
+//                    else {
                         ApplyBlockOfGates(bit_mask, i, T_bit_mask, XT_gates);
-                    }
+                   // }
 
-                    i += bit_mask.size() + __builtin_popcountll(T_bit_mask) - 1;
+                    i += bit_mask.size();
+                    for (auto t : T_bit_mask)
+                        i += __builtin_popcountll(t);
+                    i -= 1;
                     PrintStateVector();
                     g_end = clock();
                     gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                    CZ_T += bit_mask.size() + __builtin_popcountll(T_bit_mask);
+                    CZ_T += bit_mask.size();
+                    for (auto t : T_bit_mask)
+                        CZ_T += __builtin_popcountll(t);
                 }
                 else {
                     index_size c_bits = 0;

@@ -60,11 +60,12 @@ private:
     template<typename function>
     vector<index_size> FormBlockOfGates(int& num_X_gates,
                                         index_size gate_i,
-                                        index_size& T_bit_mask,
+                                        vector<index_size>& T_bit_mask,
                                         function comp);
     void ApplyBlockOfGates(const vector<index_size>& cbits,
                            const index_size gate_i,
-                           const index_size T, int X_gates);
+                           const vector<index_size>& T,
+                           int X_gates);
     inline void ApplyRandomGate(vector<bool>& iterated,
                                 index_size gate_i,
                                 const int num_bits,
