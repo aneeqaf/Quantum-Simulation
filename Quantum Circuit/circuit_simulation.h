@@ -39,15 +39,15 @@ using index_size = size_t;
 
 class state {
 public:
-    vector<cmplx> state_vector;
+    vector<cmplx> amp;
     vector<cmplx> apply_gate;
     vector<index_size> indices_for_ag;
     
     void operator*(const gate& matrix);
     
-    cmplx measure_0(short qubit);
-    cmplx measure_1(short qubit);
-    void measure(short qubit);
+    cmplx measure_0(const short qubit);
+    cmplx measure_1(const short qubit);
+    void measure(const short qubit);
     vector<cmplx> tensor();
     
     state();
@@ -57,11 +57,43 @@ public:
 
 class circuit {
 private:
-   class circuit_simulation;
+    template<typename function>
+    vector<index_size> FormBlockOfGates(int& num_X_gates,
+                                        index_size gate_i,
+                                        index_size& T_bit_mask,
+                                        function comp);
+    void ApplyBlockOfGates(const vector<index_size>& cbits,
+                           const index_size gate_i,
+                           const index_size T, int X_gates);
+    inline void ApplyRandomGate(vector<bool>& iterated,
+                                index_size gate_i,
+                                const int num_bits,
+                                const index_size idx);
+    inline void ApplyAnyCGate(const index_size c_bits,
+                              const index_size gate_i);
+    inline void ApplyNonControlGates(const index_size gate_i);
+    inline void  ApplyCXGate(const index_size idx,
+                             const index_size swap_index);
+    inline void ApplyPhaseGate(const int i_count,
+                               const index_size idx);
+    inline void ApplyTGateKTimes(const index_size gate_c,
+                                 const index_size idx);
+    inline int ApplyHOnAllAmp(const index_size gate_i);
+    inline void ApplyXXGate();
+    inline void ApplyXYGate();
+    inline void ApplyYYGate();
+    inline void ApplyYXGate();
+    void Merge2QXYGates(const index_size gate_i);
+    void ApplyMergedXYGates(const short type,
+                            const index_size gate_i);
+    void ApplySingleTGate(const index_size gate_i);
+    void ApplySingleCZGate(const index_size gate_i);
+    void GroupAlternateCycles();
+    void GroupSimilarGates();
+
 public:
     
     vector<gate> gates;
-    vector<vector<int>> qubit_to_gates;
     vector<short> clock_cycles;
     state* circuit_state;
     short merged;
@@ -70,15 +102,19 @@ public:
     short CZ_T;
     short qubits;
     short num_cycles;
+    short current_google_cycle;
     bool circuit_preprocessed;
     
-    void simulate(string outfile);
-    int test(circuit& result);
-    void print_state(string outfile);
-    void print_state();
-    void print_stats(clock_t end, clock_t begin);
-    void print_stats(string& outfile, clock_t end, clock_t begin);
-    void print_probabilities(string& out_file);
+    void Simulate(const string& outfile);
+    void PrintStateVector(const string& outfile);
+    void PrintStateVector();
+    void PrintReport(const clock_t end,
+                     const clock_t begin);
+    void PrintReport(const string& outfile,
+                     const clock_t end,
+                     const clock_t begin);
+    void PrintGatesAndCycles();
+    void PrintProbabilities(const string& out_file);
     
     circuit();
     circuit(const circuit& rhs);
@@ -86,38 +122,6 @@ public:
     ~circuit();
 };
 
-class circuit::circuit_simulation {
-public:
-    circuit& cir;
-    int google_cycle;
-    int gate_i;
-    
-    void diagonalize_XY();
-    void CZ_T_preprocess();
-    void initialize_control(index_size& index, index_size c_bits);
-    inline void control_rand_sim(index_size c_bits);
-    inline void rand_sim(vector<bool>& iterated,int g_i, int num_bits, index_size index);
-    inline void CX_opt(index_size index, index_size swap_index);
-    inline void CZ_opt(index_size index);
-    inline void Phase_opt(index_size index);
-    inline void T_opt(index_size temp_index);
-    inline int H_google_opt();
-    inline void XY_merge_opt();
-    inline void XY_merge_sim(short type);
-    inline void XX_opt();
-    inline void XY_opt();
-    inline void YY_opt();
-    inline void YX_opt();
-    inline void non_control_sim();
-    
-    template <typename Iterator> inline Iterator find_control_target(
-                                                vector<bool>& iterated,
-                                                Iterator iter, int c, index_size t_bits);
-    void block_gate_opt(vector<index_size>& cbits, int XT_gates);
-    template<typename function>
-    vector<index_size> initialize_gate_set(int& num_X_T_gates, function comp);
-    
-    circuit_simulation(circuit& c, int gate_i);
-};
+
 
 #endif /* circuit_simulation_h */
