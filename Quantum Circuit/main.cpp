@@ -136,8 +136,8 @@ int main(int argc, char *argv[]) {
         }
         
 //        new_circuit.q_circuit -> circuit_preprocessing();
-        new_circuit.q_circuit -> simulate("probabilities/" + out_file);
-        new_circuit.q_circuit -> print_state("state/" + out_file);
+        new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
+        new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
     }
     else if(create) {
         for (int i = 0; i < num_qubits.size(); ++i){
@@ -155,8 +155,8 @@ int main(int argc, char *argv[]) {
             
             
 //            new_circuit.q_circuit -> circuit_preprocessing();
-            new_circuit.q_circuit -> simulate("probabilities/" + out_file);
-            new_circuit.q_circuit -> print_state("state/" + out_file);
+            new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
+            new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
         }
     }
     return 0;
