@@ -37,6 +37,7 @@ FormBlockOfGates(int& num_X_gates,
 
         if (gates[gate_i].gate_identification.back() == gate::Gates::Phase ||
             gates[gate_i].gate_identification.back() == gate::Gates::Z) {
+            
             for (index_size j = 0 ; j < gates[gate_i].qubits.size(); ++j)
                 bits |= ( 1ull << ((qubits - 1) - gates[gate_i].qubits[j]));
             
@@ -72,7 +73,7 @@ FormBlockOfGates(int& num_X_gates,
 
 void circuit::
 ApplyBlockOfGates(const vector<index_size>& cbits,
-                  const index_size gate_i,
+                  index_size gate_i,
                   const vector<index_size>& T_bit_mask,
                   const int X_gates)
 {
@@ -80,13 +81,13 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
         for(int cq = 0; cq < gates[gate_i + j].num_controls; ++cq)
             if (cq != gates[gate_i + j].qubits[cq])
                 return cq;
-        
         return -1;
     };
+    
     vector<vector<bool>> iterated;
     if (X_gates > 0)
         iterated.resize(circuit_state -> amp.size(),
-                        vector<bool>(X_gates,false)) ;
+                 vector<bool>(X_gates,false)) ;
     
     index_size size =  circuit_state -> amp.size();
     int c_size = (int)cbits.size();
@@ -108,7 +109,7 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
                         ++i_count;
                     
                     else if (gates[gate_i + j].gate_identification.back() == gate::Gates::Z)
-                        negate_Z = ~negate_Z;
+                       negate_Z = !negate_Z;
                 }
                 else if (gates[gate_i + j].gate_identification.back() == gate::Gates::X) {
                     if (iterated[idx][iter_count] == false) {
@@ -131,7 +132,7 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
             }
         }
 
-        if (i_count > 0)
+        if ((i_count % 4) > 0)
             ApplyPhaseGate(i_count, idx);
         if (negate_Z)
             circuit_state -> amp[idx] = -circuit_state -> amp[idx];
@@ -140,7 +141,7 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(idx & t);
             
-            if (gate_c > 0)
+            if ((gate_c % 8) > 0)
                 ApplyTGateKTimes(gate_c, idx);
         }
     }
@@ -150,7 +151,7 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
 
 
 inline void circuit::
-ApplyRandomGate(vector<bool>& iterated,
+FindRelevantAmp(vector<bool>& iterated,
                 const index_size gate_i,
                 const int num_bits,
                 const index_size idx)
@@ -206,7 +207,7 @@ ApplyAnyCGate(const index_size c_bits,
 
             if((idx & c_bits) == c_bits) {
                 iter_count += 2;
-                ApplyRandomGate(iterated, gate_i, num_bits, idx);
+                FindRelevantAmp(iterated, gate_i, num_bits, idx);
                (*circuit_state) * (gates[gate_i]);
             }
         }
@@ -226,7 +227,7 @@ ApplyNonControlGates(const index_size gate_i)
             iterated[idx] = true;
             ++iter_count;
             
-            ApplyRandomGate(iterated, gate_i, num_bits, idx);
+            FindRelevantAmp(iterated, gate_i, num_bits, idx);
             (*circuit_state) * (gates[gate_i]);
         }
     }
@@ -309,8 +310,8 @@ ApplyTGateKTimes(const index_size gate_c,
         case 4: {
             //-1
             circuit_state -> amp[idx] =
-            -cmplx(real(circuit_state -> amp[idx]),
-                   imag(circuit_state -> amp[idx]));
+            cmplx(-real(circuit_state -> amp[idx]),
+                   -imag(circuit_state -> amp[idx]));
             break;
         }
         case 5: {
@@ -326,8 +327,8 @@ ApplyTGateKTimes(const index_size gate_c,
         case 6: {
             //- i
             circuit_state -> amp[idx] =
-            -cmplx(-imag(circuit_state -> amp[idx]),
-                  real(circuit_state -> amp[idx]));
+            cmplx(imag(circuit_state -> amp[idx]),
+                  -real(circuit_state -> amp[idx]));
             break;
         }
         case 7: {
@@ -336,7 +337,7 @@ ApplyTGateKTimes(const index_size gate_c,
             circuit_state->amp[idx] =
             cmplx(real(circuit_state->amp[idx])
                   + imag(circuit_state->amp[idx]),
-                  -real(circuit_state->amp[idx])
+                  - real(circuit_state->amp[idx])
                   + imag(circuit_state->amp[idx]));
             break;
         }
@@ -451,8 +452,7 @@ Merge2QXYGates(index_size gate_i)
         a = gate_i + 1;
         b = gate_i++;
     }
-    
-<<<<<<< HEAD
+
     if(gates[a].gate_identification.back() == gate::Gates::X_rotation &&
        gates[b].gate_identification.back() == gate::Gates::X_rotation)
         ApplyMergedXYGates(0, gate_i);
@@ -468,23 +468,6 @@ Merge2QXYGates(index_size gate_i)
     else if(gates[a].gate_identification.back() == gate::Gates::Y_rotation &&
        gates[b].gate_identification.back() == gate::Gates::Y_rotation)
         ApplyMergedXYGates(3, gate_i);
-=======
-    if(cir.gates[a].gate_identification.back() == gate::Gates::X_rotation &&
-       cir.gates[b].gate_identification.back() == gate::Gates::X_rotation)
-        XY_merge_sim(0);
-    
-    else if(cir.gates[a].gate_identification.back() == gate::Gates::X_rotation &&
-       cir.gates[b].gate_identification.back() == gate::Gates::Y_rotation)
-        XY_merge_sim(1);
-    
-    else if(cir.gates[a].gate_identification.back() == gate::Gates::Y_rotation &&
-       cir.gates[b].gate_identification.back() == gate::Gates::X_rotation)
-        XY_merge_sim(2);
-    
-    else if(cir.gates[a].gate_identification.back() == gate::Gates::Y_rotation &&
-       cir.gates[b].gate_identification.back() == gate::Gates::Y_rotation)
-        XY_merge_sim(3);
->>>>>>> Buggy - T gate acting weird
 }
 
 void circuit::
@@ -508,7 +491,7 @@ ApplyMergedXYGates(const short type,
             iterated[idx] = true;
             ++iter_count;
             
-            ApplyRandomGate(iterated, gate_i, num_bits, idx);
+            FindRelevantAmp(iterated, gate_i, num_bits, idx);
             
             switch (type) {
                 case 0: {
@@ -555,7 +538,7 @@ ApplySingleTGate(const index_size gate_i)
 }
 
 void circuit::
-ApplySingleCZGate(const index_size gate_i)
+ApplySingleCPhaseGate(const index_size gate_i)
 {
     int num_controls = gates[gate_i].num_controls;
     
@@ -606,7 +589,7 @@ GroupAlternateCycles()
                 k = -j;
 
             if (gates[g_i + k].gate_identification.back() == gate::Gates::T ||
-                gates[g_i + k].gate_identification.back() == gate::Gates::Phase) {
+                gates[g_i + k].gate_identification.back() == gate::Gates::Z) {
                 
                 if (i % 2 == 1) {
                     if(saw_xy)
@@ -623,7 +606,6 @@ GroupAlternateCycles()
             
         }
     }
-    PrintGatesAndCycles();
 }
 
 void circuit::
@@ -636,14 +618,14 @@ GroupSimilarGates()
     for (int j = qubits; j < gates.size()
          && (g_i + last_Y + last_X + last_T + last_CZ) < gates.size(); ++j) {
             
-            if (gates[j].gate_identification.back() == gate::Gates::Phase) {
+            if (gates[j].gate_identification.back() == gate::Gates::Z) {
                 if(saw_Y || saw_X) {
                     g_i = j;
                     last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
                     saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false;
                 }
                 saw_CZ = true;
-                if (last_CZ != 0 && (saw_T || saw_X || saw_Y))
+                if (saw_T || saw_X || saw_Y)
                     swap(gates[j], gates[g_i + last_CZ]);
                 
                 ++last_CZ;
@@ -675,7 +657,6 @@ GroupSimilarGates()
                 ++last_Y;
             }
         }
-    PrintGatesAndCycles();
 }
 
 circuit::
@@ -715,11 +696,11 @@ Simulate(const string& outfile)
 {
     int size = (int)gates.size();
     
-//    if (google) {
-//        if (!clock_cycles.empty())
-//            GroupAlternateCycles();
-//        GroupSimilarGates();
-//    }
+    if (google) {
+        if (!clock_cycles.empty())
+            GroupAlternateCycles();
+        GroupSimilarGates();
+    }
     
     increment_cycle = [&](index_size g_i) {
         if (google && !clock_cycles.empty() && g_i == clock_cycles[current_google_cycle] )
@@ -739,7 +720,7 @@ Simulate(const string& outfile)
            gates[i].gate_identification.front() != gate::Gates::Control)
             sort(gates[i].qubits.begin(), gates[i].qubits.end());
         
-        //T bit mask won't work if multiple T gates on same qubit (general case)
+        //T bit mask won't work unless ordering of blocks is correct
         if(gates[i].gate_identification.front() == gate::Gates::Control ||
              gates[i].gate_identification.back() == gate::Gates::T) {
             
@@ -754,28 +735,17 @@ Simulate(const string& outfile)
                     int XT_gates = 0;
                     vector<index_size> bit_mask;
                     vector<index_size> T_bit_mask(1, 0);
+                    index_size gate_i = i;
                     
-                    bit_mask = FormBlockOfGates(XT_gates, i, T_bit_mask, comparator);
+                    bit_mask = FormBlockOfGates(XT_gates, i,
+                                                T_bit_mask, comparator);
                     
-//                    if ((bit_mask.size() == 0 && T_bit_mask.size() == 1
-//                         && __builtin_popcountll(T_bit_mask.front()) == 1) ||
-//                        (bit_mask.size() == 1 && __builtin_popcountll(T_bit_mask.front()) == 0)) {
-//                        if (gates[i].gate_identification.back() == gate::Gates::T) {
-//                            ApplySingleTGate(i);
-//                        }
-//                        else if (gates[i].gate_identification.back() == gate::Gates::Phase) {
-//                            ApplySingleCZGate(i);
-//                        }
-//                    }
-//                    else {
-                        ApplyBlockOfGates(bit_mask, i, T_bit_mask, XT_gates);
-                   // }
-
+                    ApplyBlockOfGates(bit_mask, gate_i, T_bit_mask, XT_gates);
+                
                     i += bit_mask.size();
                     for (auto t : T_bit_mask)
                         i += __builtin_popcountll(t);
                     i -= 1;
-                    PrintStateVector();
                     g_end = clock();
                     gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     CZ_T += bit_mask.size();
@@ -837,6 +807,23 @@ Simulate(const string& outfile)
 }
 
 void circuit::
+PrintGates()
+{
+    for (auto& g : gates) {
+        if(g.gate_identification.back() == gate::Gates::Z)
+            cout << "CZ ";
+        else if (g.gate_identification.back() == gate::Gates::X_rotation)
+            cout << "X ";
+        else if (g.gate_identification.back() == gate::Gates::Y_rotation)
+            cout << "Y ";
+        else if (g.gate_identification.back() == gate::Gates::T)
+            cout << "T ";
+        else if (g.gate_identification.back() == gate::Gates::Hadamard)
+            cout << "H ";
+    }
+    cout << "\n\n";
+}
+void circuit::
 PrintGatesAndCycles()
 {
     int j = 0;
@@ -845,7 +832,7 @@ PrintGatesAndCycles()
 
         for(;j < clock_cycles[i]; ++j) {
             auto& g = gates[j];
-            if(g.gate_identification.back() == gate::Gates::Phase)
+            if(g.gate_identification.back() == gate::Gates::Z)
                 cout << "CZ ";
             else if (g.gate_identification.back() == gate::Gates::X_rotation)
                 cout << "X ";
@@ -874,7 +861,15 @@ PrintReport(const clock_t end, const clock_t begin)
     cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
          <<  __GNUC_PATCHLEVEL__<< "\n";
     cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
-    cout << "Executed on : " << __DATE__ << " " << __TIME__ << "\n\n";
+    time_t t = time(0);
+    struct tm * now = localtime (&t);
+    cout << "Executed on : "
+         << (now->tm_mon + 1) << "/"
+         <<  now->tm_mday << "/"
+         << (now->tm_year + 1900) << " "
+         <<  now->tm_hour << ":" << now->tm_min << ":"
+         << std::setw(2) << std::setfill('0') << now->tm_sec
+         <<"\n\n";
     
     cout << "Qubits : " << qubits << "  ";
     cout << "Gates : " << gates.size() << "  ";

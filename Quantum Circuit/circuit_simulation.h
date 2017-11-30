@@ -63,10 +63,10 @@ private:
                                         vector<index_size>& T_bit_mask,
                                         function comp);
     void ApplyBlockOfGates(const vector<index_size>& cbits,
-                           const index_size gate_i,
+                           index_size gate_i,
                            const vector<index_size>& T,
                            int X_gates);
-    inline void ApplyRandomGate(vector<bool>& iterated,
+    inline void FindRelevantAmp(vector<bool>& iterated,
                                 index_size gate_i,
                                 const int num_bits,
                                 const index_size idx);
@@ -88,7 +88,7 @@ private:
     void ApplyMergedXYGates(const short type,
                             const index_size gate_i);
     void ApplySingleTGate(const index_size gate_i);
-    void ApplySingleCZGate(const index_size gate_i);
+    void ApplySingleCPhaseGate(const index_size gate_i);
     void GroupAlternateCycles();
     void GroupSimilarGates();
 
@@ -115,6 +115,7 @@ public:
                      const clock_t end,
                      const clock_t begin);
     void PrintGatesAndCycles();
+    void PrintGates();
     void PrintProbabilities(const string& out_file);
     
     circuit();

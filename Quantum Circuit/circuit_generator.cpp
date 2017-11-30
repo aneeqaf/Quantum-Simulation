@@ -244,7 +244,7 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
         //control phase gate
         int k = 0;
         for (int j = 0; j < current_CZ_pairs.size()/2; ++j) {
-            gate temp = create_phase_gate(0.0);
+            gate temp = create_Z();
             temp.gate_identification.insert(temp.gate_identification.begin()
                                                , gate::Gates::Control);
             temp.num_controls = 1;
@@ -632,7 +632,7 @@ void circuit_generator::read_google_input_files(const string& input_file)
         }
         else {
             file >> q1 >> q2;
-            q_circuit -> gates.push_back(create_phase_gate(0.0));
+            q_circuit -> gates.push_back(create_Z());
             q_circuit -> gates[q_circuit -> gates.size() - 1].
                     gate_identification.insert(
                     q_circuit -> gates[q_circuit -> gates.size() - 1]. gate_identification.begin()

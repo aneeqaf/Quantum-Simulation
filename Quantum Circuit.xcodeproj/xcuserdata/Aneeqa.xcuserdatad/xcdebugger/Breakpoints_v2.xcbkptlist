@@ -234,11 +234,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.84879"
+            timestampString = "533665207.41563"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -248,11 +248,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.849182"
+            timestampString = "533665207.416347"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -262,11 +262,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.849439"
+            timestampString = "533665207.41662"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -276,11 +276,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.849677"
+            timestampString = "533665207.416873"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -290,11 +290,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.849925"
+            timestampString = "533665207.417101"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -304,7 +304,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.850331"
+            timestampString = "533665207.417329"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "213"
@@ -320,7 +320,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.850826"
+            timestampString = "533665207.417614"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "318"
@@ -336,11 +336,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.851291"
+            timestampString = "533665207.417954"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -366,7 +366,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.851597"
+            timestampString = "533665207.418225"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "273"
@@ -382,7 +382,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.851876"
+            timestampString = "533665207.418554"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "285"
@@ -398,7 +398,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.852135"
+            timestampString = "533665207.418844"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "502"
@@ -414,7 +414,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.852403"
+            timestampString = "533665207.419122"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "578"
@@ -430,11 +430,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.852666"
+            timestampString = "533665207.419406"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "58"
-            endingLineNumber = "58"
+            startingLineNumber = "57"
+            endingLineNumber = "57"
             landmarkName = "circuit:: FormBlockOfGates(int&amp; num_X_gates, index_size gate_i, vector&lt;index_size&gt;&amp; T_bit_mask, function comp)"
             landmarkType = "7">
          </BreakpointContent>
@@ -446,7 +446,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.853286"
+            timestampString = "533665207.41967"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "300"
@@ -462,7 +462,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.853548"
+            timestampString = "533665207.419965"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "314"
@@ -478,7 +478,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.853797"
+            timestampString = "533665207.420356"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "292"
@@ -510,12 +510,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.854067"
+            timestampString = "533665207.42068"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "533"
-            endingLineNumber = "533"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "338"
+            endingLineNumber = "338"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -542,7 +542,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.854347"
+            timestampString = "533665207.420768"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "323"
@@ -558,7 +558,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.854619"
+            timestampString = "533665207.421041"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "377"
@@ -574,7 +574,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.854874"
+            timestampString = "533665207.421313"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "388"
@@ -590,7 +590,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.855125"
+            timestampString = "533665207.421579"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "413"
@@ -606,7 +606,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.855381"
+            timestampString = "533665207.421859"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "439"
@@ -622,12 +622,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.855636"
+            timestampString = "533665207.422128"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -638,12 +638,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.85592"
+            timestampString = "533665207.422202"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
             <Locations>
                <Location
@@ -686,12 +686,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.85618"
+            timestampString = "533665207.422269"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
             <Locations>
                <Location
@@ -734,12 +734,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.856441"
+            timestampString = "533665207.422333"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -750,12 +750,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.856703"
+            timestampString = "533665207.422397"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -766,12 +766,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.856964"
+            timestampString = "533665207.422459"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -782,7 +782,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.857231"
+            timestampString = "533665207.422521"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "406"
@@ -798,7 +798,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.857497"
+            timestampString = "533665207.422786"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "389"
@@ -814,7 +814,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.857792"
+            timestampString = "533665207.423048"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "416"
@@ -830,11 +830,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.85806"
+            timestampString = "533665207.423322"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -844,7 +844,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.858299"
+            timestampString = "533665207.423536"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "376"
@@ -860,7 +860,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.858547"
+            timestampString = "533665207.42379"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "511"
@@ -876,11 +876,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.858794"
+            timestampString = "533665207.424039"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -890,11 +890,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.859028"
+            timestampString = "533665207.42426"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -904,7 +904,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.859261"
+            timestampString = "533665207.424475"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "356"
@@ -920,7 +920,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.859509"
+            timestampString = "533665207.424733"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "367"
@@ -936,7 +936,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.859752"
+            timestampString = "533665207.424987"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "381"
@@ -952,7 +952,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.859992"
+            timestampString = "533665207.425251"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "345"
@@ -968,13 +968,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.860241"
+            timestampString = "533665207.425497"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "358"
-            endingLineNumber = "358"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
-            landmarkType = "7">
+            startingLineNumber = "237"
+            endingLineNumber = "237"
+            landmarkName = "unknown"
+            landmarkType = "0">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -984,11 +984,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.860496"
+            timestampString = "533665207.42556"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -998,12 +998,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.860729"
+            timestampString = "533665207.425771"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "548"
-            endingLineNumber = "548"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "345"
+            endingLineNumber = "345"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1014,7 +1014,7 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.861243"
+            timestampString = "533665207.425829"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "412"
@@ -1030,11 +1030,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.86149"
+            timestampString = "533665207.426079"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "132"
-            endingLineNumber = "132"
+            startingLineNumber = "131"
+            endingLineNumber = "131"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1046,11 +1046,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.861743"
+            timestampString = "533665207.426141"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1060,11 +1060,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.861975"
+            timestampString = "533665207.426355"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1074,12 +1074,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.862205"
+            timestampString = "533665207.426571"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "503"
-            endingLineNumber = "503"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "323"
+            endingLineNumber = "323"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
             <Locations>
                <Location
@@ -1122,12 +1122,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.862706"
+            timestampString = "533665207.426634"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "549"
-            endingLineNumber = "549"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "346"
+            endingLineNumber = "346"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1154,11 +1154,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.862975"
+            timestampString = "533665207.426718"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1168,11 +1168,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.863461"
+            timestampString = "533665207.426937"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1182,11 +1182,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.863693"
+            timestampString = "533665207.427155"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "170"
-            endingLineNumber = "170"
+            startingLineNumber = "144"
+            endingLineNumber = "144"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
             <Locations>
@@ -1260,12 +1260,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.863945"
+            timestampString = "533665207.427232"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "579"
-            endingLineNumber = "579"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "366"
+            endingLineNumber = "366"
+            landmarkName = "circuit:: ApplyXXGate()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1276,12 +1276,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.864191"
+            timestampString = "533665207.427286"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "424"
-            endingLineNumber = "424"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "279"
+            endingLineNumber = "279"
+            landmarkName = "circuit:: ApplyTGateKTimes(const index_size gate_c, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1292,11 +1292,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.865411"
+            timestampString = "533665207.427343"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1306,11 +1306,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.865645"
+            timestampString = "533665207.427566"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1320,11 +1320,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_generator.cpp"
-            timestampString = "533361738.865871"
+            timestampString = "533665207.427886"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "655"
-            endingLineNumber = "655">
+            startingLineNumber = "653"
+            endingLineNumber = "653">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -1334,12 +1334,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.8661"
+            timestampString = "533665207.428176"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "352"
-            endingLineNumber = "352"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "231"
+            endingLineNumber = "231"
+            landmarkName = "circuit:: ApplyNonControlGates(const index_size gate_i)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1350,12 +1350,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.866589"
+            timestampString = "533665207.428242"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "233"
-            endingLineNumber = "233"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "187"
+            endingLineNumber = "187"
+            landmarkName = "circuit:: ApplyRandomGate(vector&lt;bool&gt;&amp; iterated, const index_size gate_i, const int num_bits, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1366,12 +1366,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.86756"
+            timestampString = "533665207.428301"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "588"
-            endingLineNumber = "588"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "375"
+            endingLineNumber = "375"
+            landmarkName = "circuit:: ApplyXXGate()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1382,12 +1382,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.867809"
+            timestampString = "533665207.428355"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "580"
-            endingLineNumber = "580"
-            landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
+            startingLineNumber = "367"
+            endingLineNumber = "367"
+            landmarkName = "circuit:: ApplyXXGate()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1398,11 +1398,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.868064"
+            timestampString = "533665207.42841"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "179"
-            endingLineNumber = "179"
+            startingLineNumber = "146"
+            endingLineNumber = "146"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
             <Locations>
@@ -1476,11 +1476,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.868979"
+            timestampString = "533665207.428467"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "108"
-            endingLineNumber = "108"
+            startingLineNumber = "107"
+            endingLineNumber = "107"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1492,11 +1492,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.869208"
+            timestampString = "533665207.428522"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "115"
-            endingLineNumber = "115"
+            startingLineNumber = "114"
+            endingLineNumber = "114"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1508,11 +1508,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.869435"
+            timestampString = "533665207.428577"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "47"
-            endingLineNumber = "47"
+            startingLineNumber = "46"
+            endingLineNumber = "46"
             landmarkName = "circuit:: FormBlockOfGates(int&amp; num_X_gates, index_size gate_i, vector&lt;index_size&gt;&amp; T_bit_mask, function comp)"
             landmarkType = "7">
             <Locations>
@@ -1556,11 +1556,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.869648"
+            timestampString = "533665207.428632"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "57"
-            endingLineNumber = "57"
+            startingLineNumber = "56"
+            endingLineNumber = "56"
             landmarkName = "circuit:: FormBlockOfGates(int&amp; num_X_gates, index_size gate_i, vector&lt;index_size&gt;&amp; T_bit_mask, function comp)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1572,11 +1572,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.869856"
+            timestampString = "533665207.428688"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "74"
-            endingLineNumber = "74"
+            startingLineNumber = "73"
+            endingLineNumber = "73"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1588,11 +1588,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.870065"
+            timestampString = "533665207.428742"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "81"
-            endingLineNumber = "81"
+            startingLineNumber = "80"
+            endingLineNumber = "80"
             landmarkName = "circuit:: ApplyBlockOfGates(const vector&lt;index_size&gt;&amp; cbits, const index_size gate_i, const vector&lt;index_size&gt;&amp; T_bit_mask, const int X_gates)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1604,11 +1604,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533361738.870267"
+            timestampString = "533665207.428795"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "38"
-            endingLineNumber = "38"
+            startingLineNumber = "37"
+            endingLineNumber = "37"
             landmarkName = "circuit:: FormBlockOfGates(int&amp; num_X_gates, index_size gate_i, vector&lt;index_size&gt;&amp; T_bit_mask, function comp)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1620,11 +1620,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533664460.586373"
+            timestampString = "533665207.428851"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "259"
-            endingLineNumber = "259"
+            startingLineNumber = "258"
+            endingLineNumber = "258"
             landmarkName = "circuit:: ApplyPhaseGate(const int i_count, const index_size idx)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1636,11 +1636,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "Quantum Circuit/circuit_simulation.cpp"
-            timestampString = "533664856.446626"
+            timestampString = "533665207.428906"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1044"
-            endingLineNumber = "1044"
+            startingLineNumber = "1025"
+            endingLineNumber = "1025"
             landmarkName = "state:: operator*(const gate&amp; q_gate)"
             landmarkType = "7">
          </BreakpointContent>
