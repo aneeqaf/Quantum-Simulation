@@ -70,8 +70,12 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i testquidd0.txt "
+            argument = "-h random_circuits_examples/inst_6_5_100_7"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-i testquidd0.txt "
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-g 20 55 -o quantum20"
@@ -114,7 +118,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-i quantum1650.txt"
+            argument = "-h input/quantum1650.txt -o test"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
