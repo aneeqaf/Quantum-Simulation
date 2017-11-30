@@ -80,6 +80,26 @@ gate& gate::operator=(const gate& rhs)
     return g;
 }
 
+gate create_X_1_2()
+{
+    gate g =  create_gate(cmplx(1, 1),
+                          cmplx(1, -1),
+                          cmplx(1, -1),
+                          cmplx(1, 1));
+    g.gate_identification.push_back(gate::Gates::X);
+    return g;
+}
+
+gate create_Y_1_2()
+{
+    gate g =  create_gate(cmplx(0, 0),
+                          cmplx(0, -1),
+                          cmplx(0, 1),
+                          cmplx(0, 0));
+    g.gate_identification.push_back(gate::Gates::Y);
+    return g;
+}
+
  gate create_Z()
 {
     gate g = create_gate(cmplx(1, 0),
