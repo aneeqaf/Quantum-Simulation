@@ -1,7 +1,7 @@
 TARGET = quantum
 LIBS = -lm -lstdc++
-CC = g++-7
-CFLAGS = -g -Wall -std=c++17 -march=native -Ofast -DDO_PREFETCH
+CC = gcc
+CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -DDO_PREFETCH
 
 .PHONY: default all clean
 

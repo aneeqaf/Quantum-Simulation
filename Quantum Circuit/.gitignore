@@ -13,4 +13,5 @@ state/
 probabilities/
 simulation_stats/
 sftp-config.json
+Quantum\ Circuit.xcodeproj/
 *.txt

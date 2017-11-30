@@ -1,4 +1,3 @@
-//
 //  circuit_gates.cpp
 //  Quantum Circuit
 //
