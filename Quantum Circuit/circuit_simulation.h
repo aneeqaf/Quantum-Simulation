@@ -32,8 +32,6 @@
 using namespace std;
 
 const float HADAMARD_CONST = 1/sqrt(2);
-extern bool google;
-extern float H_related_gates;
 
 using index_size = size_t;
 
@@ -43,7 +41,7 @@ public:
     vector<cmplx> apply_gate;
     vector<index_size> indices_for_ag;
     
-    void operator*(const gate& matrix);
+    void operator*=(const gate& matrix);
     
     cmplx measure_0(const short qubit);
     cmplx measure_1(const short qubit);
@@ -56,7 +54,23 @@ public:
 };
 
 class circuit {
-private:
+public:
+    vector<gate> gates;
+    vector<short> clock_cycles;
+    state* circuit_state;
+    short merged;
+    short X;
+    short Y;
+    short CZ_T;
+    short qubits;
+    short num_cycles;
+    short current_google_cycle;
+    vector<double> gate_time;
+    clock_t g_begin;
+    clock_t g_end;
+    bool google ;
+    int H_related_gates;
+    
     template<typename function>
     vector<index_size> FormBlockOfGates(int& num_X_gates,
                                         index_size gate_i,
@@ -80,31 +94,17 @@ private:
     inline void ApplyTGateKTimes(const index_size gate_c,
                                  const index_size idx);
     inline int ApplyHOnAllAmp(const index_size gate_i);
-    inline void ApplyXXGate();
-    inline void ApplyXYGate();
-    inline void ApplyYYGate();
-    inline void ApplyYXGate();
-    void Merge2QXYGates(const index_size gate_i);
-    void ApplyMergedXYGates(const short type,
+    inline void ApplyXX12Gate();
+    inline void ApplyXY12Gate();
+    inline void ApplyYY12Gate();
+    inline void ApplyYX12Gate();
+    void Merge2QXY12Gates(const index_size gate_i);
+    void ApplyMergedXY12Gates(const short type,
                             const index_size gate_i);
     void ApplySingleTGate(const index_size gate_i);
     void ApplySingleCPhaseGate(const index_size gate_i);
     void GroupAlternateCycles();
     void GroupSimilarGates();
-
-public:
-    
-    vector<gate> gates;
-    vector<short> clock_cycles;
-    state* circuit_state;
-    short merged;
-    short X;
-    short Y;
-    short CZ_T;
-    short qubits;
-    short num_cycles;
-    short current_google_cycle;
-    bool circuit_preprocessed;
     
     void Simulate(const string& outfile);
     void PrintStateVector(const string& outfile);
