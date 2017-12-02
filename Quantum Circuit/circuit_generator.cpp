@@ -162,19 +162,9 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
 {
     srand(time(NULL));
     
-    google = true;
     short GS_gates[3] = {gate::Gates::X_rotation, gate::Gates::Y_rotation, gate::Gates::T};
     
     int GS_gates_num = 3;
-    
-    auto check_reoccurance = [](vector<short>& to_check, short q) {
-        for(size_t i = 0; i < to_check.size(); ++i) {
-            if(to_check[i] == q) {
-                return false;
-            }
-        }
-        return true;
-    };
     
     //Each row represents a qubit. This is to keep track of the
     //gates applied to this qubit.
@@ -188,17 +178,6 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
                 gate_identification[0] == gate::Gates::Control) {
                 CZ_pairs.push_back(i);
                 count += 1;
-            }
-        }
-        return count;
-    };
-    auto count_wires_gate1 = [&]() {
-        auto& gates = q_circuit -> gates;
-        int count = 0;
-        for (int i = 0; i < qubit_to_gates.size(); ++i) {
-            if ( gates[qubit_to_gates[i].back()].gate_identification[0]
-                                == gate::Gates::Control) {
-                count += 2;
             }
         }
         return count;
@@ -301,10 +280,10 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
             gate temp;
             
             if (gate_to_apply == 0) {
-                temp = create_X_rotation(0.5);
+                temp = create_X_1_2();
             }
             else if (gate_to_apply == 1) {
-                temp = create_Y_rotation(0.5);
+                temp = create_Y_1_2();
             }
             else if (gate_to_apply == 2) {
                 temp = create_T();
@@ -356,9 +335,17 @@ void circuit_generator::create_quiddpro_script(const string& input_file)
                 continue;
             }
             
-            if ( g == gate::Gates::T) {
+            if (g == gate::Gates::T) {
                 file << "T = [1 0 ; 0 " + to_string(0.707106781) + "+i*" + to_string(0.707106781) + "];\n";
                 file << "op" + to_string(op_count++) + " = cu_gate (T, \"";
+            }
+            else if (g == gate::Gates::X_1_2) {
+                file << "X_1_2 = [0.5+i*0.5 0.5-i*0.5 ; 0.5-i*0.5 0.5+i*0.5];\n";
+                file << "op" + to_string(op_count++) + " = cu_gate (X_1_2, \"";
+            }
+            else if (g == gate::Gates::Y_1_2) {
+                file << "Y_1_2 = [0.5+i*0.5 -0.5-i*0.5 ; 0.5+i*0.5 0.5+i*0.5];\n";
+                file << "op" + to_string(op_count++) + " = cu_gate (Y_1_2, \"";
             }
             else if (g != gate::Gates::Control ) {
                 file << "op" + to_string(op_count++)  + " = cu_gate(" + quiddpro_func[g] + "(";
@@ -596,7 +583,6 @@ void circuit_generator::read_google_input_files(const string& input_file)
     ifstream file;
     file.open(input_file);
     
-    google = true;
     file >> q_circuit -> qubits;
     
     q_circuit -> circuit_state -> amp.push_back(cmplx(1,0));
@@ -625,10 +611,10 @@ void circuit_generator::read_google_input_files(const string& input_file)
             q_circuit -> gates.push_back(create_T());
         }
         else if (gate_type == "y_1_2") {
-            q_circuit -> gates.push_back(create_Y_rotation(0.5));
+            q_circuit -> gates.push_back(create_Y_1_2());
         }
         else if (gate_type == "x_1_2") {
-            q_circuit -> gates.push_back(create_X_rotation(0.5));
+            q_circuit -> gates.push_back(create_X_1_2());
         }
         else {
             file >> q1 >> q2;

@@ -20,8 +20,6 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
     
-    google = false;
-    
 #ifdef __APPLE__
     if (getenv("STDIN")) {
         if (!freopen(getenv("STDIN"), "r", stdin)) {
@@ -121,13 +119,14 @@ int main(int argc, char *argv[]) {
     circuit_generator new_circuit = {};
     if (inputfile || googleInput) {
         
-         google = true;
+        
         
         if (inputfile) {
             new_circuit.read_input_file("input/" + input_filename);
         }
         else {
             new_circuit.read_google_input_files(input_filename);
+            new_circuit.q_circuit -> google = true;
         }
         
         if(googleInput) {
@@ -136,6 +135,7 @@ int main(int argc, char *argv[]) {
         }
         
 //        new_circuit.q_circuit -> circuit_preprocessing();
+        
         new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
         new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
     }
@@ -143,6 +143,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < num_qubits.size(); ++i){
             if (google_c) {
                 new_circuit.create_google_rand_circuit(num_qubits[i], num_gates[i]);
+                new_circuit.q_circuit -> google = true;
             }
             else {
                 new_circuit.create_rand_circuit(num_qubits[i], num_gates[i]);
