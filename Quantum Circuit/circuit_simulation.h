@@ -69,7 +69,9 @@ public:
     clock_t g_begin;
     clock_t g_end;
     bool google ;
-    int H_related_gates;
+    //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
+    //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
+    index_size global_factor_power;
     
     template<typename function>
     vector<index_size> FormBlockOfGates(int& num_X_gates,
@@ -105,6 +107,7 @@ public:
     void ApplySingleCPhaseGate(const index_size gate_i);
     void GroupAlternateCycles();
     void GroupSimilarGates();
+    float CalculateNormOfAmp();
     
     void Simulate(const string& outfile);
     void PrintStateVector(const string& outfile);

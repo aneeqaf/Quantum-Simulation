@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
     if (inputfile || googleInput) {
         
         
-        
+        //write a function for printing google files.
         if (inputfile) {
             new_circuit.read_input_file("input/" + input_filename);
         }
