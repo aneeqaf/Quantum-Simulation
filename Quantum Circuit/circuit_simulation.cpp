@@ -21,7 +21,7 @@ circuit::
 circuit() : gates({}),clock_cycles({}),
 circuit_state(new state()), merged(0), X(0), Y(0), CZ_T(0),
 qubits(0), num_cycles(0), current_google_cycle(0), g_begin(0),
-g_end(0), google(false), H_related_gates(0)
+g_end(0), google(false), global_factor_power(0)
 {
     gate_time.resize(5,0);
 }
@@ -128,10 +128,6 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
     for (index_size idx = 0; idx < size ; ++idx) {
         int iter_count = 0;
         
-        if (current_google_cycle % 50 == 0)
-            circuit_state -> amp[idx] *=
-            pow(HADAMARD_CONST, H_related_gates);
-        
         bool negate_Z = false;
         int i_count = 0;
         for (index_size j = 0; j < c_size; ++j){
@@ -165,21 +161,35 @@ ApplyBlockOfGates(const vector<index_size>& cbits,
             }
         }
 
-        if ((i_count % 4) > 0)
+        if ((i_count & ((1u << 2) - 1)) > 0)
             ApplyPhaseGate(i_count, idx);
-        if (negate_Z)
-            circuit_state -> amp[idx] = -circuit_state -> amp[idx];
         if (!t_bit_mask_empty && circuit_state->amp[idx] != cmplx(0,0)) {
             index_size gate_c = 0;
+        
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(idx & t);
             
-            if ((gate_c % 8) > 0)
-                ApplyTGateKTimes(gate_c, idx);
+            int k = gate_c & ((1u << 3) - 1);
+            if ( k > 0) {
+                if (negate_Z)
+                   k = k + 4 ;
+                
+                ApplyTGateKTimes(k, idx);
+            }
+            else if (negate_Z)
+                circuit_state -> amp[idx] = -circuit_state -> amp[idx];
+        }
+        else if (negate_Z)
+            circuit_state -> amp[idx] = -circuit_state -> amp[idx];
+        
+        if (global_factor_power > 100) {
+            circuit_state -> amp[idx] /= pow(2,(global_factor_power/2));
+            if (global_factor_power % 2 == 1)
+                circuit_state -> amp[idx] /= sqrt(2);
         }
     }
-    if (current_google_cycle % 50 == 0)
-        H_related_gates = 0;
+    if (global_factor_power > 100)
+        global_factor_power = 0;
 }
 
 
@@ -265,7 +275,7 @@ ApplyNonControlGates(const index_size gate_i)
         }
     }
     if (google) {
-        H_related_gates += 2;
+        global_factor_power += 2;
     }
 }
 
@@ -385,7 +395,7 @@ ApplyHOnAllAmp(const index_size gate_i)
     int j = 0;
     for(; j < gates.size() &&
         gates[gate_i + j].gate_identification.back() == gate::Gates::Hadamard; ++j )
-        ++H_related_gates;
+        ++global_factor_power;
 
     index_size size = circuit_state -> amp.size();
     for (index_size idx = 0; idx < size; ++idx)
@@ -560,7 +570,7 @@ ApplyMergedXY12Gates(const short type,
             circuit_state -> indices_for_ag.clear();
         }
     }
-    H_related_gates += 2;
+    global_factor_power += 2;
 }
 
 void circuit::
@@ -697,6 +707,27 @@ GroupSimilarGates()
                 ++last_Y;
             }
         }
+}
+
+float circuit::
+CalculateNormOfAmp()
+{
+    double norm = 0;
+    for (auto& state_v : circuit_state -> amp) {
+        state_v /= pow(2,(global_factor_power/2));
+        if (global_factor_power % 2 == 1)
+            state_v /= sqrt(2);
+        state_v *= conj(state_v);
+        if (real(state_v) > (1/(1ull << qubits)))
+            norm += real(state_v);
+    }
+    
+    for (auto state_v : circuit_state -> amp) {
+        state_v *= conj(state_v);
+        if (real(state_v) <= (1/(1ull << qubits)))
+            norm += real(state_v);
+    }
+    return norm;
 }
 
 // TO DO: apply optimizations for diagonal gates, control Z, toffolli, and control X. 
@@ -884,7 +915,8 @@ PrintReport(const clock_t end, const clock_t begin)
     
     double total_time = double(end - begin) / CLOCKS_PER_SEC;
     cout << setprecision(3);
-    cout << "Total runtime : " << total_time << "s\n\n";
+    cout << "Total runtime : " << total_time << "s\n";
+    cout << "Norm : " << CalculateNormOfAmp() << "\n\n";
     
     cout << "Runtimes by gate type\n";
     cout << "   H (" << qubits << ") : " << gate_time[0]
@@ -963,7 +995,9 @@ PrintProbabilities(const string &out_file)
     file.open(out_file + to_string(count) + ".txt");
     
     for (auto state_v : circuit_state -> amp) {
-        state_v *= cmplx((HADAMARD_CONST, H_related_gates));
+        state_v /= pow(2,(global_factor_power/2));
+        if (global_factor_power % 2 == 1)
+            state_v /= sqrt(2);
         state_v *= conj(state_v); /// cmplx(pow(2, qubits));
         
         file << real(state_v) ;
@@ -984,7 +1018,9 @@ void circuit::
 PrintStateVector()
 {
     for (auto state_v : circuit_state -> amp) {
-        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));
+        state_v /= pow(2,(global_factor_power/2));
+        if (global_factor_power % 2 == 1)
+            state_v /= sqrt(2);
         
         cout << real(state_v) ;
         
@@ -1006,7 +1042,10 @@ PrintStateVector(const string& outfile)
     file.open(outfile + ".txt");
     
     for (auto state_v : circuit_state -> amp) {
-        state_v *= cmplx(pow(HADAMARD_CONST, H_related_gates));
+        state_v /= pow(2,(global_factor_power/2));
+        if (global_factor_power % 2 == 1)
+           state_v /= sqrt(2);
+        
         file << real(state_v) ;
         
         if (imag(state_v) > 0) {
