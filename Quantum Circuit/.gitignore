@@ -15,6 +15,10 @@ simulation_stats/
 sftp-config.json
 ../Quantum\ Circuit.xcodeproj/
 *.txt
-
-
-
+../.vagrant/
+../Quantum Circuit.xcodeproj/
+../Vagrantfile
+../qp-3.8-i386 2/
+../qp-3.8-i386.tar.gz
+../test_25_2.txt
+../test_25_5.txt

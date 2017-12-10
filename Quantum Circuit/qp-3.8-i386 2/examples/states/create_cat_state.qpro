@@ -1,4 +1,0 @@
-# This function creates an n-qubit cat state.
-function |cs:> = create_cat_state(n)
-  |cs:> = (|0:>_n + |2^n - 1:>)/sqrt(2);
-

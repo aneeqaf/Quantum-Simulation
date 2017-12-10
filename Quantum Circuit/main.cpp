@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
         //write a function for printing google files.
         if (inputfile) {
             new_circuit.read_input_file("input/" + input_filename);
+            new_circuit.q_circuit -> google = true;
         }
         else {
             new_circuit.read_google_input_files(input_filename);
@@ -137,7 +138,7 @@ int main(int argc, char *argv[]) {
 //        new_circuit.q_circuit -> circuit_preprocessing();
         
         new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
-        new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
+       // new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
     }
     else if(create) {
         for (int i = 0; i < num_qubits.size(); ++i){
@@ -157,7 +158,7 @@ int main(int argc, char *argv[]) {
             
 //            new_circuit.q_circuit -> circuit_preprocessing();
             new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
-            new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
+//            new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
         }
     }
     return 0;
