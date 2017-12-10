@@ -1,7 +1,8 @@
 TARGET = quantum
 LIBS = -lm -lstdc++
-CC = g++-7
-CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast 
+CC = gcc-7
+#/usr/local/gcc7/bin/
+CFLAGS = -g -Wall -std=c++17 -march=native -Ofast 
 
 .PHONY: default all clean
 
@@ -22,3 +23,5 @@ $(TARGET): $(OBJECTS)
 clean:
 	-rm -f *.o
 	-rm -f $(TARGET)
+
+# export LD_LIBRARY_PATH=/usr/local/gcc7/lib64
