@@ -192,10 +192,12 @@ ApplyBlockOfGates(const idx_size* cbits,
     idx_size modified_q = qubits - 1;
     
     cmplx rescaling_factor(0,0);
-    const idx_size global_power = global_factor_power;
-    if (global_power > 100) {
+    bool rescale_now = global_factor_power > 100;
+    if (rescale_now) {
         ++num_rescaling;
         rescaling_factor = cmplx(pow(2,(global_factor_power/2)));
+        if ((global_factor_power % 2) == 1)
+            rescaling_factor *= sqrt(2.0);
         global_factor_power = 0;
     }
     
@@ -211,34 +213,24 @@ ApplyBlockOfGates(const idx_size* cbits,
         idx_size gc = count ^ (count >> 1);
         idx_size changed_bit = gc ^ prev_gc;
         idx_size set_bit = modified_q - __builtin_ctzl(changed_bit);
-        idx_size parity = __builtin_parityl(cbits[set_bit] & gc);
         
-        if (parity == 1)
-            negate_Z = !negate_Z;
+        if (__builtin_parityl(cbits[set_bit] & gc) == 1)
+             negate_Z = !negate_Z;
     
         cmplx mutated_amp = amp[gc];
+        if (negate_Z)
+            mutated_amp = -mutated_amp;
+        
         if (!t_bit_mask_empty && mutated_amp != cmplx(0,0)) {
             idx_size gate_c = 0;
             
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(gc & t);
             
-            if (negate_Z)
-                gate_c += 4;
-                
             mutated_amp = ApplyTGateKTimes(gate_c, mutated_amp);
         }
-        else if (negate_Z)
-            mutated_amp = -mutated_amp;
         
-        if (global_power > 100) {
-            if ((global_power % 2) == 1)
-                amp[gc] = mutated_amp / (rescaling_factor * cmplx(sqrt(2)));
-            else
-                amp[gc] = mutated_amp / rescaling_factor;
-        }
-        else
-            amp[gc] = mutated_amp;
+        amp[gc] = rescale_now ? (mutated_amp / rescaling_factor) : mutated_amp;
         
         prev_gc = gc;
     }
@@ -936,7 +928,8 @@ PrintReport(const clock_t end, const clock_t begin)
     cout << "Gates : " << gates.size() << "  ";
     cout << "Cycles : " << current_google_cycle << "\n\n";
     
-    cout << setprecision(3);
+    cout << fixed;
+    cout << setprecision(2);
     auto memory = (sizeof(vector<cmplx>) + (sizeof(cmplx)
                     * circuit_state -> amp.size())) ;
     cout << "State vector size: ";
