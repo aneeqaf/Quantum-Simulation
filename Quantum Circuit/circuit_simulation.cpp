@@ -52,16 +52,16 @@ circuit::
 }
 
 template<typename function>
-pair<index_size, index_size>* circuit::
+index_size* circuit::
 FormBlockOfGates(const vector<gate>& block_gates,
                  index_size& gate_i,
                  vector<index_size>& T_bit_mask,
                  function comp)
 {
-    pair<index_size, index_size>* qubits_CZ_bitmask =  new pair<index_size, index_size>[64];
+    index_size* qubits_CZ_bitmask =  new index_size[qubits];
     
-    for (int i = 0; i < 64; ++i)
-        qubits_CZ_bitmask[i] = pair<index_size, index_size>(0, 0);
+    for (int i = 0; i < qubits; ++i)
+        qubits_CZ_bitmask[i] = 0;
     
     for(;(gate_i < gates.size()) && (comp(gate_i)); ++gate_i) {
         
@@ -69,16 +69,12 @@ FormBlockOfGates(const vector<gate>& block_gates,
         increment_cycle(gate_i);
 
         if (block_gates[gate_i].gate_identification.back() == gate::Gates::Z) {
-            
-            for (auto q : block_gates[gate_i].qubits)
+            for (auto q : block_gates[gate_i].qubits) {
                 bits |= ( 1ull << ((qubits - 1) - q));
-            
+                qubits_CZ_bitmask[q] |= ( 1ull << ((qubits - 1) - q));
+            }
             for (auto q : block_gates[gate_i].qubits)
-                if (qubits_CZ_bitmask[q].first == 0)
-                    qubits_CZ_bitmask[q].first = bits;
-                else
-                    qubits_CZ_bitmask[q].second = bits;
-            
+                qubits_CZ_bitmask[q] ^= bits;
         }
         else if (block_gates[gate_i].gate_identification.back() == gate::Gates::T) {
             index_size t_mask = (1ull << ((qubits - 1) - block_gates[gate_i].qubits[0]));
@@ -103,21 +99,18 @@ FormBlockOfGates(const vector<gate>& block_gates,
 }
 
 void circuit::
-ApplyBlockOfGates(const pair<index_size, index_size>* cbits,
-                  const index_size cbits_size,
+ApplyBlockOfGates(const index_size* cbits,
+                  const int qubits,
                   vector<cmplx>& amp,
                   const vector<index_size>& T_bit_mask)
 {
     index_size size =  amp.size();
-    const int qubits = log2(size);
     
     bool t_bit_mask_empty = true;
     if (T_bit_mask.front() != 0)
         t_bit_mask_empty = false;
     
     index_size prev_gc = 0;
-    index_size prev_set_bit = 0;
-    index_size contributions = 0;
     
     auto rescale = [&](const index_size gc,
                        const cmplx& mutated_amp) {
@@ -128,42 +121,20 @@ ApplyBlockOfGates(const pair<index_size, index_size>* cbits,
             amp[gc] = mutated_amp / cmplx(pow(2,(global_factor_power/2)));
     };
     
-    if (global_factor_power > 100)
-        rescale (0, amp[0]);
-    for (index_size count = 1; count < size ; ++count) {
-        bool gate_applied = false;
+    bool negate_Z = false;
+    for (index_size count = 0; count < size ; ++count) {
         
         index_size gc = count ^ (count >> 1);
         index_size changed_bit = gc ^ prev_gc;
-        index_size set_bit = (qubits - 1) - ((changed_bit == 0) ? 0 : log2(changed_bit));
-        bool negate_Z = false;
-       
-        if(cbits[set_bit].first != 0
-           &&(cbits[set_bit].first & prev_gc) != (cbits[set_bit].first & gc)) {
-            if ((cbits[set_bit].first & gc) == cbits[set_bit].first)
-                ++contributions;
-            else if ((cbits[set_bit].first & prev_gc) == cbits[set_bit].first
-                     && contributions != 0)
-                --contributions;
-        }
-        if(cbits[set_bit].second != 0
-           && (cbits[set_bit].second & prev_gc) != (cbits[set_bit].second & gc)) {
-            if ( (cbits[set_bit].second & gc) == cbits[set_bit].second)
-                ++contributions;
-            else if ((cbits[set_bit].second & prev_gc) == cbits[set_bit].second
-                     && contributions != 0)
-                --contributions;
-        }
+        index_size set_bit = (qubits - 1) - __builtin_ctzl(changed_bit);
+        index_size parity = __builtin_parityl(cbits[set_bit] & gc);
         
-        if (contributions % 2 == 1) {
+        if (parity == 1)
             negate_Z = !negate_Z;
-            gate_applied = true;
-        }
     
         cmplx mutated_amp = amp[gc];
-        if (!t_bit_mask_empty && amp[gc] != cmplx(0,0)) {
+        if (!t_bit_mask_empty && mutated_amp != cmplx(0,0)) {
             index_size gate_c = 0;
-            gate_applied = true;
             
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(gc & t);
@@ -173,7 +144,7 @@ ApplyBlockOfGates(const pair<index_size, index_size>* cbits,
                 if (negate_Z)
                    k = k + 4 ;
                 
-                mutated_amp = ApplyTGateKTimes(k, amp[gc]);
+                mutated_amp = ApplyTGateKTimes(k, mutated_amp);
             }
             else if (negate_Z)
                 mutated_amp = -mutated_amp;
@@ -183,11 +154,10 @@ ApplyBlockOfGates(const pair<index_size, index_size>* cbits,
         
         if (global_factor_power > 100)
             rescale(gc, mutated_amp);
-        else if (gate_applied)
+        else
             amp[gc] = mutated_amp;
         
         prev_gc = gc;
-        prev_set_bit = set_bit;
     }
     if (global_factor_power > 100)
         global_factor_power = 0;
@@ -780,7 +750,6 @@ ApplyGateOnGateSizeAmps(const index_size* indices,
     }
 }
 
-// TO DO: apply optimizations for diagonal gates, control Z, toffolli, and control X. 
 void circuit::
 Simulate(const string& outfile)
 {
@@ -807,31 +776,27 @@ Simulate(const string& outfile)
            gates[i].gate_identification.front() != gate::Gates::Control)
             sort(gates[i].qubits.begin(), gates[i].qubits.end());
         
-        //T bit mask won't work unless ordering of blocks is correct
         if(gates[i].gate_identification.front() == gate::Gates::Control ||
              gates[i].gate_identification.back() == gate::Gates::T) {
             
             auto comparator = [&](index_size g_i) {
-                return (gates[g_i].gate_identification.back() == gate::Gates::X ||
-                        gates[g_i].gate_identification.back() == gate::Gates::T ||
-                        gates[g_i].gate_identification.back() == gate::Gates::Z ||
-                        gates[g_i].gate_identification.back() == gate::Gates::Phase);
+                return (gates[g_i].gate_identification.back() == gate::Gates::T ||
+                        gates[g_i].gate_identification.back() == gate::Gates::Z);
             };
                 if (comparator(i)) {
                     vector<index_size> T_bit_mask(1, 0);
                     index_size gate_i = i;
                     
-                    pair<index_size, index_size>* bit_mask = 
-                                            FormBlockOfGates(gates ,i,
-                                                T_bit_mask, comparator);
+                    index_size* bit_mask = FormBlockOfGates(gates ,i,
+                                         T_bit_mask, comparator);
                     
-                    ApplyBlockOfGates(bit_mask, i - gate_i, circuit_state -> amp, T_bit_mask);
+                    ApplyBlockOfGates(bit_mask, qubits, circuit_state -> amp, T_bit_mask);
                 
-                    i -= 1;
                     g_end = clock();
                     gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     CZ_T += i - gate_i;
                     delete [] bit_mask;
+                    i -= 1;
                 }
                 else {
                     index_size c_bits = 0;

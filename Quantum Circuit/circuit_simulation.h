@@ -69,12 +69,12 @@ public:
     index_size global_factor_power;
     
     template<typename function>
-    pair<index_size, index_size>* FormBlockOfGates(const vector<gate>& gates,
-                                                   index_size& gate_i,
-                                                    vector<index_size>& T_bit_mask,
-                                                    function comp);
-    void ApplyBlockOfGates(const pair<index_size, index_size>* cbits,
-                           const index_size cbits_size,
+    index_size* FormBlockOfGates(const vector<gate>& gates,
+                                index_size& gate_i,
+                                vector<index_size>& T_bit_mask,
+                                function comp);
+    void ApplyBlockOfGates(const index_size* cbits,
+                           const int qubits,
                            vector<cmplx>& amp,
                            const vector<index_size>& T);
     inline void FindRelevantAmp(vector<index_size>& indices_amp_gate,
