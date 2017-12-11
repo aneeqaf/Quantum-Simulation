@@ -52,6 +52,9 @@ class circuit {
 public:
     vector<gate> gates;
     vector<short> clock_cycles;
+    cmplx min_prob;
+    cmplx max_prob;
+    complex<double> avg_prob;
     state* circuit_state;
     short merged;
     short X;
@@ -60,6 +63,7 @@ public:
     short qubits;
     short num_cycles;
     short current_google_cycle;
+    short num_rescaling;
     vector<double> gate_time;
     clock_t g_begin;
     clock_t g_end;
