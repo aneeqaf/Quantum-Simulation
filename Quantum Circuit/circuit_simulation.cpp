@@ -162,7 +162,7 @@ FormBlockOfGates(const vector<gate>& block_gates,
         }
         else if (block_gates[gate_i].gate_identification.back() == gate::Gates::T) {
             idx_size t_mask = (1ull << ((qubits - 1) - block_gates[gate_i].qubits[0]));
-            if ((T_bit_mask.front() & t_mask) != t_mask)
+            if (!T_bit_mask.empty() && (T_bit_mask.front() & t_mask) != t_mask)
                 T_bit_mask[0] |= t_mask;
             
             else {
@@ -173,7 +173,7 @@ FormBlockOfGates(const vector<gate>& block_gates,
                         found = true;
                     }
                 if (!found) {
-                    T_bit_mask.push_back(0 | t_mask);
+                    T_bit_mask.push_back(t_mask);
                 }
             }
         }
@@ -190,13 +190,12 @@ ApplyBlockOfGates(const idx_size* cbits,
 {
     idx_size size =  amp.size();
     idx_size modified_q = qubits - 1;
+    
     cmplx rescaling_factor(0,0);
-    bool rescaling_factor_odd = false;
-    bool global_factor_greater_100 = global_factor_power > 100;
-    if (global_factor_greater_100) {
+    const idx_size global_power = global_factor_power;
+    if (global_power > 100) {
         ++num_rescaling;
         rescaling_factor = cmplx(pow(2,(global_factor_power/2)));
-        rescaling_factor_odd = (global_factor_power % 2) == 1;
         global_factor_power = 0;
     }
     
@@ -205,14 +204,6 @@ ApplyBlockOfGates(const idx_size* cbits,
         t_bit_mask_empty = false;
     
     idx_size prev_gc = 0;
-    
-    auto rescale = [&](const idx_size gc,
-                       const cmplx& mutated_amp) {
-        if (rescaling_factor_odd)
-            amp[gc] = mutated_amp / (rescaling_factor * cmplx(sqrt(2)));
-        else
-            amp[gc] = mutated_amp / rescaling_factor;
-    };
     
     bool negate_Z = false;
     for (idx_size count = 0; count < size ; ++count) {
@@ -240,8 +231,12 @@ ApplyBlockOfGates(const idx_size* cbits,
         else if (negate_Z)
             mutated_amp = -mutated_amp;
         
-        if (global_factor_greater_100)
-            rescale(gc, mutated_amp);
+        if (global_power > 100) {
+            if ((global_power % 2) == 1)
+                amp[gc] = mutated_amp / (rescaling_factor * cmplx(sqrt(2)));
+            else
+                amp[gc] = mutated_amp / rescaling_factor;
+        }
         else
             amp[gc] = mutated_amp;
         
@@ -941,6 +936,7 @@ PrintReport(const clock_t end, const clock_t begin)
     cout << "Gates : " << gates.size() << "  ";
     cout << "Cycles : " << current_google_cycle << "\n\n";
     
+    cout << setprecision(3);
     auto memory = (sizeof(vector<cmplx>) + (sizeof(cmplx)
                     * circuit_state -> amp.size())) ;
     cout << "State vector size: ";
@@ -958,7 +954,6 @@ PrintReport(const clock_t end, const clock_t begin)
         cout << memory << " B \n";
     
     double total_time = double(end - begin) / CLOCKS_PER_SEC;
-    cout << setprecision(3);
     cout << "Total runtime : " << total_time << "s\n";
     cout << "Norm : " << CalculateNormOfAmp() << "\n";
     cout << "Probabilities : " << real(min_prob) << "(min), "
