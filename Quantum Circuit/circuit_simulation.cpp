@@ -14,8 +14,86 @@ using namespace std;
 
 // 0:H, 1:CZ & T, 2:X, 3:Y, 4:Merged X & Y
 
+function<void(idx_size)> increment_cycle;
 
-function<void(index_size)> increment_cycle;
+inline cmplx
+ApplyTGateKTimes(const idx_size gate_c,
+                 const cmplx& amp)
+{
+    switch (gate_c % 8) {
+        case 0: {
+            return amp;
+            break;
+        }
+        case 1: {
+            //0.707106781 + 0.707106781 i
+            return HADAMARD_CONST * cmplx(real(amp) - imag(amp),
+                                          real(amp) + imag(amp));
+            break;
+        }
+        case 2: {
+            //i
+            return cmplx(-imag(amp), real(amp));
+            break;
+        }
+        case 3: {
+            //-0.707106781 + 0.707106781 i
+            return HADAMARD_CONST * cmplx(-real(amp) - imag(amp),
+                                          real(amp) - imag(amp));
+            break;
+        }
+        case 4: {
+            //-1
+            return -amp;
+            break;
+        }
+        case 5: {
+            //-0.707106781 - 0.707106781 i
+            return HADAMARD_CONST * cmplx(-real(amp) + imag(amp),
+                                          -real(amp) -imag(amp));
+            break;
+        }
+        case 6: {
+            //-i
+            return cmplx(imag(amp), -real(amp));
+            break;
+        }
+        case 7: {
+            //0.707106781 - 0.707106781 i
+            return HADAMARD_CONST * cmplx(real(amp) + imag(amp),
+                                          - real(amp) + imag(amp));
+            break;
+        }
+        default:
+            return amp;
+            break;
+    }
+    return amp;
+}
+
+inline cmplx
+ApplyPhaseGate(const idx_size i_count,
+               const cmplx& amp)
+{
+    switch (i_count % 4) {
+        case 1: {
+            return cmplx(-imag(amp), real(amp));
+            break;
+        }
+        case 2: {
+            return -cmplx(real(amp), imag(amp));
+            break;
+        }
+        case 3: {
+            return -cmplx(-imag(amp), real(amp));
+            break;
+        }
+        default:
+            return amp;
+            break;
+    }
+    return amp;
+}
 
 circuit::
 circuit() : gates({}),clock_cycles({}),
@@ -52,20 +130,20 @@ circuit::
 }
 
 template<typename function>
-index_size* circuit::
+idx_size* circuit::
 FormBlockOfGates(const vector<gate>& block_gates,
-                 index_size& gate_i,
-                 vector<index_size>& T_bit_mask,
+                 idx_size& gate_i,
+                 vector<idx_size>& T_bit_mask,
                  function comp)
 {
-    index_size* qubits_CZ_bitmask =  new index_size[qubits];
+    idx_size* qubits_CZ_bitmask =  new idx_size[qubits];
     
     for (int i = 0; i < qubits; ++i)
         qubits_CZ_bitmask[i] = 0;
     
     for(;(gate_i < gates.size()) && (comp(gate_i)); ++gate_i) {
         
-        index_size bits = 0;
+        idx_size bits = 0;
         increment_cycle(gate_i);
 
         if (block_gates[gate_i].gate_identification.back() == gate::Gates::Z) {
@@ -77,7 +155,7 @@ FormBlockOfGates(const vector<gate>& block_gates,
                 qubits_CZ_bitmask[q] ^= bits;
         }
         else if (block_gates[gate_i].gate_identification.back() == gate::Gates::T) {
-            index_size t_mask = (1ull << ((qubits - 1) - block_gates[gate_i].qubits[0]));
+            idx_size t_mask = (1ull << ((qubits - 1) - block_gates[gate_i].qubits[0]));
             if ((T_bit_mask.front() & t_mask) != t_mask)
                 T_bit_mask[0] |= t_mask;
             
@@ -99,20 +177,21 @@ FormBlockOfGates(const vector<gate>& block_gates,
 }
 
 void circuit::
-ApplyBlockOfGates(const index_size* cbits,
+ApplyBlockOfGates(const idx_size* cbits,
                   const int qubits,
                   vector<cmplx>& amp,
-                  const vector<index_size>& T_bit_mask)
+                  const vector<idx_size>& T_bit_mask)
 {
-    index_size size =  amp.size();
+    idx_size size =  amp.size();
+    idx_size modified_q = qubits - 1;
     
     bool t_bit_mask_empty = true;
     if (T_bit_mask.front() != 0)
         t_bit_mask_empty = false;
     
-    index_size prev_gc = 0;
+    idx_size prev_gc = 0;
     
-    auto rescale = [&](const index_size gc,
+    auto rescale = [&](const idx_size gc,
                        const cmplx& mutated_amp) {
         if (global_factor_power % 2 == 1)
             amp[gc] = mutated_amp
@@ -122,32 +201,29 @@ ApplyBlockOfGates(const index_size* cbits,
     };
     
     bool negate_Z = false;
-    for (index_size count = 0; count < size ; ++count) {
+    for (idx_size count = 0; count < size ; ++count) {
         
-        index_size gc = count ^ (count >> 1);
-        index_size changed_bit = gc ^ prev_gc;
-        index_size set_bit = (qubits - 1) - __builtin_ctzl(changed_bit);
-        index_size parity = __builtin_parityl(cbits[set_bit] & gc);
+        idx_size gc = count ^ (count >> 1);
+        idx_size changed_bit = gc ^ prev_gc;
+        idx_size set_bit = modified_q - __builtin_ctzl(changed_bit);
+        idx_size parity = __builtin_parityl(cbits[set_bit] & gc);
         
         if (parity == 1)
             negate_Z = !negate_Z;
     
         cmplx mutated_amp = amp[gc];
         if (!t_bit_mask_empty && mutated_amp != cmplx(0,0)) {
-            index_size gate_c = 0;
+            idx_size gate_c = 0;
             
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(gc & t);
             
-            int k = gate_c & ((1u << 3) - 1);
-            if ( k > 0) {
-                if (negate_Z)
-                   k = k + 4 ;
-                
-                mutated_amp = ApplyTGateKTimes(k, mutated_amp);
+            if (negate_Z) {
+                gate_c += 4;
+                gate_c &= 0b111;
             }
-            else if (negate_Z)
-                mutated_amp = -mutated_amp;
+                
+            mutated_amp = ApplyTGateKTimes(gate_c, mutated_amp);
         }
         else if (negate_Z)
             mutated_amp = -mutated_amp;
@@ -165,21 +241,21 @@ ApplyBlockOfGates(const index_size* cbits,
 
 
 inline void circuit::
-FindRelevantAmp(vector<index_size>& indices_amp_gate,
-                const index_size gate_i,
+FindRelevantAmp(vector<idx_size>& indices_amp_gate,
+                const idx_size gate_i,
                 const int num_bits,
-                const index_size idx)
+                const idx_size idx)
 {
     indices_amp_gate.push_back(idx);
     
-    index_size temp_index = 0;
+    idx_size temp_index = 0;
     int c1 = 1;
     int target = gates[gate_i].num_controls;
     
-    for (index_size i = target ; i < num_bits; ++i) {
+    for (idx_size i = target ; i < num_bits; ++i) {
         short relative_pos = 1;
         short j = 0;
-        for (index_size n = 0; n < indices_amp_gate.size() &&
+        for (idx_size n = 0; n < indices_amp_gate.size() &&
              indices_amp_gate.size() < (1ull << (i+1)); n += 2) {
             
             temp_index = indices_amp_gate[n] +
@@ -197,29 +273,29 @@ FindRelevantAmp(vector<index_size>& indices_amp_gate,
 }
 
 inline void circuit::
-ApplyAnyCGate(const index_size c_bits,
-              const index_size gate_i)
+ApplyAnyCGate(const idx_size c_bits,
+              const idx_size gate_i)
 {
     int num_bits = (int)gates[gate_i].qubits.size();
-    index_size iter_count = 0;
+    idx_size iter_count = 0;
     int num_controls = gates[gate_i].num_controls;
     
-    index_size gate_bitmask = 0;
-    for (index_size i = 0; i < gates[gate_i].qubits.size(); ++i)
+    idx_size gate_bitmask = 0;
+    for (idx_size i = 0; i < gates[gate_i].qubits.size(); ++i)
         gate_bitmask |= (1ull << ((qubits - 1) - gates[gate_i].qubits[i]));
     
-    vector<index_size> indices_amp_gates;
+    vector<idx_size> indices_amp_gates;
     FindRelevantAmp(indices_amp_gates, gate_i, num_bits, 0);
-    index_size idx = 0;
-    index_size iag_size = indices_amp_gates.size();
+    idx_size idx = 0;
+    idx_size iag_size = indices_amp_gates.size();
     
     while(iter_count < (1 << (qubits - num_controls))) {
         if ((idx & gate_bitmask) == 0) {
             if((idx & c_bits) == c_bits) {
                 iter_count += 2;
                 
-                index_size temp_amp_gates[iag_size];
-                for (index_size i = 0; i < iag_size; ++i)
+                idx_size temp_amp_gates[iag_size];
+                for (idx_size i = 0; i < iag_size; ++i)
                     temp_amp_gates[i] = indices_amp_gates[i] + idx;
                 
                 ApplyGateOnGateSizeAmps(temp_amp_gates, iag_size, gates[gate_i]);
@@ -232,27 +308,27 @@ ApplyAnyCGate(const index_size c_bits,
 }
 
 inline void circuit::
-ApplyNonControlGates(const index_size gate_i)
+ApplyNonControlGates(const idx_size gate_i)
 {
     int num_bits = (int)gates[gate_i].qubits.size();
-    index_size iter_count = 0;
-    index_size size = circuit_state -> amp.size();
+    idx_size iter_count = 0;
+    idx_size size = circuit_state -> amp.size();
     
-    index_size gate_bitmask = 0;
-    for (index_size i = 0; i < gates[gate_i].qubits.size(); ++i)
+    idx_size gate_bitmask = 0;
+    for (idx_size i = 0; i < gates[gate_i].qubits.size(); ++i)
         gate_bitmask |= (1ull << ((qubits - 1) - gates[gate_i].qubits[i]));
 
-    vector<index_size> indices_amp_gates;
+    vector<idx_size> indices_amp_gates;
     FindRelevantAmp(indices_amp_gates, gate_i, num_bits, 0);
-    index_size idx = 0;
-    index_size iag_size = indices_amp_gates.size();
+    idx_size idx = 0;
+    idx_size iag_size = indices_amp_gates.size();
     
     while(iter_count < (size/(1 << num_bits))) {
         if ((idx & gate_bitmask) == 0) {
             ++iter_count;
             
-            index_size temp_amp_gates[iag_size];
-            for (index_size i = 0; i < iag_size; ++i)
+            idx_size temp_amp_gates[iag_size];
+            for (idx_size i = 0; i < iag_size; ++i)
                 temp_amp_gates[i] = indices_amp_gates[i] + idx;
             
             ApplyGateOnGateSizeAmps(temp_amp_gates, iag_size, gates[gate_i]);
@@ -267,8 +343,8 @@ ApplyNonControlGates(const index_size gate_i)
 }
 
 inline void circuit::
-ApplyCXGate(const index_size idx,
-            const index_size swap_index)
+ApplyCXGate(const idx_size idx,
+            const idx_size swap_index)
 {
     if(!(circuit_state -> amp[idx] == cmplx(0,0)
              && circuit_state -> amp[idx] == cmplx(0,0))) {
@@ -277,98 +353,23 @@ ApplyCXGate(const index_size idx,
     }
 }
 
-inline cmplx circuit::
-ApplyPhaseGate(const index_size i_count,
-               const cmplx& amp)
-{
-    switch (i_count % 4) {
-        case 1: {
-            return cmplx(-imag(amp), real(amp));
-            break;
-        }
-        case 2: {
-            return -cmplx(real(amp), imag(amp));
-            break;
-        }
-        case 3: {
-            return -cmplx(-imag(amp), real(amp));
-            break;
-        }
-        default:
-            return amp;
-            break;
-    }
-    return amp;
-}
-
-inline cmplx circuit::
-ApplyTGateKTimes(const index_size gate_c,
-                 const cmplx& amp)
-{
-    switch (gate_c % 8) {
-        case 1: {
-            //0.707106781 + 0.707106781 i
-            return HADAMARD_CONST * cmplx(real(amp) - imag(amp),
-                  real(amp) + imag(amp));
-            break;
-        }
-        case 2: {
-            //i
-            return cmplx(-imag(amp), real(amp));
-            break;
-        }
-        case 3: {
-            //-0.707106781 + 0.707106781 i
-            return HADAMARD_CONST * cmplx(-real(amp) - imag(amp),
-                  real(amp) - imag(amp));
-            break;
-        }
-        case 4: {
-            //-1
-            return cmplx(-real(amp), -imag(amp));
-            break;
-        }
-        case 5: {
-            //-0.707106781 - 0.707106781 i
-            return HADAMARD_CONST * cmplx(-real(amp) + imag(amp),
-                  -real(amp) -imag(amp));
-            break;
-        }
-        case 6: {
-            //- i
-            return cmplx(imag(amp), -real(amp));
-            break;
-        }
-        case 7: {
-            //0.707106781 - 0.707106781 i
-            return HADAMARD_CONST * cmplx(real(amp) + imag(amp),
-                  - real(amp) + imag(amp));
-            break;
-        }
-        default:
-            return amp;
-            break;
-    }
-    return amp;
-}
-
 inline int circuit::
-ApplyHOnAllAmp(const index_size gate_i)
+ApplyHOnAllAmp(const idx_size gate_i)
 {
     int j = 0;
     for(; j < gates.size() &&
         gates[gate_i + j].gate_identification.back() == gate::Gates::Hadamard; ++j )
         ++global_factor_power;
 
-    index_size size = circuit_state -> amp.size();
-    for (index_size idx = 0; idx < size; ++idx)
+    idx_size size = circuit_state -> amp.size();
+    for (idx_size idx = 0; idx < size; ++idx)
         circuit_state -> amp[idx] = 1;
 
     return j;
 }
 
 inline void circuit::
-ApplyXX12Gate(const index_size* const indices)
+ApplyXX12Gate(const idx_size* const indices)
 {
     auto& temp_v = circuit_state -> amp;
 
@@ -386,12 +387,12 @@ ApplyXX12Gate(const index_size* const indices)
 }
 
 inline void circuit::
-ApplyXY12Gate(const index_size* const indices,
-              const index_size size)
+ApplyXY12Gate(const idx_size* const indices,
+              const idx_size size)
 {
     cmplx ap_gate[size];
     auto& temp_v = circuit_state -> amp;
-    for (index_size i = 0; i < size; ++i)
+    for (idx_size i = 0; i < size; ++i)
         ap_gate[i] = temp_v[indices[i]];
     
     temp_v[indices[0]] = cmplx(-imag(ap_gate[0]), real(ap_gate[0]))
@@ -412,7 +413,7 @@ ApplyXY12Gate(const index_size* const indices,
 }
 
 inline void circuit::
-ApplyYY12Gate(const index_size* const indices)
+ApplyYY12Gate(const idx_size* const indices)
 {
     auto& temp_v = circuit_state -> amp;
     
@@ -432,7 +433,7 @@ ApplyYY12Gate(const index_size* const indices)
 }
 
 inline void circuit::
-ApplyYX12Gate(const index_size* const indices)
+ApplyYX12Gate(const idx_size* const indices)
 {
     auto& temp_v = circuit_state -> amp;
     
@@ -452,9 +453,9 @@ ApplyYX12Gate(const index_size* const indices)
 }
 
 void circuit::
-Merge2QXY12Gates(index_size gate_i)
+Merge2QXY12Gates(idx_size gate_i)
 {
-    index_size a, b;
+    idx_size a, b;
     if (gates[gate_i].qubits.back() < gates[gate_i + 1].qubits.back()) {
         gates[gate_i].qubits.push_back(gates[gate_i + 1].qubits.back());
         a = gate_i;
@@ -485,26 +486,26 @@ Merge2QXY12Gates(index_size gate_i)
 
 void circuit::
 ApplyMergedXY12Gates(const short type,
-                   const index_size gate_i)
+                   const idx_size gate_i)
 {
-    index_size gate_bitmask = 0;
-    for (index_size i = 0; i < gates[gate_i].qubits.size(); ++i)
+    idx_size gate_bitmask = 0;
+    for (idx_size i = 0; i < gates[gate_i].qubits.size(); ++i)
         gate_bitmask |= (1ull << ((qubits - 1) - gates[gate_i].qubits[i]));
 
     int num_bits = (int)gates[gate_i].qubits.size();
-    index_size iter_count = 0;
-    index_size size = circuit_state -> amp.size();
+    idx_size iter_count = 0;
+    idx_size size = circuit_state -> amp.size();
     
-    vector<index_size> indices_amp_gates;
+    vector<idx_size> indices_amp_gates;
     FindRelevantAmp(indices_amp_gates, gate_i, num_bits, 0);
-    index_size idx = 0;
+    idx_size idx = 0;
     
     while(iter_count < size/(1 << num_bits)) {
         if ((idx & gate_bitmask) == 0) {
             ++iter_count;
             
-            index_size temp_amp_gates[indices_amp_gates.size()];
-            for (index_size i = 0; i < indices_amp_gates.size(); ++i)
+            idx_size temp_amp_gates[indices_amp_gates.size()];
+            for (idx_size i = 0; i < indices_amp_gates.size(); ++i)
                 temp_amp_gates[i] = indices_amp_gates[i] + idx;
             
             switch (type) {
@@ -539,10 +540,10 @@ ApplyMergedXY12Gates(const short type,
 }
 
 void circuit::
-ApplySingleTGate(const index_size gate_i)
+ApplySingleTGate(const idx_size gate_i)
 {
-    index_size gap = (1ull << ((qubits - 1) - gates[gate_i].qubits[0]));
-    index_size idx = gap;
+    idx_size gap = (1ull << ((qubits - 1) - gates[gate_i].qubits[0]));
+    idx_size idx = gap;
     for (; idx < circuit_state -> amp.size(); ++idx) {
         if ((idx & gap) != gap) {
             idx += gap - 1;
@@ -553,23 +554,23 @@ ApplySingleTGate(const index_size gate_i)
 }
 
 void circuit::
-ApplySingleCPhaseGate(const index_size gate_i)
+ApplySingleCPhaseGate(const idx_size gate_i)
 {
     int num_controls = gates[gate_i].num_controls;
     
-    index_size c_bits = 0;
-    for (index_size j = 0 ; j < num_controls; ++j)
+    idx_size c_bits = 0;
+    for (idx_size j = 0 ; j < num_controls; ++j)
         c_bits |= (1ull << ((qubits - 1) - (gates[gate_i].qubits[j])));
     
-    index_size t_bits = c_bits;
-        for (index_size j = num_controls ;
+    idx_size t_bits = c_bits;
+        for (idx_size j = num_controls ;
              j < gates[gate_i].qubits.size(); ++j)
             t_bits |= (1ull << ((qubits - 1) - (gates[gate_i].qubits[j])));
     
-    index_size size = circuit_state -> amp.size();
+    idx_size size = circuit_state -> amp.size();
     
-    index_size idx = (1ull << ((qubits - 1) - (gates[gate_i].qubits[0])));
-    index_size gap = (1ull << ((qubits - 1) - (gates[gate_i].qubits[1])));
+    idx_size idx = (1ull << ((qubits - 1) - (gates[gate_i].qubits[0])));
+    idx_size gap = (1ull << ((qubits - 1) - (gates[gate_i].qubits[1])));
     
     idx += gap;
     for (;idx < size ; ++idx) {
@@ -590,7 +591,7 @@ GroupAlternateCycles()
     int g_i = 0;
     num_cycles = clock_cycles.size();
 
-    for (index_size i = 2; i < clock_cycles.size(); ++i) {
+    for (idx_size i = 2; i < clock_cycles.size(); ++i) {
         int last_CZT_gate = 0;
         if (i % 2 == 1)
             g_i = clock_cycles[i] - 1;
@@ -696,13 +697,13 @@ CalculateNormOfAmp()
 }
 
 void circuit::
-ApplyGateOnGateSizeAmps(const index_size* indices,
-                        const index_size size,
+ApplyGateOnGateSizeAmps(const idx_size* indices,
+                        const idx_size size,
                         const gate& q_gate)
 {
     auto& amp = circuit_state -> amp;
     cmplx temp_amp[size] ;
-    for (index_size i = 0; i < size; ++i)
+    for (idx_size i = 0; i < size; ++i)
         temp_amp[i] = amp[indices[i]];
     
     if (!(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
@@ -730,13 +731,13 @@ ApplyGateOnGateSizeAmps(const index_size* indices,
         else if (q_gate.gate_identification.back() == gate::Gates::Z ||
                  q_gate.gate_identification.back() == gate::Gates::T) {
             
-            for (index_size i = 0; i < size; ++i) {
+            for (idx_size i = 0; i < size; ++i) {
                 amp[indices[i]] = temp_amp[i] * q_gate.rows[i][i];
             }
         }
         else if (q_gate.gate_identification.back() == gate::Gates::X ||
                  q_gate.gate_identification.back() == gate::Gates::Y ) {
-            for (index_size i = 0; i < size; ++i) {
+            for (idx_size i = 0; i < size; ++i) {
                 amp[indices[i]] = temp_amp[size - i + 1]
                 * q_gate.rows[i][size - i + 1];
             }
@@ -744,7 +745,7 @@ ApplyGateOnGateSizeAmps(const index_size* indices,
         else {
             vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
             m_temp = matrix_v_mult(q_gate.rows, m_temp);
-            for (index_size i = 0; i < size; ++i)
+            for (idx_size i = 0; i < size; ++i)
                 amp[i] = m_temp[i];
         }
     }
@@ -761,13 +762,13 @@ Simulate(const string& outfile)
         GroupSimilarGates();
     }
     
-    increment_cycle = [&](index_size g_i) {
+    increment_cycle = [&](idx_size g_i) {
         if (google && !clock_cycles.empty() && g_i == clock_cycles[current_google_cycle] )
             ++current_google_cycle;
     };
     
     clock_t begin = clock();
-    for (index_size i = 0; i < size; ++i) {
+    for (idx_size i = 0; i < size; ++i) {
         
         g_begin = clock();
         increment_cycle(i);
@@ -779,15 +780,15 @@ Simulate(const string& outfile)
         if(gates[i].gate_identification.front() == gate::Gates::Control ||
              gates[i].gate_identification.back() == gate::Gates::T) {
             
-            auto comparator = [&](index_size g_i) {
+            auto comparator = [&](idx_size g_i) {
                 return (gates[g_i].gate_identification.back() == gate::Gates::T ||
                         gates[g_i].gate_identification.back() == gate::Gates::Z);
             };
                 if (comparator(i)) {
-                    vector<index_size> T_bit_mask(1, 0);
-                    index_size gate_i = i;
+                    vector<idx_size> T_bit_mask(1, 0);
+                    idx_size gate_i = i;
                     
-                    index_size* bit_mask = FormBlockOfGates(gates ,i,
+                    idx_size* bit_mask = FormBlockOfGates(gates ,i,
                                          T_bit_mask, comparator);
                     
                     ApplyBlockOfGates(bit_mask, qubits, circuit_state -> amp, T_bit_mask);
@@ -799,8 +800,8 @@ Simulate(const string& outfile)
                     i -= 1;
                 }
                 else {
-                    index_size c_bits = 0;
-                    for (index_size j = 0 ; j < gates[i].num_controls; ++j)
+                    idx_size c_bits = 0;
+                    for (idx_size j = 0 ; j < gates[i].num_controls; ++j)
                         c_bits += (1 << ((qubits - 1) - (gates[i].qubits[j])));
                     
                     ApplyAnyCGate(c_bits, i);
@@ -844,7 +845,7 @@ Simulate(const string& outfile)
     
     clock_t end = clock();
    
-    if (qubits <= 16)
+//    if (qubits <= 16)
         PrintStateVector();
     
      PrintReport(end , begin);
@@ -872,7 +873,7 @@ void circuit::
 PrintGatesAndCycles()
 {
     int j = 0;
-    for (index_size i = 0; i < clock_cycles.size(); ++i) {
+    for (idx_size i = 0; i < clock_cycles.size(); ++i) {
         cout << i << endl;
 
         for(;j < clock_cycles[i]; ++j) {
@@ -1091,7 +1092,7 @@ measure_0(const short qubit)
     map<int, cmplx> measurement_0;
     cmplx prob_0 = 0;
     
-    for (index_size i = 0; i < amp.size() ; ++i) {
+    for (idx_size i = 0; i < amp.size() ; ++i) {
         if ((i & m_bit) != m_bit) {
             measurement_0[i] = (amp[i] * conj(amp[i]));
         }
@@ -1119,7 +1120,7 @@ measure_1(const short qubit)
     map<int, cmplx> measurement_1;
     cmplx prob_1 = 0;
 
-    for (index_size i = 0; i < amp.size() ; ++i) {
+    for (idx_size i = 0; i < amp.size() ; ++i) {
         if ((i & m_bit) == m_bit) {
             measurement_1[i] = (amp[i] * conj(amp[i]));
         }
@@ -1149,7 +1150,7 @@ measure(const short qubit)
     map<int, cmplx> measurement_1;
     cmplx prob_1 = 0;
     
-    for (index_size i = 0; i < amp.size() ; ++i) {
+    for (idx_size i = 0; i < amp.size() ; ++i) {
         if ((i & m_bit) == m_bit) {
             measurement_1[i] = (amp[i] * conj(amp[i]));
         }
