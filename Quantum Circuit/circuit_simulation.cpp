@@ -15,6 +15,11 @@ using namespace std;
 // 0:H, 1:CZ & T, 2:X, 3:Y, 4:Merged X & Y
 
 function<void(idx_size)> increment_cycle;
+//constexpr cmplx TGateKTime[8] =
+//    {cmplx(1,0), cmplx(HADAMARD_CONST, HADAMARD_CONST),
+//    cmplx(0,1), cmplx(-HADAMARD_CONST, HADAMARD_CONST),
+//    cmplx(-1,0), cmplx(-HADAMARD_CONST, -HADAMARD_CONST),
+//    cmplx(0, -1), cmplx(HADAMARD_CONST, -HADAMARD_CONST)};
 
 inline cmplx
 ApplyTGateKTimes(const idx_size gate_c,
@@ -99,7 +104,8 @@ circuit::
 circuit() : gates({}),clock_cycles({}),
 circuit_state(new state()), merged(0), X(0), Y(0), CZ_T(0),
 qubits(0), num_cycles(0), current_google_cycle(0), g_begin(0),
-g_end(0), google(false), global_factor_power(0)
+g_end(0), google(false), global_factor_power(0), num_rescaling(0),
+min_prob(numeric_limits<float>::max()), max_prob(0), avg_prob(0)
 {
     gate_time.resize(5,0);
 }
@@ -184,6 +190,15 @@ ApplyBlockOfGates(const idx_size* cbits,
 {
     idx_size size =  amp.size();
     idx_size modified_q = qubits - 1;
+    cmplx rescaling_factor(0,0);
+    bool rescaling_factor_odd = false;
+    bool global_factor_greater_100 = global_factor_power > 100;
+    if (global_factor_greater_100) {
+        ++num_rescaling;
+        rescaling_factor = cmplx(pow(2,(global_factor_power/2)));
+        rescaling_factor_odd = (global_factor_power % 2) == 1;
+        global_factor_power = 0;
+    }
     
     bool t_bit_mask_empty = true;
     if (T_bit_mask.front() != 0)
@@ -193,11 +208,10 @@ ApplyBlockOfGates(const idx_size* cbits,
     
     auto rescale = [&](const idx_size gc,
                        const cmplx& mutated_amp) {
-        if (global_factor_power % 2 == 1)
-            amp[gc] = mutated_amp
-            / (cmplx(pow(2,(global_factor_power/2))) * cmplx(sqrt(2)));
+        if (rescaling_factor_odd)
+            amp[gc] = mutated_amp / (rescaling_factor * cmplx(sqrt(2)));
         else
-            amp[gc] = mutated_amp / cmplx(pow(2,(global_factor_power/2)));
+            amp[gc] = mutated_amp / rescaling_factor;
     };
     
     bool negate_Z = false;
@@ -218,25 +232,21 @@ ApplyBlockOfGates(const idx_size* cbits,
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(gc & t);
             
-            if (negate_Z) {
+            if (negate_Z)
                 gate_c += 4;
-                gate_c &= 0b111;
-            }
                 
             mutated_amp = ApplyTGateKTimes(gate_c, mutated_amp);
         }
         else if (negate_Z)
             mutated_amp = -mutated_amp;
         
-        if (global_factor_power > 100)
+        if (global_factor_greater_100)
             rescale(gc, mutated_amp);
         else
             amp[gc] = mutated_amp;
         
         prev_gc = gc;
     }
-    if (global_factor_power > 100)
-        global_factor_power = 0;
 }
 
 
@@ -679,20 +689,32 @@ float circuit::
 CalculateNormOfAmp()
 {
     double norm = 0;
+    cmplx prob(0, 0);
     for (auto& state_v : circuit_state -> amp) {
         state_v /= pow(2,(global_factor_power/2));
         if (global_factor_power % 2 == 1)
             state_v /= sqrt(2);
-        state_v *= conj(state_v);
-        if (real(state_v) > (1/(1ull << qubits)))
-            norm += real(state_v);
+        prob = state_v * conj(state_v);
+        if (real(prob) > (1.0/(1ull << qubits)))
+            norm += real(prob);
+        
+        if (real(min_prob) > real(prob))
+            min_prob = prob;
+        if (real(max_prob) < real(prob))
+            max_prob = prob;
     }
     
     for (auto state_v : circuit_state -> amp) {
-        state_v *= conj(state_v);
-        if (real(state_v) <= (1/(1ull << qubits)))
-            norm += real(state_v);
+        prob = state_v * conj(state_v);
+        if (real(prob) <= (1.0/(1ull << qubits)))
+            norm += real(prob);
+        
+        if (real(min_prob) > real(prob))
+            min_prob = prob;
+        if (real(max_prob) < real(prob))
+            max_prob = prob;
     }
+    avg_prob = 1.0/(1ull << qubits);
     return norm;
 }
 
@@ -771,11 +793,9 @@ Simulate(const string& outfile)
     for (idx_size i = 0; i < size; ++i) {
         
         g_begin = clock();
+        if (current_google_cycle == 26)
+            break;
         increment_cycle(i);
-        
-        if(gates[i].qubits.size() > 1 &&
-           gates[i].gate_identification.front() != gate::Gates::Control)
-            sort(gates[i].qubits.begin(), gates[i].qubits.end());
         
         if(gates[i].gate_identification.front() == gate::Gates::Control ||
              gates[i].gate_identification.back() == gate::Gates::T) {
@@ -816,12 +836,12 @@ Simulate(const string& outfile)
                 gates[i + 1].gate_identification.back() == gate::Gates::Y_1_2)) {
                     Merge2QXY12Gates(i);
                     ++i;
+                    increment_cycle(i);
                     g_end = clock();
                     gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     merged++;
             }
-            else if(google && gates[i].gate_identification.back() == gate::Gates::Hadamard)
-            {
+            else if(google && gates[i].gate_identification.back() == gate::Gates::Hadamard) {
                 int increment = ApplyHOnAllAmp(i);
                 i += increment - 1;
                 g_end = clock();
@@ -845,7 +865,7 @@ Simulate(const string& outfile)
     
     clock_t end = clock();
    
-//    if (qubits <= 16)
+    if (qubits <= 16)
         PrintStateVector();
     
      PrintReport(end , begin);
@@ -919,12 +939,33 @@ PrintReport(const clock_t end, const clock_t begin)
     
     cout << "Qubits : " << qubits << "  ";
     cout << "Gates : " << gates.size() << "  ";
-    cout << "Cycles : " << num_cycles << "\n\n";
+    cout << "Cycles : " << current_google_cycle << "\n\n";
+    
+    auto memory = (sizeof(vector<cmplx>) + (sizeof(cmplx)
+                    * circuit_state -> amp.size())) ;
+    cout << "State vector size: ";
+    
+    if (memory >= 1e9) {
+        cout << memory / 1e9 << " GB \n";
+    }
+    else if (memory >= 1e6) {
+        cout << memory / 1e6 << " MB \n";
+    }
+    else if (memory >= 1e3) {
+        cout << memory / 1e3 << " KB \n";
+    }
+    else
+        cout << memory << " B \n";
     
     double total_time = double(end - begin) / CLOCKS_PER_SEC;
     cout << setprecision(3);
     cout << "Total runtime : " << total_time << "s\n";
-    cout << "Norm : " << CalculateNormOfAmp() << "\n\n";
+    cout << "Norm : " << CalculateNormOfAmp() << "\n";
+    cout << "Probabilities : " << real(min_prob) << "(min), "
+         << real(max_prob) << "(max), "
+         << real(avg_prob) << "(avg)\n";
+    cout << "Log_2 (max / min) = " << log2(real(max_prob)/real(min_prob)) << "\n" ;
+    cout << "Rescaling passes : " << num_rescaling << "\n\n";
     
     cout << "Runtimes by gate type\n";
     cout << "   H (" << qubits << ") : " << gate_time[0]
