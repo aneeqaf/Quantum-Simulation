@@ -1,6 +1,6 @@
 TARGET = quantum
 LIBS = -lm -lstdc++
-CC = gcc-7
+CC = gcc
 #/usr/local/gcc7/bin/
 CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast 
 
