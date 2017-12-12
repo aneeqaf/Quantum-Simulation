@@ -15,66 +15,9 @@ using namespace std;
 // 0:H, 1:CZ & T, 2:X, 3:Y, 4:Merged X & Y
 
 function<void(idx_size)> increment_cycle;
-//constexpr cmplx TGateKTime[8] =
-//    {cmplx(1,0), cmplx(HADAMARD_CONST, HADAMARD_CONST),
-//    cmplx(0,1), cmplx(-HADAMARD_CONST, HADAMARD_CONST),
-//    cmplx(-1,0), cmplx(-HADAMARD_CONST, -HADAMARD_CONST),
-//    cmplx(0, -1), cmplx(HADAMARD_CONST, -HADAMARD_CONST)};
+constexpr cmplx kTGate[8] = {{1,0}, {kH, kH}, {0,1}, {-kH, kH},
+                        {-1,0}, {-kH, -kH}, {0, -1}, {kH, -kH}};
 
-inline cmplx
-ApplyTGateKTimes(const idx_size gate_c,
-                 const cmplx& amp)
-{
-    switch (gate_c % 8) {
-        case 0: {
-            return amp;
-            break;
-        }
-        case 1: {
-            //0.707106781 + 0.707106781 i
-            return HADAMARD_CONST * cmplx(real(amp) - imag(amp),
-                                          real(amp) + imag(amp));
-            break;
-        }
-        case 2: {
-            //i
-            return cmplx(-imag(amp), real(amp));
-            break;
-        }
-        case 3: {
-            //-0.707106781 + 0.707106781 i
-            return HADAMARD_CONST * cmplx(-real(amp) - imag(amp),
-                                          real(amp) - imag(amp));
-            break;
-        }
-        case 4: {
-            //-1
-            return -amp;
-            break;
-        }
-        case 5: {
-            //-0.707106781 - 0.707106781 i
-            return HADAMARD_CONST * cmplx(-real(amp) + imag(amp),
-                                          -real(amp) -imag(amp));
-            break;
-        }
-        case 6: {
-            //-i
-            return cmplx(imag(amp), -real(amp));
-            break;
-        }
-        case 7: {
-            //0.707106781 - 0.707106781 i
-            return HADAMARD_CONST * cmplx(real(amp) + imag(amp),
-                                          - real(amp) + imag(amp));
-            break;
-        }
-        default:
-            return amp;
-            break;
-    }
-    return amp;
-}
 
 inline cmplx
 ApplyPhaseGate(const idx_size i_count,
@@ -185,7 +128,7 @@ FormBlockOfGates(const vector<gate>& block_gates,
 void circuit::
 ApplyBlockOfGates(const idx_size* cbits,
                   const int qubits,
-                  vector<cmplx>& amp,
+                  valarray<cmplx>& amp,
                   const vector<idx_size>& T_bit_mask)
 {
     idx_size size =  amp.size();
@@ -193,11 +136,12 @@ ApplyBlockOfGates(const idx_size* cbits,
     
     cmplx rescaling_factor(0,0);
     bool rescale_now = global_factor_power > 100;
+    
     if (rescale_now) {
         ++num_rescaling;
-        rescaling_factor = cmplx(pow(2,(global_factor_power/2)));
+        rescaling_factor = cmplx(1.0)/cmplx(pow(2,(global_factor_power/2)));
         if ((global_factor_power % 2) == 1)
-            rescaling_factor *= sqrt(2.0);
+            rescaling_factor *= 1.0/sqrt(2.0);
         global_factor_power = 0;
     }
     
@@ -210,27 +154,28 @@ ApplyBlockOfGates(const idx_size* cbits,
     bool negate_Z = false;
     for (idx_size count = 0; count < size ; ++count) {
         
-        idx_size gc = count ^ (count >> 1);
-        idx_size changed_bit = gc ^ prev_gc;
-        idx_size set_bit = modified_q - __builtin_ctzl(changed_bit);
-        
-        if (__builtin_parityl(cbits[set_bit] & gc) == 1)
-             negate_Z = !negate_Z;
-    
+        const idx_size gc = count ^ (count >> 1);
         cmplx mutated_amp = amp[gc];
+        mutated_amp = rescale_now ? (mutated_amp * rescaling_factor) : mutated_amp;
+        
+        const idx_size changed_bit = gc ^ prev_gc;
+        const idx_size bit_idx = modified_q - __builtin_ctzl(changed_bit);
+        
+        if (__builtin_parityl(cbits[bit_idx] & gc) == 1)
+             negate_Z = !negate_Z;
         if (negate_Z)
             mutated_amp = -mutated_amp;
         
-        if (!t_bit_mask_empty && mutated_amp != cmplx(0,0)) {
+        if (!t_bit_mask_empty) {
             idx_size gate_c = 0;
             
             for (auto t : T_bit_mask)
                 gate_c += __builtin_popcountll(gc & t);
             
-            mutated_amp = ApplyTGateKTimes(gate_c, mutated_amp);
+            mutated_amp *= kTGate[gate_c % 8];
         }
         
-        amp[gc] = rescale_now ? (mutated_amp / rescaling_factor) : mutated_amp;
+        amp[gc] = mutated_amp;
         
         prev_gc = gc;
     }
@@ -536,6 +481,7 @@ ApplyMergedXY12Gates(const short type,
     global_factor_power += 2;
 }
 
+//Fix
 void circuit::
 ApplySingleTGate(const idx_size gate_i)
 {
@@ -546,7 +492,8 @@ ApplySingleTGate(const idx_size gate_i)
             idx += gap - 1;
             continue;
         }
-        ApplyTGateKTimes(1, idx);
+    
+//        ApplyTGateKTimes(1, idx);
     }
 }
 
@@ -831,6 +778,7 @@ Simulate(const string& outfile)
             else if(google && gates[i].gate_identification.back() == gate::Gates::Hadamard) {
                 int increment = ApplyHOnAllAmp(i);
                 i += increment - 1;
+                increment_cycle(i);
                 g_end = clock();
                 gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
@@ -928,8 +876,7 @@ PrintReport(const clock_t end, const clock_t begin)
     cout << "Gates : " << gates.size() << "  ";
     cout << "Cycles : " << current_google_cycle << "\n\n";
     
-    cout << fixed;
-    cout << setprecision(2);
+    cout << setprecision(3);
     auto memory = (sizeof(vector<cmplx>) + (sizeof(cmplx)
                     * circuit_state -> amp.size())) ;
     cout << "State vector size: ";

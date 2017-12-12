@@ -26,18 +26,19 @@
 #include <deque>
 #include <algorithm>
 #include <functional>
+#include <valarray>
 #include "matrix.h"
 #include "circuit_gates.h"
 
 using namespace std;
 
-const float HADAMARD_CONST = 1/sqrt(2);
+constexpr float kH = 0.707106781;
 
 using idx_size = size_t;
 
 class state {
 public:
-    vector<cmplx> amp;
+    valarray<cmplx> amp;
     
     cmplx measure_0(const short qubit);
     cmplx measure_1(const short qubit);
@@ -56,14 +57,14 @@ public:
     cmplx max_prob;
     complex<double> avg_prob;
     state* circuit_state;
-    short merged;
-    short X;
-    short Y;
-    short CZ_T;
-    short qubits;
-    short num_cycles;
-    short current_google_cycle;
-    short num_rescaling;
+    int merged;
+    int X;
+    int Y;
+    int CZ_T;
+    int qubits;
+    int num_cycles;
+    int current_google_cycle;
+    int num_rescaling;
     vector<double> gate_time;
     clock_t g_begin;
     clock_t g_end;
@@ -79,7 +80,7 @@ public:
                                 function comp);
     void ApplyBlockOfGates(const idx_size* cbits,
                            const int qubits,
-                           vector<cmplx>& amp,
+                           valarray<cmplx>& amp,
                            const vector<idx_size>& T);
     inline void FindRelevantAmp(vector<idx_size>& indices_amp_gate,
                                 idx_size gate_i,
