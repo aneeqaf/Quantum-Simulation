@@ -55,29 +55,30 @@ void circuit_generator::create_rand_circuit(int qubits, int num_gates)
         throw "Please request a valid circuit";
     }
 
-    q_circuit -> qubits = qubits;
-    for (int i = 0; i < qubits; ++i) {
-        int q = rand() % 2;
-        vector<cmplx> bits;
-        
-        if (q == 0) {
-            bits.push_back(cmplx(1,0));
-            bits.push_back(cmplx(0,0));
-        }
-        else {
-            bits.push_back(cmplx(0,0));
-            bits.push_back(cmplx(1,0));
-        }
-     
-        classical_bits.push_back(q);
-        
-        if (i > 0) {
-            q_circuit -> circuit_state -> amp = tensor_v_product(q_circuit -> circuit_state -> amp, bits);
-        }
-        else {
-            q_circuit -> circuit_state -> amp = bits;
-        }
-    }
+    
+//    q_circuit -> qubits = qubits;
+//    for (int i = 0; i < qubits; ++i) {
+//        int q = rand() % 2;
+//        valarray<cmplx> bits(2);
+//
+//        if (q == 0) {
+//            bits[0] = cmplx(1,0);
+//            bits[1] = cmplx(0,0);
+//        }
+//        else {
+//            bits[0] = cmplx(0,0);
+//            bits[1] = cmplx(1,0);
+//        }
+//
+//        classical_bits.push_back(q);
+//
+//        if (i > 0) {
+////            q_circuit -> circuit_state -> amp = tensor_v_product(q_circuit -> circuit_state -> amp, bits);
+//        }
+//        else {
+//            q_circuit -> circuit_state -> amp = bits;
+//        }
+//    }
     
     for (int i = 0 ; i < num_gates; ++i) {
         int q = rand() % qubits;
@@ -170,6 +171,7 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
     //gates applied to this qubit.
     vector<vector<int>> qubit_to_gates(qubits);
     q_circuit -> qubits = qubits;
+    q_circuit -> circuit_state -> amp.resize(1ull << qubits);
     
     auto count_wires_gate = [&](vector<short>& CZ_pairs) {
         int count = 0;
@@ -184,10 +186,8 @@ void circuit_generator::create_google_rand_circuit(int qubits, int clock_cycles)
     };
     
     vector<bool> T_gate_allowed(qubits, true);
-    q_circuit -> circuit_state -> amp.push_back(cmplx(1,0));
-    for (int i = 1; i < pow(2, qubits); ++i) {
-        q_circuit -> circuit_state -> amp.push_back(cmplx(0,0));
-    }
+    q_circuit -> circuit_state -> amp = cmplx(0,0);
+    q_circuit -> circuit_state -> amp[0] = cmplx(1,0);
     
     //Start by applying Hadamard Gates
     for (int i = 0; i < qubits; ++i) {
@@ -494,14 +494,17 @@ void circuit_generator::read_input_file(const string& input_file)
         classical_bits.push_back(classical);
     }
     
+    q_circuit -> circuit_state -> amp.resize(1ull << q_circuit -> qubits);
     getline(file, input);
     cmplx amp(0,0);
     double theta;
     int q, gt;
     char delim = '_';
     istringstream ss(input);
+    int vi = 0;
     while (ss >> amp) {
-        q_circuit -> circuit_state -> amp.push_back(amp);
+        q_circuit -> circuit_state -> amp[vi] = amp;
+        ++vi;
     }
     
     while(getline(file, input)) {
@@ -584,11 +587,10 @@ void circuit_generator::read_google_input_files(const string& input_file)
     file.open(input_file);
     
     file >> q_circuit -> qubits;
+    q_circuit -> circuit_state -> amp.resize(1ull << q_circuit -> qubits);
     
-    q_circuit -> circuit_state -> amp.push_back(cmplx(1,0));
-    for (int i = 1; i < pow(2, q_circuit -> qubits); ++i) {
-        q_circuit -> circuit_state -> amp.push_back(cmplx(0,0));
-    }
+    q_circuit -> circuit_state -> amp = cmplx(0,0);
+    q_circuit -> circuit_state -> amp[0] = cmplx(1,0);
     
     for (int i = 0; i < q_circuit -> qubits; ++i) {
         classical_bits.push_back(0);
