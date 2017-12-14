@@ -13,8 +13,8 @@
 #include <sstream>
 #include <fstream>
 #include <getopt.h>
-#include "circuit_simulation.h"
-#include "circuit_generator.h"
+#include "simulation.h"
+
 
 using namespace std;
 
@@ -35,20 +35,19 @@ int main(int argc, char *argv[]) {
         { "google",    required_argument,       nullptr, 'g' },
         { "googleInput",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
-        { "test",    no_argument,       nullptr, 't' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     int c = 0;
     bool inputfile = false, googleInput = false, create = false, to_write = false,
-    test = false, google_c = false;;
+    google_c = false;
     int idx = 0;
     
     string input_filename = "", out_file = "";
     int numQ = 0, numG = 0;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:c:o:g:h:t", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:c:o:g:h:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
@@ -103,10 +102,6 @@ int main(int argc, char *argv[]) {
                 out_file = string(optarg);
                 break;
             }
-            case 't': {
-                test = true;
-                break;
-            }
             default: {
                 cerr << "Unknown option " << c << '\n';
                 exit(1);
@@ -115,50 +110,38 @@ int main(int argc, char *argv[]) {
         } // switch
     } // while
     
-    circuit test_circuit;
-    circuit_generator new_circuit = {};
+    circuit cir;
+    sequentialSimulation sim;
     if (inputfile || googleInput) {
+        if(googleInput)
+            cout << "Google circuit file: " << input_filename << "\n\n";
         
-        
+        valarray<cmplx> amp_v;
         //write a function for printing google files.
         if (inputfile) {
-            new_circuit.read_input_file("input/" + input_filename);
-            new_circuit.q_circuit -> google = true;
+            cir.ReadCustomInputFiles("input/" + input_filename, amp_v);
+            cir.CreateQuiddProScript("qpro_scripts/" + out_file + ".qpro");
+            state amp(amp_v);
+            sim.Simulate("probabilities/" + out_file, amp, cir);
         }
         else {
-            new_circuit.read_google_input_files(input_filename);
-            new_circuit.q_circuit -> google = true;
+            cir.ReadGoogleCircuitFile(input_filename);
+            state amp(cir.GetNumQubits());
+            sim.Simulate("probabilities/" + out_file, amp, cir, 26);
         }
-        
-        if(googleInput) {
-            cout << "Google circuit file: " << input_filename << "\n\n";
-            new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + ".qpro");
-        }
-        
-//        new_circuit.q_circuit -> circuit_preprocessing();
-        
-        new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
-       // new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
     }
     else if(create) {
-        for (int i = 0; i < num_qubits.size(); ++i){
-            if (google_c) {
-                new_circuit.create_google_rand_circuit(num_qubits[i], num_gates[i]);
-                new_circuit.q_circuit -> google = true;
-            }
-            else {
-                new_circuit.create_rand_circuit(num_qubits[i], num_gates[i]);
-            }
+        for (idx_size i = 0; i < num_qubits.size(); ++i){
+            cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             
+            state amp(cir.GetNumQubits());
             if(to_write && num_qubits[0] <= 20) {
-                new_circuit.write_circuit_to_file("input/" + out_file + to_string(i) + ".txt");
-                new_circuit.create_quiddpro_script("qpro_scripts/" + out_file + to_string(i) + ".qpro");
+                cir.WriteGeneratedCircuitFile("input/" + out_file + to_string(i) + ".txt",
+                                              amp.GetAmp());
+                cir.CreateQuiddProScript("qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
             
-            
-//            new_circuit.q_circuit -> circuit_preprocessing();
-            new_circuit.q_circuit -> Simulate("probabilities/" + out_file);
-//            new_circuit.q_circuit -> PrintStateVector("state/" + out_file);
+            sim.Simulate("probabilities/" + out_file, amp, cir);
         }
     }
     return 0;

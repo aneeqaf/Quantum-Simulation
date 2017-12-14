@@ -28,7 +28,7 @@
 #include <functional>
 #include <valarray>
 #include "matrix.h"
-#include "circuit_gates.h"
+#include "gates.h"
 
 using namespace std;
 

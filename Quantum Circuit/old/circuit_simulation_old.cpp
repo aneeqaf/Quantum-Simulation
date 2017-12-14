@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 
-#include "circuit_simulation.h"
+#include "circuit_simulation_old.h"
 
 using namespace std;
 
