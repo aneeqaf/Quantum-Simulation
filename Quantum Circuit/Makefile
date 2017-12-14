@@ -2,7 +2,7 @@ TARGET = quantum
 LIBS = -lm -lstdc++
 CC = gcc-7
 #/usr/local/gcc7/bin/
-CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast 
+CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -finline-functions
 
 .PHONY: default all clean
 
