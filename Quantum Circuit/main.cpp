@@ -125,9 +125,9 @@ int main(int argc, char *argv[]) {
             sim.Simulate("probabilities/" + out_file, amp, cir);
         }
         else {
-            cir.ReadGoogleCircuitFile(input_filename);
+            cir.ReadGoogleCircuitFile(input_filename, 26);
             state amp(cir.GetNumQubits());
-            sim.Simulate("probabilities/" + out_file, amp, cir, 26);
+            sim.Simulate("probabilities/" + out_file, amp, cir);
         }
     }
     else if(create) {
