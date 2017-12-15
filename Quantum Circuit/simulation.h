@@ -35,19 +35,16 @@ public:
     void PrintReport(const clock_t end,
                      const clock_t begin,
                      state& amp,
-                     const circuit& circuit,
-                     const int sim_depth) const;
+                     const circuit& circuit) const;
     void PrintReport(const string& outfile,
                      const clock_t end,
                      const clock_t begin,
                      state& amp,
-                     const circuit& circuit,
-                     const int sim_depth) const;
+                     const circuit& circuit) const;
     
     void Simulate(const string& outfile,
                   state& amp,
-                  circuit& circuit,
-                  const int sim_depth = -1);
+                  circuit& circuit);
     
     sequentialSimulation();
     sequentialSimulation(const sequentialSimulation& rhs);

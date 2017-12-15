@@ -60,7 +60,7 @@ void state::
 ApplyNonCGate(const vector<int>& gate_qubits,
               const int qubits,
               const gate& g,
-              const gate::Gates gate_type)
+              const gate::type gate_type)
 {
     ApplyNonControl1QGates(gate_qubits, amp, qubits, g, gate_type);
 }
@@ -77,18 +77,17 @@ ApplyCGate(const int num_controls,
            const vector<int>& gate_qubits,
            const int qubits,
            const gate& g,
-           const gate::Gates gate_type)
+           const gate::type gate_type)
 {
     ApplyControlGate(num_controls, gate_qubits, amp, qubits, g, gate_type);
 }
 
 void state::
-ApplyTwoMergedXYGate(vector<gate>& gates,
-                     idx_size gate1,
-                     idx_size gate2,
+ApplyTwoMergedXYGate(gate& gate1,
+                     gate& gate2,
                      const int qubits)
 {
-    Merge2QXY12Gates(gates, gate1, gate2, qubits, amp);
+    Merge2QXY12Gates(gate1, gate2, qubits, amp);
     global_factor_power += 2;
 }
 
@@ -134,6 +133,7 @@ float state::
 CalculateNormOfAmp()
 {
     double norm = 0;
+    idx_size qubits = log2(amp.size());
     cmplx prob(0, 0);
     
     amp /= pow(2,(global_factor_power/2));
@@ -142,15 +142,14 @@ CalculateNormOfAmp()
     
     auto conj_op = [](valarray<cmplx>::value_type v) {return conj(v);};
     amp *= amp.apply(conj_op);
-    norm = real(amp.sum());
-//    for (auto& prob : amp)
-//        prob *= conj(prob);
-//        if (real(prob) > (1.0/(1ull << qubits)))
-//            norm += real(prob);
-//
-//    for (const auto& prob : amp)
-//        if (real(prob) <= (1.0/(1ull << qubits)))
-//            norm += real(prob);
+    for (const auto& prob : amp)
+        if (real(prob) > (1.0/(1ull << qubits)))
+            norm += real(prob);
+    
+    for (const auto& prob : amp)
+        if (real(prob) <= (1.0/(1ull << qubits)))
+            norm += real(prob);
+    
     return norm;
 }
 

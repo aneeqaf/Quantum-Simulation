@@ -37,7 +37,8 @@ public:
     
     void GroupAlternateCycles();
     void GroupSimilarGates();
-    void ReadGoogleCircuitFile(const string& input_file);
+    void ReadGoogleCircuitFile(const string& input_file,
+                               const int depth);
     void ReadCustomInputFiles(const string& input_file,
                               valarray<cmplx>& amp);
     void CreateGoogleCircuit(int qubits,

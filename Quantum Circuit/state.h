@@ -31,16 +31,15 @@ public:
     void ApplyNonCGate(const vector<int>& gate_qubits,
                       const int qubits,
                       const gate& g,
-                      const gate::Gates gate_type);
+                      const gate::type gate_type);
     void ApplyHGateOnAllAmps(const int qubits);
     void ApplyCGate(const int num_controls,
                    const vector<int>& gate_qubits,
                    const int qubits,
                    const gate& g,
-                   const gate::Gates gate_type);
-    void ApplyTwoMergedXYGate(vector<gate>& gates,
-                              idx_size gate1,
-                              idx_size gate2,
+                   const gate::type gate_type);
+    void ApplyTwoMergedXYGate(gate& gate1,
+                              gate& gate2,
                               const int qubits);
     
     double GetMinProb() const;

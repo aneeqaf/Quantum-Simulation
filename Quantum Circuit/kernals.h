@@ -79,43 +79,42 @@ GroupTGates(valarray<idx_size>& T_bitmask,
     }
 }
 
-inline valarray<idx_size>
-ExtractAmpForQGate(const vector<int>& gate_qubits,
-                   const int qubits,
-                   const int q_idx)
+inline void
+ExtractIndicesForAmp(idx_size* strides_idx,
+                     const vector<int>& gate_qubits,
+                     const int qubits,
+                     const int q_idx)
 {
     const idx_size num_q = gate_qubits.size();
     idx_size temp_index = 0;
-    idx_size strides_count = 1;
+    idx_size strides_idx_size = 1;
     
-    valarray<idx_size> strides(1ull << num_q);
     idx_size pos = 1ull << (num_q - 1);
     
-    strides[0] = q_idx;
+    strides_idx[0] = q_idx;
     for (idx_size i = q_idx ; i < num_q; ++i) {
-        for (idx_size n = 0; n < strides_count &&
-             strides_count < (1ull << (i+1)); n += 2) {
+        for (idx_size n = 0; n < strides_idx_size &&
+             strides_idx_size < (1ull << (i+1)); n += 2) {
             
-            temp_index = strides[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
+            temp_index = strides_idx[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
             
-            strides[n + pos] = temp_index;
-            ++strides_count;
+            strides_idx[n + pos] = temp_index;
+            ++strides_idx_size;
         }
         pos /= 2;
     }
-    return strides;
 }
 
 inline void
-ApplyXX12Gate(const valarray<idx_size>& indices,
+ApplyXX12Gate(const idx_size* indices,
               valarray<cmplx>& amp)
 {
     auto t = amp[indices[0]] + amp[indices[3]];
     auto t1 = amp[indices[1]] + amp[indices[2]];
     auto t2 = cmplx(-imag(amp[indices[0]]), real(amp[indices[0]]))
-    - cmplx(-imag(amp[indices[3]]), real(amp[indices[3]]));
+            - cmplx(-imag(amp[indices[3]]), real(amp[indices[3]]));
     auto t3 = cmplx(-imag(amp[indices[1]]), real(amp[indices[1]]))
-    - cmplx(-imag(amp[indices[2]]), real(amp[indices[2]]));
+            - cmplx(-imag(amp[indices[2]]), real(amp[indices[2]]));
     
     amp[indices[0]] = t1 + t2;
     amp[indices[1]] = t + t3;
@@ -124,11 +123,11 @@ ApplyXX12Gate(const valarray<idx_size>& indices,
 }
 
 inline void
-ApplyXY12Gate(const valarray<idx_size>& indices,
+ApplyXY12Gate(const idx_size* indices,
               valarray<cmplx>& amp)
 {
-    valarray<cmplx> temp_amp(indices.size());
-    for (idx_size i = 0; i < indices.size(); ++i)
+    cmplx temp_amp[4];
+    for (idx_size i = 0; i < 4; ++i)
         temp_amp[i] = amp[indices[i]];
     
     amp[indices[0]] = cmplx(-imag(temp_amp[0]), real(temp_amp[0]))
@@ -150,17 +149,17 @@ ApplyXY12Gate(const valarray<idx_size>& indices,
 }
 
 inline void
-ApplyYY12Gate(const valarray<idx_size>& indices,
+ApplyYY12Gate(const idx_size* indices,
               valarray<cmplx>& amp)
 {
     auto t = cmplx(-imag(amp[indices[0]]), real(amp[indices[0]]))
-    + cmplx(-imag(amp[indices[3]]), real(amp[indices[3]]));
+            + cmplx(-imag(amp[indices[3]]), real(amp[indices[3]]));
     auto t1 = cmplx(-imag(amp[indices[0]]), real(amp[indices[0]]))
-    - cmplx(-imag(amp[indices[3]]), real(amp[indices[3]]));
+            - cmplx(-imag(amp[indices[3]]), real(amp[indices[3]]));
     auto t2 = cmplx(-imag(amp[indices[1]]), real(amp[indices[1]]))
-    + cmplx(-imag(amp[indices[2]]), real(amp[indices[2]]));
+            + cmplx(-imag(amp[indices[2]]), real(amp[indices[2]]));
     auto t3 = cmplx(-imag(amp[indices[1]]), real(amp[indices[1]]))
-    - cmplx(-imag(amp[indices[2]]), real(amp[indices[2]]));
+            - cmplx(-imag(amp[indices[2]]), real(amp[indices[2]]));
     
     amp[indices[0]] = t - t2;
     amp[indices[1]] = t1 + t3;
@@ -169,7 +168,7 @@ ApplyYY12Gate(const valarray<idx_size>& indices,
 }
 
 inline void
-ApplyYX12Gate(const valarray<idx_size>& indices,
+ApplyYX12Gate(const idx_size* indices,
               valarray<cmplx>& amp)
 {
     auto t = cmplx(-imag(amp[indices[0]]), real(amp[indices[0]]))
@@ -187,15 +186,14 @@ ApplyYX12Gate(const valarray<idx_size>& indices,
     amp[indices[3]] = t1 + t3;
 }
 
-inline valarray<idx_size>
-FindStrides (const vector<int>& gate_qubits,
+inline void
+FindStrides (valarray<idx_size>& strides,
+             const vector<int>& gate_qubits,
              const int num_q) {
     
-    valarray<idx_size> strides(gate_qubits.size());
+    strides.resize(gate_qubits.size());
     for (idx_size i = 0; i < strides.size(); ++i)
         strides[i] = (1ull << ((num_q - 1) - gate_qubits[i]));
-    
-    return strides;
 }
 
 inline void
@@ -224,12 +222,12 @@ FormBlockOfCZTGates(const vector<gate>& block_gates,
 {
 
     for(;(gate_i < block_gates.size())
-        && (block_gates[gate_i].ids.back() == gate::Gates::Z ||
-            block_gates[gate_i].ids.back() == gate::Gates::T); ++gate_i) {
+        && (block_gates[gate_i].ids.back() == gate::type::Z ||
+            block_gates[gate_i].ids.back() == gate::type::T); ++gate_i) {
         
-        if (block_gates[gate_i].ids.back() == gate::Gates::Z)
+        if (block_gates[gate_i].ids.back() == gate::type::Z)
             GroupCZGates(CZ_bitmasks, qubits, block_gates[gate_i].qubits);
-        else if (block_gates[gate_i].ids.back() == gate::Gates::T)
+        else if (block_gates[gate_i].ids.back() == gate::type::T)
             GroupTGates(T_bitmasks, qubits, block_gates[gate_i].qubits);
     }
 }
@@ -244,7 +242,7 @@ ApplyBlockOfGates(const int qubits,
 extern void
 ApplyGateOnAmps(const idx_size* indices,
                 const idx_size size,
-                const gate::Gates gate_type,
+                const gate::type gate_type,
                 const gate& q_gate,
                 valarray<cmplx>& amp);
 
@@ -254,27 +252,25 @@ ApplyControlGate(const int num_controls,
               valarray<cmplx>& amp,
               const int qubits,
               const gate& g,
-              const gate::Gates gate_type);
+              const gate::type gate_type);
 
 extern void
 ApplyNonControl1QGates(const vector<int>& gate_qubits,
                      valarray<cmplx>& amp,
                      const int qubits,
                      const gate& g,
-                     const gate::Gates gate_type);
+                     const gate::type gate_type);
 
 
-template<typename function>
 extern void
 ApplyMergedXY12Gates(const vector<int>& gate_qubits,
                      const int qubits,
                      valarray<cmplx>& amp,
-                     function& gate_func);
+                     const int gate_order);
 
 extern void
-Merge2QXY12Gates(vector<gate>& gates,
-                 idx_size gate1,
-                 idx_size gate2,
+Merge2QXY12Gates(gate& gate1,
+                 gate& gate2,
                  const int qubits,
                  valarray<cmplx>& amp);
 
