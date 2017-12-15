@@ -9,13 +9,13 @@
 #include <stdio.h>
 #include "gates.h"
 
-gate::gate(): rows({}), qubits({}), ids({}),
+Gate::Gate(): rows({}), qubits({}), ids({}),
 theta({}), num_controls(0){}
 
-gate::gate(vector<vector<cmplx>> g): rows(g), qubits({}),
+Gate::Gate(vector<vector<cmplx>> g): rows(g), qubits({}),
 ids({}),theta({}), num_controls(0){}
 
-gate::gate(const gate& rhs)
+Gate::Gate(const Gate& rhs)
 {
     rows = rhs.rows;
     qubits = rhs.qubits;
@@ -24,9 +24,9 @@ gate::gate(const gate& rhs)
     num_controls = rhs.num_controls;
 }
 
-gate& gate::operator=(const gate& rhs)
+Gate& Gate::operator=(const Gate& rhs)
 {
-    gate temp(rhs);
+    Gate temp(rhs);
     swap(rows, temp.rows);
     swap(qubits, temp.qubits);
     swap(ids, temp.ids);

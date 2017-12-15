@@ -7,12 +7,28 @@
 //
 
 #include <stdio.h>
-#include "kernals.h"
+#include "kernels.h"
+
+void
+GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
+             const int qubits,
+             const vector<int>& gate_qubits)
+{
+    idx_size bits = 0;
+    int new_q = qubits - 1;
+    
+    for (auto q : gate_qubits) {
+        bits |= ( 1ull << (new_q - q));
+        qubits_CZ_bitmasks[q] |= ( 1ull << (new_q - q));
+    }
+    for (auto q : gate_qubits)
+        qubits_CZ_bitmasks[q] ^= bits;
+}
 
 void
 ApplyBlockOfGates(const int qubits,
-                  const valarray<idx_size>& CZ_bitmask,
-                  const valarray<idx_size>& T_bitmask,
+                  const valarray<idx_size>& CZ_bitmasks,
+                  const valarray<idx_size>& T_bitmasks,
                   valarray<cmplx>& amp,
                   cmplx rescaling_factor)
 {
@@ -23,7 +39,7 @@ ApplyBlockOfGates(const int qubits,
     const bool rescale_now = rescaling_factor != cmplx(0,0);
     
     bool t_bit_mask_empty = true;
-    if (T_bitmask[0] != 0)
+    if (T_bitmasks[0] != 0)
         t_bit_mask_empty = false;
     
     bool negate_Z = false;
@@ -36,7 +52,7 @@ ApplyBlockOfGates(const int qubits,
         cmplx mutated_amp = amp[gc];
         mutated_amp = rescale_now ? (mutated_amp * rescaling_factor) : mutated_amp;
         
-        if (__builtin_parityl(CZ_bitmask[bit_idx] & gc) == 1)
+        if (__builtin_parityl(CZ_bitmasks[bit_idx] & gc) == 1)
             negate_Z = !negate_Z;
         if (negate_Z)
             mutated_amp = -mutated_amp;
@@ -44,7 +60,7 @@ ApplyBlockOfGates(const int qubits,
         if (!t_bit_mask_empty) {
             idx_size gate_c = 0;
             
-            for (auto t : T_bitmask)
+            for (auto t : T_bitmasks)
                 gate_c += __builtin_popcountll(gc & t);
             
             mutated_amp *= kTGate[gate_c % 8];
@@ -56,56 +72,14 @@ ApplyBlockOfGates(const int qubits,
     }
 }
 
-void
-ApplyGateOnAmps(const idx_size* indices,
-                const idx_size size,
-                const gate::type gate_type,
-                const gate& q_gate,
-                valarray<cmplx>& amp)
-{
-    cmplx temp_amp[size];
-    for (idx_size i = 0; i < size; ++i)
-        temp_amp[i] = amp[indices[i]];
-    //Add a size check;
-    if (!(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
-        if (gate_type == gate::type::X_1_2) {
-            amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
-            amp[indices[1]] = (temp_amp[0]*X12[1][0]) + (temp_amp[1]*X12[1][1]);
-        }
-        else if (gate_type == gate::type::Y_1_2) {
-            amp[indices[0]] = (temp_amp[0]*Y12[0][0]) + (temp_amp[1]*Y12[0][1]);
-            amp[indices[1]] = (temp_amp[0]*Y12[1][0]) + (temp_amp[1]*Y12[1][1]);
-        }
-        else if (gate_type == gate::type::Z)
-            amp[indices[1]] *= Z[1][1];
-        
-        else if (gate_type == gate::type::T) 
-            amp[indices[1]] *= T[1][1];
-        
-        else if (gate_type == gate::type::X)
-            swap(amp[indices[0]], amp[indices[1]]);
-        
-        else if (gate_type == gate::type::Y) {
-            amp[indices[0]] = temp_amp[1] * Y[0][1];
-            amp[indices[1]] = temp_amp[0] * Y[1][0];
-        }
-        else {
-            vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
-            m_temp = matrix_v_mult(q_gate.rows, m_temp);
-            for (idx_size i = 0; i < size; ++i)
-                amp[i] = temp_amp[i];
-        }
-    }
-}
-
 //Test this
 void
 ApplyControlGate(const int num_controls,
                  const vector<int>& gate_qubits,
                  valarray<cmplx>& amp,
                  const int qubits,
-                 const gate& g,
-                 const gate::type gate_type)
+                 const Gate& g,
+                 const Gate::type gate_type)
 {
     int loop_count = qubits - num_controls;
     idx_size idx = 0, gate_bitmask = 0, c_bits = 0, iter_count = 0;
@@ -144,8 +118,8 @@ void
 ApplyNonControl1QGates(const vector<int>& gate_qubits,
                        valarray<cmplx>& amp,
                        const int qubits,
-                       const gate& g,
-                       const gate::type gate_type)
+                       const Gate& g,
+                       const Gate::type gate_type)
 {
     idx_size num_bits = gate_qubits.size(), iter_count = 0, size = amp.size();
     idx_size idx = 0, gate_bitmask = 0;
@@ -207,12 +181,12 @@ ApplyMergedXY12Gates(const vector<int>& gate_qubits,
 }
 
 void
-Merge2QXY12Gates(gate& gate1,
-                 gate& gate2,
+Merge2QXY12Gates(Gate& gate1,
+                 Gate& gate2,
                  const int qubits,
                  valarray<cmplx>& amp)
 {
-    gate gate_to_apply = gate1;
+    Gate gate_to_apply = gate1;
     if (gate1.qubits.back() < gate2.qubits.back())
         gate_to_apply.qubits.push_back(gate2.qubits.back());
     else {
@@ -221,19 +195,19 @@ Merge2QXY12Gates(gate& gate1,
         swap(gate1, gate2);
     }
     
-    if(gate1.ids.back() == gate::type::X_1_2 &&
-       gate2.ids.back() == gate::type::X_1_2)
+    if(gate1.ids.back() == Gate::type::X_1_2 &&
+       gate2.ids.back() == Gate::type::X_1_2)
         ApplyMergedXY12Gates(gate_to_apply.qubits, qubits, amp, ApplyXX12Gate);
     
-    else if(gate1.ids.back() == gate::type::X_1_2 &&
-            gate2.ids.back() == gate::type::Y_1_2)
+    else if(gate1.ids.back() == Gate::type::X_1_2 &&
+            gate2.ids.back() == Gate::type::Y_1_2)
         ApplyMergedXY12Gates(gate_to_apply.qubits, qubits, amp, ApplyXY12Gate);
     
-    else if(gate1.ids.back() == gate::type::Y_1_2 &&
-            gate2.ids.back() == gate::type::X_1_2)
+    else if(gate1.ids.back() == Gate::type::Y_1_2 &&
+            gate2.ids.back() == Gate::type::X_1_2)
         ApplyMergedXY12Gates(gate_to_apply.qubits, qubits, amp, ApplyYX12Gate);
     
-    else if(gate1.ids.back() == gate::type::Y_1_2 &&
-            gate2.ids.back() == gate::type::Y_1_2)
+    else if(gate1.ids.back() == Gate::type::Y_1_2 &&
+            gate2.ids.back() == Gate::type::Y_1_2)
         ApplyMergedXY12Gates(gate_to_apply.qubits, qubits, amp, ApplyYY12Gate);
 }

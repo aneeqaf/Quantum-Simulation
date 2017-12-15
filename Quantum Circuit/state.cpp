@@ -8,33 +8,33 @@
 
 #include "state.h"
 
-state::
-state(int qubits): global_factor_power(0)
+State::
+State(int qubits): global_factor_power(0)
 {
     amp.resize(1ull << qubits, 0);
     amp[0] = 1;
 }
 
-state::
-state(valarray<cmplx>& a): amp(a), global_factor_power(0) {}
+State::
+State(valarray<cmplx>& a): amp(a), global_factor_power(0) {}
 
-state::state(const state& rhs)
+State::State(const State& rhs)
 {
     amp = rhs.amp;
     global_factor_power = rhs.global_factor_power;
 }
 
-state& state::
-operator=(const state& rhs)
+State& State::
+operator=(const State& rhs)
 {
-    state temp(rhs);
+    State temp(rhs);
     swap(amp, temp.amp);
     swap(global_factor_power, temp.global_factor_power);
     return *this;
 }
 
-void state::
-ApplyBlockOfDiagGates(const vector<gate>& block_gates,
+void State::
+ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
                       const int qubits,
                       idx_size& gate_i)
 {
@@ -50,48 +50,48 @@ ApplyBlockOfDiagGates(const vector<gate>& block_gates,
         ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp);
 }
 
-void state::
+void State::
 ApplyGateFWHT()
 {
     
 }
 
-void state::
+void State::
 ApplyNonCGate(const vector<int>& gate_qubits,
               const int qubits,
-              const gate& g,
-              const gate::type gate_type)
+              const Gate& g,
+              const Gate::type gate_type)
 {
     ApplyNonControl1QGates(gate_qubits, amp, qubits, g, gate_type);
 }
 
-void state::
+void State::
 ApplyHGateOnAllAmps(const int qubits)
 {
     amp = cmplx(1, 0);
     global_factor_power += qubits;
 }
 
-void state::
+void State::
 ApplyCGate(const int num_controls,
            const vector<int>& gate_qubits,
            const int qubits,
-           const gate& g,
-           const gate::type gate_type)
+           const Gate& g,
+           const Gate::type gate_type)
 {
     ApplyControlGate(num_controls, gate_qubits, amp, qubits, g, gate_type);
 }
 
-void state::
-ApplyTwoMergedXYGate(gate& gate1,
-                     gate& gate2,
+void State::
+ApplyTwoMergedXYGate(Gate& gate1,
+                     Gate& gate2,
                      const int qubits)
 {
     Merge2QXY12Gates(gate1, gate2, qubits, amp);
     global_factor_power += 2;
 }
 
-double state::
+double State::
 GetMinProb() const
 {
     double min = numeric_limits<double>::max();
@@ -101,7 +101,7 @@ GetMinProb() const
     return min;
 }
 
-double state::
+double State::
 GetMaxProb() const
 {
     double max = numeric_limits<double>::min();
@@ -111,25 +111,25 @@ GetMaxProb() const
     return max;
 }
 
-double state::
+double State::
 GetAvgProb() const
 {
     return 1.0/(1ull << (idx_size)(log2(amp.size())));
 }
 
-double state::
+double State::
 GetMemUsage() const
 {
     return sizeof(vector<cmplx>) + (sizeof(cmplx) * amp.size()) ;
 }
 
-idx_size state::
+idx_size State::
 GetGlobalFactorPower() const
 {
     return global_factor_power;
 }
 
-float state::
+float State::
 CalculateNormOfAmp()
 {
     double norm = 0;
@@ -153,25 +153,25 @@ CalculateNormOfAmp()
     return norm;
 }
 
-const valarray<cmplx>& state::
+const valarray<cmplx>& State::
 GetAmp() const
 {
     return amp;
 }
 
-void state::
+void State::
 IncrementGlobalFactorPower(int num)
 {
     global_factor_power += num;
 }
 
-void state::
+void State::
 ResetGlobalFactorPower()
 {
     global_factor_power = 0;
 }
 
-cmplx state::
+cmplx State::
 ComputeRescalingFactor()
 {
     cmplx rescaling_factor(0,0);
@@ -183,7 +183,7 @@ ComputeRescalingFactor()
     return rescaling_factor;
 }
 
-void state::
+void State::
 PrintProbabilities(const string &out_file) const
 {
     static int count = 0;
@@ -210,7 +210,7 @@ PrintProbabilities(const string &out_file) const
     ++count;
 }
 
-void state::
+void State::
 PrintStateVector() const
 {
     for (auto state_v :amp) {
@@ -231,7 +231,7 @@ PrintStateVector() const
     cout << "\n\n";
 }
 
-void state::
+void State::
 PrintStateVector(const string& outfile) const
 {
     static ofstream file;

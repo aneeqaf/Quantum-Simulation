@@ -13,33 +13,33 @@
 #include <stdio.h>
 #include <ctime>
 #include <fstream>
-#include "kernals.h"
+#include "kernels.h"
 
 using namespace std;
 
-class state {
+class State {
 private:
     valarray<cmplx> amp;
     idx_size global_factor_power;
     
 public:
     
-    void ApplyBlockOfDiagGates(const vector<gate>& block_gates,
+    void ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
                               const int qubits,
                               idx_size& gate_i);
     void ApplyGateFWHT();
     void ApplyNonCGate(const vector<int>& gate_qubits,
                       const int qubits,
-                      const gate& g,
-                      const gate::type gate_type);
+                      const Gate& g,
+                      const Gate::type gate_type);
     void ApplyHGateOnAllAmps(const int qubits);
     void ApplyCGate(const int num_controls,
                    const vector<int>& gate_qubits,
                    const int qubits,
-                   const gate& g,
-                   const gate::type gate_type);
-    void ApplyTwoMergedXYGate(gate& gate1,
-                              gate& gate2,
+                   const Gate& g,
+                   const Gate::type gate_type);
+    void ApplyTwoMergedXYGate(Gate& gate1,
+                              Gate& gate2,
                               const int qubits);
     
     double GetMinProb() const;
@@ -62,10 +62,10 @@ public:
     cmplx Measure1(const short qubit);
     void Measure(const short qubit);
     
-    state(int qubits);
-    state(valarray<cmplx>& a);
-    state(const state& rhs);
-    state& operator=(const state& rhs);
+    State(int qubits);
+    State(valarray<cmplx>& a);
+    State(const State& rhs);
+    State& operator=(const State& rhs);
 };
 
 #endif /* state_h */

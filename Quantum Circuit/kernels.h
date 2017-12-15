@@ -40,66 +40,50 @@ constexpr cmplx kTGate[8] = {{1,0}, {kH, kH}, {0,1}, {-kH, kH},
 
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 
-inline void
-GroupCZGates(valarray<idx_size>& qubits_CZ_bitmask,
+extern void
+GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
              const int qubits,
-             const vector<int>& gate_qubits)
-{
-    idx_size bits = 0;
-    int new_q = qubits - 1;
-    
-    for (auto q : gate_qubits) {
-        bits |= ( 1ull << (new_q - q));
-        qubits_CZ_bitmask[q] |= ( 1ull << (new_q - q));
-    }
-    for (auto q : gate_qubits)
-        qubits_CZ_bitmask[q] ^= bits;
-}
+             const vector<int>& gate_qubits);
 
 inline void
-GroupTGates(valarray<idx_size>& T_bitmask,
+GroupTGates(valarray<idx_size>& T_bitmasks,
             const int qubits,
             const vector<int>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
     idx_size t_mask = (1ull << ((qubits - 1) - gate_qubits[0]));
-    if ((T_bitmask[0] & t_mask) != t_mask)
-        T_bitmask[0] |= t_mask;
+    if ((T_bitmasks[0] & t_mask) != t_mask)
+        T_bitmasks[0] |= t_mask;
     
     else {
         bool found = false;
-        for (auto& t : T_bitmask)
+        for (auto& t : T_bitmasks)
             if ((t & t_mask) != t_mask) {
                 t |= t_mask;
                 found = true;
             }
         if (!found) {
-            T_bitmask[1] = t_mask;
+            T_bitmasks[1] = t_mask;
         }
     }
 }
 
 inline void
-ExtractIndicesForAmp(idx_size* strides_idx,
+ExtractIndicesForAmp(idx_size* strides,
                      const vector<int>& gate_qubits,
                      const int qubits,
                      const int q_idx)
 {
     const idx_size num_q = gate_qubits.size();
-    idx_size temp_index = 0;
-    idx_size strides_idx_size = 1;
+    idx_size strides_size = 1, pos = 1ull << (num_q - 1);
     
-    idx_size pos = 1ull << (num_q - 1);
-    
-    strides_idx[0] = q_idx;
+    strides[0] = q_idx;
     for (idx_size i = q_idx ; i < num_q; ++i) {
-        for (idx_size n = 0; n < strides_idx_size &&
-             strides_idx_size < (1ull << (i+1)); n += 2) {
+        for (idx_size n = 0; n < strides_size &&
+             strides_size < (1ull << (i+1)); n += 2) {
             
-            temp_index = strides_idx[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
-            
-            strides_idx[n + pos] = temp_index;
-            ++strides_idx_size;
+            strides[n + pos] = strides[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
+            ++strides_size;
         }
         pos /= 2;
     }
@@ -197,11 +181,11 @@ FindStrides (valarray<idx_size>& strides,
 }
 
 inline void
-ApplySingleTGate(const gate& gate,
+ApplySingleTGate(const Gate& Gate,
                  const int qubits,
                  valarray<cmplx>& amp)
 {
-    idx_size gap = (1ull << ((qubits - 1) - gate.qubits[0]));
+    idx_size gap = (1ull << ((qubits - 1) - Gate.qubits[0]));
     idx_size idx = gap, amp_size = amp.size();
     
     for (; idx < amp_size; ++idx) {
@@ -214,21 +198,71 @@ ApplySingleTGate(const gate& gate,
 }
 
 inline void
-FormBlockOfCZTGates(const vector<gate>& block_gates,
+FormBlockOfCZTGates(const vector<Gate>& block_gates,
                  const int qubits,
                  idx_size& gate_i,
                  valarray<idx_size>& CZ_bitmasks,
                  valarray<idx_size>& T_bitmasks)
 {
-
     for(;(gate_i < block_gates.size())
-        && (block_gates[gate_i].ids.back() == gate::type::Z ||
-            block_gates[gate_i].ids.back() == gate::type::T); ++gate_i) {
+        && (block_gates[gate_i].ids.back() == Gate::type::Z ||
+            block_gates[gate_i].ids.back() == Gate::type::T); ++gate_i) {
         
-        if (block_gates[gate_i].ids.back() == gate::type::Z)
+        if (block_gates[gate_i].ids.back() == Gate::type::Z)
             GroupCZGates(CZ_bitmasks, qubits, block_gates[gate_i].qubits);
-        else if (block_gates[gate_i].ids.back() == gate::type::T)
+        else if (block_gates[gate_i].ids.back() == Gate::type::T)
             GroupTGates(T_bitmasks, qubits, block_gates[gate_i].qubits);
+    }
+}
+
+inline void
+ApplyGateOnAmps(const idx_size* indices,
+                const idx_size size,
+                const Gate::type gate_type,
+                const Gate& q_gate,
+                valarray<cmplx>& amp)
+{
+    cmplx temp_amp[size];
+    for (idx_size i = 0; i < size; ++i)
+        temp_amp[i] = amp[indices[i]];
+    
+    if (size >= 2 && !(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
+        switch (gate_type) {
+            case (Gate::type::X_1_2):{
+                amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
+                amp[indices[1]] = (temp_amp[0]*X12[1][0]) + (temp_amp[1]*X12[1][1]);
+                break;
+            }
+            case (Gate::type::Y_1_2):{
+                amp[indices[0]] = (temp_amp[0]*Y12[0][0]) + (temp_amp[1]*Y12[0][1]);
+                amp[indices[1]] = (temp_amp[0]*Y12[1][0]) + (temp_amp[1]*Y12[1][1]);
+                break;
+            }
+            case (Gate::type::Z):{
+                amp[indices[1]] *= -1;
+                break;
+            }
+            case (Gate::type::T):{
+                amp[indices[1]] *= T[1][1];
+                break;
+            }
+            case (Gate::type::X):{
+                swap(amp[indices[0]], amp[indices[1]]);
+                break;
+            }
+            case (Gate::type::Y):{
+                amp[indices[0]] = temp_amp[1] * Y[0][1];
+                amp[indices[1]] = temp_amp[0] * Y[1][0];
+                break;
+            }
+            default: {
+                vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
+                m_temp = matrix_v_mult(q_gate.rows, m_temp);
+                for (idx_size i = 0; i < size; ++i)
+                    amp[i] = temp_amp[i];
+                break;
+            }
+        }
     }
 }
 
@@ -240,26 +274,19 @@ ApplyBlockOfGates(const int qubits,
                   cmplx rescaling_factor = 0);
 
 extern void
-ApplyGateOnAmps(const idx_size* indices,
-                const idx_size size,
-                const gate::type gate_type,
-                const gate& q_gate,
-                valarray<cmplx>& amp);
-
-extern void
 ApplyControlGate(const int num_controls,
               const vector<int>& gate_qubits,
               valarray<cmplx>& amp,
               const int qubits,
-              const gate& g,
-              const gate::type gate_type);
+              const Gate& g,
+              const Gate::type gate_type);
 
 extern void
 ApplyNonControl1QGates(const vector<int>& gate_qubits,
                      valarray<cmplx>& amp,
                      const int qubits,
-                     const gate& g,
-                     const gate::type gate_type);
+                     const Gate& g,
+                     const Gate::type gate_type);
 
 
 extern void
@@ -269,8 +296,8 @@ ApplyMergedXY12Gates(const vector<int>& gate_qubits,
                      const int gate_order);
 
 extern void
-Merge2QXY12Gates(gate& gate1,
-                 gate& gate2,
+Merge2QXY12Gates(Gate& gate1,
+                 Gate& gate2,
                  const int qubits,
                  valarray<cmplx>& amp);
 

@@ -21,10 +21,10 @@ using namespace std;
 
 using idx_size = size_t;
 
-class circuit {
+class Circuit {
 private:
     static vector<string> quiddpro_func;
-    vector<gate> gates;
+    vector<Gate> gates;
     vector<idx_size> clock_cycles;
     vector<int> classical_bits;
     int qubits;
@@ -52,12 +52,12 @@ public:
     bool ClockCycleEmpty() const;
     idx_size GetNumCycles() const;
     int GateIndexForCycle(int cycle_num) const;
-    gate& GetGateFromIndex(idx_size i);
-    const vector<gate>& GetGates() const;
+    Gate& GetGateFromIndex(idx_size i);
+    const vector<Gate>& GetGates() const;
     
-    circuit();
-    circuit(const circuit& rhs);
-    circuit& operator=(const circuit& rhs);
+    Circuit();
+    Circuit(const Circuit& rhs);
+    Circuit& operator=(const Circuit& rhs);
 };
 
 #endif /* circuit_h */

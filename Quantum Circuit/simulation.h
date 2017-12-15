@@ -16,7 +16,7 @@
 
 using namespace std;
 
-class sequentialSimulation {
+class SequentialSimulation {
 private:
     
     vector<double> gate_time;
@@ -34,21 +34,21 @@ private:
 public:
     void PrintReport(const clock_t end,
                      const clock_t begin,
-                     state& amp,
-                     const circuit& circuit) const;
+                     State& amp,
+                     const Circuit& circuit) const;
     void PrintReport(const string& outfile,
                      const clock_t end,
                      const clock_t begin,
-                     state& amp,
-                     const circuit& circuit) const;
+                     State& amp,
+                     const Circuit& circuit) const;
     
     void Simulate(const string& outfile,
-                  state& amp,
-                  circuit& circuit);
+                  State& amp,
+                  Circuit& circuit);
     
-    sequentialSimulation();
-    sequentialSimulation(const sequentialSimulation& rhs);
-    sequentialSimulation& operator=(const sequentialSimulation& rhs);
+    SequentialSimulation();
+    SequentialSimulation(const SequentialSimulation& rhs);
+    SequentialSimulation& operator=(const SequentialSimulation& rhs);
 };
 
 
