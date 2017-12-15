@@ -110,8 +110,8 @@ int main(int argc, char *argv[]) {
         } // switch
     } // while
     
-    circuit cir;
-    sequentialSimulation sim;
+    Circuit cir;
+    SequentialSimulation sim;
     if (inputfile || googleInput) {
         if(googleInput)
             cout << "Google circuit file: " << input_filename << "\n\n";
@@ -121,12 +121,12 @@ int main(int argc, char *argv[]) {
         if (inputfile) {
             cir.ReadCustomInputFiles("input/" + input_filename, amp_v);
             cir.CreateQuiddProScript("qpro_scripts/" + out_file + ".qpro");
-            state amp(amp_v);
+            State amp(amp_v);
             sim.Simulate("probabilities/" + out_file, amp, cir);
         }
         else {
             cir.ReadGoogleCircuitFile(input_filename, 26);
-            state amp(cir.GetNumQubits());
+            State amp(cir.GetNumQubits());
             sim.Simulate("probabilities/" + out_file, amp, cir);
         }
     }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
         for (idx_size i = 0; i < num_qubits.size(); ++i){
             cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             
-            state amp(cir.GetNumQubits());
+            State amp(cir.GetNumQubits());
             if(to_write && num_qubits[0] <= 20) {
                 cir.WriteGeneratedCircuitFile("input/" + out_file + to_string(i) + ".txt",
                                               amp.GetAmp());

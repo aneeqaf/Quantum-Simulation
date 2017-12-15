@@ -31,7 +31,7 @@ constexpr cmplx T[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {0.707106781, 0.707106781
 constexpr cmplx X12[2][2] = {{{1, 1}, {1, -1}}, {{1, -1} , {1, 1}}};
 constexpr cmplx Y12[2][2] = {{{1, 1}, {-1, -1}}, {{1, 1} , {1, 1}}};
 
-struct gate {
+struct Gate {
     enum type : int { Hadamard, X, Y, Z, Random, X_rotation, Y_rotation,
         Z_rotation, Phase, Control, Identity, T, Measurement, X_1_2, Y_1_2};
     
@@ -41,13 +41,13 @@ struct gate {
     vector<float> theta;
     short num_controls;
     
-    gate(vector<vector<cmplx>> g);
-    gate();
-    gate(const gate& rhs);
-    gate& operator=(const gate& rhs);
+    Gate(vector<vector<cmplx>> g);
+    Gate();
+    Gate(const Gate& rhs);
+    Gate& operator=(const Gate& rhs);
 };
 
-inline gate create_gate(const cmplx& a, const cmplx& b,
+inline Gate create_gate(const cmplx& a, const cmplx& b,
                  const cmplx& c, const cmplx& d)
 {
     vector<cmplx> row2;
@@ -61,163 +61,163 @@ inline gate create_gate(const cmplx& a, const cmplx& b,
     g.push_back(row1);
     g.push_back(row2);
     
-    return gate(g);
+    return Gate(g);
 }
 
-inline gate create_hadamard()
+inline Gate create_hadamard()
 {
-    gate g =  create_gate(cmplx(1, 0),
+    Gate g =  create_gate(cmplx(1, 0),
                           cmplx(1, 0),
                           cmplx(1, 0),
                           cmplx(-1, 0));
-    g.ids.push_back(gate::type::Hadamard);
+    g.ids.push_back(Gate::type::Hadamard);
     return g;
 }
 
-inline gate create_X()
+inline Gate create_X()
 {
-    gate g =  create_gate(cmplx(0, 0),
+    Gate g =  create_gate(cmplx(0, 0),
                           cmplx(1, 0),
                           cmplx(1, 0),
                           cmplx(0, 0));
-    g.ids.push_back(gate::type::X);
+    g.ids.push_back(Gate::type::X);
     return g;
 }
 
-inline gate create_Y()
+inline Gate create_Y()
 {
-    gate g =  create_gate(cmplx(0, 0),
+    Gate g =  create_gate(cmplx(0, 0),
                           cmplx(0, -1),
                           cmplx(0, 1),
                           cmplx(0, 0));
-    g.ids.push_back(gate::type::Y);
+    g.ids.push_back(Gate::type::Y);
     return g;
 }
 
-inline gate create_X_1_2()
+inline Gate create_X_1_2()
 {
-    gate g =  create_gate(cmplx(1, 1),
+    Gate g =  create_gate(cmplx(1, 1),
                           cmplx(1, -1),
                           cmplx(1, -1),
                           cmplx(1, 1));
-    g.ids.push_back(gate::type::X_1_2);
+    g.ids.push_back(Gate::type::X_1_2);
     return g;
 }
 
-inline gate create_Y_1_2()
+inline Gate create_Y_1_2()
 {
-    gate g =  create_gate(cmplx(1, 1),
+    Gate g =  create_gate(cmplx(1, 1),
                           cmplx(-1, -1),
                           cmplx(1, 1),
                           cmplx(1, 1));
-    g.ids.push_back(gate::type::Y_1_2);
+    g.ids.push_back(Gate::type::Y_1_2);
     return g;
 }
 
-inline gate create_Z()
+inline Gate create_Z()
 {
-    gate g = create_gate(cmplx(1, 0),
+    Gate g = create_gate(cmplx(1, 0),
                          cmplx(0, 0),
                          cmplx(0, 0),
                          cmplx(-1, 0));
-    g.ids.push_back(gate::type::Z);
+    g.ids.push_back(Gate::type::Z);
     return g;
 }
 
-inline gate create_I()
+inline Gate create_I()
 {
-    gate g = create_gate(cmplx(1, 0),
+    Gate g = create_gate(cmplx(1, 0),
                          cmplx(0, 0),
                          cmplx(0, 0),
                          cmplx(1, 0));
-    g.ids.push_back(gate::type::Identity);
+    g.ids.push_back(Gate::type::Identity);
     return g;
 }
 
 
-inline gate create_X_rotation(double theta)
+inline Gate create_X_rotation(double theta)
 {
-    gate g = create_gate(cmplx(cos(theta*M_PI/2), 0),
+    Gate g = create_gate(cmplx(cos(theta*M_PI/2), 0),
                          cmplx(0, -sin(theta*M_PI/2)),
                          cmplx(0, -sin(theta*M_PI/2)),
                          cmplx(cos(theta*M_PI/2), 0));
     g.theta.push_back(theta);
-    g.ids.push_back(gate::type::X_rotation);
+    g.ids.push_back(Gate::type::X_rotation);
     return g;
 }
 
-inline gate create_Y_rotation(double theta)
+inline Gate create_Y_rotation(double theta)
 {
-    gate g = create_gate(cmplx(cos(theta*M_PI/2), 0),
+    Gate g = create_gate(cmplx(cos(theta*M_PI/2), 0),
                          cmplx(-sin(theta*M_PI/2),0),
                          cmplx(sin(theta*M_PI/2),0),
                          cmplx(cos(theta*M_PI/2), 0));
     g.theta.push_back(theta);
-    g.ids.push_back(gate::type::Y_rotation);
+    g.ids.push_back(Gate::type::Y_rotation);
     return g;
 }
 
-inline gate create_Z_rotation(double theta)
+inline Gate create_Z_rotation(double theta)
 {
-    gate g = create_gate(exp(cmplx(0,-theta*M_PI/2)),
+    Gate g = create_gate(exp(cmplx(0,-theta*M_PI/2)),
                          cmplx(0, 0),
                          cmplx(0, 0),
                          exp(cmplx(0,theta*M_PI/2)));
     g.theta.push_back(theta);
-    g.ids.push_back(gate::type::Z_rotation);
+    g.ids.push_back(Gate::type::Z_rotation);
     return g;
 }
 
-inline gate create_phase_gate(double theta)
+inline Gate create_phase_gate(double theta)
 {
-    gate g = create_gate(cmplx(1,0),
+    Gate g = create_gate(cmplx(1,0),
                          cmplx(0, 0),
                          cmplx(0, 0),
                          cmplx(0,1));
     //exp(cmplx(0, theta * M_PI * 2))
     //    g -> theta.push_back(theta);
-    g.ids.push_back(gate::type::Phase);
+    g.ids.push_back(Gate::type::Phase);
     return g;
 }
 
-inline gate create_T()
+inline Gate create_T()
 {
-    gate g = create_gate(cmplx(1,0),
+    Gate g = create_gate(cmplx(1,0),
                          cmplx(0, 0),
                          cmplx(0, 0),
                          exp(cmplx(0,M_PI/4)));
-    g.ids.push_back(gate::type::T);
+    g.ids.push_back(Gate::type::T);
     return g;
 }
 
-inline gate random_gate()
+inline Gate random_gate()
 {
     srand(time(NULL));
-    vector<gate> rotation_gates;
+    vector<Gate> rotation_gates;
     
     double theta = ((double)rand())/double(RAND_MAX), theta1, theta2;
     rotation_gates.push_back(create_Z_rotation(theta));
     
     theta2 = (double)rand()/double(RAND_MAX);
-    gate rand_gate = create_Z_rotation(theta2);
-    rand_gate.ids.push_back(gate::type::Z_rotation);
+    Gate rand_gate = create_Z_rotation(theta2);
+    rand_gate.ids.push_back(Gate::type::Z_rotation);
     rand_gate.theta.push_back(theta);
     
     theta1 = (double)rand()/double(RAND_MAX);
     int xy = rand() % NUM_BASIS_STATES;
     
     if (xy == 0) {
-        rand_gate.ids.push_back(gate::type::X_rotation);
+        rand_gate.ids.push_back(Gate::type::X_rotation);
         rand_gate.theta.push_back(theta1);
         rotation_gates.push_back(create_X_rotation(theta1));
     }
     else {
-        rand_gate.ids.push_back(gate::type::Y_rotation);
+        rand_gate.ids.push_back(Gate::type::Y_rotation);
         rand_gate.theta.push_back(theta1);
         rotation_gates.push_back(create_Y_rotation(theta1));
     }
     
-    rand_gate.ids.push_back(gate::type::Z_rotation);
+    rand_gate.ids.push_back(Gate::type::Z_rotation);
     rand_gate.theta.push_back(theta2);
     rotation_gates.push_back(move(rand_gate));
     

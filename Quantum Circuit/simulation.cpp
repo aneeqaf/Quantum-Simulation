@@ -8,15 +8,15 @@
 
 #include "simulation.h"
 
-sequentialSimulation::
-sequentialSimulation(): g_begin(0), g_end(0),
+SequentialSimulation::
+SequentialSimulation(): g_begin(0), g_end(0),
                         num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0)
 {
     gate_time.resize(5, 0);
 }
 
-sequentialSimulation::
-sequentialSimulation(const sequentialSimulation& rhs)
+SequentialSimulation::
+SequentialSimulation(const SequentialSimulation& rhs)
 {
     gate_time = rhs.gate_time;
     g_begin = rhs.g_begin;
@@ -28,10 +28,10 @@ sequentialSimulation(const sequentialSimulation& rhs)
     CZ_T = rhs.CZ_T;
 }
 
-void sequentialSimulation::
+void SequentialSimulation::
 Simulate(const string &outfile,
-         state& amp,
-         circuit& circuit)
+         State& amp,
+         Circuit& circuit)
 {
     idx_size size = circuit.GetTotalNumGates();
     int qubits = circuit.GetNumQubits();
@@ -49,15 +49,15 @@ Simulate(const string &outfile,
         
         g_begin = clock();
         
-        gate& current_gate = circuit.GetGateFromIndex(i);
-        if(current_gate.ids.front() == gate::type::Control ||
-           current_gate.ids.back() == gate::type::T) {
+        Gate& current_gate = circuit.GetGateFromIndex(i);
+        if(current_gate.ids.front() == Gate::type::Control ||
+           current_gate.ids.back() == Gate::type::T) {
             
             if (amp.GetGlobalFactorPower() > 100)
                 ++num_rescaling;
             
-            if (current_gate.ids.back() == gate::type::T ||
-                current_gate.ids.back() == gate::type::Z) {
+            if (current_gate.ids.back() == Gate::type::T ||
+                current_gate.ids.back() == Gate::type::Z) {
                 
                 idx_size prev_i = i;
                 amp.ApplyBlockOfDiagGates(gates, qubits, i);
@@ -70,12 +70,12 @@ Simulate(const string &outfile,
             }
             else 
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
-                              qubits, current_gate, (gate::type)current_gate.ids.back());
+                              qubits, current_gate, (Gate::type)current_gate.ids.back());
         }
         else {
             if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
-                (circuit.GetGateFromIndex(i + 1).ids.back() == gate::type::X_1_2 ||
-                 circuit.GetGateFromIndex(i + 1).ids.back() == gate::type::Y_1_2)) {
+                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::type::X_1_2 ||
+                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::type::Y_1_2)) {
                     amp.ApplyTwoMergedXYGate(current_gate,
                                              circuit.GetGateFromIndex(i + 1), qubits);
                     ++i;
@@ -83,7 +83,7 @@ Simulate(const string &outfile,
                     gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     merged_X_Y++;
             }
-            else if(circuit.google && current_gate.ids.back() == gate::type::Hadamard) {
+            else if(circuit.google && current_gate.ids.back() == Gate::type::Hadamard) {
                 amp.ApplyHGateOnAllAmps(qubits);
                 i += qubits - 1;
                 g_end = clock();
@@ -91,15 +91,15 @@ Simulate(const string &outfile,
             }
             else {
                 amp.ApplyNonCGate(current_gate.qubits, qubits, current_gate,
-                                  (gate::type)current_gate.ids.back());
+                                  (Gate::type)current_gate.ids.back());
                 g_end = clock();
                 
-                if(current_gate.ids.back() == gate::type::X_1_2){
+                if(current_gate.ids.back() == Gate::type::X_1_2){
                     gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     X++;
                     amp.IncrementGlobalFactorPower(2);
                 }
-                else if(current_gate.ids.back() == gate::type::Y_1_2) {
+                else if(current_gate.ids.back() == Gate::type::Y_1_2) {
                     gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     Y++;
                     amp.IncrementGlobalFactorPower(2);
@@ -110,13 +110,15 @@ Simulate(const string &outfile,
     
     clock_t end = clock();
     
+//    amp.PrintStateVector();
+    
     PrintReport(end , begin, amp, circuit);
 }
 
-sequentialSimulation& sequentialSimulation::
-operator=(const sequentialSimulation& rhs)
+SequentialSimulation& SequentialSimulation::
+operator=(const SequentialSimulation& rhs)
 {
-    sequentialSimulation temp(rhs);
+    SequentialSimulation temp(rhs);
     swap(gate_time, temp.gate_time);
     g_begin = temp.g_begin;
     g_end = temp.g_end;
@@ -128,11 +130,11 @@ operator=(const sequentialSimulation& rhs)
     return *this;
 }
 
-void sequentialSimulation::
+void SequentialSimulation::
 PrintReport(const clock_t end,
             const clock_t begin,
-            state& amp,
-            const circuit& circuit) const
+            State& amp,
+            const Circuit& circuit) const
 {
     char hostname[20] = {};
     gethostname(hostname, 20);
@@ -200,12 +202,12 @@ PrintReport(const clock_t end,
     << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";
 }
 
-void sequentialSimulation::
+void SequentialSimulation::
 PrintReport(const string &outfile,
             const clock_t end,
             const clock_t begin,
-            state& amp,
-            const circuit& circuit) const
+            State& amp,
+            const Circuit& circuit) const
 {
     ofstream file;
     file.open("simulation_stats/" + outfile);
