@@ -9,8 +9,9 @@
 #ifndef simulation_h
 #define simulation_h
 
-#include <stdio.h>
 #include <ctime>
+#include <stdio.h>
+
 #include "circuit.h"
 #include "state.h"
 

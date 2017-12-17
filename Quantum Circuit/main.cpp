@@ -116,13 +116,16 @@ int main(int argc, char *argv[]) {
         if(googleInput)
             cout << "Google circuit file: " << input_filename << "\n\n";
         
-        valarray<cmplx> amp_v;
+        cmplx* amp_v = nullptr;
+        idx_size size = 0;
         //write a function for printing google files.
         if (inputfile) {
-            cir.ReadCustomInputFiles("input/" + input_filename, amp_v);
+            cir.ReadCustomInputFiles("input/" + input_filename, amp_v, size);
             cir.CreateQuiddProScript("qpro_scripts/" + out_file + ".qpro");
-            State amp(amp_v);
+            State amp(amp_v, size);
             sim.Simulate("probabilities/" + out_file, amp, cir);
+            delete [] amp_v;
+            amp_v = nullptr;
         }
         else {
             cir.ReadGoogleCircuitFile(input_filename, 26);
@@ -137,7 +140,7 @@ int main(int argc, char *argv[]) {
             State amp(cir.GetNumQubits());
             if(to_write && num_qubits[0] <= 20) {
                 cir.WriteGeneratedCircuitFile("input/" + out_file + to_string(i) + ".txt",
-                                              amp.GetAmp());
+                                              amp.GetAmp(), cir.GetNumQubits());
                 cir.CreateQuiddProScript("qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
             
