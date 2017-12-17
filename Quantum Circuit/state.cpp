@@ -11,16 +11,26 @@
 State::
 State(int qubits): global_factor_power(0)
 {
-    amp.resize(1ull << qubits, 0);
+    amp_size = 1ull << qubits;
+    amp = new cmplx[amp_size];
+    memset(amp, 0, amp_size * sizeof(amp));
     amp[0] = 1;
 }
 
 State::
-State(valarray<cmplx>& a): amp(a), global_factor_power(0) {}
+State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0)
+{
+    amp = new cmplx[size];
+    for (idx_size i = 0; i < size; ++i)
+        amp[i] = a[i];
+}
 
 State::State(const State& rhs)
 {
-    amp = rhs.amp;
+    amp = new cmplx[rhs.GetAmpSize()];
+    for (idx_size i = 0; i < rhs.GetAmpSize(); ++i)
+        amp[i] = rhs.amp[i];
+    amp_size = rhs.GetAmpSize();
     global_factor_power = rhs.global_factor_power;
 }
 
@@ -29,8 +39,15 @@ operator=(const State& rhs)
 {
     State temp(rhs);
     swap(amp, temp.amp);
+    swap(amp_size, temp.amp_size);
     swap(global_factor_power, temp.global_factor_power);
     return *this;
+}
+State::
+~State()
+{
+    delete [] amp;
+    amp = nullptr;
 }
 
 void State::
@@ -44,31 +61,27 @@ ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
     FormBlockOfCZTGates(block_gates, qubits, gate_i, CZ_bitmask, T_bitmask);
     
     if (global_factor_power > 100)
-        ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp, ComputeRescalingFactor());
+        ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp, amp_size, ComputeRescalingFactor());
    
     else
-        ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp);
-}
-
-void State::
-ApplyGateFWHT()
-{
-    
+        ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp, amp_size);
 }
 
 void State::
 ApplyNonCGate(const vector<int>& gate_qubits,
               const int qubits,
               const Gate& g,
-              const Gate::type gate_type)
+              const Gate::Type gate_type)
 {
-    ApplyNonControl1QGates(gate_qubits, amp, qubits, g, gate_type);
+    ApplyNonControl1QGates(gate_qubits[0], amp, amp_size, qubits, g, gate_type);
 }
 
 void State::
 ApplyHGateOnAllAmps(const int qubits)
 {
-    amp = cmplx(1, 0);
+    for (idx_size i = 0; i < amp_size; ++i)
+        amp[i] = cmplx(1,0);
+    
     global_factor_power += qubits;
 }
 
@@ -77,7 +90,7 @@ ApplyCGate(const int num_controls,
            const vector<int>& gate_qubits,
            const int qubits,
            const Gate& g,
-           const Gate::type gate_type)
+           const Gate::Type gate_type)
 {
     ApplyControlGate(num_controls, gate_qubits, amp, qubits, g, gate_type);
 }
@@ -87,17 +100,34 @@ ApplyTwoMergedXYGate(Gate& gate1,
                      Gate& gate2,
                      const int qubits)
 {
-    Merge2QXY12Gates(gate1, gate2, qubits, amp);
+    Merge2QXY12Gates(gate1, gate2, qubits, amp, amp_size);
     global_factor_power += 2;
+}
+
+void State::
+ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
+                       const int qubits,
+                       idx_size& gate_i,
+                       Gate::Type gate_type)
+{
+    idx_size initial_gate_i = gate_i;
+    vector<int> qubits_in_cluster =
+            FormBlockOfXYHGates(block_gates, qubits, gate_i);
+    
+    vector<Gate> gate_block(block_gates.begin() + initial_gate_i, block_gates.begin() + gate_i);
+    
+    ApplyFWHT(amp, amp_size, qubits_in_cluster, qubits, gate_block);
+    
+    global_factor_power += (2 * qubits_in_cluster.size());
 }
 
 double State::
 GetMinProb() const
 {
     double min = numeric_limits<double>::max();
-    for (auto p : amp)
-        if (min > real(p))
-            min = real(p);
+    for (idx_size i = 0; i < amp_size; ++i)
+        if (min > real(amp[i]))
+            min = real(amp[i]);
     return min;
 }
 
@@ -105,22 +135,22 @@ double State::
 GetMaxProb() const
 {
     double max = numeric_limits<double>::min();
-    for (auto p : amp)
-        if (max < real(p))
-            max = real(p);
+    for (idx_size i = 0; i < amp_size; ++i)
+        if (max < real(amp[i]))
+            max = real(amp[i]);
     return max;
 }
 
 double State::
 GetAvgProb() const
 {
-    return 1.0/(1ull << (idx_size)(log2(amp.size())));
+    return 1.0/(1ull << (idx_size)(log2(amp_size)));
 }
 
 double State::
 GetMemUsage() const
 {
-    return sizeof(vector<cmplx>) + (sizeof(cmplx) * amp.size()) ;
+    return sizeof(vector<cmplx>) + (sizeof(cmplx) * amp_size) ;
 }
 
 idx_size State::
@@ -133,30 +163,34 @@ float State::
 CalculateNormOfAmp()
 {
     double norm = 0;
-    idx_size qubits = log2(amp.size());
-    cmplx prob(0, 0);
+    idx_size qubits = log2(amp_size);
     
-    amp /= pow(2,(global_factor_power/2));
-    if (global_factor_power % 2 == 1)
-        amp /= sqrt(2);
-    
-    auto conj_op = [](valarray<cmplx>::value_type v) {return conj(v);};
-    amp *= amp.apply(conj_op);
-    for (const auto& prob : amp)
-        if (real(prob) > (1.0/(1ull << qubits)))
-            norm += real(prob);
-    
-    for (const auto& prob : amp)
-        if (real(prob) <= (1.0/(1ull << qubits)))
-            norm += real(prob);
+    for (idx_size i = 0; i < amp_size; ++i) {
+        amp[i] /= pow(2,(global_factor_power/2));
+        if (global_factor_power % 2 == 1)
+            amp[i] /= sqrt(2);
+        
+        amp[i] *= conj(amp[i]);
+        if (real(amp[i]) > (1.0/(1ull << qubits)))
+            norm += real(amp[i]);
+    }
+    for (idx_size i = 0; i < amp_size; ++i)
+        if (real(amp[i]) <= (1.0/(1ull << qubits)))
+            norm += real(amp[i]);
     
     return norm;
 }
 
-const valarray<cmplx>& State::
+const cmplx* const State::
 GetAmp() const
 {
     return amp;
+}
+
+idx_size State::
+GetAmpSize() const
+{
+    return amp_size;
 }
 
 void State::
@@ -190,7 +224,8 @@ PrintProbabilities(const string &out_file) const
     ofstream file;
     file.open(out_file + to_string(count) + ".txt");
     
-    for (auto state_v : amp) {
+    for (idx_size i = 0; i < amp_size; ++i) {
+        auto state_v = amp[i];
         state_v /= pow(2,(global_factor_power/2));
         if (global_factor_power % 2 == 1)
             state_v /= sqrt(2);
@@ -213,7 +248,8 @@ PrintProbabilities(const string &out_file) const
 void State::
 PrintStateVector() const
 {
-    for (auto state_v :amp) {
+    for (idx_size i = 0; i < amp_size; ++i) {
+        auto state_v = amp[i];
         state_v /= pow(2,(global_factor_power/2));
         if (global_factor_power % 2 == 1)
             state_v /= sqrt(2);
@@ -237,7 +273,8 @@ PrintStateVector(const string& outfile) const
     static ofstream file;
     file.open(outfile + ".txt");
     
-    for (auto state_v : amp) {
+    for (idx_size i = 0; i < amp_size; ++i) {
+        auto state_v = amp[i];
         state_v /= pow(2,(global_factor_power/2));
         if (global_factor_power % 2 == 1)
             state_v /= sqrt(2);

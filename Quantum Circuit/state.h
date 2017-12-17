@@ -9,17 +9,19 @@
 #ifndef state_h
 #define state_h
 
-#include <stdio.h>
-#include <stdio.h>
 #include <ctime>
 #include <fstream>
+#include <stdio.h>
+#include <stdio.h>
+
 #include "kernels.h"
 
 using namespace std;
 
 class State {
 private:
-    valarray<cmplx> amp;
+    cmplx* amp;
+    idx_size amp_size;
     idx_size global_factor_power;
     
 public:
@@ -27,28 +29,32 @@ public:
     void ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
                               const int qubits,
                               idx_size& gate_i);
-    void ApplyGateFWHT();
     void ApplyNonCGate(const vector<int>& gate_qubits,
                       const int qubits,
                       const Gate& g,
-                      const Gate::type gate_type);
+                      const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(const int qubits);
     void ApplyCGate(const int num_controls,
                    const vector<int>& gate_qubits,
                    const int qubits,
                    const Gate& g,
-                   const Gate::type gate_type);
+                   const Gate::Type gate_type);
     void ApplyTwoMergedXYGate(Gate& gate1,
                               Gate& gate2,
                               const int qubits);
+    void ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
+                                const int qubits,
+                                idx_size& gate_i,
+                                Gate::Type gate_type);
     
     double GetMinProb() const;
     double GetMaxProb() const;
     double GetAvgProb() const;
     double GetMemUsage() const;
+    idx_size GetAmpSize() const;
     idx_size GetGlobalFactorPower() const;
     float CalculateNormOfAmp();
-    const valarray<cmplx>& GetAmp() const;
+    const cmplx* const GetAmp() const;
     
     void IncrementGlobalFactorPower(int num);
     void ResetGlobalFactorPower();
@@ -63,9 +69,10 @@ public:
     void Measure(const short qubit);
     
     State(int qubits);
-    State(valarray<cmplx>& a);
+    State(cmplx* a, idx_size size);
     State(const State& rhs);
     State& operator=(const State& rhs);
+    ~State();
 };
 
 #endif /* state_h */

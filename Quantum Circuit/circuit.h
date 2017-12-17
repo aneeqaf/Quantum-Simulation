@@ -9,12 +9,13 @@
 #ifndef circuit_h
 #define circuit_h
 
-#include <stdio.h>
-#include <vector>
 #include <fstream>
-#include <valarray>
 #include <iostream>
 #include <string>
+#include <stdio.h>
+#include <valarray>
+#include <vector>
+
 #include "gates.h"
 
 using namespace std;
@@ -40,11 +41,13 @@ public:
     void ReadGoogleCircuitFile(const string& input_file,
                                const int depth);
     void ReadCustomInputFiles(const string& input_file,
-                              valarray<cmplx>& amp);
+                              cmplx*& amp,
+                              idx_size& amp_size);
     void CreateGoogleCircuit(int qubits,
                              int clock_cycles);
     void WriteGeneratedCircuitFile(const string& out_file,
-                                   const valarray<cmplx>& amp);
+                              const cmplx* const amp,
+                              const idx_size size_q);
     void CreateQuiddProScript(const string& out_file);
     
     int GetNumQubits() const;
