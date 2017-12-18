@@ -44,16 +44,16 @@ constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 
 void
 GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
-             const int qubits,
+             const int total_q_cir,
              const vector<int>& gate_qubits);
 
 inline void
 GroupTGates(valarray<idx_size>& T_bitmasks,
-            const int qubits,
+            const int total_q_cir,
             const vector<int>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
-    idx_size t_mask = (1ull << ((qubits - 1) - gate_qubits[0]));
+    idx_size t_mask = (1ull << ((total_q_cir - 1) - gate_qubits[0]));
     if ((T_bitmasks[0] & t_mask) != t_mask)
         T_bitmasks[0] |= t_mask;
     
@@ -73,22 +73,22 @@ GroupTGates(valarray<idx_size>& T_bitmasks,
 inline void
 ExtractIndicesForAmp(idx_size* strides,
                      const vector<int>& gate_qubits,
-                     const int qubits,
+                     const int total_q_cir,
                      const idx_size starting_idx = 0)
 {
     const idx_size num_q = gate_qubits.size();
-    idx_size strides_size = 1, pos = 1ull << (num_q - 1);
+    idx_size strides_size = 1, gap = 1ull << (num_q - 1);
     
     strides[0] = starting_idx;
-    idx_size prev_gap = pos;
+    idx_size prev_gap = gap;
     for (idx_size i = starting_idx ; i < num_q; ++i) {
         for (idx_size n = 0; strides_size < (1ull << (i+1)); n += prev_gap) {
             
-            strides[n + pos] = strides[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
+            strides[n + gap] = strides[n] + (1ull << ((total_q_cir - 1) - gate_qubits[i]));
             ++strides_size;
         }
-        prev_gap = pos;
-        pos /= 2;
+        prev_gap = gap;
+        gap /= 2;
     }
 }
 
@@ -223,7 +223,6 @@ ApplyGateOnAmps(const idx_size* indices,
 
 inline vector<int>
 FormBlockOfXYHGates(const vector<Gate>& block_gates,
-                    const int qubits,
                     idx_size& gate_i,
                     Gate::Type gate_type)
 {
@@ -248,13 +247,13 @@ ApplyManyYOnSlice(const idx_size num_qbits,
 
 void
 FormBlockOfCZTGates(const vector<Gate>& block_gates,
-                    const int qubits,
+                    const int total_q_cir,
                     idx_size& gate_i,
                     valarray<idx_size>& CZ_bitmasks,
                     valarray<idx_size>& T_bitmasks);
 
 void
-ApplyBlockOfGates(const int qubits,
+ApplyBlockOfGates(const int total_q_cir,
                   const valarray<idx_size>& CZ_bitmask,
                   const valarray<idx_size>& T_bitmask,
                   cmplx* __restrict amp,
@@ -280,7 +279,7 @@ ApplyNonControl1QGates(const int gate_qubit,
 template<typename function>
 void
 ApplyMergedXY12Gates(const vector<int>& gate_qubits,
-                     const int total_q,
+                     const int total_q_cir,
                      cmplx* __restrict amp,
                      const idx_size size,
                      function& gate_func);
@@ -288,7 +287,7 @@ ApplyMergedXY12Gates(const vector<int>& gate_qubits,
 void
 Merge2QXY12Gates(Gate& gate1,
                  Gate& gate2,
-                 const int qubits,
+                 const int total_q_cir,
                  cmplx* __restrict amp,
                  const idx_size size);
 
@@ -297,7 +296,7 @@ void
 ApplyFWHT(cmplx* __restrict amp,
           const idx_size a_size,
           const vector<int>& qubits_in_cluster,
-          const int total_cir_q,
+          const int total_q_cir,
           const Gate::Type gate_type);
 
 #endif /* kernals_h */

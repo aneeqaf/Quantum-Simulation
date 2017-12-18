@@ -34,7 +34,7 @@ Simulate(const string &outfile,
          Circuit& circuit)
 {
     idx_size size = circuit.GetTotalNumGates();
-    int qubits = circuit.GetNumQubits();
+    int total_q_cir = circuit.GetNumQubits();
     
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -60,7 +60,7 @@ Simulate(const string &outfile,
                 current_gate.ids.back() == Gate::Type::Z) {
                 
                 idx_size prev_i = i;
-                amp.ApplyBlockOfDiagGates(gates, qubits, i);
+                amp.ApplyBlockOfDiagGates(gates, total_q_cir, i);
     
                 g_end = clock();
                 gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -70,7 +70,7 @@ Simulate(const string &outfile,
             }
             else 
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
-                              qubits, current_gate, (Gate::Type)current_gate.ids.back());
+                              total_q_cir, current_gate, (Gate::Type)current_gate.ids.back());
         }
         else {
 #ifdef Clustering
@@ -89,20 +89,20 @@ Simulate(const string &outfile,
            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-               amp.ApplyTwoMergedXYGate(current_gate, circuit.GetGateFromIndex(i + 1), qubits);
+               amp.ApplyTwoMergedXYGate(current_gate, circuit.GetGateFromIndex(i + 1), total_q_cir);
                g_end = clock();
                gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                merged_X_Y += 2;
                ++i;
            }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
-                amp.ApplyHGateOnAllAmps(qubits);
-                i += qubits - 1;
+                amp.ApplyHGateOnAllAmps(total_q_cir);
+                i += total_q_cir - 1;
                 g_end = clock();
                 gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
             else {
-                amp.ApplyNonCGate(current_gate.qubits, qubits, current_gate,
+                amp.ApplyNonCGate(current_gate.qubits, total_q_cir, current_gate,
                                   (Gate::Type)current_gate.ids.back());
                 g_end = clock();
                 

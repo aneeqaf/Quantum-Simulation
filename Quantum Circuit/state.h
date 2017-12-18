@@ -27,23 +27,23 @@ private:
 public:
     
     void ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
-                              const int qubits,
+                              const int total_q_cir,
                               idx_size& gate_i);
     void ApplyNonCGate(const vector<int>& gate_qubits,
-                      const int qubits,
+                      const int total_q_cir,
                       const Gate& g,
                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(const int qubits);
     void ApplyCGate(const int num_controls,
                    const vector<int>& gate_qubits,
-                   const int qubits,
+                   const int total_q_cir,
                    const Gate& g,
                    const Gate::Type gate_type);
     void ApplyTwoMergedXYGate(Gate& gate1,
                               Gate& gate2,
-                              const int qubits);
+                              const int total_q_cir);
     void ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
-                                const int qubits,
+                                const int total_q_cir,
                                 idx_size& gate_i,
                                 Gate::Type gate_type);
     
