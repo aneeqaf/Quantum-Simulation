@@ -237,41 +237,13 @@ FormBlockOfXYHGates(const vector<Gate>& block_gates,
     return qubits_in_cluster;
 }
 
-inline void
+void
 ApplyManyXOnSlice(const idx_size num_qbits,
-                  cmplx* __restrict amp)
-{
-    for (idx_size i = 0; i < num_qbits ; ++i)
-    {
-        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += 1 << (i+1))
-        {
-            for (idx_size k = 0; k < (idx_size)(1<<i); ++k)
-            {
-                const cmplx temp[2] = {amp[j + k], amp[j + k + (1<<i)]};
-                amp[j + k] = (temp[0]*X12[0][0]) + (temp[1]*X12[0][1]);
-                amp[j + k + (1<<i)] = (temp[0]*X12[1][0]) + (temp[1]*X12[1][1]);
-            }
-        }
-    }
-}
+                  cmplx* __restrict amp);
 
-inline void
+void
 ApplyManyYOnSlice(const idx_size num_qbits,
-                  cmplx* __restrict amp)
-{
-    for (idx_size i = 0; i < num_qbits ; ++i)
-    {
-        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += 1 << (i+1))
-        {
-            for (idx_size k = 0; k < (idx_size)(1<<i); ++k)
-            {
-                const cmplx temp[2] = {amp[j + k], amp[j + k + (1<<i)]};
-                amp[j + k] = (temp[0]*Y12[0][0]) + (temp[1]*Y12[0][1]);
-                amp[j + k + (1<<i)] = (temp[0]*Y12[1][0]) + (temp[1]*Y12[1][1]);
-            }
-        }
-    }
-}
+                  cmplx* __restrict amp);
 
 void
 FormBlockOfCZTGates(const vector<Gate>& block_gates,
