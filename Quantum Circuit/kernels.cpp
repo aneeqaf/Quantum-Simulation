@@ -238,7 +238,40 @@ Merge2QXY12Gates(Gate& gate1,
         ApplyMergedXY12Gates(gate_to_apply.qubits, qubits, amp, size, ApplyYY12Gate);
 }
 
+void
+ApplyManyXOnSlice(const idx_size num_qbits,
+                  cmplx* __restrict amp)
+{
+    for (idx_size i = 0; i < num_qbits ; ++i){
+        const idx_size add = 1 << (i+1);
+        const idx_size i_offset = 1 << i;
+        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
+            for (idx_size k = 0; k < (idx_size)(1<<i); ++k){
+                const cmplx temp[2] = {amp[j + k], amp[j + k + i_offset]};
+                amp[j + k] = (temp[0]*X12[0][0]) + (temp[1]*X12[0][1]);
+                amp[j + k + i_offset] = (temp[0]*X12[1][0]) + (temp[1]*X12[1][1]);
+            }
+        }
+    }
+}
 
+void
+ApplyManyYOnSlice(const idx_size num_qbits,
+                  cmplx* __restrict amp)
+{
+    for (idx_size i = 0; i < num_qbits ; ++i){
+        const idx_size add = 1 << (i+1);
+        const idx_size i_offset = 1<<i;
+        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
+            for (idx_size k = 0; k < (idx_size)(1<<i); ++k){
+                const cmplx temp[2] = {amp[j + k], amp[j + k + i_offset]};
+                const cmplx t = temp[0]*Y12[0][0];
+                amp[j + k] = t + (temp[1]*Y12[0][1]);
+                amp[j + k + i_offset] = t + (temp[1]*Y12[1][1]);
+            }
+        }
+    }
+}
 
 void
 ApplyFWHT(cmplx* __restrict amp,
@@ -247,10 +280,6 @@ ApplyFWHT(cmplx* __restrict amp,
           const int total_cir_q,
           const Gate::Type gate_type)
 {
-    auto ApplyManyGates = ApplyManyXOnSlice;
-    if (gate_type == Gate::Type::Y_1_2)
-        ApplyManyGates = ApplyManyYOnSlice;
-    
     const idx_size num_qubits = qubits_in_cluster.size(),
     slice_size = 1ull << num_qubits;
     
@@ -272,8 +301,11 @@ ApplyFWHT(cmplx* __restrict amp,
             for (idx_size i = 0; i < slice_size; ++i)
                 amp_slice[i] = amp[indices[i] + idx];
             
-            ApplyManyGates(num_qubits, amp_slice);
-        
+            if (gate_type == Gate::Type::X_1_2)
+                ApplyManyXOnSlice(num_qubits, amp_slice);
+            else
+               ApplyManyYOnSlice(num_qubits, amp_slice);
+                   
             for (idx_size i = 0; i < slice_size; ++i)
                 amp[indices[i] + idx] = amp_slice[i];
             
