@@ -112,11 +112,11 @@ ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
 {
     idx_size initial_gate_i = gate_i;
     vector<int> qubits_in_cluster =
-            FormBlockOfXYHGates(block_gates, qubits, gate_i);
+            FormBlockOfXYHGates(block_gates, qubits, gate_i, gate_type);
     
     vector<Gate> gate_block(block_gates.begin() + initial_gate_i, block_gates.begin() + gate_i);
     
-    ApplyFWHT(amp, amp_size, qubits_in_cluster, qubits, gate_block);
+    ApplyFWHT(amp, amp_size, qubits_in_cluster, qubits, gate_type);
     
     global_factor_power += (2 * qubits_in_cluster.size());
 }
