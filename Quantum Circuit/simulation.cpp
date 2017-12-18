@@ -73,24 +73,26 @@ Simulate(const string &outfile,
                               qubits, current_gate, (Gate::Type)current_gate.ids.back());
         }
         else {
-            // if (circuit.google && i < circuit.GetTotalNumGates() - 1 && (current_gate.ids.back() == Gate::Type::X_1_2 || current_gate.ids.back() == Gate::Type::Y_1_2) &&
-            //     (circuit.GetGateFromIndex(i + 1).ids.back() == current_gate.ids.back())) {
-            //         idx_size prev_i = i;
-            //         amp.ApplyClusterOfXYHGates(gates, qubits, i, (Gate::Type)current_gate.ids.back());
-            //         g_end = clock();
-            //         gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-            //         merged_X_Y += i - prev_i;
-            //         --i;
-            // }
-           if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
-               (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
-                circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-               amp.ApplyTwoMergedXYGate(current_gate, circuit.GetGateFromIndex(i + 1), qubits);
-               g_end = clock();
-               gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-               merged_X_Y += 2;
-               ++i;
-           }
+             if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
+                 (current_gate.ids.back() == Gate::Type::X_1_2 ||
+                  current_gate.ids.back() == Gate::Type::Y_1_2) &&
+                 (circuit.GetGateFromIndex(i + 1).ids.back() == current_gate.ids.back())) {
+                     idx_size prev_i = i;
+                     amp.ApplyClusterOfXYHGates(gates, qubits, i, (Gate::Type)current_gate.ids.back());
+                     g_end = clock();
+                     gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                     merged_X_Y += i - prev_i;
+                     --i;
+             }
+//           if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
+//               (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
+//                circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
+//               amp.ApplyTwoMergedXYGate(current_gate, circuit.GetGateFromIndex(i + 1), qubits);
+//               g_end = clock();
+//               gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+//               merged_X_Y += 2;
+//               ++i;
+//           }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 amp.ApplyHGateOnAllAmps(qubits);
                 i += qubits - 1;
@@ -118,7 +120,7 @@ Simulate(const string &outfile,
     
     clock_t end = clock();
     
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
     
     PrintReport(end , begin, amp, circuit);
 }
