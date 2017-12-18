@@ -86,6 +86,7 @@ Simulate(const string &outfile,
                      --i;
              }
 #endif
+#ifdef ManualMerging
            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
@@ -95,7 +96,8 @@ Simulate(const string &outfile,
                merged_X_Y += 2;
                ++i;
            }
-            else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
+#endif
+           if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 amp.ApplyHGateOnAllAmps(total_q_cir);
                 i += total_q_cir - 1;
                 g_end = clock();
