@@ -81,7 +81,7 @@ Simulate(const string &outfile,
                  (circuit.GetGateFromIndex(i + 1).ids.back() == current_gate.ids.back())) {
                  applied = true;
                  idx_size prev_i = i;
-                 amp.ApplyClusterOfXYHGates(gates, qubits, i, (Gate::Type)current_gate.ids.back());
+                 amp.ApplyClusterOfXYHGates(gates, total_q_cir, i, (Gate::Type)current_gate.ids.back());
                  g_end = clock();
                  gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                  merged_X_Y += i - prev_i;
