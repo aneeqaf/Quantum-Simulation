@@ -110,11 +110,8 @@ ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
                        idx_size& gate_i,
                        Gate::Type gate_type)
 {
-    idx_size initial_gate_i = gate_i;
     vector<int> qubits_in_cluster =
             FormBlockOfXYHGates(block_gates, qubits, gate_i, gate_type);
-    
-    vector<Gate> gate_block(block_gates.begin() + initial_gate_i, block_gates.begin() + gate_i);
     
     ApplyFWHT(amp, amp_size, qubits_in_cluster, qubits, gate_type);
     

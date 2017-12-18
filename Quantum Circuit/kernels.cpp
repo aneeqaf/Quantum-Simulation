@@ -238,44 +238,7 @@ Merge2QXY12Gates(Gate& gate1,
         ApplyMergedXY12Gates(gate_to_apply.qubits, qubits, amp, size, ApplyYY12Gate);
 }
 
-void ApplyManyXYHOnSlice(const idx_size num_qbits,
-                         cmplx* __restrict amp,
-                         Gate::Type gate_type)
-{
-    idx_size i_size = 1ull << num_qbits, half_way = i_size/2, idx[2] = {0, half_way},
-    iter = i_size/half_way;
-    for (idx_size i = 0; i < num_qbits; ++i) {
-        idx_size gap = idx[1];
-        for (idx_size k = 0; k < i_size/(half_way*2); ++k) {
-            for (idx_size j = 0; j < iter; ++j) {
-                idx[0] += j;
-                idx[1] += j;
-                const cmplx temp[2] = {amp[idx[0]], amp[idx[1]]};
-                switch (gate_type) {
-                    case Gate::Type::X_1_2:{
-                        amp[idx[0]] = (temp[0]*X12[0][0]) + (temp[1]*X12[0][1]);
-                        amp[idx[1]] = (temp[0]*X12[1][0]) + (temp[1]*X12[1][1]);
-                        break;
-                    }
-                    case Gate::Type::Y_1_2:{
-                        amp[idx[0]] = (temp[0]*Y12[0][0]) + (temp[1]*Y12[0][1]);
-                        amp[idx[1]] = (temp[0]*Y12[1][0]) + (temp[1]*Y12[1][1]);
-                        break;
-                    }
-                    default:
-                        throw "Invalid Gate";
-                        break;
-                }
-            }
-            idx[0] = half_way + gap;
-            idx[1] = idx[0] + gap;
-        }
-        idx[0] = 0;
-        idx[1] = half_way/2;
-        half_way /= 2;
-        iter /= 2;
-    }
-}
+
 
 void
 ApplyFWHT(cmplx* __restrict amp,
@@ -284,10 +247,12 @@ ApplyFWHT(cmplx* __restrict amp,
           const int total_cir_q,
           const Gate::Type gate_type)
 {
+    auto ApplyManyGates = ApplyManyXOnSlice;
+    if (gate_type == Gate::Type::Y_1_2)
+        ApplyManyGates = ApplyManyYOnSlice;
+    
     const idx_size num_qubits = qubits_in_cluster.size(),
     slice_size = 1ull << num_qubits;
-    
-    Gate dummy;
     
     idx_size gate_bitmask = 0;
     for (idx_size i = 0; i < num_qubits; ++i)
@@ -307,16 +272,11 @@ ApplyFWHT(cmplx* __restrict amp,
             for (idx_size i = 0; i < slice_size; ++i)
                 amp_slice[i] = amp[indices[i] + idx];
             
-            ApplyManyXYHOnSlice(num_qubits, amp_slice, gate_type);
-
-//            for (idx_size i = 0; i < num_qubits; ++i)
-//                ApplyNonControl1QGates((int)i, amp_slice, slice_size,
-//                                       (int)num_qubits, dummy,
-//                                       (Gate::Type)gates_block[i].ids.back());
-            
+            ApplyManyGates(num_qubits, amp_slice);
+        
             for (idx_size i = 0; i < slice_size; ++i)
                 amp[indices[i] + idx] = amp_slice[i];
-
+            
             ++idx;
         }
         else
