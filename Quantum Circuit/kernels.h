@@ -73,15 +73,14 @@ GroupTGates(valarray<idx_size>& T_bitmasks,
 inline void
 ExtractIndicesForAmp(idx_size* strides,
                      const vector<int>& gate_qubits,
-                     const int qubits,
-                     const int q_idx)
+                     const int qubits)
 {
     const idx_size num_q = gate_qubits.size();
     idx_size strides_size = 1, pos = 1ull << (num_q - 1);
     
-    strides[0] = q_idx;
+    strides[0] = 0;
     idx_size prev_gap = pos;
-    for (idx_size i = q_idx ; i < num_q; ++i) {
+    for (idx_size i = 0 ; i < num_q; ++i) {
         for (idx_size n = 0; strides_size < (1ull << (i+1)); n += prev_gap) {
             
             strides[n + pos] = strides[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
@@ -102,15 +101,10 @@ ApplyXX12Gate(const idx_size* indices,
     auto t2 = (cmplx(0,1) * (a[0] - a[3]));
     auto t3 = (cmplx(0,1) * (a[1] - a[2]));
     
-    a[0] = t1 + t2;
-    a[1] = t + t3;
-    a[2] = t - t3;
-    a[3] = t1 - t2 ;
-    
-    amp[indices[0]] = a[0];
-    amp[indices[1]] = a[1];
-    amp[indices[2]] = a[2];
-    amp[indices[3]] = a[3];
+    amp[indices[0]] = t1 + t2;
+    amp[indices[1]] = t + t3;
+    amp[indices[2]] = t - t3;
+    amp[indices[3]] = t1 - t2;
 }
 
 inline void
@@ -229,13 +223,14 @@ ApplyGateOnAmps(const idx_size* indices,
 inline vector<int>
 FormBlockOfXYHGates(const vector<Gate>& block_gates,
                     const int qubits,
-                    idx_size& gate_i)
+                    idx_size& gate_i,
+                    Gate::Type gate_type)
 {
     vector<int> qubits_in_cluster;
     for(;gate_i < block_gates.size() && qubits_in_cluster.size() < 12; ++gate_i) {
         const auto& gt = block_gates[gate_i];
         
-        if(gt.ids.back() == Gate::Type::X_1_2 || gt.ids.back() == Gate::Type::Y_1_2)
+        if(gt.ids.back() == gate_type)
             qubits_in_cluster.push_back(gt.qubits.back());
         else break;
     }
@@ -297,6 +292,6 @@ ApplyFWHT(cmplx* __restrict amp,
           const idx_size a_size,
           const vector<int>& qubits_in_cluster,
           const int total_cir_q,
-          const vector<Gate>& gates_block);
+          const Gate::Type gate_type);
 
 #endif /* kernals_h */
