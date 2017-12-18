@@ -120,7 +120,7 @@ Simulate(const string &outfile,
     
     clock_t end = clock();
     
-    amp.PrintStateVector();
+//    amp.PrintStateVector();
     
     PrintReport(end , begin, amp, circuit);
 }

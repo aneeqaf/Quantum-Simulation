@@ -42,7 +42,7 @@ constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH},
 
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 
-extern void
+void
 GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
              const int qubits,
              const vector<int>& gate_qubits);
@@ -237,6 +237,42 @@ FormBlockOfXYHGates(const vector<Gate>& block_gates,
     return qubits_in_cluster;
 }
 
+inline void
+ApplyManyXOnSlice(const idx_size num_qbits,
+                  cmplx* __restrict amp)
+{
+    for (idx_size i = 0; i < num_qbits ; ++i)
+    {
+        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += 1 << (i+1))
+        {
+            for (idx_size k = 0; k < (idx_size)(1<<i); ++k)
+            {
+                const cmplx temp[2] = {amp[j + k], amp[j + k + (1<<i)]};
+                amp[j + k] = (temp[0]*X12[0][0]) + (temp[1]*X12[0][1]);
+                amp[j + k + (1<<i)] = (temp[0]*X12[1][0]) + (temp[1]*X12[1][1]);
+            }
+        }
+    }
+}
+
+inline void
+ApplyManyYOnSlice(const idx_size num_qbits,
+                  cmplx* __restrict amp)
+{
+    for (idx_size i = 0; i < num_qbits ; ++i)
+    {
+        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += 1 << (i+1))
+        {
+            for (idx_size k = 0; k < (idx_size)(1<<i); ++k)
+            {
+                const cmplx temp[2] = {amp[j + k], amp[j + k + (1<<i)]};
+                amp[j + k] = (temp[0]*Y12[0][0]) + (temp[1]*Y12[0][1]);
+                amp[j + k + (1<<i)] = (temp[0]*Y12[1][0]) + (temp[1]*Y12[1][1]);
+            }
+        }
+    }
+}
+
 void
 FormBlockOfCZTGates(const vector<Gate>& block_gates,
                     const int qubits,
@@ -268,17 +304,13 @@ ApplyNonControl1QGates(const int gate_qubit,
                      const Gate& g,
                      const Gate::Type gate_type);
 
-void
-ApplyManyXYHOnSlice(const idx_size num_qbits,
-                    cmplx* __restrict amp,
-                    Gate::Type gate_type);
-
+template<typename function>
 void
 ApplyMergedXY12Gates(const vector<int>& gate_qubits,
-                     const int qubits,
+                     const int total_q,
                      cmplx* __restrict amp,
                      const idx_size size,
-                     const int gate_order);
+                     function& gate_func);
 
 void
 Merge2QXY12Gates(Gate& gate1,
@@ -286,6 +318,7 @@ Merge2QXY12Gates(Gate& gate1,
                  const int qubits,
                  cmplx* __restrict amp,
                  const idx_size size);
+
 
 void
 ApplyFWHT(cmplx* __restrict amp,
