@@ -73,14 +73,15 @@ GroupTGates(valarray<idx_size>& T_bitmasks,
 inline void
 ExtractIndicesForAmp(idx_size* strides,
                      const vector<int>& gate_qubits,
-                     const int qubits)
+                     const int qubits,
+                     const idx_size starting_idx = 0)
 {
     const idx_size num_q = gate_qubits.size();
     idx_size strides_size = 1, pos = 1ull << (num_q - 1);
     
-    strides[0] = 0;
+    strides[0] = starting_idx;
     idx_size prev_gap = pos;
-    for (idx_size i = 0 ; i < num_q; ++i) {
+    for (idx_size i = starting_idx ; i < num_q; ++i) {
         for (idx_size n = 0; strides_size < (1ull << (i+1)); n += prev_gap) {
             
             strides[n + pos] = strides[n] + (1ull << ((qubits - 1) - gate_qubits[i]));
