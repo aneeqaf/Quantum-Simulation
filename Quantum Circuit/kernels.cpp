@@ -90,7 +90,7 @@ ApplyBlockOfGates(const int qubits,
     }
 }
 
-//Test this
+//TODO: Test this
 void
 ApplyControlGate(const int num_controls,
                  const vector<int>& gate_qubits,
@@ -111,8 +111,7 @@ ApplyControlGate(const int num_controls,
     idx_size num_indices = 1ull << loop_count;
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
-    //num_control need to be passed to extract indices for amp
-    ExtractIndicesForAmp(indices, gate_qubits, qubits);
+    ExtractIndicesForAmp(indices, gate_qubits, qubits, num_controls);
     idx_size temp_indices[num_indices];
     memset(temp_indices, 0, num_indices * sizeof(idx_size));
     
