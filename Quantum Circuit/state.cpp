@@ -52,68 +52,68 @@ State::
 
 void State::
 ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
-                      const int qubits,
+                      const int total_q_cir,
                       idx_size& gate_i)
 {
     valarray<idx_size> T_bitmask (2);
-    valarray<idx_size> CZ_bitmask (qubits);
+    valarray<idx_size> CZ_bitmask (total_q_cir);
 
-    FormBlockOfCZTGates(block_gates, qubits, gate_i, CZ_bitmask, T_bitmask);
+    FormBlockOfCZTGates(block_gates, total_q_cir, gate_i, CZ_bitmask, T_bitmask);
     
     if (global_factor_power > 100)
-        ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp, amp_size, ComputeRescalingFactor());
+        ApplyBlockOfGates(total_q_cir, CZ_bitmask, T_bitmask, amp, amp_size, ComputeRescalingFactor());
    
     else
-        ApplyBlockOfGates(qubits, CZ_bitmask, T_bitmask, amp, amp_size);
+        ApplyBlockOfGates(total_q_cir, CZ_bitmask, T_bitmask, amp, amp_size);
 }
 
 void State::
 ApplyNonCGate(const vector<int>& gate_qubits,
-              const int qubits,
+              const int total_q_cir,
               const Gate& g,
               const Gate::Type gate_type)
 {
-    ApplyNonControl1QGates(gate_qubits[0], amp, amp_size, qubits, g, gate_type);
+    ApplyNonControl1QGates(gate_qubits[0], amp, amp_size, total_q_cir, g, gate_type);
 }
 
 void State::
-ApplyHGateOnAllAmps(const int qubits)
+ApplyHGateOnAllAmps(const int total_q_cir)
 {
     for (idx_size i = 0; i < amp_size; ++i)
         amp[i] = cmplx(1,0);
     
-    global_factor_power += qubits;
+    global_factor_power += total_q_cir;
 }
 
 void State::
 ApplyCGate(const int num_controls,
            const vector<int>& gate_qubits,
-           const int qubits,
+           const int total_q_cir,
            const Gate& g,
            const Gate::Type gate_type)
 {
-    ApplyControlGate(num_controls, gate_qubits, amp, qubits, g, gate_type);
+    ApplyControlGate(num_controls, gate_qubits, amp, total_q_cir, g, gate_type);
 }
 
 void State::
 ApplyTwoMergedXYGate(Gate& gate1,
                      Gate& gate2,
-                     const int qubits)
+                     const int total_q_cir)
 {
-    Merge2QXY12Gates(gate1, gate2, qubits, amp, amp_size);
+    Merge2QXY12Gates(gate1, gate2, total_q_cir, amp, amp_size);
     global_factor_power += 2;
 }
 
 void State::
 ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
-                       const int qubits,
+                       const int total_q_cir,
                        idx_size& gate_i,
                        Gate::Type gate_type)
 {
     vector<int> qubits_in_cluster =
-            FormBlockOfXYHGates(block_gates, qubits, gate_i, gate_type);
+            FormBlockOfXYHGates(block_gates, gate_i, gate_type);
     
-    ApplyFWHT(amp, amp_size, qubits_in_cluster, qubits, gate_type);
+    ApplyFWHT(amp, amp_size, qubits_in_cluster, total_q_cir, gate_type);
     
     global_factor_power += (2 * qubits_in_cluster.size());
 }
