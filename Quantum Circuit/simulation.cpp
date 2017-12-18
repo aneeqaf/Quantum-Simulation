@@ -73,23 +73,26 @@ Simulate(const string &outfile,
                               total_q_cir, current_gate, (Gate::Type)current_gate.ids.back());
         }
         else {
+            bool applied = false;
 #ifdef Clustering
              if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
                  (current_gate.ids.back() == Gate::Type::X_1_2 ||
                   current_gate.ids.back() == Gate::Type::Y_1_2) &&
                  (circuit.GetGateFromIndex(i + 1).ids.back() == current_gate.ids.back())) {
-                     idx_size prev_i = i;
-                     amp.ApplyClusterOfXYHGates(gates, qubits, i, (Gate::Type)current_gate.ids.back());
-                     g_end = clock();
-                     gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                     merged_X_Y += i - prev_i;
-                     --i;
+                 applied = true;
+                 idx_size prev_i = i;
+                 amp.ApplyClusterOfXYHGates(gates, qubits, i, (Gate::Type)current_gate.ids.back());
+                 g_end = clock();
+                 gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                 merged_X_Y += i - prev_i;
+                 --i;
              }
 #endif
 #ifdef ManualMerging
            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
+               applied = true;
                amp.ApplyTwoMergedXYGate(current_gate, circuit.GetGateFromIndex(i + 1), total_q_cir);
                g_end = clock();
                gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -103,7 +106,7 @@ Simulate(const string &outfile,
                 g_end = clock();
                 gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
-            else {
+            else if (!applied) {
                 amp.ApplyNonCGate(current_gate.qubits, total_q_cir, current_gate,
                                   (Gate::Type)current_gate.ids.back());
                 g_end = clock();
