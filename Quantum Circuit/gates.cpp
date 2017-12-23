@@ -1,9 +1,8 @@
 //
-//  circuit_gates.cpp
+//  gates.cpp
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/2/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #include <stdio.h>

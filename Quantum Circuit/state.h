@@ -1,14 +1,14 @@
 //
-//  state.hpp
+//  state.h
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/13/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #ifndef state_h
 #define state_h
 
+#include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <stdio.h>

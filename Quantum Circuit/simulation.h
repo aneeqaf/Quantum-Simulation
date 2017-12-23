@@ -1,9 +1,8 @@
 //
-//  simulation.hpp
+//  simulation.h
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/12/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #ifndef simulation_h

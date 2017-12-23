@@ -3,15 +3,22 @@
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/13/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #include "state.h"
+
+using namespace std;
 
 State::
 State(int qubits): global_factor_power(0)
 {
     amp_size = 1ull << qubits;
+    
+//#ifndef __APPLE__
+//    amp = static_cast<cmplx*>(aligned_alloc(64, sizeof(cmplx) * amp_size));
+//#else
+//    amp = new cmplx[amp_size];
+//#endif
     amp = new cmplx[amp_size];
     memset(amp, 0, amp_size * sizeof(amp));
     amp[0] = 1;
@@ -20,6 +27,11 @@ State(int qubits): global_factor_power(0)
 State::
 State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0)
 {
+//#ifndef __APPLE__
+//    amp = static_cast<cmplx*>(aligned_alloc(64, sizeof(cmplx) * size));
+//#else
+//    amp = new cmplx[size];
+//#endif
     amp = new cmplx[size];
     for (idx_size i = 0; i < size; ++i)
         amp[i] = a[i];
@@ -27,7 +39,12 @@ State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0)
 
 State::State(const State& rhs)
 {
-    amp = new cmplx[rhs.GetAmpSize()];
+//#ifndef __APPLE__
+//    amp = static_cast<cmplx*>(aligned_alloc(64, sizeof(cmplx) * rhs.GetAmpSize()));
+//#else
+//    amp = new cmplx[rhs.GetAmpSize()];
+//#endif
+     amp = new cmplx[rhs.GetAmpSize()];
     for (idx_size i = 0; i < rhs.GetAmpSize(); ++i)
         amp[i] = rhs.amp[i];
     amp_size = rhs.GetAmpSize();
@@ -61,10 +78,10 @@ ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
     FormBlockOfCZTGates(block_gates, total_q_cir, gate_i, CZ_bitmask, T_bitmask);
     
     if (global_factor_power > 100)
-        ApplyBlockOfGates(total_q_cir, CZ_bitmask, T_bitmask, amp, amp_size, ComputeRescalingFactor());
+        ApplyBlockOfCZTGates(total_q_cir, CZ_bitmask, T_bitmask, amp, amp_size, ComputeRescalingFactor());
    
     else
-        ApplyBlockOfGates(total_q_cir, CZ_bitmask, T_bitmask, amp, amp_size);
+        ApplyBlockOfCZTGates(total_q_cir, CZ_bitmask, T_bitmask, amp, amp_size);
 }
 
 void State::
