@@ -3,7 +3,6 @@
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/12/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #include "circuit.h"
@@ -129,6 +128,7 @@ GroupSimilarGates()
             ++last_Y;
         }
     }
+//    PrintGates();
 }
 
 void Circuit::

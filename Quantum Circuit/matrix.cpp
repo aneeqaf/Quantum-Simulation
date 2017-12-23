@@ -3,7 +3,6 @@
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 10/21/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #include <stdio.h>
