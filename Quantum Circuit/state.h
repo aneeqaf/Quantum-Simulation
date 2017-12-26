@@ -27,23 +27,23 @@ private:
 public:
     
     void ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
-                              const int total_q_cir,
+                              const int total_circuit_qubits,
                               idx_size& gate_i);
     void ApplyNonCGate(const vector<int>& gate_qubits,
-                      const int total_q_cir,
+                      const int total_circuit_qubits,
                       const Gate& g,
                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(const int qubits);
     void ApplyCGate(const int num_controls,
                    const vector<int>& gate_qubits,
-                   const int total_q_cir,
+                   const int total_circuit_qubits,
                    const Gate& g,
                    const Gate::Type gate_type);
     void ApplyMergedXYGate(const vector<Gate>& all_gates,
                            idx_size& gate_i,
-                           const int total_q_cir);
+                           const int total_circuit_qubits);
     void ApplyClusterOfXYHGates(const vector<Gate>& all_gates,
-                                const int total_q_cir,
+                                const int total_circuit_qubits,
                                 idx_size& gate_i,
                                 Gate::Type gate_type);
     
@@ -58,7 +58,7 @@ public:
     
     void IncrementGlobalFactorPower(int num);
     void ResetGlobalFactorPower();
-    cmplx ComputeRescalingFactor();
+    void Rescale();
     
     void PrintStateVector(const string& outfile) const;
     void PrintStateVector() const;

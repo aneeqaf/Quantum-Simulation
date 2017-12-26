@@ -10,11 +10,11 @@
 
 void
 GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
-             const int total_q_cir,
+             const int total_circuit_qubits,
              const vector<int>& gate_qubits)
 {
     idx_size bits = 0;
-    int new_q = total_q_cir - 1;
+    int new_q = total_circuit_qubits - 1;
     
     for (auto q : gate_qubits) {
         bits |= ( 1ull << (new_q - q));
@@ -26,11 +26,11 @@ GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
 
 void
 GroupTGates(valarray<idx_size>& T_bitmasks,
-            const int total_q_cir,
+            const int total_circuit_qubits,
             const vector<int>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
-    idx_size t_mask = (1ull << ((total_q_cir - 1) - gate_qubits[0]));
+    idx_size t_mask = (1ull << ((total_circuit_qubits - 1) - gate_qubits[0]));
     if ((T_bitmasks[0] & t_mask) != t_mask)
         T_bitmasks[0] |= t_mask;
     
@@ -49,11 +49,12 @@ GroupTGates(valarray<idx_size>& T_bitmasks,
 
 void
 ExtractIndicesForAmp(idx_size* strides,
-                     const vector<int>& gate_qubits,
-                     const int total_q_cir,
+                     const int* gate_qubits,
+                     const idx_size gate_qubits_size,
+                     const int total_circuit_qubits,
                      const idx_size starting_idx)
 {
-    const idx_size num_q = gate_qubits.size();
+    const idx_size num_q = gate_qubits_size;
     idx_size strides_size = 1, gap = 1ull << (num_q - 1);
     
     strides[0] = starting_idx;
@@ -61,7 +62,7 @@ ExtractIndicesForAmp(idx_size* strides,
     for (idx_size i = starting_idx ; i < num_q; ++i) {
         for (idx_size n = 0; strides_size < (1ull << (i+1)); n += prev_gap) {
             
-            strides[n + gap] = strides[n] + (1ull << ((total_q_cir - 1) - gate_qubits[i]));
+            strides[n + gap] = strides[n] + (1ull << ((total_circuit_qubits - 1) - gate_qubits[i]));
             ++strides_size;
         }
         prev_gap = gap;
@@ -70,31 +71,31 @@ ExtractIndicesForAmp(idx_size* strides,
 }
 
 void
-FormBlockOfCZTGates(const vector<Gate>& block_gates,
-                    const int total_q_cir,
-                    idx_size& gate_i,
+FormBlockOfCZTGates(idx_size& gate_i,
                     valarray<idx_size>& CZ_bitmasks,
-                    valarray<idx_size>& T_bitmasks)
+                    valarray<idx_size>& T_bitmasks,
+                    const vector<Gate>& cluster,
+                    const int total_circuit_qubits)
 {
-    for(;gate_i < block_gates.size(); ++gate_i) {
-        const auto gt = block_gates[gate_i].ids.back();
+    for(;gate_i < cluster.size(); ++gate_i) {
+        const auto gt = cluster[gate_i].ids.back();
         
         if (gt == Gate::Type::Z)
-            GroupCZGates(CZ_bitmasks, total_q_cir, block_gates[gate_i].qubits);
+            GroupCZGates(CZ_bitmasks, total_circuit_qubits, cluster[gate_i].qubits);
         else if (gt == Gate::Type::T)
-            GroupTGates(T_bitmasks, total_q_cir, block_gates[gate_i].qubits);
+            GroupTGates(T_bitmasks, total_circuit_qubits, cluster[gate_i].qubits);
         else break;
     }
 }
 
 vector<int>
-FormBlockOfXYHGates(const vector<Gate>& block_gates,
-                    idx_size& gate_i,
-                    Gate::Type gate_type)
+FormBlockOfXYHGates(idx_size& gate_i,
+                    Gate::Type gate_type,
+                    const vector<Gate>& all_gates)
 {
     vector<int> qubits_in_cluster;
-    for(;gate_i < block_gates.size() && qubits_in_cluster.size() < 12; ++gate_i) {
-        const auto& gt = block_gates[gate_i];
+    for(;gate_i < all_gates.size() && qubits_in_cluster.size() < 12; ++gate_i) {
+        const auto& gt = all_gates[gate_i];
         
         if(gt.ids.back() == gate_type)
             qubits_in_cluster.push_back(gt.qubits.back());
@@ -104,31 +105,28 @@ FormBlockOfXYHGates(const vector<Gate>& block_gates,
 }
 
 void
-FormBlockOfXYHGates(const vector<Gate>& all_gates,
-                    vector<Gate>& block_gates,
-                    idx_size& gate_i)
+FormBlockOfXYHGates(vector<Gate>& cluster,
+                    idx_size& gate_i,
+                    const vector<Gate>& all_gates)
 {
-    for(;gate_i < all_gates.size() && block_gates.size() < 4; ++gate_i) {
+    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
         if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
-            block_gates.push_back(all_gates[gate_i]);
+            cluster.push_back(all_gates[gate_i]);
         else break;
     }
 }
 
 void
-ApplyBlockOfCZTGates(const int total_q_cir,
-                  const valarray<idx_size>& CZ_bitmasks,
-                  const valarray<idx_size>& T_bitmasks,
-                  cmplx* __restrict amp,
-                  const idx_size amp_size,
-                  cmplx rescaling_factor)
+ApplyBlockOfCZTGates(cmplx* __restrict amp,
+                     const idx_size amp_size,
+                     const int total_circuit_qubits,
+                     const valarray<idx_size>& CZ_bitmasks,
+                     const valarray<idx_size>& T_bitmasks)
 {
-    const idx_size modified_q = total_q_cir - 1;
+    const idx_size modified_q = total_circuit_qubits - 1;
     idx_size prev_gc = 0;
-    
-    const bool rescale_now = rescaling_factor != cmplx(0,0);
     
     bool t_bit_mask_empty = true;
     if (T_bitmasks[0] != 0)
@@ -142,8 +140,7 @@ ApplyBlockOfCZTGates(const int total_q_cir,
         const idx_size bit_idx = modified_q - __builtin_ctzl(changed_bit);
         
         cmplx mutated_amp = amp[gc];
-        mutated_amp = rescale_now ? (mutated_amp * rescaling_factor) : mutated_amp;
-        
+      
         if (__builtin_parityl(CZ_bitmasks[bit_idx] & gc) == 1)
             negate_Z = !negate_Z;
         if (negate_Z)
@@ -166,15 +163,15 @@ ApplyBlockOfCZTGates(const int total_q_cir,
 
 //TODO: Test this
 void
-ApplyControlGate(const int num_controls,
+ApplyControlGate(cmplx* __restrict amp,
+                 const int num_controls,
                  const vector<int>& gate_qubits,
-                 cmplx* __restrict amp,
-                 const int total_q_cir,
+                 const int total_circuit_qubits,
                  const Gate& g,
                  const Gate::Type gate_type)
 {
-    int loop_count = total_q_cir - num_controls;
-    idx_size modified_q = total_q_cir -1, idx = 0, gate_bitmask = 0,
+    int loop_count = total_circuit_qubits - num_controls;
+    idx_size modified_q = total_circuit_qubits -1, idx = 0, gate_bitmask = 0,
     c_bits = 0, iter_count = 0;
     
     for (int j = 0 ; j < num_controls; ++j)
@@ -186,7 +183,7 @@ ApplyControlGate(const int num_controls,
     idx_size num_indices = 1ull << loop_count;
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, gate_qubits, total_q_cir, num_controls);
+    ExtractIndicesForAmp(indices, gate_qubits.data(), gate_qubits.size(),total_circuit_qubits, num_controls);
     idx_size temp_indices[num_indices];
     memset(temp_indices, 0, num_indices * sizeof(idx_size));
     
@@ -210,21 +207,21 @@ ApplyControlGate(const int num_controls,
 }
 
 void
-ApplyNonControl1QGates(const int q,
-                       cmplx* __restrict amp,
+ApplyNonControl1QGates(cmplx* __restrict amp,
                        const idx_size amp_size,
-                       const int total_q_cir,
+                       const int q,
+                       const int total_circuit_qubits,
                        const Gate& g,
                        const Gate::Type gate_type)
 {
     idx_size iter_count = 0, idx = 0, gate_bitmask = 0;
     
-    gate_bitmask |= (1ull << ((total_q_cir - 1) - q));
+    gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - q));
     idx_size num_indices = 1ull << 1;
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
     indices[0] = 0;
-    indices[1] = 1ull << ((total_q_cir - 1) - q);
+    indices[1] = 1ull << ((total_circuit_qubits - 1) - q);
     idx_size temp_indices[num_indices];
     memset(temp_indices, 0, num_indices * sizeof(idx_size));
                          
@@ -245,21 +242,22 @@ ApplyNonControl1QGates(const int q,
 
 template <typename function>
 void
-Apply4MergedXY12Gates(const vector<int>& gate_qubits,
-                     const int total_q_cir,
-                     cmplx* __restrict amp,
-                     const idx_size amp_size,
-                     const function* gate_funcs)
+Apply4MergedXY12Gates(cmplx* __restrict amp,
+                      const idx_size amp_size,
+                      const int* gate_qubits,
+                      const int total_circuit_qubits,
+                      const function& gate_func1,
+                      const function& gate_func2)
 {
-    idx_size gate_bitmask = 0, num_bits = gate_qubits.size();
-    idx_size iter_count = 0;
+    idx_size gate_bitmask = 0, iter_count = 0;
+    constexpr idx_size num_bits = 4;
     for (idx_size i = 0; i < num_bits; ++i)
-        gate_bitmask |= (1ull << ((total_q_cir - 1) - gate_qubits[i]));
+        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - gate_qubits[i]));
     
-    idx_size num_indices = 1ull << num_bits;
+    constexpr idx_size num_indices = 16;
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, gate_qubits, total_q_cir);
+    ExtractIndicesForAmp(indices, gate_qubits, num_bits, total_circuit_qubits);
     cmplx amp_slice[num_indices];
     memset(amp_slice, 0, num_indices * sizeof(cmplx));
     
@@ -271,7 +269,7 @@ Apply4MergedXY12Gates(const vector<int>& gate_qubits,
             for (idx_size i = 0; i < num_indices; ++i)
                 amp_slice[i] = amp[indices[i] + idx];
             
-            Apply4YX12Gate(amp_slice, gate_funcs);
+            Apply4YX12Gate(amp_slice, gate_func1, gate_func2);
             
             for (idx_size i = 0; i < num_indices; ++i)
                 amp[indices[i] + idx] = amp_slice[i];
@@ -285,21 +283,21 @@ Apply4MergedXY12Gates(const vector<int>& gate_qubits,
 
 template<typename function>
 void
-Apply2MergedXY12Gates(const vector<int>& gate_qubits,
-                     const int total_q_cir,
-                     cmplx* __restrict amp,
-                     const idx_size size,
-                     function& gate_func)
+Apply2MergedXY12Gates(cmplx* __restrict amp,
+                      const int* gate_qubits,
+                      const int total_circuit_qubits,
+                      const idx_size size,
+                      const function& gate_func)
 {
-    idx_size gate_bitmask = 0, num_bits = gate_qubits.size();
-    idx_size iter_count = 0;
+    idx_size gate_bitmask = 0, iter_count = 0;
+    constexpr idx_size num_bits = 2;
     for (idx_size i = 0; i < num_bits; ++i)
-        gate_bitmask |= (1ull << ((total_q_cir - 1) - gate_qubits[i]));
+        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - gate_qubits[i]));
     
-    idx_size num_indices = 1ull << num_bits;
+    constexpr idx_size num_indices = 4;
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, gate_qubits, total_q_cir);
+    ExtractIndicesForAmp(indices, gate_qubits, num_bits ,total_circuit_qubits);
     idx_size temp_indices[num_indices];
     memset(temp_indices, 0, num_indices * sizeof(idx_size));
     
@@ -322,55 +320,46 @@ Apply2MergedXY12Gates(const vector<int>& gate_qubits,
 
 void
 Merge2XY12Gates(Gate& gate1,
-                 Gate& gate2,
-                 const int total_q_cir,
-                 cmplx* __restrict amp,
-                 const idx_size amp_size)
+                Gate& gate2,
+                cmplx* __restrict amp,
+                const idx_size amp_size,
+                const int total_circuit_qubits)
 {
-    Gate gate_to_apply = gate1;
-    if (gate1.qubits.back() < gate2.qubits.back())
-        gate_to_apply.qubits.push_back(gate2.qubits.back());
-    else {
-        gate_to_apply = gate2;
-        gate_to_apply.qubits.push_back(gate1.qubits.back());
-        swap(gate1, gate2);
-    }
+    int qubits[2] = {gate1.qubits.back(), gate2.qubits.back()};
 
     Gate::Type g1t = (Gate::Type)gate1.ids.back();
     Gate::Type g2t = (Gate::Type)gate2.ids.back();
 
     if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
-        Apply2MergedXY12Gates(gate_to_apply.qubits, total_q_cir, amp, amp_size, ApplyXX12Gate);
+        Apply2MergedXY12Gates(amp, qubits, total_circuit_qubits, amp_size, ApplyXX12Gate);
 
     else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
-        Apply2MergedXY12Gates(gate_to_apply.qubits, total_q_cir, amp, amp_size, ApplyXY12Gate);
+        Apply2MergedXY12Gates(amp, qubits, total_circuit_qubits, amp_size, ApplyXY12Gate);
 
     else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
-        Apply2MergedXY12Gates(gate_to_apply.qubits, total_q_cir, amp, amp_size, ApplyYY12Gate);
+        Apply2MergedXY12Gates(amp, qubits, total_circuit_qubits, amp_size, ApplyYY12Gate);
 
     else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
-        Apply2MergedXY12Gates(gate_to_apply.qubits, total_q_cir, amp, amp_size, ApplyYX12Gate);
-
-
+        Apply2MergedXY12Gates(amp, qubits, total_circuit_qubits, amp_size, ApplyYX12Gate);
 }
 
 void
-Merge4XY12Gates(vector<Gate>& block_gates,
-               const int total_q_cir,
-               cmplx* __restrict amp,
-               const idx_size amp_size)
+Merge4XY12Gates(vector<Gate>& cluster,
+                cmplx* __restrict amp,
+                const idx_size amp_size,
+                const int total_circuit_qubits)
 {
-    vector<int> block_qubits(4, 0);
+    int block_qubits[4];
     function<void (const idx_size* , cmplx*)> gate_app_funcs[2];
     
     int q = 0;
     for (idx_size i = 0; i < 4; i+=2) {
     
-        block_qubits[i] = block_gates[i].qubits.back();
-        block_qubits[i + 1] = block_gates[i + 1].qubits.back();
+        block_qubits[i] = cluster[i].qubits.back();
+        block_qubits[i + 1] = cluster[i + 1].qubits.back();
 
-        Gate::Type g1t = (Gate::Type)block_gates[i].ids.back();
-        Gate::Type g2t = (Gate::Type)block_gates[i + 1].ids.back();
+        Gate::Type g1t = (Gate::Type)cluster[i].ids.back();
+        Gate::Type g2t = (Gate::Type)cluster[i + 1].ids.back();
         
         if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
             gate_app_funcs[q++] = ApplyXX12Gate;
@@ -387,12 +376,12 @@ Merge4XY12Gates(vector<Gate>& block_gates,
         
     }
     
-    Apply4MergedXY12Gates(block_qubits, total_q_cir, amp, amp_size, gate_app_funcs);
+    Apply4MergedXY12Gates(amp, amp_size, block_qubits, total_circuit_qubits, gate_app_funcs[0], gate_app_funcs[1]);
 }
 
 void
-ApplyManyXOnSlice(const idx_size num_qbits,
-                  cmplx* __restrict amp)
+ApplyManyXOnSlice(cmplx* __restrict amp,
+                  const idx_size num_qbits)
 {
     for (idx_size i = 0; i < num_qbits ; ++i){
         const idx_size add = 1 << (i + 1);
@@ -408,8 +397,8 @@ ApplyManyXOnSlice(const idx_size num_qbits,
 }
 
 void
-ApplyManyYOnSlice(const idx_size num_qbits,
-                  cmplx* __restrict amp)
+ApplyManyYOnSlice(cmplx* __restrict amp,
+                  const idx_size num_qbits)
 {
     for (idx_size i = 0; i < num_qbits ; ++i){
         const idx_size add = 1 << (i + 1);
@@ -429,7 +418,7 @@ void
 ApplyFWHT(cmplx* __restrict amp,
           const idx_size amp_size,
           const vector<int>& qubits_in_cluster,
-          const int total_q_cir,
+          const int total_circuit_qubits,
           const Gate::Type gate_type)
 {
     const idx_size num_qubits = qubits_in_cluster.size(),
@@ -437,11 +426,11 @@ ApplyFWHT(cmplx* __restrict amp,
     
     idx_size gate_bitmask = 0;
     for (idx_size i = 0; i < num_qubits; ++i)
-        gate_bitmask |= (1ull << ((total_q_cir - 1) - qubits_in_cluster[i]));
+        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - qubits_in_cluster[i]));
     
     idx_size indices [slice_size];
     memset(indices, 0, slice_size * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, qubits_in_cluster, total_q_cir);
+    ExtractIndicesForAmp(indices, qubits_in_cluster.data(), qubits_in_cluster.size(), total_circuit_qubits);
     cmplx amp_slice[slice_size];
     memset(amp_slice, 0, slice_size * sizeof(cmplx));
     
@@ -454,9 +443,9 @@ ApplyFWHT(cmplx* __restrict amp,
                 amp_slice[i] = amp[indices[i] + idx];
             
             if (gate_type == Gate::Type::X_1_2)
-                ApplyManyXOnSlice(num_qubits, amp_slice);
+                ApplyManyXOnSlice(amp_slice, num_qubits);
             else
-                ApplyManyYOnSlice(num_qubits, amp_slice);
+                ApplyManyYOnSlice(amp_slice, num_qubits);
                    
             for (idx_size i = 0; i < slice_size; ++i)
                 amp[indices[i] + idx] = amp_slice[i];
