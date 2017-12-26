@@ -87,18 +87,19 @@ Simulate(const string &outfile,
                  --i;
              }
 #endif
-#ifdef ManualMerging
+//#ifdef ManualMerging
            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
                applied = true;
-               amp.ApplyTwoMergedXYGate(current_gate, circuit.GetGateFromIndex(i + 1), total_q_cir);
+               idx_size prev_i = i;
+               amp.ApplyMergedXYGate(gates, i, total_q_cir);
                g_end = clock();
                gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-               merged_X_Y += 2;
-               ++i;
+               merged_X_Y += i - prev_i;;
+               --i;
            }
-#endif
+//#endif
            if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 amp.ApplyHGateOnAllAmps(total_q_cir);
                 i += total_q_cir - 1;

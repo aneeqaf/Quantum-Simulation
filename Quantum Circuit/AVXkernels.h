@@ -17,7 +17,7 @@ using cmplx = complex<float>;
 using idx_size = size_t;
 
 static const __m256 kM256CmplxNeg1 = _mm256_setr_ps(1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0);
-static const __m256 kM256CmplxNeg2 = _mm256_setr_ps(1.0, -1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0);
+static const __m256 kM256CmplxNeg2 = _mm256_setr_ps(1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0);
 static const __m256 kM256Neg = _mm256_setr_ps(1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0);
 static const __m128 kM128CmplxNeg = _mm_setr_ps(1.0, -1.0, 1.0, -1.0);
 
@@ -124,38 +124,27 @@ ApplyAVXYY12Gate(const idx_size* indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    //    __m128 neg = _mm_setr_ps(1.0, -1.0, 1.0, -1.0);
-    //    __m128 a0 = _mm_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]));
-    //    __m128 a1 = _mm_setr_ps(real(a[3]), imag(a[3]), real(a[2]), imag(a[2]));
-    //    __m128 t = _mm_add_ps(a0, a1);
-    //    __m128 t1 = _mm_sub_ps(a0, a1);
-    //    t = _mm_permute_ps(t, 0x5);
-    //    t = _mm_mul_ps(t, neg);
-    //    t1 = _mm_permute_ps(t1, 0x5);
-    //    t1 = _mm_mul_ps(t1, neg);
-    //
-    //    float* t_amp1 = (float*)&t;
-    //    float* t_amp2 = (float*)&t1;
-    //
-    //    a0 = _mm_setr_ps(t_amp1[0], t_amp1[1], t_amp2[0], t_amp2[1]);
-    //    a1 = _mm_setr_ps(t_amp1[2], t_amp1[3], t_amp2[2], t_amp2[3]);
-    //    t = _mm_add_ps(a0, a1);
-    //    t1 = _mm_sub_ps(a0, a1);
-    //
-    //    amp[indices[0]] = cmplx(t_amp2[0], t_amp1[1]);
-    //    amp[indices[1]] = cmplx(t_amp1[2], t_amp1[3]);
-    //    amp[indices[2]] = cmplx(t_amp2[0], t_amp1[1]);
-    //    amp[indices[3]] = cmplx(t_amp2[2], t_amp1[3]);
-    
-    auto t = (cmplx(0,1) * (a[0] + a[3]));
-    auto t1 = (cmplx(0,1) * (a[0] - a[3]));
-    auto t2 = (cmplx(0,1) * (a[1] + a[2]));
-    auto t3 = (cmplx(0,1) * (a[1] - a[2]));
-    
-    amp[indices[0]] = t - t2;
-    amp[indices[1]] = t1 + t3;
-    amp[indices[2]] = t1 - t3;
-    amp[indices[3]] = t + t2;
+    __m128 a0 = _mm_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]));
+    __m128 a1 = _mm_setr_ps(real(a[3]), imag(a[3]), real(a[2]), imag(a[2]));
+    __m128 t = _mm_add_ps(a0, a1);
+    __m128 t1 = _mm_sub_ps(a0, a1);
+    t = _mm_permute_ps(t, 0x5);
+    t = _mm_mul_ps(t, kM128CmplxNeg);
+    t1 = _mm_permute_ps(t1, 0x5);
+    t1 = _mm_mul_ps(t1, kM128CmplxNeg);
+
+    float* t_amp1 = (float*)&t;
+    float* t_amp2 = (float*)&t1;
+
+    a0 = _mm_setr_ps(t_amp1[0], t_amp1[1], t_amp2[0], t_amp2[1]);
+    a1 = _mm_setr_ps(t_amp1[2], t_amp1[3], t_amp2[2], t_amp2[3]);
+    t = _mm_add_ps(a0, a1);
+    t1 = _mm_sub_ps(a0, a1);
+
+    amp[indices[0]] = cmplx(t_amp2[0], t_amp1[1]);
+    amp[indices[1]] = cmplx(t_amp1[2], t_amp1[3]);
+    amp[indices[2]] = cmplx(t_amp2[0], t_amp1[1]);
+    amp[indices[3]] = cmplx(t_amp2[2], t_amp1[3]);
 }
 
 inline void
@@ -163,16 +152,19 @@ ApplyAVXYX12Gate(const idx_size* indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    __m256 a0 = _mm256_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]),
+                               real(a[2]), imag(a[2]), real(a[3]), imag(a[3]));
+    __m256 a1 = _mm256_setr_ps(imag(a[1]), real(a[1]), imag(a[0]), real(a[0]),
+                               imag(a[3]), real(a[3]), imag(a[2]), real(a[2]));
+    a1 = _mm256_mul_ps(a1, kM256CmplxNeg2);
+    __m256 res = _mm256_add_ps(a0, a1);
     
-    auto t = cmplx(-imag(a[0]), real(a[0])) + a[1];
-    auto t1 = a[0] + cmplx(-imag(a[1]), real(a[1]));
-    auto t2 = cmplx(-imag(a[2]), real(a[2])) + a[3];
-    auto t3 = a[2] + cmplx(-imag(a[3]), real(a[3]));
+    float* f_res = (float*)&res;
     
-    amp[indices[0]] = t - t2;
-    amp[indices[1]] = t1 - t3;
-    amp[indices[2]] = t + t2;
-    amp[indices[3]] = t1 + t3;
+    amp[indices[0]] = cmplx(f_res[1], f_res[1]);
+    amp[indices[1]] = cmplx(f_res[0], f_res[0]);
+    amp[indices[2]] = cmplx(f_res[3], f_res[3]);
+    amp[indices[3]] = cmplx(f_res[2], f_res[2]);
 }
 
 

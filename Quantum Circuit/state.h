@@ -39,10 +39,10 @@ public:
                    const int total_q_cir,
                    const Gate& g,
                    const Gate::Type gate_type);
-    void ApplyTwoMergedXYGate(Gate& gate1,
-                              Gate& gate2,
-                              const int total_q_cir);
-    void ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
+    void ApplyMergedXYGate(const vector<Gate>& all_gates,
+                           idx_size& gate_i,
+                           const int total_q_cir);
+    void ApplyClusterOfXYHGates(const vector<Gate>& all_gates,
                                 const int total_q_cir,
                                 idx_size& gate_i,
                                 Gate::Type gate_type);
