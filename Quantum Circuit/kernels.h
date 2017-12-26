@@ -40,9 +40,10 @@ using idx_size = size_t;
 
 constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH},
     -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
-
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx ki = {0,1};
+
+enum TwoQGates : int {XX, XY, YX, YY};
 
 inline void
 ApplyXX12Gate(const idx_size* indices,
@@ -104,6 +105,33 @@ ApplyYX12Gate(const idx_size* indices,
     amp[indices[3]] = t1 + t3;
 }
 
+inline void
+Apply4YX12Gate(cmplx* __restrict amp_slice,
+              const function<void (const idx_size* , cmplx*)>* gate_funcs = nullptr)
+{
+    
+    idx_size temp_i1[4] = {0, 4, 8, 12};
+    idx_size temp_i2[4] = {0, 1, 2, 3};
+    
+    gate_funcs[0](temp_i1, amp_slice);
+    temp_i1[0] = 1;  temp_i1[1] = 5; temp_i1[2] = 9; temp_i1[3] = 13;
+    gate_funcs[0](temp_i1, amp_slice);
+    temp_i1[0] = 2;  temp_i1[1] = 6; temp_i1[2] = 10; temp_i1[3] = 14;
+    gate_funcs[0](temp_i1, amp_slice);
+    temp_i1[0] = 3;  temp_i1[1] = 7; temp_i1[2] = 11; temp_i1[3] = 15;
+    gate_funcs[0](temp_i1, amp_slice);
+    
+    gate_funcs[1](temp_i2, amp_slice);
+    temp_i2[0] = 4;  temp_i2[1] = 5; temp_i2[2] = 6; temp_i2[3] = 7;
+    gate_funcs[1](temp_i2, amp_slice);
+    temp_i2[0] = 8;  temp_i2[1] = 9; temp_i2[2] = 10; temp_i2[3] = 11;
+    gate_funcs[1](temp_i2, amp_slice);
+    temp_i2[0] = 12;  temp_i2[1] = 13; temp_i2[2] = 14; temp_i2[3] = 15;
+    gate_funcs[1](temp_i2, amp_slice);
+    
+}
+
+
 inline valarray<idx_size>
 FindStrides (const vector<int>& gate_qubits,
              const int num_q) {
@@ -117,16 +145,16 @@ FindStrides (const vector<int>& gate_qubits,
 
 inline void
 ApplyGateOnAmps(const idx_size* indices,
-                const idx_size size,
+                const idx_size indices_size,
                 const Gate::Type gate_type,
                 const Gate& q_gate,
                 cmplx* __restrict amp)
 {
-    cmplx temp_amp[size];
-    for (idx_size i = 0; i < size; ++i)
+    cmplx temp_amp[indices_size];
+    for (idx_size i = 0; i < indices_size; ++i)
         temp_amp[i] = amp[indices[i]];
     
-    if (size >= 2 && !(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
+    if (indices_size >= 2 && !(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
         switch (gate_type) {
             case (Gate::Type::X_1_2):{
                 amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
@@ -158,7 +186,7 @@ ApplyGateOnAmps(const idx_size* indices,
             default: {
                 vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
                 m_temp = matrix_v_mult(q_gate.rows, m_temp);
-                for (idx_size i = 0; i < size; ++i)
+                for (idx_size i = 0; i < indices_size; ++i)
                     amp[indices[i]] = temp_amp[i];
                 break;
             }
@@ -167,7 +195,7 @@ ApplyGateOnAmps(const idx_size* indices,
     else {
         vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
         m_temp = matrix_v_mult(q_gate.rows, m_temp);
-        for (idx_size i = 0; i < size; ++i)
+        for (idx_size i = 0; i < indices_size; ++i)
             amp[indices[i]] = temp_amp[i];
     }
 }
@@ -209,11 +237,16 @@ FormBlockOfXYHGates(const vector<Gate>& block_gates,
                     Gate::Type gate_type);
 
 void
+FormBlockOfXYHGates(const vector<Gate>& all_gates,
+                    vector<Gate>& block_gates,
+                    idx_size& gate_i);
+
+void
 ApplyBlockOfCZTGates(const int total_q_cir,
                   const valarray<idx_size>& CZ_bitmask,
                   const valarray<idx_size>& T_bitmask,
                   cmplx* __restrict amp,
-                  const idx_size size,
+                  const idx_size amp_size,
                   cmplx rescaling_factor = 0);
 
 void
@@ -227,30 +260,43 @@ ApplyControlGate(const int num_controls,
 void
 ApplyNonControl1QGates(const int gate_qubit,
                      cmplx* __restrict amp,
-                     const idx_size size,
+                     const idx_size amp_size,
                      const int qubits,
                      const Gate& g,
                      const Gate::Type gate_type);
 
 template<typename function>
 void
-ApplyMergedXY12Gates(const vector<int>& gate_qubits,
-                     const int total_q_cir,
+Apply2MergedXY12Gates(const vector<int>& gate_qubits,
+                      const int total_q_cir,
+                      cmplx* __restrict amp,
+                      const idx_size size,
+                      function& gate_func);
+
+template<typename function>
+void
+Apply4MergedXY12Gates(const int* gate_qubits,
+                     const idx_size gate_q_size,
                      cmplx* __restrict amp,
-                     const idx_size size,
-                     function& gate_func);
+                     const idx_size amp_size,
+                     const function* gate_func);
 
 void
-Merge2QXY12Gates(Gate& gate1,
+Merge2XY12Gates(Gate& gate1,
                  Gate& gate2,
                  const int total_q_cir,
                  cmplx* __restrict amp,
-                 const idx_size size);
+                 const idx_size amp_size);
 
+void
+Merge4XY12Gates(vector<Gate>& block_gates,
+               const int total_q_cir,
+               cmplx* __restrict amp,
+               const idx_size amp_size);
 
 void
 ApplyFWHT(cmplx* __restrict amp,
-          const idx_size a_size,
+          const idx_size amp_size,
           const vector<int>& qubits_in_cluster,
           const int total_q_cir,
           const Gate::Type gate_type);

@@ -113,22 +113,36 @@ ApplyCGate(const int num_controls,
 }
 
 void State::
-ApplyTwoMergedXYGate(Gate& gate1,
-                     Gate& gate2,
-                     const int total_q_cir)
+ApplyMergedXYGate(const vector<Gate>& all_gates,
+                  idx_size& gate_i,
+                  const int total_q_cir)
 {
-    Merge2QXY12Gates(gate1, gate2, total_q_cir, amp, amp_size);
-    global_factor_power += 2;
+    vector<Gate> block_gates;
+    FormBlockOfXYHGates(all_gates, block_gates, gate_i);
+    idx_size num_gates = block_gates.size();
+    
+    if (num_gates % 2 == 1) {
+        --gate_i;
+        --num_gates;
+        block_gates.pop_back();
+    }
+    
+    if (num_gates == 2)
+        Merge2XY12Gates(block_gates[0], block_gates[1], total_q_cir, amp, amp_size);
+    else if (num_gates == 4)
+        Merge4XY12Gates(block_gates, total_q_cir, amp, amp_size);
+    
+    global_factor_power += num_gates;
 }
 
 void State::
-ApplyClusterOfXYHGates(const vector<Gate>& block_gates,
+ApplyClusterOfXYHGates(const vector<Gate>& all_gates,
                        const int total_q_cir,
                        idx_size& gate_i,
                        Gate::Type gate_type)
 {
     vector<int> qubits_in_cluster =
-            FormBlockOfXYHGates(block_gates, gate_i, gate_type);
+            FormBlockOfXYHGates(all_gates, gate_i, gate_type);
     
     ApplyFWHT(amp, amp_size, qubits_in_cluster, total_q_cir, gate_type);
     
