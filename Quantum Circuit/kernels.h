@@ -33,8 +33,6 @@
 
 using namespace std;
 
-// 0:H, 1:CZ & T, 2:X, 3:Y, 4:Merged X & Y
-
 constexpr float kH = 0.707106781;
 
 using idx_size = size_t;
@@ -113,24 +111,24 @@ Apply4YX12Gate(cmplx*  __restrict amp_slice,
                const function& gate_func2)
 {
     
-    array<idx_size, 4> temp_i1 ({0, 4, 8, 12});
-    array<idx_size, 4> temp_i2 ({0, 1, 2, 3});
+    array<idx_size, 4> t ({0, 4, 8, 12});
+    array<idx_size, 4> t1 ({0, 1, 2, 3});
     
-    gate_func1(temp_i1, amp_slice);
-    temp_i1[0] = 1;  temp_i1[1] = 5; temp_i1[2] = 9; temp_i1[3] = 13;
-    gate_func1(temp_i1, amp_slice);
-    temp_i1[0] = 2;  temp_i1[1] = 6; temp_i1[2] = 10; temp_i1[3] = 14;
-    gate_func1(temp_i1, amp_slice);
-    temp_i1[0] = 3;  temp_i1[1] = 7; temp_i1[2] = 11; temp_i1[3] = 15;
-    gate_func1(temp_i1, amp_slice);
+    gate_func1(t, amp_slice);
+    t[0] = 1;  t[1] = 5; t[2] = 9; t[3] = 13;
+    gate_func1(t, amp_slice);
+    t[0] = 2;  t[1] = 6; t[2] = 10; t[3] = 14;
+    gate_func1(t, amp_slice);
+    t[0] = 3;  t[1] = 7; t[2] = 11; t[3] = 15;
+    gate_func1(t, amp_slice);
     
-    gate_func2(temp_i2, amp_slice);
-    temp_i2[0] = 4;  temp_i2[1] = 5; temp_i2[2] = 6; temp_i2[3] = 7;
-    gate_func2(temp_i2, amp_slice);
-    temp_i2[0] = 8;  temp_i2[1] = 9; temp_i2[2] = 10; temp_i2[3] = 11;
-    gate_func2(temp_i2, amp_slice);
-    temp_i2[0] = 12;  temp_i2[1] = 13; temp_i2[2] = 14; temp_i2[3] = 15;
-    gate_func2(temp_i2, amp_slice);
+    gate_func2(t1, amp_slice);
+    t1[0] = 4;  t1[1] = 5; t1[2] = 6; t1[3] = 7;
+    gate_func2(t1, amp_slice);
+    t1[0] = 8;  t1[1] = 9; t1[2] = 10; t1[3] = 11;
+    gate_func2(t1, amp_slice);
+    t1[0] = 12;  t1[1] = 13; t1[2] = 14; t1[3] = 15;
+    gate_func2(t1, amp_slice);
     
 }
 
