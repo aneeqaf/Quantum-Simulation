@@ -124,9 +124,9 @@ ApplyMergedXYGate(const vector<Gate>& all_gates,
     }
     
     if (num_gates == 2)
-        Merge2XY12Gates(cluster[0], cluster[1], amp, amp_size, total_circuit_qubits);
+        Apply2MergedXY12Gates(cluster[0], cluster[1], amp, amp_size, total_circuit_qubits);
     else if (num_gates == 4)
-        Merge4XY12Gates(cluster, amp, amp_size, total_circuit_qubits);
+        Apply4MergedXY12Gates(cluster, amp, amp_size, total_circuit_qubits);
     
     global_factor_power += num_gates;
 }

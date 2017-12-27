@@ -15,6 +15,7 @@
 #include <stdio.h>
 
 #include "kernels.h"
+#include "kernels1.h"
 
 using namespace std;
 
