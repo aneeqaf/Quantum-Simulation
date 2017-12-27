@@ -72,13 +72,10 @@ ApplyBlockOfDiagGates(const vector<Gate>& cluster,
                       const int total_circuit_qubits,
                       idx_size& gate_i)
 {
-    valarray<idx_size> T_bitmask (2);
+    array<idx_size, 2> T_bitmask = {0};
     valarray<idx_size> CZ_bitmask (total_circuit_qubits);
 
     FormBlockOfCZTGates(gate_i, CZ_bitmask, T_bitmask, cluster, total_circuit_qubits);
-    
-    if (global_factor_power > 100)
-        Rescale();
    
     ApplyBlockOfCZTGates(amp, amp_size, total_circuit_qubits, CZ_bitmask, T_bitmask);
 }

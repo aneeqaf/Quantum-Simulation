@@ -8,7 +8,7 @@
 #include "simulation.h"
 
 SequentialSimulation::
-SequentialSimulation(): g_begin(0), g_end(0),
+SequentialSimulation(): g_begin(0), g_end(0), rescale_time(0),
                         num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0)
 {
     gate_time.resize(5, 0);
@@ -20,6 +20,7 @@ SequentialSimulation(const SequentialSimulation& rhs)
     gate_time = rhs.gate_time;
     g_begin = rhs.g_begin;
     g_end = rhs.g_end;
+    rescale_time = rhs.rescale_time;
     num_rescaling = rhs.num_rescaling;
     merged_X_Y = rhs.merged_X_Y;
     X = rhs.X;
@@ -48,14 +49,19 @@ Simulate(const string &outfile,
         
         g_begin = clock();
         
+        if (amp.GetGlobalFactorPower() > 100) {
+            clock_t r_b = clock();
+            amp.Rescale();
+            ++num_rescaling;
+            clock_t r_e = clock();
+            rescale_time += double(r_e - r_b)/ CLOCKS_PER_SEC;
+        }
+        
         Gate& current_gate = circuit.GetGateFromIndex(i);
         if(current_gate.ids.front() == Gate::Type::Control ||
            current_gate.ids.back() == Gate::Type::T) {
             
-            if (amp.GetGlobalFactorPower() > 100)
-                ++num_rescaling;
-            
-            if (current_gate.ids.back() == Gate::Type::T ||
+             if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
                 idx_size prev_i = i;
@@ -194,14 +200,13 @@ PrintReport(const clock_t end,
         cout << memory << " B \n";
     
     double total_time = double(end - begin) / CLOCKS_PER_SEC;
-    cout << "Total runtime : " << total_time << "s\n";
     cout << "Norm : " << amp.CalculateNormOfAmp() << "\n";
     cout << "Probabilities : " << amp.GetMinProb() << "(min), "
          << amp.GetMaxProb() << "(max), "
          << amp.GetAvgProb() << "(avg)\n";
-    cout << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
-    cout << "Rescaling passes : " << num_rescaling << "\n\n";
+    cout << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n\n" ;
     
+    cout << "Total runtime : " << total_time << "s\n";
     cout << "Runtimes by gate type\n";
     cout << "   H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
     << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
@@ -216,7 +221,9 @@ PrintReport(const clock_t end,
     << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
     
     cout << "   Merged X & Y (" << merged_X_Y << ") : " << gate_time[4]
-    << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";
+    << "s = " << (gate_time[4]/total_time) * 100 << "%\n";
+    cout << "Rescaling passes (" << num_rescaling << ") : " << rescale_time << "s = "
+    << (rescale_time/total_time) * 100 << "%\n\n";
 }
 
 void SequentialSimulation::
@@ -270,13 +277,11 @@ PrintReport(const string &outfile,
         file << memory << " B \n";
     
     double total_time = double(end - begin) / CLOCKS_PER_SEC;
-    file << "Total runtime : " << total_time << "s\n";
     file << "Norm : " << amp.CalculateNormOfAmp() << "\n";
     file << "Probabilities : " << amp.GetMinProb() << "(min), "
     << amp.GetMaxProb() << "(max), "
     << amp.GetAvgProb() << "(avg)\n";
-    file << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
-    file << "Rescaling passes : " << num_rescaling << "\n\n";
+    file << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n\n" ;
     
     file << "Runtimes by gate type\n";
     file << "   H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
@@ -292,7 +297,10 @@ PrintReport(const string &outfile,
     << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
     
     file << "   Merged X & Y (" << merged_X_Y << ") : " << gate_time[4]
-    << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";;
+    << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";
+    
+    file << "Total runtime : " << total_time << "s\n";
+    file << "Rescaling time (" << num_rescaling << ") : " << rescale_time << "s\n\n";
 }
 
 

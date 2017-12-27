@@ -9,6 +9,7 @@
 #define kernals_h
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <complex>
 #include <cstring>
@@ -46,7 +47,7 @@ constexpr cmplx ki = {0,1};
 enum TwoQGates : int {XX, XY, YX, YY};
 
 inline void
-ApplyXX12Gate(const idx_size* indices,
+ApplyXX12Gate(const array<idx_size, 4> indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
@@ -62,7 +63,7 @@ ApplyXX12Gate(const idx_size* indices,
 }
 
 inline void
-ApplyXY12Gate(const idx_size* indices,
+ApplyXY12Gate(const array<idx_size, 4> indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -74,7 +75,7 @@ ApplyXY12Gate(const idx_size* indices,
 }
 
 inline void
-ApplyYY12Gate(const idx_size* indices,
+ApplyYY12Gate(const array<idx_size, 4> indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -90,7 +91,7 @@ ApplyYY12Gate(const idx_size* indices,
 }
 
 inline void
-ApplyYX12Gate(const idx_size* indices,
+ApplyYX12Gate(const array<idx_size, 4> indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -107,13 +108,13 @@ ApplyYX12Gate(const idx_size* indices,
 
 template <typename function>
 inline void
-Apply4YX12Gate(cmplx* __restrict amp_slice,
+Apply4YX12Gate(cmplx*  __restrict amp_slice,
                const function& gate_func1,
                const function& gate_func2)
 {
     
-    idx_size temp_i1[4] = {0, 4, 8, 12};
-    idx_size temp_i2[4] = {0, 1, 2, 3};
+    array<idx_size, 4> temp_i1 ({0, 4, 8, 12});
+    array<idx_size, 4> temp_i2 ({0, 1, 2, 3});
     
     gate_func1(temp_i1, amp_slice);
     temp_i1[0] = 1;  temp_i1[1] = 5; temp_i1[2] = 9; temp_i1[3] = 13;
@@ -208,7 +209,7 @@ GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
              const vector<int>& gate_qubits);
 
 void
-GroupTGates(valarray<idx_size>& T_bitmasks,
+GroupTGates(array<idx_size, 2>& T_bitmasks,
             const int total_circuit_qubits,
             const vector<int>& gate_qubits);
 
@@ -222,7 +223,7 @@ ExtractIndicesForAmp(idx_size* strides,
 void
 FormBlockOfCZTGates(idx_size& gate_i,
                     valarray<idx_size>& CZ_bitmasks,
-                    valarray<idx_size>& T_bitmasks,
+                    array<idx_size, 2>& T_bitmasks,
                     const vector<Gate>& cluster,
                     const int total_circuit_qubits);
 
@@ -240,7 +241,7 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
                      const idx_size amp_size,
                      const int total_circuit_qubits,
                      const valarray<idx_size>& CZ_bitmasks,
-                     const valarray<idx_size>& T_bitmasks);
+                     const array<idx_size, 2>& T_bitmasks);
 //TODO: Test this
 void
 ApplyControlGate(cmplx* __restrict amp,

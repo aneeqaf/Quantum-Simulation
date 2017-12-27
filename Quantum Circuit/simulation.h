@@ -22,6 +22,7 @@ private:
     vector<double> gate_time;
     clock_t g_begin;
     clock_t g_end;
+    double rescale_time;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
     int num_rescaling;

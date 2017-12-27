@@ -5,7 +5,7 @@ CC = g++-7
 CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
 -fmodulo-sched-allow-regmoves -fsplit-ivs-in-unroller -ffast-math -fgcse-las \
 -DManualMerging
- # CFLAGS = -g3 -Wall -std=c++17 -mavx -mavx2 -msse2avx -DManualMerging
+# CFLAGS = -g3 -S -Wall -std=c++17 -mavx -mavx2 -msse2avx -DManualMerging
 
 .PHONY: default all clean
 
