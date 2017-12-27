@@ -48,11 +48,11 @@ inline void
 ApplyXX12Gate(const array<idx_size, 4> indices,
               cmplx* __restrict amp)
 {
-    cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
-    auto t = a[0] + a[3];
-    auto t1 = a[1] + a[2];
-    auto t2 = ki * (a[0] - a[3]);
-    auto t3 = ki * (a[1] - a[2]);
+    const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
+    const auto t = a[0] + a[3];
+    const auto t1 = a[1] + a[2];
+    const auto t2 = ki * (a[0] - a[3]);
+    const auto t3 = ki * (a[1] - a[2]);
 
     amp[indices[0]] = t1 + t2;
     amp[indices[1]] = t + t3;
@@ -64,12 +64,16 @@ inline void
 ApplyXY12Gate(const array<idx_size, 4> indices,
               cmplx* __restrict amp)
 {
-    cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    const auto t = a[0] - a[1];
+    const auto t1 = a[2] - a[3];
+    const auto t2 = a[0] + a[1];
+    const auto t3 = a[2] + a[3];
 
-    amp[indices[0]] = (ki * (a[0] - a[1])) + a[2] - a[3] ;
-    amp[indices[1]] = (ki * (a[0] + a[1])) + a[2] + a[3] ;
-    amp[indices[2]] = a[0] - a[1] + (ki * (a[2] - a[3]));
-    amp[indices[3]] = a[0] + a[1] + (ki * (a[2] + a[3]));
+    amp[indices[0]] = (ki * t) + t1;
+    amp[indices[1]] = (ki * t2) + t3;
+    amp[indices[2]] = t + (ki * t1);
+    amp[indices[3]] = t2 + (ki * t3);
 }
 
 inline void
