@@ -25,7 +25,6 @@
 #include <vector>
 #include <unistd.h>
 #include <utility>
-#include <immintrin.h>
 
 #include "AVXkernels.h"
 #include "matrix.h"
@@ -41,8 +40,6 @@ constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH},
     -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx ki = {0,1};
-
-enum TwoQGates : int {XX, XY, YX, YY};
 
 inline void
 ApplyXX12Gate(const array<idx_size, 4> indices,
@@ -136,18 +133,6 @@ Apply4YX12Gate(cmplx*  __restrict amp_slice,
     
 }
 
-
-inline valarray<idx_size>
-FindStrides (const vector<int>& gate_qubits,
-             const int num_q) {
-    
-    valarray<idx_size> strides(gate_qubits.size());
-    for (idx_size i = 0; i < strides.size(); ++i)
-        strides[i] = (1ull << ((num_q - 1) - gate_qubits[i]));
-    
-    return strides;
-}
-
 inline void
 ApplyGateOnAmps(const idx_size* indices,
                 const idx_size indices_size,
@@ -229,11 +214,6 @@ FormBlockOfCZTGates(idx_size& gate_i,
                     const vector<Gate>& cluster,
                     const int total_circuit_qubits);
 
-vector<int>
-FormBlockOfXYHGates(idx_size& gate_i,
-                    Gate::Type gate_type,
-                    const vector<Gate>& all_gates);
-
 void
 FormBlockOfXYHGates(vector<Gate>& cluster,
                     idx_size& gate_i,
@@ -244,14 +224,7 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
                      const int total_circuit_qubits,
                      const valarray<idx_size>& CZ_bitmasks,
                      const array<idx_size, 2>& T_bitmasks);
-//TODO: Test this
-void
-ApplyControlGate(cmplx* __restrict amp,
-                 const int num_controls,
-                 const vector<int>& gate_qubits,
-                 const int total_circuit_qubits,
-                 const Gate& g,
-                 const Gate::Type gate_type);
+
 void
 ApplyNonControl1QGates(cmplx* __restrict amp,
                        const idx_size amp_size,
@@ -260,48 +233,19 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const Gate& g,
                        const Gate::Type gate_type);
 
-template <typename function>
-void
-Apply4MergedXY12Gates(cmplx* __restrict amp,
-                       const idx_size amp_size,
-                      const int* gate_qubits,
-                      const int total_circuit_qubits,
-                      const function& gate_func1,
-                      const function& gate_func2);
-
 template<typename function>
 void
-Apply2MergedXY12Gates(cmplx* __restrict amp,
-                      const int* gate_qubits,
-                      const int total_circuit_qubits,
-                      const idx_size size,
-                      const function& gate_func);
+Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
+                            const int* gate_qubits,
+                            const int total_circuit_qubits,
+                            const idx_size size,
+                            const function& gate_func);
 
 void
-Merge2XY12Gates(Gate& gate1,
-                Gate& gate2,
-                cmplx* __restrict amp,
-                const idx_size amp_size,
-                const int total_circuit_qubits);
-void
-Merge4XY12Gates(vector<Gate>& cluster,
-                cmplx* __restrict amp,
-                const idx_size amp_size,
-                const int total_circuit_qubits);
-
-void
-ApplyManyXOnSlice(cmplx* __restrict amp,
-                  const idx_size num_qbits);
-
-void
-ApplyManyYOnSlice(cmplx* __restrict amp,
-                  const idx_size num_qbits);
-
-void
-ApplyFWHT(cmplx* __restrict amp,
-          const idx_size amp_size,
-          const vector<int>& qubits_in_cluster,
-          const int total_circuit_qubits,
-          const Gate::Type gate_type);
+Apply2MergedXY12Gates(Gate& gate1,
+                      Gate& gate2,
+                      cmplx* __restrict amp,
+                      const idx_size amp_size,
+                      const int total_circuit_qubits);
 
 #endif /* kernals_h */
