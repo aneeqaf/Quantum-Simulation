@@ -5,8 +5,8 @@
 //  Created by Aneeqa Fatima on 12/22/17.
 //
 
-#ifndef AVXkernels_h
-#define AVXkernels_h
+#ifndef kernelsAVX_h
+#define kernelsAVX_h
 
 #include <complex>
 #include <immintrin.h>
@@ -168,4 +168,4 @@ ApplyAVXYX12Gate(const idx_size* indices,
 }
 
 
-#endif /* AVXkernels_h */
+#endif /* kernelsAVX_h */

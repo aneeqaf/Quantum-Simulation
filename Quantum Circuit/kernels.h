@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <utility>
 
-#include "AVXkernels.h"
+#include "kernelsAVX.h"
 #include "matrix.h"
 #include "gates.h"
 
