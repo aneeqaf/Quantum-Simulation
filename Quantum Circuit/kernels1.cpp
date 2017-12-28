@@ -10,7 +10,7 @@
 
 vector<int>
 FormBlockOfXYHGates(idx_size& gate_i,
-                    Gate::Type gate_type,
+                    const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
     vector<int> qubits_in_cluster;
@@ -56,7 +56,7 @@ ApplyControlGate(cmplx* __restrict amp,
                 
                 for (idx_size i = 0; i < num_indices; ++i)
                     temp_indices[i] = indices[i] + idx;
-                ApplyGateOnAmps(temp_indices, num_indices, gate_type, g, amp);
+                ApplyGateOnAmps(amp, temp_indices, num_indices, gate_type, g);
                 
                 ++idx;
             }
@@ -74,8 +74,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
                       const idx_size amp_size,
                       const int* gate_qubits,
                       const int total_circuit_qubits,
-                      const function& gate_func1,
-                      const function& gate_func2)
+                      const function& gate_func)
 {
     idx_size gate_bitmask = 0, iter_count = 0;
     constexpr idx_size num_bits = 4;
@@ -85,7 +84,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
     constexpr idx_size num_indices = 16;
     array<idx_size, num_indices> indices;
     ExtractIndicesForAmp(indices.data(), gate_qubits, num_bits ,total_circuit_qubits);
-    array<cmplx, num_indices> amp_slice;
+    array<idx_size, num_indices> temp_indices;
     
     idx_size idx = 0;
     while(iter_count < (amp_size/num_indices)) {
@@ -93,12 +92,9 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
             ++iter_count;
             
             for (idx_size i = 0; i < num_indices; ++i)
-                amp_slice[i] = amp[indices[i] + idx];
+                temp_indices[i] = indices[i] + idx;
             
-            Apply4YX12Gate(amp_slice.data(), gate_func1, gate_func2);
-            
-            for (idx_size i = 0; i < num_indices; ++i)
-                amp[indices[i] + idx] = amp_slice[i];
+            gate_func(amp, temp_indices);
             
             ++idx;
         }
@@ -114,33 +110,17 @@ Apply4MergedXY12Gates(vector<Gate>& cluster,
                 const int total_circuit_qubits)
 {
     int block_qubits[4];
-    function<void (const array<idx_size, 4>& , cmplx*)> gate_app_funcs[2];
     
-    int q = 0;
-    for (idx_size i = 0; i < 4; i+=2) {
-        
+    for (idx_size i = 0; i < 4; ++i)
         block_qubits[i] = cluster[i].qubits.back();
-        block_qubits[i + 1] = cluster[i + 1].qubits.back();
-        
-        Gate::Type g1t = (Gate::Type)cluster[i].ids.back();
-        Gate::Type g2t = (Gate::Type)cluster[i + 1].ids.back();
-        
-        if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
-            gate_app_funcs[q++] = ApplyXX12Gate;
-        
-        else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
-            gate_app_funcs[q++] = ApplyXY12Gate;
-        
-        else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
-            gate_app_funcs[q++] =  ApplyYY12Gate;
-        
-        
-        else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
-            gate_app_funcs[q++] = ApplyYX12Gate;
-        
-    }
     
-    Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, gate_app_funcs[0], gate_app_funcs[1]);
+    Gate::Type g1t = (Gate::Type)cluster[0].ids.back();
+    
+    if(g1t == Gate::Type::X_1_2)
+        Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, Apply4X12Gate);
+    
+    else if(g1t == Gate::Type::Y_1_2)
+        Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, Apply4Y12Gate);
 }
 
 void

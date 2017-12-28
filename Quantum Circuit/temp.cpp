@@ -24,69 +24,70 @@ using idx_size = size_t;
 
 constexpr cmplx ki = {0,1};
 
-static void
-ApplyXX12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+__attribute__((always_inline)) inline void
+ApplyXX12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
     const auto t = a[0] + a[3];
     const auto t1 = a[1] + a[2];
     const auto t2 = ki * (a[0] - a[3]);
     const auto t3 = ki * (a[1] - a[2]);
-    
+
     amp[indices[0]] = t1 + t2;
     amp[indices[1]] = t + t3;
     amp[indices[2]] = t - t3;
     amp[indices[3]] = t1 - t2;
 }
 
-static void
-ApplyXY12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+__attribute__((always_inline)) inline void
+ApplyXY12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     const auto t = a[0] - a[1];
     const auto t1 = a[2] - a[3];
     const auto t2 = a[0] + a[1];
     const auto t3 = a[2] + a[3];
-    
+
     amp[indices[0]] = (ki * t) + t1;
     amp[indices[1]] = (ki * t2) + t3;
     amp[indices[2]] = t + (ki * t1);
     amp[indices[3]] = t2 + (ki * t3);
 }
 
-static void
-ApplyYY12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+__attribute__((always_inline)) inline void
+ApplyYY12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     auto t = ki * (a[0] + a[3]);
     auto t1 = ki * (a[0] - a[3]);
     auto t2 = ki * (a[1] + a[2]);
     auto t3 = ki * (a[1] - a[2]);
-    
+
     amp[indices[0]] = t - t2;
     amp[indices[1]] = t1 + t3;
     amp[indices[2]] = t1 - t3;
     amp[indices[3]] = t + t2;
 }
 
-static void
-ApplyYX12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+__attribute__((always_inline)) inline void
+ApplyYX12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    auto t = cmplx(-imag(a[0]), real(a[0])) + a[1];
-    auto t1 = a[0] + cmplx(-imag(a[1]), real(a[1]));
-    auto t2 = cmplx(-imag(a[2]), real(a[2])) + a[3];
-    auto t3 = a[2] + cmplx(-imag(a[3]), real(a[3]));
+    auto t = (ki * a[0]) + a[1];
+    auto t1 = a[0] + (ki * a[1]);
+    auto t2 = (ki * a[2]) + a[3];
+    auto t3 = a[2] + (ki * a[3]);
     
     amp[indices[0]] = t - t2;
     amp[indices[1]] = t1 - t3;
     amp[indices[2]] = t + t2;
     amp[indices[3]] = t1 + t3;
 }
+
 
 void
 ExtractIndicesForAmp(idx_size* strides,
@@ -111,33 +112,34 @@ ExtractIndicesForAmp(idx_size* strides,
     }
 }
 
-template <typename function>
-static void
-Apply4YX12Gate(cmplx*  __restrict amp_slice,
-               const function& gate_func1,
-               const function& gate_func2)
+__attribute__((always_inline)) inline void
+Apply4X12Gate(cmplx* __restrict amp,
+              const array<idx_size, 16> indices)
 {
-    
-    array<idx_size, 4> t ({0, 4, 8, 12});
-    array<idx_size, 4> t1 ({0, 1, 2, 3});
-    
-    gate_func1(t, amp_slice);
-    t[0] = 1;  t[1] = 5; t[2] = 9; t[3] = 13;
-    gate_func1(t, amp_slice);
-    t[0] = 2;  t[1] = 6; t[2] = 10; t[3] = 14;
-    gate_func1(t, amp_slice);
-    t[0] = 3;  t[1] = 7; t[2] = 11; t[3] = 15;
-    gate_func1(t, amp_slice);
-    
-    gate_func2(t1, amp_slice);
-    t1[0] = 4;  t1[1] = 5; t1[2] = 6; t1[3] = 7;
-    gate_func2(t1, amp_slice);
-    t1[0] = 8;  t1[1] = 9; t1[2] = 10; t1[3] = 11;
-    gate_func2(t1, amp_slice);
-    t1[0] = 12;  t1[1] = 13; t1[2] = 14; t1[3] = 15;
-    gate_func2(t1, amp_slice);
-    
+    ApplyXX12Gate( amp, {indices[0], indices[4], indices[8], indices[12]});
+    ApplyXX12Gate( amp, {indices[1], indices[5], indices[9], indices[13]});
+    ApplyXX12Gate( amp, {indices[2], indices[6], indices[10], indices[14]});
+    ApplyXX12Gate( amp, {indices[3], indices[7], indices[11], indices[15]});
+    ApplyXX12Gate( amp, {indices[0], indices[1], indices[2], indices[3]});
+    ApplyXX12Gate( amp, {indices[4], indices[5], indices[6], indices[7]});
+    ApplyXX12Gate( amp, {indices[8], indices[9], indices[10], indices[11]});
+    ApplyXX12Gate( amp, {indices[12], indices[13], indices[14], indices[15]});
 }
+
+__attribute__((always_inline)) inline void
+Apply4Y12Gate(cmplx* __restrict amp,
+              const array<idx_size, 16> indices)
+{
+    ApplyYY12Gate( amp, {indices[0], indices[4], indices[8], indices[12]});
+    ApplyYY12Gate( amp, {indices[1], indices[5], indices[9], indices[13]});
+    ApplyYY12Gate( amp, {indices[2], indices[6], indices[10], indices[14]});
+    ApplyYY12Gate( amp, {indices[3], indices[7], indices[11], indices[15]});
+    ApplyYY12Gate( amp, {indices[0], indices[1], indices[2], indices[3]});
+    ApplyYY12Gate( amp, {indices[4], indices[5], indices[6], indices[7]});
+    ApplyYY12Gate( amp, {indices[8], indices[9], indices[10], indices[11]});
+    ApplyYY12Gate( amp, {indices[12], indices[13], indices[14], indices[15]});
+}
+
 
 template<typename function>
 void
@@ -165,7 +167,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            gate_func(temp_indices, amp);
+            gate_func(amp , temp_indices);
             
             ++idx;
         }
@@ -202,11 +204,10 @@ Apply2MergedXY12Gates(Gate& gate1,
 template <typename function>
 void
 Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
-                            const idx_size amp_size,
-                            const int* gate_qubits,
-                            const int total_circuit_qubits,
-                            const function& gate_func1,
-                            const function& gate_func2)
+                      const idx_size amp_size,
+                      const int* gate_qubits,
+                      const int total_circuit_qubits,
+                      const function& gate_func)
 {
     idx_size gate_bitmask = 0, iter_count = 0;
     constexpr idx_size num_bits = 4;
@@ -216,7 +217,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
     constexpr idx_size num_indices = 16;
     array<idx_size, num_indices> indices;
     ExtractIndicesForAmp(indices.data(), gate_qubits, num_bits ,total_circuit_qubits);
-    array<cmplx, num_indices> amp_slice;
+    array<idx_size, num_indices> temp_indices;
     
     idx_size idx = 0;
     while(iter_count < (amp_size/num_indices)) {
@@ -224,12 +225,9 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
             ++iter_count;
             
             for (idx_size i = 0; i < num_indices; ++i)
-                amp_slice[i] = amp[indices[i] + idx];
+                temp_indices[i] = indices[i] + idx;
             
-            Apply4YX12Gate(amp_slice.data(), gate_func1, gate_func2);
-            
-            for (idx_size i = 0; i < num_indices; ++i)
-                amp[indices[i] + idx] = amp_slice[i];
+            gate_func(amp, temp_indices);
             
             ++idx;
         }
@@ -240,37 +238,21 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
 
 void
 Apply4MergedXY12Gates(vector<Gate>& cluster,
-                      cmplx* __restrict amp,
-                      const idx_size amp_size,
-                      const int total_circuit_qubits)
+                cmplx* __restrict amp,
+                const idx_size amp_size,
+                const int total_circuit_qubits)
 {
     int block_qubits[4];
-    function<void (const array<idx_size, 4>& , cmplx*)> gate_app_funcs[2];
     
-    int q = 0;
-    for (idx_size i = 0; i < 4; i+=2) {
-        
+    for (idx_size i = 0; i < 4; ++i)
         block_qubits[i] = cluster[i].qubits.back();
-        block_qubits[i + 1] = cluster[i + 1].qubits.back();
-        
-        Gate::Type g1t = (Gate::Type)cluster[i].ids.back();
-        Gate::Type g2t = (Gate::Type)cluster[i + 1].ids.back();
-        
-        if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
-            gate_app_funcs[q++] = ApplyXX12Gate;
-        
-        else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
-            gate_app_funcs[q++] = ApplyXY12Gate;
-        
-        else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
-            gate_app_funcs[q++] =  ApplyYY12Gate;
-        
-        
-        else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
-            gate_app_funcs[q++] = ApplyYX12Gate;
-        
-    }
     
-    Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, gate_app_funcs[0], gate_app_funcs[1]);
+    Gate::Type g1t = (Gate::Type)cluster[0].ids.back();
+    
+    if(g1t == Gate::Type::X_1_2)
+        Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, Apply4X12Gate);
+    
+    else if(g1t == Gate::Type::Y_1_2)
+        Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, Apply4Y12Gate);
 }
 

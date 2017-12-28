@@ -93,14 +93,30 @@ FormBlockOfCZTGates(idx_size& gate_i,
 void
 FormBlockOfXYHGates(vector<Gate>& cluster,
                     idx_size& gate_i,
+                    const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
-    for(;gate_i < all_gates.size() && cluster.size() < 3; ++gate_i) {
+    for(;gate_i < all_gates.size() && cluster.size() < 4; ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
-        if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
+        if(gt.ids.back() == gate_type)
             cluster.push_back(all_gates[gate_i]);
-        else break;
+        else if (gt.ids.back() == Gate::Type::Y_1_2 || gt.ids.back() == Gate::Type::X_1_2){
+            if (cluster.size() > 2) {
+                --gate_i;
+                cluster.pop_back();
+            }
+            else if (cluster.size() < 2)
+                cluster.push_back(all_gates[gate_i++]);
+            break;
+        }
+        else {
+            if (cluster.size() % 2 == 1) {
+                --gate_i;
+                cluster.pop_back();
+            }
+            break;
+        }
     }
 }
 
@@ -161,7 +177,7 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            ApplyGateOnAmps(temp_indices.data(), num_indices, gate_type, g, amp);
+            ApplyGateOnAmps(amp, temp_indices.data(), num_indices, gate_type, g);
             
             ++idx;
         }
@@ -197,7 +213,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            gate_func(temp_indices, amp);
+            gate_func(amp, temp_indices);
             
             ++idx;
         }
