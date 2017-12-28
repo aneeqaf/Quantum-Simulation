@@ -13,12 +13,9 @@ State::
 State(int qubits): global_factor_power(0)
 {
     amp_size = 1ull << qubits;
-    
-#ifndef __APPLE__
-    amp = static_cast<cmplx*>(aligned_alloc(64, sizeof(cmplx) * amp_size));
-#else
-    amp = new cmplx[amp_size];
-#endif
+    posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
+    amp = static_cast<cmplx*>(amp);
+
 //    amp = new cmplx[amp_size];
     memset(amp, 0, amp_size * sizeof(amp));
     amp[0] = 1;
@@ -27,11 +24,9 @@ State(int qubits): global_factor_power(0)
 State::
 State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0)
 {
-#ifndef __APPLE__
-    amp = static_cast<cmplx*>(aligned_alloc(64, sizeof(cmplx) * size));
-#else
-    amp = new cmplx[size];
-#endif
+    posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
+    amp = static_cast<cmplx*>(amp);
+
 //    amp = new cmplx[size];
     for (idx_size i = 0; i < size; ++i)
         amp[i] = a[i];
@@ -39,15 +34,12 @@ State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0)
 
 State::State(const State& rhs)
 {
-#ifndef __APPLE__
-    amp = static_cast<cmplx*>(aligned_alloc(64, sizeof(cmplx) * rhs.GetAmpSize()));
-#else
-    amp = new cmplx[rhs.GetAmpSize()];
-#endif
+    amp_size = rhs.GetAmpSize();
+    posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
+    amp = static_cast<cmplx*>(amp);
 //     amp = new cmplx[rhs.GetAmpSize()];
     for (idx_size i = 0; i < rhs.GetAmpSize(); ++i)
         amp[i] = rhs.amp[i];
-    amp_size = rhs.GetAmpSize();
     global_factor_power = rhs.global_factor_power;
 }
 
@@ -232,8 +224,7 @@ ResetGlobalFactorPower()
 void State::
 Rescale()
 {
-    cmplx rescaling_factor(0,0);
-    rescaling_factor = cmplx(1.0)/cmplx(pow(2,(global_factor_power/2)));
+    cmplx rescaling_factor = 1.0/pow(2,(global_factor_power/2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
     global_factor_power = 0;

@@ -166,6 +166,58 @@ PrintReport(const clock_t end,
         cout << h;
     }
     cout << "\n";
+#ifdef CPUname
+    cout << "CPU name : ";
+    if (__builtin_cpu_is("amd")) {
+        cout << "AMD ";
+        if (__builtin_cpu_is("amdfam10h"))
+            cout << "Family 10h\n";
+        else if (__builtin_cpu_is("barcelona"))
+            cout << "Family 10h Barcelona\n";
+        else if (__builtin_cpu_is("shanghai"))
+            cout << "Family 10h Shanghai\n";
+        else if (__builtin_cpu_is("istanbul"))
+            cout << "Family 10h Istanbul\n";
+        else if (__builtin_cpu_is("btver1"))
+            cout << "Family 14h\n";
+        else if (__builtin_cpu_is("amdfam15h"))
+            cout << "Family 15h\n";
+        else if (__builtin_cpu_is("bdver1"))
+            cout << "Family 15h Bulldozer version 1\n";
+        else if (__builtin_cpu_is("bdver2"))
+            cout << "Family 15h Bulldozer version 2\n";
+        else if (__builtin_cpu_is("bdver3"))
+            cout << "Family 15h Bulldozer version 3\n";
+        else if (__builtin_cpu_is("btver2"))
+            cout << "Family 16h\n";
+        else
+            cout << "\n";
+    }
+    else if (__builtin_cpu_is("intel")) {
+        cout << "Intel ";
+        
+        if (__builtin_cpu_is("corei7"))
+            cout << "Core i7\n";
+        else if (__builtin_cpu_is("atom"))
+            cout << "Atom\n";
+        else if (__builtin_cpu_is("core2"))
+            cout << "Core 2\n";
+        else if (__builtin_cpu_is("nehalem"))
+            cout << "Core i7 Nehalem\n";
+        else if (__builtin_cpu_is("westmere"))
+            cout << "Core i7 Westmere\n";
+        else if (__builtin_cpu_is("sandybridge"))
+            cout << "Core i7 Sandy Bridge\n";
+        else
+            cout << "\n";
+    }
+    else
+        cout << "Unrecognized\n";
+#endif
+    cout << "CPU supports :"
+    << " popcnt:" << __builtin_cpu_supports("popcnt")
+    << ", avx:" << __builtin_cpu_supports("avx")
+    << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
     cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
     <<  __GNUC_PATCHLEVEL__<< "\n";
     cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
