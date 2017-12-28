@@ -95,7 +95,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     idx_size& gate_i,
                     const vector<Gate>& all_gates)
 {
-    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
+    for(;gate_i < all_gates.size() && cluster.size() < 3; ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
         if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
@@ -115,6 +115,7 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
     idx_size prev_gc = 0;
     
     bool negate_Z = false;
+    amp = (cmplx*)__builtin_assume_aligned(amp, 64);
     for (idx_size count = 0; count < amp_size ; ++count) {
         
         const idx_size gc = count ^ (count >> 1);
@@ -152,6 +153,7 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
     const array<idx_size, num_indices> indices = {0, 1ull << ((total_circuit_qubits - 1) - q)};
     array<idx_size, num_indices> temp_indices;
     
+    amp = (cmplx*)__builtin_assume_aligned(amp, 64);
     while(iter_count < (amp_size/num_indices)) {
         if ((idx & gate_bitmask) == 0) {
             ++iter_count;
@@ -187,6 +189,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
     array<idx_size, num_indices> temp_indices;
     
     idx_size idx = 0;
+    amp = (cmplx*)__builtin_assume_aligned(amp, 64);
     while(iter_count < (size/num_indices)) {
         if ((idx & gate_bitmask) == 0) {
             ++iter_count;

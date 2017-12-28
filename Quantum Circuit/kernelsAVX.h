@@ -22,7 +22,7 @@ static const __m256 kM256Neg = _mm256_setr_ps(1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1
 static const __m128 kM128CmplxNeg = _mm_setr_ps(1.0, -1.0, 1.0, -1.0);
 
 inline void
-ApplyAVXXX12Gate(const idx_size* indices,
+ApplyXX12GateAVX(const idx_size* indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
@@ -63,7 +63,7 @@ ApplyAVXXX12Gate(const idx_size* indices,
 }
 
 inline void
-ApplyAVXXY12Gate(const idx_size* indices,
+ApplyXY12GateAVX(const idx_size* indices,
               cmplx* __restrict amp)
 {
 //    cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -120,7 +120,7 @@ ApplyAVXXY12Gate(const idx_size* indices,
 }
 
 inline void
-ApplyAVXYY12Gate(const idx_size* indices,
+ApplyYY12GateAVX(const idx_size* indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -148,7 +148,7 @@ ApplyAVXYY12Gate(const idx_size* indices,
 }
 
 inline void
-ApplyAVXYX12Gate(const idx_size* indices,
+ApplyYX12GateAVX(const idx_size* indices,
               cmplx* __restrict amp)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
