@@ -45,8 +45,8 @@ constexpr cmplx ki = {0,1};
 
 
 __attribute__((always_inline)) inline void
-ApplyXX12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+ApplyXX12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
     const auto t = a[0] + a[3];
@@ -61,8 +61,8 @@ ApplyXX12Gate(const array<idx_size, 4> indices,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXY12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+ApplyXY12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     const auto t = a[0] - a[1];
@@ -77,8 +77,8 @@ ApplyXY12Gate(const array<idx_size, 4> indices,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYY12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+ApplyYY12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     auto t = ki * (a[0] + a[3]);
@@ -93,8 +93,8 @@ ApplyYY12Gate(const array<idx_size, 4> indices,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYX12Gate(const array<idx_size, 4> indices,
-              cmplx* __restrict amp)
+ApplyYX12Gate(cmplx* __restrict amp,
+              const array<idx_size, 4> indices)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     auto t = (ki * a[0]) + a[1];
@@ -108,29 +108,12 @@ ApplyYX12Gate(const array<idx_size, 4> indices,
     amp[indices[3]] = t1 + t3;
 }
 
-template <typename function>
-__attribute__((always_inline)) inline void
-Apply4YX12Gate(cmplx*  __restrict amp_slice,
-               const function& gate_func1,
-               const function& gate_func2)
-{
-    gate_func1({0, 4, 8, 12}, amp_slice);
-    gate_func1({1, 5, 9, 13}, amp_slice);
-    gate_func1({2, 6, 10, 14}, amp_slice);
-    gate_func1({3, 7, 11, 15}, amp_slice);
-    
-    gate_func2({0, 1, 2, 3}, amp_slice);
-    gate_func2({4, 5, 6, 7}, amp_slice);
-    gate_func2({8, 9, 10, 11}, amp_slice);
-    gate_func2({12, 13, 14, 15}, amp_slice);
-}
-
 inline void
-ApplyGateOnAmps(const idx_size* indices,
+ApplyGateOnAmps(cmplx* __restrict amp,
+                const idx_size* indices,
                 const idx_size indices_size,
                 const Gate::Type gate_type,
-                const Gate& q_gate,
-                cmplx* __restrict amp)
+                const Gate& q_gate)
 {
     cmplx temp_amp[indices_size];
     for (idx_size i = 0; i < indices_size; ++i)
@@ -209,6 +192,7 @@ FormBlockOfCZTGates(idx_size& gate_i,
 void
 FormBlockOfXYHGates(vector<Gate>& cluster,
                     idx_size& gate_i,
+                    const Gate::Type gate_type,
                     const vector<Gate>& all_gates);
 void
 ApplyBlockOfCZTGates(cmplx* __restrict amp,

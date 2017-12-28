@@ -12,6 +12,33 @@
 
 using namespace std;
 
+__attribute__((always_inline)) inline void
+Apply4X12Gate(cmplx* __restrict amp,
+              const array<idx_size, 16> indices)
+{
+    ApplyXX12Gate( amp, {indices[0], indices[4], indices[8], indices[12]});
+    ApplyXX12Gate( amp, {indices[1], indices[5], indices[9], indices[13]});
+    ApplyXX12Gate( amp, {indices[2], indices[6], indices[10], indices[14]});
+    ApplyXX12Gate( amp, {indices[3], indices[7], indices[11], indices[15]});
+    ApplyXX12Gate( amp, {indices[0], indices[1], indices[2], indices[3]});
+    ApplyXX12Gate( amp, {indices[4], indices[5], indices[6], indices[7]});
+    ApplyXX12Gate( amp, {indices[8], indices[9], indices[10], indices[11]});
+    ApplyXX12Gate( amp, {indices[12], indices[13], indices[14], indices[15]});
+}
+
+__attribute__((always_inline)) inline void
+Apply4Y12Gate(cmplx* __restrict amp,
+              const array<idx_size, 16> indices)
+{
+    ApplyYY12Gate( amp, {indices[0], indices[4], indices[8], indices[12]});
+    ApplyYY12Gate( amp, {indices[1], indices[5], indices[9], indices[13]});
+    ApplyYY12Gate( amp, {indices[2], indices[6], indices[10], indices[14]});
+    ApplyYY12Gate( amp, {indices[3], indices[7], indices[11], indices[15]});
+    ApplyYY12Gate( amp, {indices[0], indices[1], indices[2], indices[3]});
+    ApplyYY12Gate( amp, {indices[4], indices[5], indices[6], indices[7]});
+    ApplyYY12Gate( amp, {indices[8], indices[9], indices[10], indices[11]});
+    ApplyYY12Gate( amp, {indices[12], indices[13], indices[14], indices[15]});
+}
 
 inline valarray<idx_size>
 FindStrides (const vector<int>& gate_qubits,
@@ -26,7 +53,7 @@ FindStrides (const vector<int>& gate_qubits,
 
 vector<int>
 FormBlockOfXYHGates(idx_size& gate_i,
-                    Gate::Type gate_type,
+                    const Gate::Type gate_type,
                     const vector<Gate>& all_gates);
 
 //TODO: Test this
@@ -44,8 +71,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
                             const idx_size amp_size,
                             const int* gate_qubits,
                             const int total_circuit_qubits,
-                            const function& gate_func1,
-                            const function& gate_func2);
+                            const function& gate_func);
 
 void
 Apply4MergedXY12Gates(vector<Gate>& cluster,
