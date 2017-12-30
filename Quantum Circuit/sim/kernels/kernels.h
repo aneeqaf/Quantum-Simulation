@@ -29,7 +29,6 @@
 #include <utility>
 
 #include "kernelsAVX.h"
-#include "matrix.h"
 #include "gates.h"
 
 using namespace std;
@@ -208,14 +207,6 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const int total_circuit_qubits,
                        const Gate& g,
                        const Gate::Type gate_type);
-
-template<typename function>
-void
-Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
-                            const int* gate_qubits,
-                            const int total_circuit_qubits,
-                            const idx_size size,
-                            const function& gate_func);
 
 void
 Apply2MergedXY12Gates(Gate& gate1,

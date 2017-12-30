@@ -13,13 +13,12 @@
 #include <sstream>
 #include <fstream>
 #include <getopt.h>
-#include "simulation.h"
-
+#include "../sim/simulation.h"
 
 using namespace std;
 
-int main(int argc, char *argv[]) {
-    
+int main(int argc, char *argv[])
+{    
 #ifdef __APPLE__
     if (getenv("STDIN")) {
         if (!freopen(getenv("STDIN"), "r", stdin)) {
@@ -120,17 +119,17 @@ int main(int argc, char *argv[]) {
         idx_size size = 0;
         //write a function for printing google files.
         if (inputfile) {
-            cir.ReadCustomInputFiles("input/" + input_filename, amp_v, size);
-            cir.CreateQuiddProScript("qpro_scripts/" + out_file + ".qpro");
+            cir.ReadCustomInputFiles("input/random_circuits_aneeqa/" + input_filename, amp_v, size);
+            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
             State amp(amp_v, size);
-            sim.Simulate("probabilities/" + out_file, amp, cir);
+            sim.Simulate("output/probabilities/" + out_file, amp, cir);
             delete [] amp_v;
             amp_v = nullptr;
         }
         else {
-            cir.ReadGoogleCircuitFile(input_filename, 26);
+            cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, 26);
             State amp(cir.GetNumQubits());
-            sim.Simulate("probabilities/" + out_file, amp, cir);
+            sim.Simulate("output/probabilities/" + out_file, amp, cir);
         }
     }
     else if(create) {
@@ -139,12 +138,12 @@ int main(int argc, char *argv[]) {
             
             State amp(cir.GetNumQubits());
             if(to_write && num_qubits[0] <= 20) {
-                cir.WriteGeneratedCircuitFile("input/" + out_file + to_string(i) + ".txt",
+                cir.WriteGeneratedCircuitFile("input/random_circuits_aneeqa/" + out_file + to_string(i) + ".txt",
                                               amp.GetAmp(), cir.GetNumQubits());
-                cir.CreateQuiddProScript("qpro_scripts/" + out_file + to_string(i) + ".qpro");
+                cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
             
-            sim.Simulate("probabilities/" + out_file, amp, cir);
+            sim.Simulate("output/probabilities/" + out_file, amp, cir);
         }
     }
     return 0;

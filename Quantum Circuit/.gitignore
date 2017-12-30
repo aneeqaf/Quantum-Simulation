@@ -6,12 +6,8 @@ qp-3.8-i386.tar.gz
 .DS_Store 
 ../.DS_Store 
 env/
-random_circuits_examples/
 input/
-qpro_scripts/
-state/
-probabilities/
-simulation_stats/
+output/
 sftp-config.json
 ../Quantum\ Circuit.xcodeproj/
 *.txt

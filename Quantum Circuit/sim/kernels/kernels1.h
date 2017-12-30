@@ -65,14 +65,6 @@ ApplyControlGate(cmplx* __restrict amp,
                  const Gate& g,
                  const Gate::Type gate_type);
 
-template <typename function>
-void
-Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
-                            const idx_size amp_size,
-                            const int* gate_qubits,
-                            const int total_circuit_qubits,
-                            const function& gate_func);
-
 void
 Apply4MergedXY12Gates(vector<Gate>& cluster,
                       cmplx* __restrict amp,
