@@ -16,14 +16,12 @@ using namespace std;
 
 int main(int argc, char *argv[]) 
 {
-    if (argc < 3)
+    if (argc < 2)
         throw "Please specify number of qubits";
     
     const string s_num_qubits(argv[1]);
-    const string s_num_gates(argv[2]);
     const int num_qubits = stoi(s_num_qubits);
-    const int num_gates = stoi(s_num_gates);
-    
+   
     if (num_qubits < 10) 
         throw "Number of qubits should be greater than or equal to 10";
     
@@ -31,13 +29,12 @@ int main(int argc, char *argv[])
     
     cmplx* amp;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
-    amp = static_cast<cmplx*>(amp);
     memset(amp, 0, amp_size * sizeof(amp));
     amp[0] = 1;
     
     cout << "Benchmarking results for " + s_num_qubits + " qubits circuit:\n";
-    Apply2MergedGatesBM(amp, amp_size, num_qubits, num_gates);
-    Apply4MergedGatesBM(amp, amp_size, num_qubits, num_gates);
+    Apply2MergedGatesBM(amp, amp_size, num_qubits);
+    Apply4MergedGatesBM(amp, amp_size, num_qubits);
     
     return 0;
 }
