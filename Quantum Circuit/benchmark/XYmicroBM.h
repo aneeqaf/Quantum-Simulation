@@ -23,12 +23,10 @@ using idx_size = size_t;
 
 void Apply2MergedGatesBM(cmplx* __restrict amp,
                          const idx_size amp_size,
-                         const int total_circuit_qubits,
-                         const int total_gates);
+                         const int total_circuit_qubits);
 
 void Apply4MergedGatesBM(cmplx* __restrict amp,
                          const idx_size amp_size,
-                         const int total_circuit_qubits,
-                         const int total_gates);
+                         const int total_circuit_qubits);
 
 #endif /* XYmicroBM_h */

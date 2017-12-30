@@ -79,11 +79,11 @@ __attribute__((always_inline)) inline void
 ApplyYY12Gate(cmplx* __restrict amp,
               const array<idx_size, 4> indices)
 {
-    cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    auto t = ki * (a[0] + a[3]);
-    auto t1 = ki * (a[0] - a[3]);
-    auto t2 = ki * (a[1] + a[2]);
-    auto t3 = ki * (a[1] - a[2]);
+    const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    const auto t = ki * (a[0] + a[3]);
+    const auto t1 = ki * (a[0] - a[3]);
+    const auto t2 = ki * (a[1] + a[2]);
+    const auto t3 = ki * (a[1] - a[2]);
 
     amp[indices[0]] = t - t2;
     amp[indices[1]] = t1 + t3;
@@ -95,11 +95,11 @@ __attribute__((always_inline)) inline void
 ApplyYX12Gate(cmplx* __restrict amp,
               const array<idx_size, 4> indices)
 {
-    cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    auto t = (ki * a[0]) + a[1];
-    auto t1 = a[0] + (ki * a[1]);
-    auto t2 = (ki * a[2]) + a[3];
-    auto t3 = a[2] + (ki * a[3]);
+    const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    const auto t = (ki * a[0]) + a[1];
+    const auto t1 = a[0] + (ki * a[1]);
+    const auto t2 = (ki * a[2]) + a[3];
+    const auto t3 = a[2] + (ki * a[3]);
     
     amp[indices[0]] = t - t2;
     amp[indices[1]] = t1 - t3;
