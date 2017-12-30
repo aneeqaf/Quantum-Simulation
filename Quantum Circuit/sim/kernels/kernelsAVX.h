@@ -21,50 +21,50 @@ static const __m256 kM256CmplxNeg2 = _mm256_setr_ps(1.0, -1.0, 1.0, -1.0, 1.0, -
 static const __m256 kM256Neg = _mm256_setr_ps(1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0);
 static const __m128 kM128CmplxNeg = _mm_setr_ps(1.0, -1.0, 1.0, -1.0);
 
-inline void
-ApplyXX12GateAVX(const idx_size* indices,
-              cmplx* __restrict amp)
+__attribute__((always_inline)) inline void
+ApplyXX12GateAVX(cmplx* __restrict amp,
+                 const array<idx_size, 4> indices)
 {
-    cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
-    __m128 a0 = _mm_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]));
-    __m128 a1 = _mm_setr_ps(real(a[3]), imag(a[3]), real(a[2]), imag(a[2]));
-    __m128 t = _mm_add_ps(a0, a1);
-    __m128 t1 = _mm_sub_ps(a0, a1);
-    t1 = _mm_permute_ps(t1, 0x5);
-    t1 = _mm_mul_ps(t1, kM128CmplxNeg);
-    t = _mm_permute_ps(t, 0b10110001);
-    
-    __m128 val1 = _mm_add_ps(t, t1);
-    __m128 val2 = _mm_sub_ps(t, t1);
-    float* t_amp1 = (float*)&val1;
-    float* t_amp2 = (float*)&val2;
-    
-    amp[indices[0]] = cmplx(t_amp1[0], t_amp1[1]);
-    amp[indices[1]] = cmplx(t_amp1[2], t_amp1[3]);
-    amp[indices[2]] = cmplx(t_amp2[0], t_amp1[1]);
-    amp[indices[3]] = cmplx(t_amp2[2], t_amp1[3]);
-    
-//        cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
-//        __m256 a0 = _mm256_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]),
-//                                    imag(a[0]), real(a[0]), imag(a[1]), real(a[1]));
-//        __m256 a1 = _mm256_setr_ps(real(a[3]), imag(a[3]), real(a[2]), imag(a[2]),
-//                                   -imag(a[3]), -real(a[3]), -imag(a[2]), -real(a[2]));
-//        __m256 t = _mm256_add_ps(a0, a1);
-//        t = _mm256_mul_ps(t, kM256CmplxNeg1);
-//        __m256 t1 = _mm256_permute2f128_ps(t, t, 1);
-//        t = _mm256_fmadd_ps(kM256Neg, t, t1);
+//    cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
+//    __m128 a0 = _mm_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]));
+//    __m128 a1 = _mm_setr_ps(real(a[3]), imag(a[3]), real(a[2]), imag(a[2]));
+//    __m128 t = _mm_add_ps(a0, a1);
+//    __m128 t1 = _mm_sub_ps(a0, a1);
+//    t1 = _mm_permute_ps(t1, 0x5);
+//    t1 = _mm_mul_ps(t1, kM128CmplxNeg);
+//    t = _mm_permute_ps(t, 0b10110001);
 //
-//        float* t_amp = (float*)&t;
+//    __m128 val1 = _mm_add_ps(t, t1);
+//    __m128 val2 = _mm_sub_ps(t, t1);
+//    float* t_amp1 = (float*)&val1;
+//    float* t_amp2 = (float*)&val2;
 //
-//        amp[indices[0]] = cmplx(t_amp[0], t_amp[1]);
-//        amp[indices[1]] = cmplx(t_amp[2], t_amp[3]);
-//        amp[indices[2]] = cmplx(t_amp[4], t_amp[5]);
-//        amp[indices[3]] = cmplx(t_amp[6], t_amp[7]);
+//    amp[indices[0]] = cmplx(t_amp1[0], t_amp1[1]);
+//    amp[indices[1]] = cmplx(t_amp1[2], t_amp1[3]);
+//    amp[indices[2]] = cmplx(t_amp2[0], t_amp1[1]);
+//    amp[indices[3]] = cmplx(t_amp2[2], t_amp1[3]);
+    
+        cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
+        __m256 a0 = _mm256_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]),
+                                    imag(a[0]), real(a[0]), imag(a[1]), real(a[1]));
+        __m256 a1 = _mm256_setr_ps(real(a[3]), imag(a[3]), real(a[2]), imag(a[2]),
+                                   -imag(a[3]), -real(a[3]), -imag(a[2]), -real(a[2]));
+        __m256 t = _mm256_add_ps(a0, a1);
+        t = _mm256_mul_ps(t, kM256CmplxNeg1);
+        __m256 t1 = _mm256_permute2f128_ps(t, t, 1);
+        t = _mm256_fmadd_ps(kM256Neg, t, t1);
+
+        float* t_amp = (float*)&t;
+
+        amp[indices[0]] = cmplx(t_amp[0], t_amp[1]);
+        amp[indices[1]] = cmplx(t_amp[2], t_amp[3]);
+        amp[indices[2]] = cmplx(t_amp[4], t_amp[5]);
+        amp[indices[3]] = cmplx(t_amp[6], t_amp[7]);
 }
 
 inline void
-ApplyXY12GateAVX(const idx_size* indices,
-              cmplx* __restrict amp)
+ApplyXY12GateAVX(cmplx* __restrict amp,
+                 const array<idx_size, 4> indices)
 {
 //    cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
 //    __m128 a0 = _mm_setr_ps(real(a[0]), imag(a[0]), real(a[2]), imag(a[2]));
@@ -120,8 +120,8 @@ ApplyXY12GateAVX(const idx_size* indices,
 }
 
 inline void
-ApplyYY12GateAVX(const idx_size* indices,
-              cmplx* __restrict amp)
+ApplyYY12GateAVX(cmplx* __restrict amp,
+                 const array<idx_size, 4> indices)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     __m128 a0 = _mm_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]));
@@ -148,8 +148,8 @@ ApplyYY12GateAVX(const idx_size* indices,
 }
 
 inline void
-ApplyYX12GateAVX(const idx_size* indices,
-              cmplx* __restrict amp)
+ApplyYX12GateAVX(cmplx* __restrict amp,
+                 const array<idx_size, 4> indices)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     __m256 a0 = _mm256_setr_ps(real(a[0]), imag(a[0]), real(a[1]), imag(a[1]),

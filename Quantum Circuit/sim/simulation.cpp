@@ -133,7 +133,7 @@ Simulate(const string &outfile,
     
     clock_t end = clock();
     
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
     
     PrintReport(end , begin, amp, circuit);
 }
@@ -286,7 +286,7 @@ PrintReport(const string &outfile,
             const Circuit& circuit) const
 {
     ofstream file;
-    file.open("simulation_stats/" + outfile);
+    file.open("output/simulation_reports/" + outfile);
     
     char hostname[20] = {};
     gethostname(hostname, 20);
