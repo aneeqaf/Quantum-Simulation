@@ -13,13 +13,14 @@ CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodul
 
 .PHONY: clean all
 
-all: $(TARGET) 
+default: $(TARGET)
+all: default
 
 SIMOBJECTS = $(patsubst %.cpp, %.o, $(wildcard sim/*.cpp))
 KERNELSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard sim/kernels/*.cpp))
 LIBSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard libs/*.cpp))
-EXE = $(patsubst %.cpp, %.o, $(wildcard vector_state_sim/*.cpp))
-BM = $(patsubst %.cpp, %.o, $(filter-out benchmark/main.cpp, $(wildcard benchmark/*.cpp)))
+EXE = $(patsubst %.cpp, %.o, vector_state_sim/main.cpp)
+BM = $(patsubst %.cpp, %.o, benchmark/XYmicroBM.cpp)
 
 OBJECTS = $(SIMOBJECTS) $(KERNELSOBJECTS) $(LIBSOBJECTS)
 
@@ -41,7 +42,7 @@ clean:
 
 # Benchmark
 bm: $(OBJECTS) $(BM)
-	$(CC) $(CFLAGS) $(BM) $(OBJECTS) benchmark/main.cpp $(INC) $(LIB) -o bin/bm
+	$(CC) $(CFLAGS) $(BM) $(OBJECTS) $(INC) $(LIBS) benchmark/main.cpp -o bin/bm
 
 
 # export LD_LIBRARY_PATH=/usr/local/gcc7/lib64

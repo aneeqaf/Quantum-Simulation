@@ -101,8 +101,6 @@ ApplyMergedXYGate(const vector<Gate>& all_gates,
     FormBlockOfXYHGates(cluster, gate_i, (Gate::Type)all_gates[gate_i].ids.back(), all_gates);
     idx_size num_gates = cluster.size();
     
-    
-    
     if (num_gates == 2)
         Apply2MergedXY12Gates(cluster[0], cluster[1], amp, amp_size, total_circuit_qubits);
     else if (num_gates == 4)

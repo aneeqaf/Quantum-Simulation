@@ -3,7 +3,6 @@
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/30/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #include <iostream>
@@ -32,6 +31,13 @@ int main(int argc, char *argv[])
     memset(amp, 0, amp_size * sizeof(amp));
     amp[0] = 1;
     
+    char hostname[20] = {};
+    gethostname(hostname, 20);
+    cout << "Hostname : ";
+    for(auto h : hostname) {
+        cout << h;
+    }
+    cout << "\n";
     cout << "Benchmarking results for " + s_num_qubits + " qubits circuit:\n";
     Apply2MergedGatesBM(amp, amp_size, num_qubits);
     Apply4MergedGatesBM(amp, amp_size, num_qubits);
