@@ -3,7 +3,6 @@
 //  Quantum Circuit
 //
 //  Created by Aneeqa Fatima on 12/30/17.
-//  Copyright © 2017 Aneeqa Fatima. All rights reserved.
 //
 
 #ifndef XYmicroBM_h

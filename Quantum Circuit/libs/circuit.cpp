@@ -128,7 +128,28 @@ GroupSimilarGates()
             ++last_Y;
         }
     }
-    PrintGates();
+    
+//    PrintGates();
+//
+//    idx_size Xidx = 0;
+//    int X_gates_count = -1;
+//    for (idx_size j = qubits; j < gates.size() && Xidx < gates.size(); ++j) {
+//        if (gates[j].ids.back() == Gate::Type::X_1_2 && X_gates_count == -1){
+//            Xidx = j + 1;
+//            ++X_gates_count;
+//        }
+//        else if (gates[j].ids.back() == Gate::Type::X_1_2)
+//            ++X_gates_count;
+//        else if (gates[j].ids.back() == Gate::Type::Y_1_2 && X_gates_count != -1) {
+//            swap(gates[Xidx], gates[j]);
+//            Xidx += 2;
+//            --X_gates_count;
+//        }
+//        else
+//            X_gates_count = -1;
+//
+//    }
+//    PrintGates();
 }
 
 void Circuit::
