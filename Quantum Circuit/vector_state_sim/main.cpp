@@ -120,7 +120,6 @@ int main(int argc, char *argv[])
         //write a function for printing google files.
         if (inputfile) {
             cir.ReadCustomInputFiles("input/random_circuits_aneeqa/" + input_filename, amp_v, size);
-            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
             State amp(amp_v, size);
             sim.Simulate("output/probabilities/" + out_file, amp, cir);
             delete [] amp_v;
