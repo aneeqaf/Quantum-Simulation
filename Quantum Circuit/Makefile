@@ -1,4 +1,4 @@
-CC := g++
+CC := g++-7
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := vector_state_sim

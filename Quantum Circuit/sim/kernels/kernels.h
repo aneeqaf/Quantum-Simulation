@@ -79,7 +79,7 @@ __attribute__((always_inline)) inline void
 ApplyYY12Gate(cmplx* __restrict amp,
               const array<idx_size, 4> indices)
 {
-    const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     const auto t = ki * (a[0] + a[3]);
     const auto t1 = ki * (a[0] - a[3]);
     const auto t2 = ki * (a[1] + a[2]);

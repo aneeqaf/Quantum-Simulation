@@ -215,9 +215,7 @@ PrintReport(const clock_t end,
         cout << "Unrecognized\n";
 #endif
     cout << "CPU supports :"
-    << " popcnt:" << __builtin_cpu_supports("popcnt")
-    << ", avx:" << __builtin_cpu_supports("avx")
-    << ", avx2:" << __builtin_cpu_supports("avx2");
+    << " popcnt:" << __builtin_cpu_supports("popcnt");
     
     if (__builtin_cpu_supports("sse4.2"))
         cout << ", sse4.2:" << __builtin_cpu_supports("sse4.2");
@@ -234,7 +232,8 @@ PrintReport(const clock_t end,
     else if (__builtin_cpu_supports("sse"))
         cout << ", sse:" << __builtin_cpu_supports("sse");
     
-    cout << "\n";
+    cout << ", avx:" << __builtin_cpu_supports("avx")
+         << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
     cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
     <<  __GNUC_PATCHLEVEL__<< "\n";
     cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
