@@ -12,17 +12,16 @@
 
 using namespace std;
 
+
 __attribute__((always_inline)) inline void
-Apply4X12GateHelper(__m128& res_real_add,
-                    __m128& res1_real_add,
-                    __m128& res_real_sub,
-                    __m128& res1_real_sub,
-                    __m128& res_imag_add,
-                    __m128& res1_imag_add,
-                    __m128& res_imag_sub,
-                    __m128& res1_imag_sub,
-                    const cmplx* __restrict a)
+Apply4X12Gate(cmplx* __restrict amp,
+              const array<idx_size, 16> indices)
 {
+     const cmplx a[16] = {amp[indices[0]], amp[indices[4]],  amp[indices[8]], amp[indices[12]],
+                        amp[indices[1]], amp[indices[5]],  amp[indices[9]], amp[indices[13]],
+                        amp[indices[2]], amp[indices[6]],  amp[indices[10]], amp[indices[14]],
+                        amp[indices[3]], amp[indices[7]], amp[indices[11]],  amp[indices[15]]};
+
     __m128 t_real = _mm_setr_ps(real(a[0]), real(a[4]), real(a[8]), real(a[12]));
     __m128 t1_real = _mm_setr_ps(real(a[1]), real(a[5]), real(a[9]), real(a[13]));
     __m128 t2_real = _mm_setr_ps(real(a[2]), real(a[6]), real(a[10]), real(a[14]));
@@ -38,75 +37,75 @@ Apply4X12GateHelper(__m128& res_real_add,
     __m128 tres2 = _mm_sub_ps(t3_imag, t_imag);
     __m128 tres3 = _mm_sub_ps(t2_imag, t1_imag);
     
-    res_real_add = _mm_add_ps(tres1, tres2);
-    res1_real_add = _mm_add_ps(tres, tres3);
-    res_real_sub = _mm_sub_ps(tres, tres3);
-    res1_real_sub = _mm_sub_ps(tres1, tres2);
+    __m128 res_real_add = _mm_add_ps(tres1, tres2);
+    __m128 res1_real_add = _mm_add_ps(tres, tres3);
+    __m128 res_real_sub = _mm_sub_ps(tres, tres3);
+    __m128 res1_real_sub = _mm_sub_ps(tres1, tres2);
     
     tres = _mm_add_ps(t_imag, t3_imag);
     tres1 = _mm_add_ps(t1_imag, t2_imag);
     tres2 = _mm_sub_ps(t_real, t3_real);
     tres3 = _mm_sub_ps(t1_real, t2_real);
-
-    res_imag_add = _mm_add_ps(tres1, tres2);
-    res1_imag_add = _mm_add_ps(tres, tres3);
-    res_imag_sub = _mm_sub_ps(tres, tres3);
-    res1_imag_sub = _mm_sub_ps(tres1, tres2);
-}
-
-__attribute__((always_inline)) inline void
-Apply4X12Gate(cmplx* __restrict amp,
-              const array<idx_size, 16> indices)
-{
-    __m128 res_real_add, res1_real_add, res_real_sub, res1_real_sub,
-          res_imag_add, res1_imag_add, res_imag_sub, res1_imag_sub;
-
-    const cmplx a[16] = {amp[indices[0]], amp[indices[4]],  amp[indices[8]], amp[indices[12]],
-                        amp[indices[1]], amp[indices[5]],  amp[indices[9]], amp[indices[13]],
-                        amp[indices[2]], amp[indices[6]],  amp[indices[10]], amp[indices[14]],
-                        amp[indices[3]], amp[indices[7]], amp[indices[11]],  amp[indices[15]]};
-
-    Apply4X12GateHelper(res_real_add, res1_real_add, res_real_sub, res1_real_sub,
-                        res_imag_add, res1_imag_add, res_imag_sub, res1_imag_sub, a);
-
-    float* res_real = (float*)&res_real_add;
-    float* res_imag = (float*)&res_imag_add;
-    float* res1_real = (float*)&res1_real_add;
-    float* res1_imag = (float*)&res1_imag_add;
-    float* res2_real = (float*)&res_real_sub;
-    float* res2_imag = (float*)&res_imag_sub;
-    float* res3_real = (float*)&res1_real_sub;
-    float* res3_imag = (float*)&res1_imag_sub;
-
-    const cmplx b[16] = {cmplx(res_real[0], res_imag[0]), cmplx(res_real[1], res_imag[1]),
-                        cmplx(res_real[2], res_imag[2]),cmplx(res_real[3], res_imag[3]),
-                        cmplx(res1_real[0], res1_imag[0]), cmplx(res1_real[1], res1_imag[1]),
-                        cmplx(res1_real[2], res1_imag[2]), cmplx(res1_real[3], res1_imag[3]),
-                        cmplx(res2_real[0], res2_imag[0]), cmplx(res2_real[1], res2_imag[1]),
-                        cmplx(res2_real[2], res2_imag[2]), cmplx(res2_real[3], res2_imag[3]),
-                        cmplx(res3_real[0], res3_imag[0]), cmplx(res3_real[1], res3_imag[1]),
-                        cmplx(res3_real[2], res3_imag[2]), cmplx(res3_real[3], res3_imag[3])};
-
-    Apply4X12GateHelper(res_real_add, res1_real_add, res_real_sub, res1_real_sub,
-                        res_imag_add, res1_imag_add, res_imag_sub, res1_imag_sub, b);
-
-    res_real = (float*)&res_real_add;
-    res_imag = (float*)&res_imag_add;
-    res1_real = (float*)&res1_real_add;
-    res1_imag = (float*)&res1_imag_add;
-    res2_real = (float*)&res_real_sub;
-    res2_imag = (float*)&res_imag_sub;
-    res3_real = (float*)&res1_real_sub;
-    res3_imag = (float*)&res1_imag_sub;
     
-    amp[indices[0]] = cmplx(res_real[0], res_imag[0]); amp[indices[1]] = cmplx(res1_real[0], res1_imag[0]);
-    amp[indices[2]] = cmplx(res2_real[0], res2_imag[0]); amp[indices[3]] = cmplx(res3_real[0], res3_imag[0]);
-    amp[indices[4]] = cmplx(res_real[1], res_imag[1]); amp[indices[5]] = cmplx(res1_real[1], res1_imag[1]);
-    amp[indices[6]] = cmplx(res2_real[1], res2_imag[1]); amp[indices[7]] = cmplx(res3_real[1], res3_imag[1]);
-    amp[indices[8]] = cmplx(res_real[2], res_imag[2]); amp[indices[9]] = cmplx(res1_real[2], res1_imag[2]);
-    amp[indices[10]] = cmplx(res2_real[2], res2_imag[2]); amp[indices[11]] = cmplx(res3_real[2], res3_imag[2]);
-    amp[indices[12]] = cmplx(res_real[3], res_imag[3]); amp[indices[13]] = cmplx(res1_real[3], res1_imag[3]);
-    amp[indices[14]] = cmplx(res2_real[3], res2_imag[3]); amp[indices[15]] = cmplx(res3_real[3], res3_imag[3]);
+    __m128 res_imag_add = _mm_add_ps(tres1, tres2);
+    __m128 res1_imag_add = _mm_add_ps(tres, tres3);
+    __m128 res_imag_sub = _mm_sub_ps(tres, tres3);
+    __m128 res1_imag_sub = _mm_sub_ps(tres1, tres2);
+    
+    //slice1
+    res_real_add = _mm_permute_ps(res_real_add, 0b10011100);
+    res_imag_add = _mm_permute_ps(res_imag_add, 0b01100011);
+    //slice2
+    res1_real_add = _mm_permute_ps(res1_real_add, 0b10011100);
+    res1_imag_add = _mm_permute_ps(res1_imag_add, 0b01100011);
+    //slice3
+    res_real_sub = _mm_permute_ps(res_real_sub, 0b10011100);
+    res_imag_sub = _mm_permute_ps(res_imag_sub, 0b01100011);
+    //slice4
+    res1_real_sub = _mm_permute_ps(res1_real_sub, 0b10011100);
+    res1_imag_sub = _mm_permute_ps(res1_imag_sub, 0b01100011);
+    
+    tres = _mm_hadd_ps(res_real_add, res1_real_add);
+    tres1 = _mm_hadd_ps(res_real_sub, res1_real_sub);
+    tres2 = _mm_hsub_ps(res_imag_add, res1_imag_add);
+    tres3 = _mm_hsub_ps(res_imag_sub, res1_imag_sub);
+    tres2 = _mm_permute_ps(tres2, 0b10110001);
+    tres3 = _mm_permute_ps(tres3, 0b10110001);
+    
+    __m128 tres4 = _mm_add_ps(tres, tres2);
+    __m128 tres5 = _mm_sub_ps(tres, tres2);
+    __m128 tres6 = _mm_add_ps(tres1, tres3);
+    __m128 tres7 = _mm_sub_ps(tres1, tres3);
+    
+    tres = _mm_hadd_ps(res_imag_add, res1_imag_add);
+    tres1 = _mm_hadd_ps(res_imag_sub, res1_imag_sub);
+    tres2 = _mm_hsub_ps(res_real_add, res1_real_add);
+    tres3 = _mm_hsub_ps(res_real_sub, res1_real_sub);
+    tres2 = _mm_permute_ps(tres2, 0b10110001);
+    tres3 = _mm_permute_ps(tres3, 0b10110001);
+    
+    res_imag_add = _mm_add_ps(tres, tres2);
+    res_imag_sub = _mm_sub_ps(tres, tres2);
+    res1_imag_add = _mm_add_ps(tres1, tres3);
+    res1_imag_sub = _mm_sub_ps(tres1, tres3);
+
+    float* res_real = (float*)&tres4;
+    float* res_imag = (float*)&res_imag_add;
+    float* res1_real = (float*)&tres5;
+    float* res1_imag = (float*)&res_imag_sub;
+    float* res2_real = (float*)&tres6;
+    float* res2_imag = (float*)&res1_imag_add;
+    float* res3_real = (float*)&tres7;
+    float* res3_imag = (float*)&res1_imag_sub;
+    
+    amp[indices[0]] = cmplx(res_real[1], res_imag[1]); amp[indices[1]] = cmplx(res_real[0], res_imag[0]);
+    amp[indices[2]] = cmplx(res1_real[0], res1_imag[0]); amp[indices[3]] = cmplx(res1_real[1], res1_imag[1]);
+    amp[indices[4]] = cmplx(res_real[3], res_imag[3]); amp[indices[5]] = cmplx(res_real[2], res_imag[2]);
+    amp[indices[6]] = cmplx(res1_real[2], res1_imag[2]); amp[indices[7]] = cmplx(res1_real[3], res1_imag[3]);
+    amp[indices[8]] = cmplx(res2_real[1], res2_imag[1]); amp[indices[9]] = cmplx(res2_real[0], res2_imag[0]);
+    amp[indices[10]] = cmplx(res3_real[0], res3_imag[0]); amp[indices[11]] = cmplx(res3_real[1], res3_imag[1]);
+    amp[indices[12]] = cmplx(res2_real[3], res2_imag[3]); amp[indices[13]] = cmplx(res2_real[2], res2_imag[2]);
+    amp[indices[14]] = cmplx(res3_real[2], res3_imag[2]); amp[indices[15]] = cmplx(res3_real[3], res3_imag[3]);
 }
 
 __attribute__((always_inline)) inline void
