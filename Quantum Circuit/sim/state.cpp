@@ -76,9 +76,7 @@ ApplyNonCGate(const vector<int>& gate_qubits,
 void State::
 ApplyHGateOnAllAmps(const int total_circuit_qubits)
 {
-    for (idx_size i = 0; i < amp_size; ++i)
-        amp[i] = cmplx(1,0);
-    
+    fill_n(amp, amp_size, 1);
     global_factor_power += total_circuit_qubits;
 }
 

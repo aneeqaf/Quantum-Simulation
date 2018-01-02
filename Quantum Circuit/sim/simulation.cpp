@@ -217,7 +217,24 @@ PrintReport(const clock_t end,
     cout << "CPU supports :"
     << " popcnt:" << __builtin_cpu_supports("popcnt")
     << ", avx:" << __builtin_cpu_supports("avx")
-    << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
+    << ", avx2:" << __builtin_cpu_supports("avx2");
+    
+    if (__builtin_cpu_supports("sse4.2"))
+        cout << ", sse4.2:" << __builtin_cpu_supports("sse4.2");
+    else if (__builtin_cpu_supports("sse4.1"))
+        cout << ", sse4.1:" << __builtin_cpu_supports("sse4.1");
+    else if (__builtin_cpu_supports("sse4.1"))
+        cout << ", sse4.1:" << __builtin_cpu_supports("sse4.1");
+    else if (__builtin_cpu_supports("ssse3"))
+        cout << ", ssse3:" << __builtin_cpu_supports("ssse3");
+    else if (__builtin_cpu_supports("sse3"))
+        cout << ", sse3:" << __builtin_cpu_supports("sse3");
+    else if (__builtin_cpu_supports("sse2"))
+        cout << ", sse2:" << __builtin_cpu_supports("sse2");
+    else if (__builtin_cpu_supports("sse"))
+        cout << ", sse:" << __builtin_cpu_supports("sse");
+    
+    cout << "\n";
     cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
     <<  __GNUC_PATCHLEVEL__<< "\n";
     cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
