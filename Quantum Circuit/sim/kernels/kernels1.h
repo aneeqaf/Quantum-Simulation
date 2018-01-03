@@ -17,101 +17,83 @@ __attribute__((always_inline)) inline void
 Apply4X12Gate(cmplx* __restrict amp,
               const array<idx_size, 16> indices)
 {
-      cmplx a[16] __attribute__((aligned(64))) =
+    const cmplx a[16] __attribute__((aligned(64))) =
                     {amp[indices[0]], amp[indices[4]],  amp[indices[8]], amp[indices[12]],
                     amp[indices[1]], amp[indices[5]],  amp[indices[9]], amp[indices[13]],
                     amp[indices[2]], amp[indices[6]],  amp[indices[10]], amp[indices[14]],
                     amp[indices[3]], amp[indices[7]], amp[indices[11]],  amp[indices[15]]};
 
-    float* __restrict b_real = (float*)(&a[0]);
-    float* __restrict b_imag = (float*)(&a[0]) + 1;
+    float* __restrict a_re = (float*)(&a[0]);
+    float* __restrict a_im = (float*)(&a[0]) + 1;
     
-    const __m128 t_real = _mm_setr_ps(*b_real, *(b_real + 8), *(b_real + 16), *(b_real + 24));
-    b_real+=2;
-    const __m128 t1_real = _mm_setr_ps(*b_real, *(b_real + 8), *(b_real + 16), *(b_real + 24));
-    b_real+=2;
-    const __m128 t2_real = _mm_setr_ps(*b_real, *(b_real + 8), *(b_real + 16), *(b_real + 24));
-    b_real+=2;
-    const __m128 t3_real = _mm_setr_ps(*b_real, *(b_real + 8), *(b_real + 16), *(b_real + 24));
-
-    const __m128 t_imag = _mm_setr_ps(*b_imag, *(b_imag + 8), *(b_imag + 16), *(b_imag + 24));
-    b_imag+=2;
-    const __m128 t1_imag = _mm_setr_ps(*b_imag, *(b_imag + 8), *(b_imag + 16), *(b_imag + 24));
-    b_imag+=2;
-    const __m128 t2_imag = _mm_setr_ps(*b_imag, *(b_imag + 8), *(b_imag + 16), *(b_imag + 24));
-    b_imag+=2;
-    const __m128 t3_imag = _mm_setr_ps(*b_imag, *(b_imag + 8), *(b_imag + 16), *(b_imag + 24));
-
-    __m128 tres0 = _mm_add_ps(t_real, t3_real);
-    __m128 tres1 = _mm_add_ps(t1_real, t2_real);
-    __m128 tres2 = _mm_sub_ps(t3_imag, t_imag);
-    __m128 tres3 = _mm_sub_ps(t2_imag, t1_imag);
+    __m128 t_re[4], t_im[4];
+    for (idx_size i = 0; i < 4; ++i) {
+        t_re[i] = _mm_setr_ps(a_re[0], a_re[8], a_re[16], a_re[24]);
+        t_im[i] = _mm_setr_ps(a_im[0], a_im[8], a_im[16], a_im[24]);
+        a_re += 2;
+        a_im += 2;
+    }
     
-    __m128 res_real_add = _mm_add_ps(tres1, tres2);
-    __m128 res1_real_add = _mm_add_ps(tres0, tres3);
-    __m128 res_real_sub = _mm_sub_ps(tres0, tres3);
-    __m128 res1_real_sub = _mm_sub_ps(tres1, tres2);
+    __m128 tres0 = _mm_add_ps(t_re[0], t_re[3]);
+    __m128 tres1 = _mm_add_ps(t_re[1], t_re[2]);
+    __m128 tres2 = _mm_sub_ps(t_im[3], t_im[0]);
+    __m128 tres3 = _mm_sub_ps(t_im[2], t_im[1]);
     
-    tres0 = _mm_add_ps(t_imag, t3_imag);
-    tres1 = _mm_add_ps(t1_imag, t2_imag);
-    tres2 = _mm_sub_ps(t_real, t3_real);
-    tres3 = _mm_sub_ps(t1_real, t2_real);
+    __m128 res0_re_add = _mm_add_ps(tres1, tres2);
+    __m128 res1_re_add = _mm_add_ps(tres0, tres3);
+    __m128 res0_re_sub = _mm_sub_ps(tres0, tres3);
+    __m128 res1_re_sub = _mm_sub_ps(tres1, tres2);
     
-    __m128 res_imag_add = _mm_add_ps(tres1, tres2);
-    __m128 res1_imag_add = _mm_add_ps(tres0, tres3);
-    __m128 res_imag_sub = _mm_sub_ps(tres0, tres3);
-    __m128 res1_imag_sub = _mm_sub_ps(tres1, tres2);
+    tres0 = _mm_add_ps(t_im[0], t_im[3]);
+    tres1 = _mm_add_ps(t_im[1], t_im[2]);
+    tres2 = _mm_sub_ps(t_re[0], t_re[3]);
+    tres3 = _mm_sub_ps(t_re[1], t_re[2]);
     
-    const __m128 slice1_real = _mm_permute_ps(res_real_add, 0b10011100);
-    const __m128 slice1_imag = _mm_permute_ps(res_imag_add, 0b01100011);
-    const __m128 slice2_real = _mm_permute_ps(res1_real_add, 0b10011100);
-    const __m128 slice2_imag = _mm_permute_ps(res1_imag_add, 0b01100011);
-    const __m128 slice3_real = _mm_permute_ps(res_real_sub, 0b10011100);
-    const __m128 slice3_imag = _mm_permute_ps(res_imag_sub, 0b01100011);
-    const __m128 slice4_real = _mm_permute_ps(res1_real_sub, 0b10011100);
-    const __m128 slice4_imag = _mm_permute_ps(res1_imag_sub, 0b01100011);
+    __m128 res0_im_add = _mm_add_ps(tres1, tres2);
+    __m128 res1_im_add = _mm_add_ps(tres0, tres3);
+    __m128 res0_im_sub = _mm_sub_ps(tres0, tres3);
+    __m128 res1_im_sub = _mm_sub_ps(tres1, tres2);
     
-    tres0 = _mm_hadd_ps(slice1_real, slice2_real);
-    tres1 = _mm_hadd_ps(slice3_real, slice4_real);
-    tres2 = _mm_hsub_ps(slice1_imag, slice2_imag);
-    tres3 = _mm_hsub_ps(slice3_imag, slice4_imag);
+    const __m128 slice_re[4] = {_mm_permute_ps(res0_re_add, 0b10011100), _mm_permute_ps(res1_re_add, 0b10011100),
+                                _mm_permute_ps(res0_re_sub, 0b10011100), _mm_permute_ps(res1_re_sub, 0b10011100)};
+    const __m128 slice_im[4] = {_mm_permute_ps(res0_im_add, 0b01100011), _mm_permute_ps(res1_im_add, 0b01100011),
+                                _mm_permute_ps(res0_im_sub, 0b01100011), _mm_permute_ps(res1_im_sub, 0b01100011)};
+    
+    tres0 = _mm_hadd_ps(slice_re[0], slice_re[1]);
+    tres1 = _mm_hadd_ps(slice_re[2], slice_re[3]);
+    tres2 = _mm_hsub_ps(slice_im[0], slice_im[1]);
+    tres3 = _mm_hsub_ps(slice_im[2], slice_im[3]);
     tres2 = _mm_permute_ps(tres2, 0b10110001);
     tres3 = _mm_permute_ps(tres3, 0b10110001);
     
-    res_real_add = _mm_add_ps(tres0, tres2);
-    res_real_sub = _mm_sub_ps(tres0, tres2);
-    res1_real_add = _mm_add_ps(tres1, tres3);
-    res1_real_sub = _mm_sub_ps(tres1, tres3);
+    res0_re_add = _mm_add_ps(tres0, tres2);
+    res0_re_sub = _mm_sub_ps(tres0, tres2);
+    res1_re_add = _mm_add_ps(tres1, tres3);
+    res1_re_sub = _mm_sub_ps(tres1, tres3);
     
-    tres0 = _mm_hadd_ps(slice1_imag, slice2_imag);
-    tres1 = _mm_hadd_ps(slice3_imag, slice4_imag);
-    tres2 = _mm_hsub_ps(slice1_real, slice2_real);
-    tres3 = _mm_hsub_ps(slice3_real, slice4_real);
+    tres0 = _mm_hadd_ps(slice_im[0], slice_im[1]);
+    tres1 = _mm_hadd_ps(slice_im[2], slice_im[3]);
+    tres2 = _mm_hsub_ps(slice_re[0], slice_re[1]);
+    tres3 = _mm_hsub_ps(slice_re[2], slice_re[3]);
     tres2 = _mm_permute_ps(tres2, 0b10110001);
     tres3 = _mm_permute_ps(tres3, 0b10110001);
     
-    res_imag_add = _mm_add_ps(tres0, tres2);
-    res_imag_sub = _mm_sub_ps(tres0, tres2);
-    res1_imag_add = _mm_add_ps(tres1, tres3);
-    res1_imag_sub = _mm_sub_ps(tres1, tres3);
+    res0_im_add = _mm_add_ps(tres0, tres2);
+    res0_im_sub = _mm_sub_ps(tres0, tres2);
+    res1_im_add = _mm_add_ps(tres1, tres3);
+    res1_im_sub = _mm_sub_ps(tres1, tres3);
 
-    const float* res_real = (float*)&res_real_add;
-    const float* res_imag = (float*)&res_imag_add;
-    const float* res1_real = (float*)&res_real_sub;
-    const float* res1_imag = (float*)&res_imag_sub;
-    const float* res2_real = (float*)&res1_real_add;
-    const float* res2_imag = (float*)&res1_imag_add;
-    const float* res3_real = (float*)&res1_real_sub;
-    const float* res3_imag = (float*)&res1_imag_sub;
+    const float* res_re[4] = {(float*)&res0_re_add, (float*)&res0_re_sub, (float*)&res1_re_add, (float*)&res1_re_sub};
+    const float* res_im[4] = {(float*)&res0_im_add, (float*)&res0_im_sub, (float*)&res1_im_add, (float*)&res1_im_sub};
     
-    amp[indices[0]] = cmplx(res_real[1], res_imag[1]); amp[indices[1]] = cmplx(res_real[0], res_imag[0]);
-    amp[indices[2]] = cmplx(res1_real[0], res1_imag[0]); amp[indices[3]] = cmplx(res1_real[1], res1_imag[1]);
-    amp[indices[4]] = cmplx(res_real[3], res_imag[3]); amp[indices[5]] = cmplx(res_real[2], res_imag[2]);
-    amp[indices[6]] = cmplx(res1_real[2], res1_imag[2]); amp[indices[7]] = cmplx(res1_real[3], res1_imag[3]);
-    amp[indices[8]] = cmplx(res2_real[1], res2_imag[1]); amp[indices[9]] = cmplx(res2_real[0], res2_imag[0]);
-    amp[indices[10]] = cmplx(res3_real[0], res3_imag[0]); amp[indices[11]] = cmplx(res3_real[1], res3_imag[1]);
-    amp[indices[12]] = cmplx(res2_real[3], res2_imag[3]); amp[indices[13]] = cmplx(res2_real[2], res2_imag[2]);
-    amp[indices[14]] = cmplx(res3_real[2], res3_imag[2]); amp[indices[15]] = cmplx(res3_real[3], res3_imag[3]);
+    amp[indices[0]] = cmplx(res_re[0][1], res_im[0][1]); amp[indices[1]] = cmplx(res_re[0][0], res_im[0][0]);
+    amp[indices[2]] = cmplx(res_re[1][0], res_im[1][0]); amp[indices[3]] = cmplx(res_re[1][1], res_im[1][1]);
+    amp[indices[4]] = cmplx(res_re[0][3], res_im[0][3]); amp[indices[5]] = cmplx(res_re[0][2], res_im[0][2]);
+    amp[indices[6]] = cmplx(res_re[1][2], res_im[1][2]); amp[indices[7]] = cmplx(res_re[1][3], res_im[1][3]);
+    amp[indices[8]] = cmplx(res_re[2][1], res_im[2][1]); amp[indices[9]] = cmplx(res_re[2][0], res_im[2][0]);
+    amp[indices[10]] = cmplx(res_re[3][0], res_im[3][0]); amp[indices[11]] = cmplx(res_re[3][1], res_im[3][1]);
+    amp[indices[12]] = cmplx(res_re[2][3], res_im[2][3]); amp[indices[13]] = cmplx(res_re[2][2], res_im[2][2]);
+    amp[indices[14]] = cmplx(res_re[3][2], res_im[3][2]); amp[indices[15]] = cmplx(res_re[3][3], res_im[3][3]);
 }
 
 __attribute__((always_inline)) inline void
