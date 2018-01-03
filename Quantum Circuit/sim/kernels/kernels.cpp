@@ -96,7 +96,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
-    for(;gate_i < all_gates.size() && cluster.size() < 4; ++gate_i) {
+    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
         if(gt.ids.back() == gate_type)
@@ -221,7 +221,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            gate_func(amp, temp_indices);
+            gate_func(amp, temp_indices.data());
             
             ++idx;
         }

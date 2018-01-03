@@ -45,7 +45,7 @@ constexpr cmplx ki = {0,1};
 
 __attribute__((always_inline)) inline void
 ApplyXX12Gate(cmplx* __restrict amp,
-              const array<idx_size, 4> indices)
+              const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
     const auto t = a[0] + a[3];
@@ -61,7 +61,7 @@ ApplyXX12Gate(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyXY12Gate(cmplx* __restrict amp,
-              const array<idx_size, 4> indices)
+              const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     const auto t = a[0] - a[1];
@@ -77,7 +77,7 @@ ApplyXY12Gate(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyYY12Gate(cmplx* __restrict amp,
-              const array<idx_size, 4> indices)
+              const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     const auto t = ki * (a[0] + a[3]);
@@ -93,7 +93,7 @@ ApplyYY12Gate(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyYX12Gate(cmplx* __restrict amp,
-              const array<idx_size, 4> indices)
+              const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
     const auto t = (ki * a[0]) + a[1];
