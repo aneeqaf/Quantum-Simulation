@@ -94,7 +94,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            gate_func(amp, temp_indices);
+            gate_func(amp, temp_indices.data());
             
             ++idx;
         }
