@@ -1,4 +1,4 @@
-CC := g++
+CC := g++-7
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := vector_state_sim
@@ -38,7 +38,7 @@ $(TARGET): $(EXE) $(OBJECTS)
 	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -o $@
 
 clean:
-	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o $(TARGET) bin/bm
+	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/*
 
 # Benchmark
 bm: $(OBJECTS) $(BM)

@@ -96,7 +96,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
-    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
+    for(;gate_i < all_gates.size() && cluster.size() < 4; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
         if(gt.ids.back() == gate_type)
@@ -117,6 +117,11 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
             }
             break;
         }
+    }
+    
+    if (cluster.size() == 3) {
+        --gate_i;
+        cluster.pop_back();
     }
     
 //    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {

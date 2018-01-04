@@ -105,6 +105,7 @@ ApplyMergedXYGate(const vector<Gate>& all_gates,
         Apply4MergedXY12Gates(cluster, amp, amp_size, total_circuit_qubits);
     
     global_factor_power += num_gates;
+//    PrintStateVector();
 }
 
 void State::

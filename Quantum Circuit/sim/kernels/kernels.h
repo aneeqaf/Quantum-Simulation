@@ -16,6 +16,7 @@
 #include <cstring>
 #include <ctime>
 #include <functional>
+#include <immintrin.h>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -28,7 +29,6 @@
 #include <unistd.h>
 #include <utility>
 
-#include "kernelsAVX.h"
 #include "gates.h"
 
 using namespace std;
