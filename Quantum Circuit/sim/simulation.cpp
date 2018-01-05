@@ -97,6 +97,7 @@ Simulate(const string &outfile,
                  merged_X_Y += i - prev_i;
                  if (odd_Xi && !odd_Yi) {
                      --merged_X_Y;
+                     g_begin = clock();
                      amp.ApplyNonCGate(gates[odd_Xi].qubits, total_circuit_qubits, Gate::Type::X_1_2);
                      g_end = clock();
                      gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -105,6 +106,7 @@ Simulate(const string &outfile,
                  }
                  else if (odd_Yi && !odd_Xi) {
                      --merged_X_Y;
+                     g_begin = clock();
                      amp.ApplyNonCGate(gates[odd_Yi].qubits, total_circuit_qubits, Gate::Type::Y_1_2);
                      g_end = clock();
                      gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;

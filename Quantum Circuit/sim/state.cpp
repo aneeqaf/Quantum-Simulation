@@ -140,11 +140,12 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     
     if (qubits_in_cluster1.size()) {
         ApplyFWHT(amp, amp_size, qubits_in_cluster1, total_circuit_qubits, Gate::Type::X_1_2);
-        global_factor_power += (2 * qubits_in_cluster1.size());
+        global_factor_power += qubits_in_cluster1.size();
     }
     if (qubits_in_cluster2.size()) {
         ApplyFWHT(amp, amp_size, qubits_in_cluster2, total_circuit_qubits, Gate::Type::Y_1_2);
-        global_factor_power += (2 * qubits_in_cluster2.size());
+        global_factor_power += qubits_in_cluster2.size();
+        global_i_counter += qubits_in_cluster2.size()/2;
     }
     
     if (odd_Xi && odd_Yi) {
