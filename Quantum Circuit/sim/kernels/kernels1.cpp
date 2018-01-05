@@ -127,14 +127,21 @@ void
 ApplyManyXOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
 {
-    for (idx_size i = 0; i < num_qbits ; ++i){
-        const idx_size add = 1 << (i + 1);
-        const idx_size i_offset = 1 << i;
+    for (idx_size i = 0; i < num_qbits ; i+=2){
+        const idx_size add = 1 << (i + 2);
+        const idx_size i_offset0 = 1 << i;
+        const idx_size i_offset1 = 1 << (i + 1);
         for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
-            for (idx_size k = 0; k < (idx_size)(1<<i); ++k){
-                const cmplx temp[2] = {amp[j + k], amp[j + k + i_offset]};
-                amp[j + k] = (temp[0]*X12[0][0]) + (temp[1]*X12[0][1]);
-                amp[j + k + i_offset] = (temp[0]*X12[1][0]) + (temp[1]*X12[1][1]);
+            for (idx_size k = 0; k < i_offset0; ++k){
+                const auto t0 = amp[j + k] + amp[j + k + i_offset0 + i_offset1];
+                const auto t1 = amp[j + k + i_offset0] + amp[j + k + i_offset1];
+                const auto t2 = ki * (amp[j + k] - amp[j + k + i_offset0 + i_offset1]);
+                const auto t3 = ki * (amp[j + k + i_offset0] - amp[j + k + i_offset1]);
+                
+                amp[j + k] = t1 + t2;
+                amp[j + k + i_offset0] = t0 + t3;
+                amp[j + k + i_offset1] = t0 - t3;
+                amp[j + k + i_offset0 + i_offset1] = t1 - t2;
             }
         }
     }
@@ -144,15 +151,21 @@ void
 ApplyManyYOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
 {
-    for (idx_size i = 0; i < num_qbits ; ++i){
-        const idx_size add = 1 << (i + 1);
-        const idx_size i_offset = 1 << i;
+    for (idx_size i = 0; i < num_qbits ; i+=2){
+        const idx_size add = 1 << (i + 2);
+        const idx_size i_offset0 = 1 << i;
+        const idx_size i_offset1 = 1 << (i + 1);
         for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
-            for (idx_size k = 0; k < (idx_size)(1<<i); ++k){
-                const cmplx temp[2] = {amp[j + k], amp[j + k + i_offset]};
-                const cmplx t = temp[0]*Y12[0][0];
-                amp[j + k] = t + (temp[1]*Y12[0][1]);
-                amp[j + k + i_offset] = t + (temp[1]*Y12[1][1]);
+            for (idx_size k = 0; k < i_offset0; ++k){
+                const auto t0 = amp[j + k] + amp[j + k + i_offset0 + i_offset1];
+                const auto t1 = amp[j + k] - amp[j + k + i_offset0 + i_offset1];
+                const auto t2 = amp[j + k + i_offset0] + amp[j + k + i_offset1];
+                const auto t3 = amp[j + k + i_offset0] - amp[j + k + i_offset1];
+                
+                amp[j + k] = t0 - t2;
+                amp[j + k + i_offset0] = t1 + t3;
+                amp[j + k + i_offset1] = t1 - t3;
+                amp[j + k + i_offset0 + i_offset1] = t0 + t2;
             }
         }
     }
@@ -193,7 +206,7 @@ ApplyFWHT(cmplx* __restrict amp,
             
             for (idx_size i = 0; i < slice_size; ++i)
                 amp[indices[i] + idx] = amp_slice[i];
-            
+
             ++idx;
         }
         else
