@@ -96,7 +96,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
-    for(;gate_i < all_gates.size() && cluster.size() < 4; ++gate_i) {
+    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
         if(gt.ids.back() == gate_type)
@@ -172,8 +172,8 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const idx_size amp_size,
                        const int q,
                        const int total_circuit_qubits,
-                       const Gate& g,
-                       const Gate::Type gate_type)
+                       const Gate::Type gate_type,
+                       const Gate& g)
 {
     idx_size iter_count = 0, idx = 0, gate_bitmask = 0;
     
@@ -236,8 +236,8 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
 }
 
 void
-Apply2MergedXY12Gates(Gate& gate1,
-                      Gate& gate2,
+Apply2MergedXY12Gates(Gate gate1,
+                      Gate gate2,
                       cmplx* __restrict amp,
                       const idx_size amp_size,
                       const int total_circuit_qubits)
