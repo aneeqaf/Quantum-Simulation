@@ -14,7 +14,7 @@ FormBlockOfXYHGates(idx_size& gate_i,
                     const vector<Gate>& all_gates)
 {
     vector<int> qubits_in_cluster;
-    for(;gate_i < all_gates.size() && qubits_in_cluster.size() < 12; ++gate_i) {
+    for(;gate_i < all_gates.size(); ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
         if(gt.ids.back() == gate_type)

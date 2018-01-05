@@ -23,29 +23,31 @@ private:
     cmplx* amp;
     idx_size amp_size;
     idx_size global_factor_power;
+    idx_size global_i_counter;
     
 public:
     
-    void ApplyBlockOfDiagGates(const vector<Gate>& block_gates,
-                              const int total_circuit_qubits,
-                              idx_size& gate_i);
+    void ApplyBlockOfDiagGates(idx_size& gate_i,
+                               const vector<Gate>& block_gates,
+                               const int total_circuit_qubits);
     void ApplyNonCGate(const vector<int>& gate_qubits,
-                      const int total_circuit_qubits,
-                      const Gate& g,
-                      const Gate::Type gate_type);
+                       const int total_circuit_qubits,
+                       const Gate::Type gate_type,
+                       const Gate& g = {});
     void ApplyHGateOnAllAmps(const int qubits);
     void ApplyCGate(const int num_controls,
                    const vector<int>& gate_qubits,
                    const int total_circuit_qubits,
                    const Gate& g,
                    const Gate::Type gate_type);
-    void ApplyMergedXYGate(const vector<Gate>& all_gates,
-                           idx_size& gate_i,
+    void ApplyMergedXYGate(idx_size& gate_i,
+                           const vector<Gate>& all_gates,
                            const int total_circuit_qubits);
-    void ApplyClusterOfXYHGates(const vector<Gate>& all_gates,
-                                const int total_circuit_qubits,
-                                idx_size& gate_i,
-                                Gate::Type gate_type);
+    void ApplyClusterOfXYHGates(idx_size& gate_i,
+                                idx_size& odd_Xi,
+                                idx_size& odd_Yi,
+                                const vector<Gate>& all_gates,
+                                const int total_circuit_qubits);
     
     double GetMinProb() const;
     double GetMaxProb() const;

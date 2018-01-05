@@ -10,7 +10,7 @@
 using namespace std;
 
 State::
-State(int qubits): global_factor_power(0)
+State(int qubits): global_factor_power(0), global_i_counter(0)
 {
     amp_size = 1ull << qubits;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
@@ -19,7 +19,7 @@ State(int qubits): global_factor_power(0)
 }
 
 State::
-State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0)
+State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0), global_i_counter(0)
 {
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
     for (idx_size i = 0; i < size; ++i)
@@ -33,6 +33,7 @@ State::State(const State& rhs)
     for (idx_size i = 0; i < rhs.GetAmpSize(); ++i)
         amp[i] = rhs.amp[i];
     global_factor_power = rhs.global_factor_power;
+    global_i_counter = rhs.global_i_counter;
 }
 
 State& State::
@@ -42,6 +43,7 @@ operator=(const State& rhs)
     swap(amp, temp.amp);
     swap(amp_size, temp.amp_size);
     swap(global_factor_power, temp.global_factor_power);
+    swap(global_i_counter, temp.global_i_counter);
     return *this;
 }
 State::
@@ -52,9 +54,9 @@ State::
 }
 
 void State::
-ApplyBlockOfDiagGates(const vector<Gate>& cluster,
-                      const int total_circuit_qubits,
-                      idx_size& gate_i)
+ApplyBlockOfDiagGates(idx_size& gate_i,
+                      const vector<Gate>& cluster,
+                      const int total_circuit_qubits)
 {
     array<idx_size, 2> T_bitmask = {0};
     valarray<idx_size> CZ_bitmask (total_circuit_qubits);
@@ -67,10 +69,10 @@ ApplyBlockOfDiagGates(const vector<Gate>& cluster,
 void State::
 ApplyNonCGate(const vector<int>& gate_qubits,
               const int total_circuit_qubits,
-              const Gate& g,
-              const Gate::Type gate_type)
+              const Gate::Type gate_type,
+              const Gate& g)
 {
-    ApplyNonControl1QGates(amp, amp_size,  gate_qubits[0], total_circuit_qubits, g, gate_type);
+    ApplyNonControl1QGates(amp, amp_size,  gate_qubits[0], total_circuit_qubits, gate_type, g);
 }
 
 void State::
@@ -91,8 +93,8 @@ ApplyCGate(const int num_controls,
 }
 
 void State::
-ApplyMergedXYGate(const vector<Gate>& all_gates,
-                  idx_size& gate_i,
+ApplyMergedXYGate(idx_size& gate_i,
+                  const vector<Gate>& all_gates,
                   const int total_circuit_qubits)
 {
     vector<Gate> cluster;
@@ -105,21 +107,50 @@ ApplyMergedXYGate(const vector<Gate>& all_gates,
         Apply4MergedXY12Gates(cluster, amp, amp_size, total_circuit_qubits);
     
     global_factor_power += num_gates;
-//    PrintStateVector();
+    
+    if (cluster[0].ids.back() == Gate::Type::Y_1_2 && cluster[1].ids.back() == Gate::Type::Y_1_2)
+        ++global_i_counter;
+    
 }
 
 void State::
-ApplyClusterOfXYHGates(const vector<Gate>& all_gates,
-                       const int total_circuit_qubits,
-                       idx_size& gate_i,
-                       Gate::Type gate_type)
+ApplyClusterOfXYHGates(idx_size& gate_i,
+                       idx_size& odd_Xi,
+                       idx_size& odd_Yi,
+                       const vector<Gate>& all_gates,
+                       const int total_circuit_qubits)
 {
-    vector<int> qubits_in_cluster =
-            FormBlockOfXYHGates(gate_i, gate_type, all_gates);
+    vector<int> qubits_in_cluster1 , qubits_in_cluster2;
     
-    ApplyFWHT(amp, amp_size, qubits_in_cluster, total_circuit_qubits, gate_type);
+    if ((Gate::Type)all_gates[gate_i].ids.back() == Gate::Type::X_1_2)
+        qubits_in_cluster1 = FormBlockOfXYHGates(gate_i, Gate::Type::X_1_2, all_gates);
     
-    global_factor_power += (2 * qubits_in_cluster.size());
+    if (qubits_in_cluster1.size() % 2 == 1) {
+        qubits_in_cluster1.pop_back();
+        odd_Xi = gate_i - 1;
+    }
+    
+    if ((Gate::Type)all_gates[gate_i].ids.back() == Gate::Type::Y_1_2)
+        qubits_in_cluster2 = FormBlockOfXYHGates(gate_i, Gate::Type::Y_1_2, all_gates);
+    
+    if (qubits_in_cluster2.size() % 2 == 1) {
+        qubits_in_cluster2.pop_back();
+        odd_Yi = gate_i - 1;
+    }
+    
+    if (qubits_in_cluster1.size()) {
+        ApplyFWHT(amp, amp_size, qubits_in_cluster1, total_circuit_qubits, Gate::Type::X_1_2);
+        global_factor_power += (2 * qubits_in_cluster1.size());
+    }
+    if (qubits_in_cluster2.size()) {
+        ApplyFWHT(amp, amp_size, qubits_in_cluster2, total_circuit_qubits, Gate::Type::Y_1_2);
+        global_factor_power += (2 * qubits_in_cluster2.size());
+    }
+    
+    if (odd_Xi && odd_Yi) {
+        global_factor_power += 2;
+        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, amp_size, total_circuit_qubits);
+    }
 }
 
 double State::
@@ -254,6 +285,7 @@ PrintStateVector() const
         state_v /= pow(2,(global_factor_power/2));
         if (global_factor_power % 2 == 1)
             state_v /= sqrt(2);
+        state_v *= pow(ki, global_i_counter);
         
         cout << real(state_v) ;
         

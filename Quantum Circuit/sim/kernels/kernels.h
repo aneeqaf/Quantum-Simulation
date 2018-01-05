@@ -48,31 +48,15 @@ ApplyXX12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
-    const auto t = a[0] + a[3];
+    const auto t0 = a[0] + a[3];
     const auto t1 = a[1] + a[2];
     const auto t2 = ki * (a[0] - a[3]);
     const auto t3 = ki * (a[1] - a[2]);
 
     amp[indices[0]] = t1 + t2;
-    amp[indices[1]] = t + t3;
-    amp[indices[2]] = t - t3;
+    amp[indices[1]] = t0 + t3;
+    amp[indices[2]] = t0 - t3;
     amp[indices[3]] = t1 - t2;
-}
-
-__attribute__((always_inline)) inline void
-ApplyXY12Gate(cmplx* __restrict amp,
-              const idx_size* indices /*4*/)
-{
-    const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    const auto t = a[0] - a[1];
-    const auto t1 = a[2] - a[3];
-    const auto t2 = a[0] + a[1];
-    const auto t3 = a[2] + a[3];
-
-    amp[indices[0]] = (ki * t) + t1;
-    amp[indices[1]] = (ki * t2) + t3;
-    amp[indices[2]] = t + (ki * t1);
-    amp[indices[3]] = t2 + (ki * t3);
 }
 
 __attribute__((always_inline)) inline void
@@ -80,15 +64,31 @@ ApplyYY12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    const auto t = ki * (a[0] + a[3]);
-    const auto t1 = ki * (a[0] - a[3]);
-    const auto t2 = ki * (a[1] + a[2]);
-    const auto t3 = ki * (a[1] - a[2]);
-
-    amp[indices[0]] = t - t2;
+    const auto t0 = a[0] + a[3];
+    const auto t1 = a[0] - a[3];
+    const auto t2 = a[1] + a[2];
+    const auto t3 = a[1] - a[2];
+    
+    amp[indices[0]] = t0 - t2;
     amp[indices[1]] = t1 + t3;
     amp[indices[2]] = t1 - t3;
-    amp[indices[3]] = t + t2;
+    amp[indices[3]] = t0 + t2;
+}
+
+__attribute__((always_inline)) inline void
+ApplyXY12Gate(cmplx* __restrict amp,
+              const idx_size* indices /*4*/)
+{
+    const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    const auto t0 = a[0] - a[1];
+    const auto t1 = a[2] - a[3];
+    const auto t2 = a[0] + a[1];
+    const auto t3 = a[2] + a[3];
+
+    amp[indices[0]] = (ki * t0) + t1;
+    amp[indices[1]] = (ki * t2) + t3;
+    amp[indices[2]] = t0 + (ki * t1);
+    amp[indices[3]] = t2 + (ki * t3);
 }
 
 __attribute__((always_inline)) inline void
@@ -96,14 +96,14 @@ ApplyYX12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
-    const auto t = (ki * a[0]) + a[1];
+    const auto t0 = (ki * a[0]) + a[1];
     const auto t1 = a[0] + (ki * a[1]);
     const auto t2 = (ki * a[2]) + a[3];
     const auto t3 = a[2] + (ki * a[3]);
     
-    amp[indices[0]] = t - t2;
+    amp[indices[0]] = t0 - t2;
     amp[indices[1]] = t1 - t3;
-    amp[indices[2]] = t + t2;
+    amp[indices[2]] = t0 + t2;
     amp[indices[3]] = t1 + t3;
 }
 
@@ -205,12 +205,12 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const idx_size amp_size,
                        const int q,
                        const int total_circuit_qubits,
-                       const Gate& g,
-                       const Gate::Type gate_type);
+                       const Gate::Type gate_type,
+                       const Gate& g = {});
 
 void
-Apply2MergedXY12Gates(Gate& gate1,
-                      Gate& gate2,
+Apply2MergedXY12Gates(Gate gate1,
+                      Gate gate2,
                       cmplx* __restrict amp,
                       const idx_size amp_size,
                       const int total_circuit_qubits);

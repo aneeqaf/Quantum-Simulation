@@ -65,7 +65,7 @@ Simulate(const string &outfile,
                 current_gate.ids.back() == Gate::Type::Z) {
                 
                 idx_size prev_i = i;
-                amp.ApplyBlockOfDiagGates(gates, total_circuit_qubits, i);
+                amp.ApplyBlockOfDiagGates(i, gates, total_circuit_qubits);
     
                 g_end = clock();
                 gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -78,43 +78,50 @@ Simulate(const string &outfile,
                               total_circuit_qubits, current_gate, (Gate::Type)current_gate.ids.back());
         }
         else {
-            bool applied = false;
-#ifdef Clustering
              if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
                  (current_gate.ids.back() == Gate::Type::X_1_2 ||
                   current_gate.ids.back() == Gate::Type::Y_1_2) &&
-                 (circuit.GetGateFromIndex(i + 1).ids.back() == current_gate.ids.back())) {
-                 applied = true;
+                 (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
+                  circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
                  idx_size prev_i = i;
-                 amp.ApplyClusterOfXYHGates(gates, total_circuit_qubits, i, (Gate::Type)current_gate.ids.back());
+                 idx_size odd_Xi = 0;
+                 idx_size odd_Yi = 0;
+#ifdef Clustering
+                 amp.ApplyClusterOfXYHGates(i, odd_Xi, odd_Yi, gates, total_circuit_qubits);
+#endif
+#ifdef ManualMerging
+                 amp.ApplyMergedXYGate(i , gates, total_circuit_qubits);
+#endif
                  g_end = clock();
                  gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                  merged_X_Y += i - prev_i;
+                 if (odd_Xi && !odd_Yi) {
+                     --merged_X_Y;
+                     amp.ApplyNonCGate(gates[odd_Xi].qubits, total_circuit_qubits, Gate::Type::X_1_2);
+                     g_end = clock();
+                     gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                     X++;
+                     amp.IncrementGlobalFactorPower(2);
+                 }
+                 else if (odd_Yi && !odd_Xi) {
+                     --merged_X_Y;
+                     amp.ApplyNonCGate(gates[odd_Yi].qubits, total_circuit_qubits, Gate::Type::Y_1_2);
+                     g_end = clock();
+                     gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                     Y++;
+                     amp.IncrementGlobalFactorPower(2);
+                 }
                  --i;
              }
-#endif
-//#ifdef ManualMerging
-           if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
-               (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
-                circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-               applied = true;
-               idx_size prev_i = i;
-               amp.ApplyMergedXYGate(gates, i, total_circuit_qubits);
-               g_end = clock();
-               gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-               merged_X_Y += i - prev_i;;
-               --i;
-           }
-//#endif
-           if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
+            else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 amp.ApplyHGateOnAllAmps(total_circuit_qubits);
                 i += total_circuit_qubits - 1;
                 g_end = clock();
                 gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
-            else if (!applied) {
-                amp.ApplyNonCGate(current_gate.qubits, total_circuit_qubits, current_gate,
-                                  (Gate::Type)current_gate.ids.back());
+            else {
+                amp.ApplyNonCGate(current_gate.qubits, total_circuit_qubits,
+                                  (Gate::Type)current_gate.ids.back(),  current_gate);
                 g_end = clock();
                 
                 if(current_gate.ids.back() == Gate::Type::X_1_2){
