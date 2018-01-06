@@ -1,6 +1,7 @@
 .DS_Store
-Quantum Circuit/.DS_Store 
-Quantum Circuit/env/
-Quantum Circuit/qp-3.8-i386/
-Quantum Circuit/Vagrantfile
-Quantum Circuit/.vagrant
+QuantumSim/.DS_Store 
+QuantumSim/env/
+Vagrantfile
+.vagrant
+QuantumSim1/
+QuantumSimProj.xcodeproj/
