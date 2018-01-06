@@ -94,7 +94,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            gate_func(amp, temp_indices.data());
+            gate_func(amp, temp_indices);
             
             ++idx;
         }
@@ -133,15 +133,19 @@ ApplyManyXOnSlice(cmplx* __restrict amp,
         const idx_size i_offset1 = 1 << (i + 1);
         for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
             for (idx_size k = 0; k < i_offset0; ++k){
-                const auto t0 = amp[j + k] + amp[j + k + i_offset0 + i_offset1];
-                const auto t1 = amp[j + k + i_offset0] + amp[j + k + i_offset1];
-                const auto t2 = ki * (amp[j + k] - amp[j + k + i_offset0 + i_offset1]);
-                const auto t3 = ki * (amp[j + k + i_offset0] - amp[j + k + i_offset1]);
+                const auto i0 = j + k;
+                const auto i1 = i0 + i_offset0;
+                const auto i2 = i0 + i_offset1;
+                const auto i3 = i2 + i_offset0;
+                const auto t0 = amp[i0] + amp[i3];
+                const auto t1 = amp[i1] + amp[i2];
+                const auto t2 = ki * (amp[i0] - amp[i3]);
+                const auto t3 = ki * (amp[i1] - amp[i2]);
                 
-                amp[j + k] = t1 + t2;
-                amp[j + k + i_offset0] = t0 + t3;
-                amp[j + k + i_offset1] = t0 - t3;
-                amp[j + k + i_offset0 + i_offset1] = t1 - t2;
+                amp[i0] = t1 + t2;
+                amp[i1] = t0 + t3;
+                amp[i2] = t0 - t3;
+                amp[i3] = t1 - t2;
             }
         }
     }
@@ -157,15 +161,19 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
         const idx_size i_offset1 = 1 << (i + 1);
         for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
             for (idx_size k = 0; k < i_offset0; ++k){
-                const auto t0 = amp[j + k] + amp[j + k + i_offset0 + i_offset1];
-                const auto t1 = amp[j + k] - amp[j + k + i_offset0 + i_offset1];
-                const auto t2 = amp[j + k + i_offset0] + amp[j + k + i_offset1];
-                const auto t3 = amp[j + k + i_offset0] - amp[j + k + i_offset1];
+                const auto i0 = j + k;
+                const auto i1 = i0 + i_offset0;
+                const auto i2 = i0 + i_offset1;
+                const auto i3 = i2 + i_offset0;
+                const auto t0 = amp[i0] + amp[i3];
+                const auto t1 = amp[i0] - amp[i3];
+                const auto t2 = amp[i1] + amp[i2];
+                const auto t3 = amp[i1] - amp[i2];
                 
-                amp[j + k] = t0 - t2;
-                amp[j + k + i_offset0] = t1 + t3;
-                amp[j + k + i_offset1] = t1 - t3;
-                amp[j + k + i_offset0 + i_offset1] = t0 + t2;
+                amp[i0] = t0 - t2;
+                amp[i1] = t1 + t3;
+                amp[i2] = t1 - t3;
+                amp[i3] = t0 + t2;
             }
         }
     }
