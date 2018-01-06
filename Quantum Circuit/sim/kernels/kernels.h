@@ -195,14 +195,12 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     const vector<Gate>& all_gates);
 void
 ApplyBlockOfCZTGates(cmplx* __restrict amp,
-                     const idx_size amp_size,
                      const int total_circuit_qubits,
                      const valarray<idx_size>& CZ_bitmasks,
                      const array<idx_size, 2>& T_bitmasks);
 
 void
 ApplyNonControl1QGates(cmplx* __restrict amp,
-                       const idx_size amp_size,
                        const int q,
                        const int total_circuit_qubits,
                        const Gate::Type gate_type,
@@ -212,7 +210,6 @@ void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
                       cmplx* __restrict amp,
-                      const idx_size amp_size,
                       const int total_circuit_qubits);
 
 #endif /* kernels_h */
