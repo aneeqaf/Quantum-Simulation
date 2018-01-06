@@ -17,10 +17,10 @@ GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
     
     for (auto q : gate_qubits) {
         bits |= ( 1ull << (new_q - q));
-        qubits_CZ_bitmasks[q] |= ( 1ull << (new_q - q));
+        qubits_CZ_bitmasks[new_q - q] |= ( 1ull << (new_q - q));
     }
     for (auto q : gate_qubits)
-        qubits_CZ_bitmasks[q] ^= bits;
+        qubits_CZ_bitmasks[new_q - q] ^= bits;
 }
 
 void
@@ -135,12 +135,11 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
 
 void
 ApplyBlockOfCZTGates(cmplx* __restrict amp,
-                     const idx_size amp_size,
                      const int total_circuit_qubits,
                      const valarray<idx_size>& CZ_bitmasks,
                      const array<idx_size, 2>& T_bitmasks)
 {
-    const idx_size modified_q = total_circuit_qubits - 1;
+    const idx_size amp_size = 1ull << total_circuit_qubits;
     idx_size prev_gc = 0;
     
     bool negate_Z = false;
@@ -149,7 +148,7 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
         
         const idx_size gc = count ^ (count >> 1);
         const idx_size changed_bit = gc ^ prev_gc;
-        const idx_size bit_idx = modified_q - __builtin_ctzl(changed_bit);
+        const idx_size bit_idx = __builtin_ctzl(changed_bit);
         
         cmplx mutated_amp = amp[gc];
       
@@ -169,12 +168,12 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
 
 void
 ApplyNonControl1QGates(cmplx* __restrict amp,
-                       const idx_size amp_size,
                        const int q,
                        const int total_circuit_qubits,
                        const Gate::Type gate_type,
                        const Gate& g)
 {
+    const idx_size amp_size = 1ull << total_circuit_qubits;
     idx_size iter_count = 0, idx = 0, gate_bitmask = 0;
     
     gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - q));
@@ -204,9 +203,9 @@ void
 Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
                            const int* gate_qubits,
                            const int total_circuit_qubits,
-                           const idx_size size,
                            const function& gate_func)
 {
+    const idx_size amp_size = 1ull << total_circuit_qubits;
     idx_size gate_bitmask = 0, iter_count = 0;
     constexpr idx_size num_bits = 2;
     for (idx_size i = 0; i < num_bits; ++i)
@@ -219,7 +218,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
     
     idx_size idx = 0;
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
-    while(iter_count < (size/num_indices)) {
+    while(iter_count < (amp_size/num_indices)) {
         if ((idx & gate_bitmask) == 0) {
             ++iter_count;
             
@@ -239,7 +238,6 @@ void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
                       cmplx* __restrict amp,
-                      const idx_size amp_size,
                       const int total_circuit_qubits)
 {
     const int qubits[2] = {gate1.qubits.back(), gate2.qubits.back()};
@@ -248,15 +246,15 @@ Apply2MergedXY12Gates(Gate gate1,
     const Gate::Type g2t = (Gate::Type)gate2.ids.back();
 
     if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, amp_size, ApplyXX12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, ApplyXX12Gate);
 
     else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, amp_size, ApplyXY12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, ApplyXY12Gate);
 
     else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, amp_size, ApplyYY12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, ApplyYY12Gate);
 
     else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, amp_size, ApplyYX12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, ApplyYX12Gate);
 }
 

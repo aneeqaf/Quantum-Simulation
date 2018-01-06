@@ -71,11 +71,11 @@ ApplyControlGate(cmplx* __restrict amp,
 template <typename function>
 void
 Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
-                      const idx_size amp_size,
                       const int* gate_qubits,
                       const int total_circuit_qubits,
                       const function& gate_func)
 {
+    const idx_size amp_size = 1ull << total_circuit_qubits;
     idx_size gate_bitmask = 0, iter_count = 0;
     constexpr idx_size num_bits = 4;
     for (idx_size i = 0; i < num_bits; ++i)
@@ -94,7 +94,7 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            gate_func(amp, temp_indices);
+            gate_func(amp, temp_indices.data());
             
             ++idx;
         }
@@ -106,7 +106,6 @@ Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
 void
 Apply4MergedXY12Gates(vector<Gate>& cluster,
                 cmplx* __restrict amp,
-                const idx_size amp_size,
                 const int total_circuit_qubits)
 {
     int block_qubits[4];
@@ -117,10 +116,10 @@ Apply4MergedXY12Gates(vector<Gate>& cluster,
     Gate::Type g1t = (Gate::Type)cluster[0].ids.back();
     
     if(g1t == Gate::Type::X_1_2)
-        Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, Apply4X12Gate);
+        Apply4MergedXY12GatesHelper(amp, block_qubits, total_circuit_qubits, Apply4X12GateAVX);
     
     else if(g1t == Gate::Type::Y_1_2)
-        Apply4MergedXY12GatesHelper(amp, amp_size, block_qubits, total_circuit_qubits, Apply4Y12Gate);
+        Apply4MergedXY12GatesHelper(amp, block_qubits, total_circuit_qubits, Apply4Y12GateAVX);
 }
 
 void
@@ -181,13 +180,12 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
 
 void
 ApplyFWHT(cmplx* __restrict amp,
-          const idx_size amp_size,
           const vector<int>& qubits_in_cluster,
           const int total_circuit_qubits,
           const Gate::Type gate_type)
 {
-    const idx_size num_qubits = qubits_in_cluster.size(),
-    slice_size = 1ull << num_qubits;
+    const idx_size num_qubits = qubits_in_cluster.size(), amp_size = 1ull << total_circuit_qubits,
+                    slice_size = 1ull << num_qubits;
     
     idx_size gate_bitmask = 0;
     for (idx_size i = 0; i < num_qubits; ++i)

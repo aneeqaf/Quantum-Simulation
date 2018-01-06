@@ -75,7 +75,7 @@ double Apply2MergedGatesBMHighQ(cmplx* __restrict amp,
 {
     try {
         double total_time = 0;
-        for (int i = total_circuit_qubits - 10; (i + 1) < total_circuit_qubits ; ++i)
+        for (int i = total_circuit_qubits - 5; (i + 1) < total_circuit_qubits ; ++i)
             total_time += Apply2MergedGatesBMHelper(amp, i, amp_size, total_circuit_qubits, gate_func);
         
         return total_time;
@@ -95,7 +95,7 @@ double Apply2MergedGatesBMLowQ(cmplx* __restrict amp,
 {
     try {
         double total_time = 0;
-        for (int i = 0; (i + 1) < 10 ; ++i)
+        for (int i = 0; (i + 1) < 4 ; ++i)
             total_time += Apply2MergedGatesBMHelper(amp, i, amp_size, total_circuit_qubits, gate_func);
         
         return total_time;
@@ -122,9 +122,9 @@ void Apply2MergedGatesBM(cmplx* __restrict amp,
     << Apply2MergedGatesBMAllQ(amp, amp_size, total_circuit_qubits, ApplyYX12Gate) << "s\n";
     cout << "ApplyYY12GateBM on all qubits (" + to_string(total_gates) + " Y gates): "
     << Apply2MergedGatesBMAllQ(amp, amp_size, total_circuit_qubits, ApplyYY12Gate) << "s\n";
-    cout << "ApplyXX12GateBM on low qubits (" + to_string(10) + " X gates) : "
+    cout << "ApplyXX12GateBM on low qubits (" + to_string(4) + " X gates) : "
     << Apply2MergedGatesBMLowQ(amp, amp_size, total_circuit_qubits, ApplyXX12Gate) << "s\n";
-    cout << "ApplyXX12GateBM on high qubits (" + to_string(10) + " X gates) : "
+    cout << "ApplyXX12GateBM on high qubits (" + to_string(4) + " X gates) : "
     << Apply2MergedGatesBMHighQ(amp, amp_size, total_circuit_qubits, ApplyXX12Gate) << "s\n\n";
 }
 
@@ -182,10 +182,10 @@ void Apply4MergedGatesBM(cmplx* __restrict amp,
                          const idx_size amp_size,
                          const int total_circuit_qubits)
 {
-    int total_gates = total_circuit_qubits % 4 == 0 ? total_circuit_qubits :
-                        total_circuit_qubits - (total_circuit_qubits % 4);
-    cout << "Apply4X12GateBM on all qubits (" + to_string(total_gates) + " X gates): "
-    << Apply4MergedGatesBMHelper(amp, amp_size, total_circuit_qubits, Apply4X12Gate) << "s\n";
-    cout << "Apply4Y12GateBM on all qubits (" + to_string(total_gates) + " Y gates): "
-    << Apply4MergedGatesBMHelper(amp, amp_size, total_circuit_qubits, Apply4Y12Gate) << "s\n\n";
+//    int total_gates = total_circuit_qubits % 4 == 0 ? total_circuit_qubits :
+//                        total_circuit_qubits - (total_circuit_qubits % 4);
+//    cout << "Apply4X12GateBM on all qubits (" + to_string(total_gates) + " X gates): "
+//    << Apply4MergedGatesBMHelper(amp, amp_size, total_circuit_qubits, Apply4X12Gate) << "s\n";
+//    cout << "Apply4Y12GateBM on all qubits (" + to_string(total_gates) + " Y gates): "
+//    << Apply4MergedGatesBMHelper(amp, amp_size, total_circuit_qubits, Apply4Y12Gate) << "s\n\n";
 }

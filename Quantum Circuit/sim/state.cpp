@@ -63,7 +63,7 @@ ApplyBlockOfDiagGates(idx_size& gate_i,
 
     FormBlockOfCZTGates(gate_i, CZ_bitmask, T_bitmask, cluster, total_circuit_qubits);
    
-    ApplyBlockOfCZTGates(amp, amp_size, total_circuit_qubits, CZ_bitmask, T_bitmask);
+    ApplyBlockOfCZTGates(amp, total_circuit_qubits, CZ_bitmask, T_bitmask);
 }
 
 void State::
@@ -72,7 +72,7 @@ ApplyNonCGate(const vector<int>& gate_qubits,
               const Gate::Type gate_type,
               const Gate& g)
 {
-    ApplyNonControl1QGates(amp, amp_size,  gate_qubits[0], total_circuit_qubits, gate_type, g);
+    ApplyNonControl1QGates(amp, gate_qubits[0], total_circuit_qubits, gate_type, g);
 }
 
 void State::
@@ -102,9 +102,9 @@ ApplyMergedXYGate(idx_size& gate_i,
     idx_size num_gates = cluster.size();
     
     if (num_gates == 2)
-        Apply2MergedXY12Gates(cluster[0], cluster[1], amp, amp_size, total_circuit_qubits);
+        Apply2MergedXY12Gates(cluster[0], cluster[1], amp, total_circuit_qubits);
     else if (num_gates == 4)
-        Apply4MergedXY12Gates(cluster, amp, amp_size, total_circuit_qubits);
+        Apply4MergedXY12Gates(cluster, amp, total_circuit_qubits);
     
     global_factor_power += num_gates;
     
@@ -139,18 +139,18 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     }
     
     if (qubits_in_cluster1.size()) {
-        ApplyFWHT(amp, amp_size, qubits_in_cluster1, total_circuit_qubits, Gate::Type::X_1_2);
+        ApplyFWHT(amp, qubits_in_cluster1, total_circuit_qubits, Gate::Type::X_1_2);
         global_factor_power += qubits_in_cluster1.size();
     }
     if (qubits_in_cluster2.size()) {
-        ApplyFWHT(amp, amp_size, qubits_in_cluster2, total_circuit_qubits, Gate::Type::Y_1_2);
+        ApplyFWHT(amp, qubits_in_cluster2, total_circuit_qubits, Gate::Type::Y_1_2);
         global_factor_power += qubits_in_cluster2.size();
         global_i_counter += qubits_in_cluster2.size()/2;
     }
     
     if (odd_Xi && odd_Yi) {
         global_factor_power += 2;
-        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, amp_size, total_circuit_qubits);
+        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, total_circuit_qubits);
     }
 }
 

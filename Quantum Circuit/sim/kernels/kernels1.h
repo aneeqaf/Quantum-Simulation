@@ -9,6 +9,7 @@
 #define kernels1_h
 
 #include "kernels.h"
+#include "kernelsAVX.h"
 
 using namespace std;
 
@@ -68,7 +69,6 @@ ApplyControlGate(cmplx* __restrict amp,
 void
 Apply4MergedXY12Gates(vector<Gate>& cluster,
                       cmplx* __restrict amp,
-                      const idx_size amp_size,
                       const int total_circuit_qubits);
 
 void
@@ -81,7 +81,6 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
 
 void
 ApplyFWHT(cmplx* __restrict amp,
-          const idx_size amp_size,
           const vector<int>& qubits_in_cluster,
           const int total_circuit_qubits,
           const Gate::Type gate_type);
