@@ -30,6 +30,7 @@ private:
     int X;
     int Y;
     int CZ_T;
+    int th;
     
    
 public:
@@ -45,7 +46,8 @@ public:
     
     void Simulate(const string& outfile,
                   State& amp,
-                  Circuit& circuit);
+                  Circuit& circuit,
+                  const int th = 0);
     
     SequentialSimulation();
     SequentialSimulation(const SequentialSimulation& rhs);
