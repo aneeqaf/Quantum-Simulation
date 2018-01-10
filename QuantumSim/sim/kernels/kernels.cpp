@@ -258,3 +258,87 @@ Apply2MergedXY12Gates(Gate gate1,
         Apply2MergedXY12GatesHelper(amp, qubits, total_circuit_qubits, ApplyYX12Gate);
 }
 
+__attribute__((always_inline)) inline idx_size
+XYRecursiveTransformHelper(cmplx* __restrict amp,
+                           idx_size& X_bitmask,
+                           idx_size& Y_bitmask,
+                           const int Xunused_qubits,
+                           const int Yunused_qubits,
+                           const int num_qubits)
+{
+    idx_size i_count = 0;
+    if (Xunused_qubits < Yunused_qubits) {
+        X_bitmask ^= 1ull << Xunused_qubits;
+        const int next_qubit = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
+        if (next_qubit < Yunused_qubits) {
+            const int gates_qubits[2] = {Xunused_qubits, next_qubit};
+            X_bitmask ^= 1ull << next_qubit;
+            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12Gate);
+        }
+        else {
+            Y_bitmask ^= 1ull << Yunused_qubits;
+            const int gates_qubits[2] = {Xunused_qubits, Yunused_qubits};
+            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12Gate);
+        }
+    }
+    else {
+        Y_bitmask ^= 1ull << Yunused_qubits;
+        const int next_qubit = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+        if (next_qubit < Xunused_qubits) {
+            const int gates_qubits[2] = {Yunused_qubits, next_qubit};
+            Y_bitmask ^= 1ull << next_qubit;
+            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12Gate);
+            ++i_count;
+        }
+        else {
+            X_bitmask ^= 1ull << Xunused_qubits;
+            const int gates_qubits[2] = {Yunused_qubits, Xunused_qubits};
+            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12Gate);
+        }
+    }
+    return i_count;
+}
+
+idx_size
+XYRecursiveTransform(cmplx* __restrict amp,
+                     idx_size X_bitmask,
+                     idx_size Y_bitmask,
+                     const int num_qubits,
+                     const int th)
+{
+    idx_size i_count = 0;
+    //base case
+    if (num_qubits <= th) {
+        for (int i = 0; i < num_qubits; ++i) {
+            int Xunused_qubits = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
+            int Yunused_qubits = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+            
+            if (X_bitmask || Y_bitmask) 
+                i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, Xunused_qubits, Yunused_qubits, num_qubits);
+        }
+        return i_count;
+    }
+    int Xunused_qubits = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
+    int Yunused_qubits = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+    
+    if (!Yunused_qubits || !Xunused_qubits) {
+        i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, Xunused_qubits, Yunused_qubits, num_qubits);
+        Xunused_qubits = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
+        Yunused_qubits = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+    }
+    
+    const idx_size k = Xunused_qubits > Yunused_qubits ? Yunused_qubits : Xunused_qubits ;
+    
+    if (k != 1000) {
+        const idx_size num_iters = 1ull << k;
+        const idx_size stride = (1ull << num_qubits)/num_iters;
+        X_bitmask >>= k;
+        Y_bitmask >>= k;
+        idx_size temp_i = 0;
+        for (idx_size i = 0; i < num_iters ; ++i)
+            temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - (int)k, th);
+        i_count += temp_i / num_iters;
+    }
+    
+    return i_count;
+}

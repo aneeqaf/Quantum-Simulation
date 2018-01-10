@@ -219,3 +219,5 @@ ApplyFWHT(cmplx* __restrict amp,
             idx += (idx & gate_bitmask);
     }
 }
+
+

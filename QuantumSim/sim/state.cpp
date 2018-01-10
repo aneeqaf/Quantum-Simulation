@@ -154,6 +154,50 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     }
 }
 
+void State::
+ApplyXYRecursiveTransform(idx_size& gate_i,
+                          const vector<Gate>& all_gates,
+                          const int total_circuit_qubits,
+                          const int th)
+{
+     vector<int> Xcluster_qubits , Ycluster_qubits;
+     Xcluster_qubits = FormBlockOfXYHGates(gate_i, Gate::Type::X_1_2, all_gates);
+     Ycluster_qubits = FormBlockOfXYHGates(gate_i, Gate::Type::Y_1_2, all_gates);
+    
+    idx_size X_bitmask = 0, Y_bitmask = 0;
+    
+    for (idx_size i = 0; i < Xcluster_qubits.size(); ++i)
+        X_bitmask |= 1ull << Xcluster_qubits[i];
+    for (idx_size i = 0; i < Ycluster_qubits.size(); ++i)
+        Y_bitmask |= 1ull << Ycluster_qubits[i];
+    
+    if ((Xcluster_qubits.size() + Ycluster_qubits.size()) % 2 == 1) {
+        const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
+        const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+        
+        if (X_q < Y_q) {
+            ApplyNonControl1QGates(amp, X_q, total_circuit_qubits, Gate::Type::X_1_2);
+            X_bitmask ^= 1ull << X_q;
+            global_factor_power += 2;
+            Xcluster_qubits.pop_back();
+        }
+        else {
+            ApplyNonControl1QGates(amp, Y_q, total_circuit_qubits, Gate::Type::Y_1_2);
+            Y_bitmask ^= 1ull << Y_q;
+            global_factor_power += 2;
+            Ycluster_qubits.pop_back();
+        }
+    }
+    
+    if (X_bitmask || Y_bitmask)
+      global_i_counter += XYRecursiveTransform(amp, X_bitmask, Y_bitmask, total_circuit_qubits, th);
+    
+    if (Xcluster_qubits.size())
+        global_factor_power += Xcluster_qubits.size();
+    if (Ycluster_qubits.size())
+        global_factor_power += Ycluster_qubits.size();
+}
+
 double State::
 GetMinProb() const
 {

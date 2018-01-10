@@ -48,6 +48,10 @@ public:
                                 idx_size& odd_Yi,
                                 const vector<Gate>& all_gates,
                                 const int total_circuit_qubits);
+    void ApplyXYRecursiveTransform(idx_size& gate_i,
+                                   const vector<Gate>& all_gates,
+                                   const int total_circuit_qubits,
+                                   const int th);
     
     double GetMinProb() const;
     double GetMaxProb() const;

@@ -206,10 +206,19 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const Gate::Type gate_type,
                        const Gate& g = {});
 
+
 void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
                       cmplx* __restrict amp,
                       const int total_circuit_qubits);
+
+idx_size
+XYRecursiveTransform(cmplx* __restrict amp,
+                     idx_size X_bitmask,
+                     idx_size Y_bitmask,
+                     const int num_qubits,
+                     const int th);
+
 
 #endif /* kernels_h */

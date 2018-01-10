@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     
     static struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
-        { "create",    required_argument,       nullptr, 'c' },
+        { "threshold",    required_argument,       nullptr, 't' },
         { "google",    required_argument,       nullptr, 'g' },
         { "googleInput",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
@@ -38,15 +38,14 @@ int main(int argc, char *argv[])
     };
     
     int c = 0;
-    bool inputfile = false, googleInput = false, create = false, to_write = false,
-    google_c = false;
+    bool inputfile = false, googleInput = false, create = false, to_write = false;
     int idx = 0;
     
     string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0;
+    int numQ = 0, numG = 0, threshold = 0;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:c:o:g:h:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:h:t:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
@@ -67,9 +66,12 @@ int main(int argc, char *argv[])
                 input_filename = string(optarg);
                 break;
             }
-            case 'g':
-                google_c = true;
-            case 'c': {
+            case 't': {
+                string s_th = string(optarg);
+                threshold = stoi(s_th);
+                break;
+            }
+            case 'g': {
                 create = true;
                 if (argc < 3) {
                     cerr << "Please enter number of qubits and number of gates in circuit\n";
@@ -121,14 +123,14 @@ int main(int argc, char *argv[])
         if (inputfile) {
             cir.ReadCustomInputFiles("input/random_circuits_aneeqa/" + input_filename, amp_v, size);
             State amp(amp_v, size);
-            sim.Simulate("output/probabilities/" + out_file, amp, cir);
+            sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             delete [] amp_v;
             amp_v = nullptr;
         }
         else {
             cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, 26);
             State amp(cir.GetNumQubits());
-            sim.Simulate("output/probabilities/" + out_file, amp, cir);
+            sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
         }
     }
     else if(create) {
@@ -142,7 +144,7 @@ int main(int argc, char *argv[])
                 cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
             
-            sim.Simulate("output/probabilities/" + out_file, amp, cir);
+            sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
         }
     }
     return 0;
