@@ -271,7 +271,7 @@ PrintReport(const clock_t end,
     
     cout << setprecision(3);
 #ifdef RT
-    cout << "Recursion Threshold: " << th << "\n\n";
+    cout << "Recursion threshold: " << th << "\n\n";
 #endif
     double memory = amp.GetMemUsage();
     cout << "State vector size: ";
