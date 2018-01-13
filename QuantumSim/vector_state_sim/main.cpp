@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
     static struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "threshold",    required_argument,       nullptr, 't' },
+        { "depth",    required_argument,       nullptr, 'd' },
         { "google",    required_argument,       nullptr, 'g' },
         { "googleInput",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
@@ -42,10 +43,10 @@ int main(int argc, char *argv[])
     int idx = 0;
     
     string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0, threshold = 0;
+    int numQ = 0, numG = 0, threshold = 0, depth = 0;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:o:g:h:t:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
@@ -69,6 +70,11 @@ int main(int argc, char *argv[])
             case 't': {
                 string s_th = string(optarg);
                 threshold = stoi(s_th);
+                break;
+            }
+            case 'd': {
+                string s_d = string(optarg);
+                depth = stoi(s_d);
                 break;
             }
             case 'g': {
@@ -111,11 +117,10 @@ int main(int argc, char *argv[])
         } // switch
     } // while
     
+    cout << "Rollright ver 0.9 - a quantum circuit simulator\n\n";
     Circuit cir;
-    SequentialSimulation sim;
     if (inputfile || googleInput) {
-        if(googleInput)
-            cout << "Google circuit file: " << input_filename << "\n\n";
+        SequentialSimulation sim(input_filename, true);
         
         cmplx* amp_v = nullptr;
         idx_size size = 0;
@@ -128,12 +133,13 @@ int main(int argc, char *argv[])
             amp_v = nullptr;
         }
         else {
-            cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, 26);
+            cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, depth);
             State amp(cir.GetNumQubits());
             sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
         }
     }
     else if(create) {
+        SequentialSimulation sim("Custom circuit", true);
         for (idx_size i = 0; i < num_qubits.size(); ++i){
             cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             

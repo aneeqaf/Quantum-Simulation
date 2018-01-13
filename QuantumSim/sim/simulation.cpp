@@ -7,17 +7,26 @@
 
 #include "simulation.h"
 
+unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
+
 SequentialSimulation::
-SequentialSimulation(): g_begin(0), g_end(0), rescale_time(0),
-                        num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0)
+SequentialSimulation(): filename({}),g_begin(0), g_end(0), rescale_time(0),
+                        num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(false)
 {
     gate_time.resize(5, 0);
 }
 
 SequentialSimulation::
+SequentialSimulation(const string fname, bool g): filename(fname),g_begin(0), g_end(0), rescale_time(0),
+num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(g)
+{
+    gate_time.resize(5, 0);
+}
+SequentialSimulation::
 SequentialSimulation(const SequentialSimulation& rhs)
 {
     gate_time = rhs.gate_time;
+    filename = rhs.filename;
     g_begin = rhs.g_begin;
     g_end = rhs.g_end;
     rescale_time = rhs.rescale_time;
@@ -30,11 +39,25 @@ SequentialSimulation(const SequentialSimulation& rhs)
 }
 
 void SequentialSimulation::
+PopulateBenchmarkMap()
+{
+    benchmark["25_26"] = {cmplx(0.000104529,-0.000158536), cmplx(0.00011983,5.54614e-05), cmplx(0.000158796,6.78702e-05),
+        cmplx(-1.13099e-05,-7.9362e-06), cmplx(4.02591e-05, -6.56695e-05)};
+    benchmark["25_101"] = {cmplx(-0.000162581, -1.55533e-05), cmplx(-8.97293e-06, -1.42227e-05), cmplx(6.07801e-05, -4.70146e-05),
+        cmplx(4.87014e-07, -0.000124961), cmplx(0.000202284, 0.000114519)};
+    benchmark["30_26"] = {cmplx(-2.88494e-05, -3.6528e-05), cmplx(1.01401e-05, 6.81786e-06), cmplx(5.24095e-06, 4.47689e-05),
+        cmplx(-6.54596e-06, -2.83312e-05), cmplx(1.06338e-05, 3.37055e-05)};
+    benchmark["30_101"] = {cmplx(-9.25684e-06, 5.20232e-05), cmplx(-3.33498e-05, 2.11104e-05), cmplx(-4.62867e-05, -1.58411e-05),
+        cmplx(-1.64932e-05, 3.05876e-05), cmplx(-1.56987e-05, -7.06633e-06)};
+}
+
+void SequentialSimulation::
 Simulate(const string &outfile,
          State& amp,
          Circuit& circuit,
          const int threshold)
 {
+    PopulateBenchmarkMap();
     idx_size size = circuit.GetTotalNumGates();
     int total_circuit_qubits = circuit.GetNumQubits();
     th = threshold;
@@ -184,53 +207,28 @@ PrintReport(const clock_t end,
         cout << h;
     }
     cout << "\n";
-#ifdef CPUname
-    cout << "CPU name : ";
-    if (__builtin_cpu_is("amd")) {
-        cout << "AMD ";
-        if (__builtin_cpu_is("amdfam10h"))
-            cout << "Family 10h\n";
-        else if (__builtin_cpu_is("barcelona"))
-            cout << "Family 10h Barcelona\n";
-        else if (__builtin_cpu_is("shanghai"))
-            cout << "Family 10h Shanghai\n";
-        else if (__builtin_cpu_is("istanbul"))
-            cout << "Family 10h Istanbul\n";
-        else if (__builtin_cpu_is("btver1"))
-            cout << "Family 14h\n";
-        else if (__builtin_cpu_is("amdfam15h"))
-            cout << "Family 15h\n";
-        else if (__builtin_cpu_is("bdver1"))
-            cout << "Family 15h Bulldozer version 1\n";
-        else if (__builtin_cpu_is("bdver2"))
-            cout << "Family 15h Bulldozer version 2\n";
-        else if (__builtin_cpu_is("bdver3"))
-            cout << "Family 15h Bulldozer version 3\n";
-        else if (__builtin_cpu_is("btver2"))
-            cout << "Family 16h\n";
-        else
-            cout << "\n";
-    }
-    else if (__builtin_cpu_is("intel")) {
-        cout << "Intel ";
-        
-        if (__builtin_cpu_is("corei7"))
-            cout << "Core i7\n";
-        else if (__builtin_cpu_is("atom"))
-            cout << "Atom\n";
-        else if (__builtin_cpu_is("core2"))
-            cout << "Core 2\n";
-        else if (__builtin_cpu_is("nehalem"))
-            cout << "Core i7 Nehalem\n";
-        else if (__builtin_cpu_is("westmere"))
-            cout << "Core i7 Westmere\n";
-        else if (__builtin_cpu_is("sandybridge"))
-            cout << "Core i7 Sandy Bridge\n";
-        else
-            cout << "\n";
-    }
-    else
-        cout << "Unrecognized\n";
+    
+   
+#ifdef __APPLE__
+    cout << "CPU model name : "; flush(cout);
+    system("sysctl -n machdep.cpu.brand_string");
+    cout << "CPU cores : "; flush(cout);
+    system("sysctl -n machdep.cpu.core_count");
+    cout << "Hardware threads : "; flush(cout);
+    system("sysctl -n machdep.cpu.thread_count");
+    cout << "L2 cache size : "; flush(cout);
+    system("sysctl -n hw.l2cachesize");
+    cout << "L3 cache size : "; flush(cout);
+    system("sysctl -n hw.l3cachesize");
+#endif
+#ifndef __APPLE__
+    cout << "CPU "; flush(cout);
+    system("egrep CPU /proc/cpuinfo | head -1");
+    system("egrep cores /proc/cpuinfo | head -1");
+    cout << "Hardware threads : "; flush(cout);
+    system("egrep cores  /proc/cpuinfo | wc -l");
+    cout << "L3 " ; flush(cout);
+    system("egrep cache /proc/cpuinfo | head -1");
 #endif
     cout << "CPU supports :"
     << " popcnt:" << __builtin_cpu_supports("popcnt");
@@ -251,7 +249,7 @@ PrintReport(const clock_t end,
         cout << ", sse:" << __builtin_cpu_supports("sse");
     
     cout << ", avx:" << __builtin_cpu_supports("avx")
-         << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
+         << ", avx2:" << __builtin_cpu_supports("avx2") << "\n\n";
     cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
     <<  __GNUC_PATCHLEVEL__<< "\n";
     cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
@@ -265,54 +263,132 @@ PrintReport(const clock_t end,
     << std::setw(2) << std::setfill('0') << now->tm_sec
     <<"\n\n";
     
+    if (google) {
+        cout << "Circuit file : " + filename + "\n";
+        cout << "Circuit type : Google\n";
+    }
+    
     cout << "Qubits : " << circuit.GetNumQubits() << "  ";
     cout << "Gates : " << circuit.GetTotalNumGates() << "  ";
-    cout << "Cycles : " << circuit.GetNumCycles() << "\n";
+    cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
     
-    cout << setprecision(3);
+    cout << "Simulation type: state vector / lossless / single-threaded \n";
+    cout << "Size of complex : " << sizeof(cmplx) << " B\n";
+    
+    idx_size temp_amp_size = amp.GetAmpSize();
+    {
+        ostringstream ss (ostringstream::ate);
+        ss << setprecision(3);
+        double norm = amp.CalculateNormOfAmp();
+        double avg_inacc = (1.0 - norm)/(double)temp_amp_size;
 #ifdef RT
-    cout << "Recursion threshold: " << th << "\n\n";
+        cout << "Recursion end-case(max) : " << th << " q\n\n";
 #endif
-    double memory = amp.GetMemUsage();
-    cout << "State vector size: ";
-    
-    if (memory >= 1e9) {
-        cout << memory / 1e9 << " GB \n";
-    }
-    else if (memory >= 1e6) {
-        cout << memory / 1e6 << " MB \n";
-    }
-    else if (memory >= 1e3) {
-        cout << memory / 1e3 << " KB \n";
-    }
-    else
-        cout << memory << " B \n";
-    
-    double total_time = double(end - begin) / CLOCKS_PER_SEC;
-    cout << "Norm : " << amp.CalculateNormOfAmp() << "\n";
-    cout << "Probabilities : " << amp.GetMinProb() << "(min), "
-         << amp.GetMaxProb() << "(max), "
-         << amp.GetAvgProb() << "(avg)\n";
-    cout << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n\n" ;
-    
-    cout << "Total runtime : " << total_time << "s\n";
-    cout << "Runtimes by gate type\n";
-    cout << "   H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
-    << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
+        double memory = amp.GetMemUsage();
+        ss << "State vector size: ";
 
-    cout << "   CZ & T (" << CZ_T << ") : " << gate_time[1]
-    << "s = " << (gate_time[1]/total_time) * 100 << "%\n";
+        if (memory >= 1e9) {
+            ss << memory / 1e9 << " GB \n";
+        }
+        else if (memory >= 1e6) {
+            ss << memory / 1e6 << " MB \n";
+        }
+        else if (memory >= 1e3) {
+            ss << memory / 1e3 << " KB \n";
+        }
+        else
+            ss << memory << " B \n";
+
+        ss << "Norm : " << norm << "\n";
+        ss << "Probabilities : " << amp.GetMinProb() << "(min), "
+             << amp.GetMaxProb() << "(max), "
+             << amp.GetAvgProb() << "(avg)\n";
+        ss << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
+        ss << "Avg inaccuracy per probability > " << avg_inacc << " ("<< (avg_inacc/amp.GetAvgProb()) * 100 << "%)\n\n";
+        cout << ss.str();
+    }
     
-    cout << "   X (" << X << ") : " << gate_time[2] << "s = "
-    << (gate_time[2]/total_time) * 100 << "%\n";
+    {
+        amp.Rescale();
+        amp.ApplyGlobalICounter();
+        auto temp_amp = amp.GetAmp();
+        string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
+        cout << "Correctness check: ";
+        
+        if (benchmark.count(key)) {
+            if (real(temp_amp[3]) - real(benchmark[key][0]) < 1e-9
+                && imag(temp_amp[3]) - imag(benchmark[key][0]) < 1e-9
+                && real(temp_amp[temp_amp_size/4]) - real(benchmark[key][1]) < 1e-9
+                && imag(temp_amp[temp_amp_size/4]) - imag(benchmark[key][1]) < 1e-9
+                && real(temp_amp[temp_amp_size/2]) - real(benchmark[key][2]) < 1e-9
+                && imag(temp_amp[temp_amp_size/2]) - imag(benchmark[key][2]) < 1e-9
+                && real(temp_amp[3 * temp_amp_size/4]) -  real(benchmark[key][3]) < 1e-9
+                && imag(temp_amp[3 * temp_amp_size/4]) -  imag(benchmark[key][3]) < 1e-9
+                && real(temp_amp[temp_amp_size - 3]) - real(benchmark[key][4]) < 1e-9
+                && imag(temp_amp[temp_amp_size - 3]) - imag(benchmark[key][4]) < 1e-9)
+            {
+                cout << "passed\n";
+            }
+            else {
+                cout << "failed\nCorrect results: \n";
+                cout << "amp[3] = " << real(benchmark[key][0]) << "+" <<  imag(benchmark[key][0])
+                << "i\namp[1/4] = " << real(benchmark[key][1]) << "+" <<  imag(benchmark[key][1])
+                << "i\namp[1/2] = " << real(benchmark[key][2]) << "+" <<  imag(benchmark[key][2])
+                << "i\namp[3/4] = " << real(benchmark[key][3]) << "+" <<  imag(benchmark[key][3])
+                << "i\namp[-3] = "  << real(benchmark[key][4]) << "+" <<  imag(benchmark[key][4]) << "i\n";
+                cout << "Incorrect results: \n";
+            }
+        }
+        else
+            cout << "no data available\n";
     
-    cout << "   Y (" << Y << ") : " << gate_time[3]
-    << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
     
-    cout << "   Merged X & Y (" << merged_X_Y << ") : " << gate_time[4]
-    << "s = " << (gate_time[4]/total_time) * 100 << "%\n";
-    cout << "Rescaling passes (" << num_rescaling << ") : " << rescale_time << "s = "
-    << (rescale_time/total_time) * 100 << "%\n\n";
+        cout << "amp[3] = " << real(temp_amp[3]) << "+" <<  imag(temp_amp[3])
+        << "i\namp[1/4] = " << real(temp_amp[temp_amp_size/4]) << "+" << imag(temp_amp[temp_amp_size/4])
+        << "i\namp[1/2] = " << real(temp_amp[temp_amp_size/2]) << "+" <<  imag(temp_amp[temp_amp_size/2])
+        << "i\namp[3/4] = " << real(temp_amp[3 * temp_amp_size/4]) << "+" << imag(temp_amp[3 * temp_amp_size/4])
+        << "i\namp[-3] = " << real(temp_amp[temp_amp_size - 3])   << "+" << imag(temp_amp[temp_amp_size - 3]) << "i\n\n";
+    }
+    
+    {
+        ostringstream ss (ostringstream::ate);
+        ss << setprecision(3);
+        double total_time = double(end - begin) / CLOCKS_PER_SEC;
+        ss << "Runtime (" << total_time << "s total) by category \n";
+        
+        ss << "     H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
+        << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
+
+        if(CZ_T) {
+            ss << "     CZ & T (" << CZ_T << ") : " << gate_time[1]
+            << "s = " << (gate_time[1]/total_time) * 100 << "%\n";
+        }
+        
+        if (X) {
+            ss << "     X (" << X << ") : " << gate_time[2] << "s = "
+            << (gate_time[2]/total_time) * 100 << "%\n";
+        }
+        
+        if (Y) {
+            ss << "     Y (" << Y << ") : " << gate_time[3]
+            << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
+        }
+        
+        if (merged_X_Y) {
+            ss << "     Merged X & Y (" << merged_X_Y << ") : " << gate_time[4]
+            << "s = " << (gate_time[4]/total_time) * 100 << "%\n";
+        }
+        
+        if (num_rescaling) {
+            ss << "     Rescaling passes (" << num_rescaling << ") : " << rescale_time << "s = "
+            << (rescale_time/total_time) * 100 << "%\n\n";
+        }
+        
+        cout << ss.str();
+    }
+    
+    cout << "¯\\_(ツ)_/¯ \n\n";
+    
 }
 
 void SequentialSimulation::

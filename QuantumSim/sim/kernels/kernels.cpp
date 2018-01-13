@@ -159,8 +159,9 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
         
         const idx_size gate_c = __builtin_popcountll(gc & T_bitmasks[0])
                 + __builtin_popcountll(gc & T_bitmasks[1]);
-        
-        amp[gc] = mutated_amp * kTGate[gate_c % 8];;
+
+        // &7 is not faster than % 8
+        amp[gc] = mutated_amp * kTGate[gate_c % 8];
         
         prev_gc = gc;
     }
