@@ -20,6 +20,8 @@ using namespace std;
 
 class State {
 private:
+    double max_prob;
+    double min_prob;
     cmplx* amp;
     idx_size amp_size;
     idx_size global_factor_power;
@@ -59,12 +61,14 @@ public:
     double GetMemUsage() const;
     idx_size GetAmpSize() const;
     idx_size GetGlobalFactorPower() const;
-    float CalculateNormOfAmp();
+    idx_size GetGlobalIcounter() const;
+    double CalculateNormOfAmp();
     const cmplx* const GetAmp() const;
     
     void IncrementGlobalFactorPower(int num);
     void ResetGlobalFactorPower();
     void Rescale();
+    void ApplyGlobalICounter();
     
     void PrintStateVector(const string& outfile) const;
     void PrintStateVector() const;

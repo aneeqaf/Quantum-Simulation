@@ -10,7 +10,8 @@
 using namespace std;
 
 State::
-State(int qubits): global_factor_power(0), global_i_counter(0)
+State(int qubits): max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
+global_factor_power(0), global_i_counter(0)
 {
     amp_size = 1ull << qubits;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
@@ -19,7 +20,8 @@ State(int qubits): global_factor_power(0), global_i_counter(0)
 }
 
 State::
-State(cmplx* a, idx_size size): amp_size(size), global_factor_power(0), global_i_counter(0)
+State(cmplx* a, idx_size size): max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
+amp_size(size), global_factor_power(0), global_i_counter(0)
 {
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
     for (idx_size i = 0; i < size; ++i)
@@ -34,6 +36,8 @@ State::State(const State& rhs)
         amp[i] = rhs.amp[i];
     global_factor_power = rhs.global_factor_power;
     global_i_counter = rhs.global_i_counter;
+    min_prob = rhs.min_prob;
+    max_prob = rhs.max_prob;
 }
 
 State& State::
@@ -44,6 +48,8 @@ operator=(const State& rhs)
     swap(amp_size, temp.amp_size);
     swap(global_factor_power, temp.global_factor_power);
     swap(global_i_counter, temp.global_i_counter);
+    swap(min_prob, temp.min_prob);
+    swap(max_prob, temp.max_prob);
     return *this;
 }
 State::
@@ -201,21 +207,13 @@ ApplyXYRecursiveTransform(idx_size& gate_i,
 double State::
 GetMinProb() const
 {
-    double min = numeric_limits<double>::max();
-    for (idx_size i = 0; i < amp_size; ++i)
-        if (min > real(amp[i]))
-            min = real(amp[i]);
-    return min;
+    return min_prob;
 }
 
 double State::
 GetMaxProb() const
 {
-    double max = numeric_limits<double>::min();
-    for (idx_size i = 0; i < amp_size; ++i)
-        if (max < real(amp[i]))
-            max = real(amp[i]);
-    return max;
+    return max_prob;
 }
 
 double State::
@@ -236,24 +234,45 @@ GetGlobalFactorPower() const
     return global_factor_power;
 }
 
-float State::
+idx_size State::
+GetGlobalIcounter() const
+{
+    return global_i_counter;
+}
+
+double State::
 CalculateNormOfAmp()
 {
     double norm = 0;
     idx_size qubits = log2(amp_size);
     
     for (idx_size i = 0; i < amp_size; ++i) {
-        amp[i] /= pow(2,(global_factor_power/2));
+        cmplx t = amp[i];
+        t /= pow(2,(global_factor_power/2));
         if (global_factor_power % 2 == 1)
-            amp[i] /= sqrt(2);
+            t /= sqrt(2);
         
-        amp[i] *= conj(amp[i]);
-        if (real(amp[i]) > (1.0/(1ull << qubits)))
-            norm += real(amp[i]);
+        t *= conj(t);
+        if (real(t) > (1.0/(1ull << qubits)))
+            norm += real(t);
+        
+        if (min_prob > real(t))
+            min_prob = real(t);
+        
+        if (max_prob < real(t))
+            max_prob = real(t);
     }
-    for (idx_size i = 0; i < amp_size; ++i)
-        if (real(amp[i]) <= (1.0/(1ull << qubits)))
-            norm += real(amp[i]);
+    
+    for (idx_size i = 0; i < amp_size; ++i) {
+        auto t = amp[i];
+        t /= pow(2,(global_factor_power/2));
+        if (global_factor_power % 2 == 1)
+            t /= sqrt(2);
+        
+        t *= conj(t);
+        if (real(t) <= (1.0/(1ull << qubits)))
+            norm += real(t);
+    }
     
     return norm;
 }
@@ -292,6 +311,13 @@ Rescale()
     
     for (idx_size i = 0; i < amp_size; ++i)
         amp[i] *= rescaling_factor;
+}
+
+void State::
+ApplyGlobalICounter()
+{
+    for (idx_size i = 0; i < amp_size; ++i)
+        amp[i] *= pow(ki, global_i_counter);
 }
 
 void State::

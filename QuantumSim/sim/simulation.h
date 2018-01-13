@@ -9,7 +9,9 @@
 #define simulation_h
 
 #include <ctime>
+#include <sstream>
 #include <stdio.h>
+#include <unordered_map>
 
 #include "circuit.h"
 #include "state.h"
@@ -19,7 +21,9 @@ using namespace std;
 class SequentialSimulation {
 private:
     
+    static unordered_map<string, array<cmplx, 5>> benchmark;
     vector<double> gate_time;
+    string filename;
     clock_t g_begin;
     clock_t g_end;
     double rescale_time;
@@ -31,7 +35,9 @@ private:
     int Y;
     int CZ_T;
     int th;
+    bool google;
     
+    void PopulateBenchmarkMap();
    
 public:
     void PrintReport(const clock_t end,
@@ -50,9 +56,9 @@ public:
                   const int th = 0);
     
     SequentialSimulation();
+    SequentialSimulation(const string filename, bool g);
     SequentialSimulation(const SequentialSimulation& rhs);
     SequentialSimulation& operator=(const SequentialSimulation& rhs);
 };
-
 
 #endif /* simulation_h */
