@@ -121,10 +121,10 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
         const idx_size changed_bit = gc ^ prev_gc;
         const idx_size bit_idx = __builtin_ctzl(changed_bit);
         
-//        cout << "gc : " << gc << endl;
-//        cout << "changed bit : " << changed_bit << endl;
-//        cout << "bit_idx : " << bit_idx << endl;
-        
+//        cout << setw(2);
+//        cout <<  gc << " ";
+//        cout << bit_idx << endl;
+//
         cmplx mutated_amp = amp[gc];
       
         if (__builtin_parityl(CZ_bitmasks[bit_idx] & gc) == 1)
