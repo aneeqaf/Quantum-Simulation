@@ -14,24 +14,23 @@ __attribute__((always_inline)) inline void
 FirstGroupOf8GatesHelper(bool& negate_Z,
                          float* __restrict t_amp,
                          const idx_size prev_gc,
-                         const idx_size __restrict gray_codes[8],
-                         const valarray<idx_size>& CZ_bitmasks,
-                         const array<idx_size, 2>& T_bitmasks)
+                         const idx_size* __restrict gray_codes /*8*/,
+                         const idx_size* __restrict CZ_bitmasks,
+                         const idx_size* __restrict T_bitmasks /*2*/)
 {
     const idx_size bit_idx[8] = {static_cast<idx_size>(__builtin_ctzl(gray_codes[0] ^ prev_gc)), 0, 1 , 0,
         static_cast<idx_size>(__builtin_ctzl(gray_codes[4] ^ gray_codes[3])), 0 , 1, 0};
 
     //Number of T gates to be applied on an amp
     //If no T gate is being applied and amplitude has to be negated, then '-1' is wrapped in.
-    int gate_counts[8] = {0};
+    long long gate_counts[8] = {0};
     for (int i = 0; i < 8; ++i) {
         gate_counts[i] = __builtin_popcountll(gray_codes[i] & T_bitmasks[0]) + __builtin_popcountll(gray_codes[i] & T_bitmasks[1]);
         if (__builtin_parityl(CZ_bitmasks[bit_idx[i]] & gray_codes[i]) == 1)
             negate_Z = !negate_Z;
-        if (negate_Z) {
+        if (negate_Z)
             gate_counts[i] += 4;
-            gate_counts[i] %= 8;
-        }
+        gate_counts[i] %= 8;
     }
     
     const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2*gray_codes[0]]);
@@ -46,13 +45,11 @@ FirstGroupOf8GatesHelper(bool& negate_Z,
         kTGate_im[gate_counts[6]], kTGate_im[gate_counts[3]], kTGate_im[gate_counts[2]], kTGate_im[gate_counts[4]],
         kTGate_im[gate_counts[5]]};
     
-    const __m256 temp_re = _mm256_mul_ps(im_amps, im_Tgates);
-    const __m256 temp_im = _mm256_mul_ps(im_amps, re_Tgates);
-    im_amps = _mm256_fmadd_ps(re_amps, im_Tgates, temp_im);
-    re_amps = _mm256_fmsub_ps(re_amps, re_Tgates, temp_re);
+    const __m256 tim_amps = _mm256_fmadd_ps(re_amps, im_Tgates, _mm256_mul_ps(im_amps, re_Tgates));
+    const __m256 tre_amps = _mm256_fmsub_ps(re_amps, re_Tgates, _mm256_mul_ps(im_amps, im_Tgates));
     
-    __m256 first_set = _mm256_shuffle_ps(re_amps, im_amps, 0b01000100);
-    __m256 second_set = _mm256_shuffle_ps(re_amps, im_amps, 0b11101110);
+    __m256 first_set = _mm256_shuffle_ps(tre_amps, tim_amps, 0b01000100);
+    __m256 second_set = _mm256_shuffle_ps(tre_amps, tim_amps, 0b11101110);
     first_set = _mm256_permute_ps(first_set, 0b11011000);
     second_set = _mm256_permute_ps(second_set, 0b11011000);
     
@@ -62,26 +59,25 @@ FirstGroupOf8GatesHelper(bool& negate_Z,
 
 __attribute__((always_inline)) inline void
 SecondGroupOf8GatesHelper(bool& negate_Z,
-                         float* __restrict t_amp,
-                         const idx_size prev_gc,
-                         const idx_size __restrict gray_codes[8],
-                         const valarray<idx_size>& CZ_bitmasks,
-                         const array<idx_size, 2>& T_bitmasks)
+                          float* __restrict t_amp,
+                          const idx_size prev_gc,
+                          const idx_size* __restrict gray_codes /*8*/,
+                          const idx_size* __restrict CZ_bitmasks,
+                          const idx_size* __restrict T_bitmasks)
 {
     const idx_size bit_idx[8] = {static_cast<idx_size>(__builtin_ctzl(gray_codes[0] ^ prev_gc)), 0, 1 , 0,
         static_cast<idx_size>(__builtin_ctzl(gray_codes[4] ^ gray_codes[3])), 0 , 1, 0};
     
     //Number of T gates to be applied on an amp
     //If no T gate is being applied and amplitude has to be negated, then '-1' is wrapped in.
-    int gate_counts[8] = {0};
+    long long gate_counts[8] = {0};
     for (int i = 0; i < 8; ++i) {
         gate_counts[i] = __builtin_popcountll(gray_codes[i] & T_bitmasks[0]) + __builtin_popcountll(gray_codes[i] & T_bitmasks[1]);
         if (__builtin_parityl(CZ_bitmasks[bit_idx[i]] & gray_codes[i]) == 1)
             negate_Z = !negate_Z;
-        if (negate_Z) {
+        if (negate_Z)
             gate_counts[i] += 4;
-            gate_counts[i] %= 8;
-        }
+        gate_counts[i] %= 8;
     }
     
     const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2*gray_codes[7]]);
@@ -98,13 +94,11 @@ SecondGroupOf8GatesHelper(bool& negate_Z,
         kTGate_im[gate_counts[1]], kTGate_im[gate_counts[4]], kTGate_im[gate_counts[5]], kTGate_im[gate_counts[3]],
         kTGate_im[gate_counts[2]]};
     
-    const __m256 temp_re = _mm256_mul_ps(im_amps, im_Tgates);
-    const __m256 temp_im = _mm256_mul_ps(im_amps, re_Tgates);
-    im_amps = _mm256_fmadd_ps(re_amps, im_Tgates, temp_im);
-    re_amps = _mm256_fmsub_ps(re_amps, re_Tgates, temp_re);
+    const __m256 tim_amps = _mm256_fmadd_ps(re_amps, im_Tgates, _mm256_mul_ps(im_amps, re_Tgates));
+    const __m256 tre_amps = _mm256_fmsub_ps(re_amps, re_Tgates, _mm256_mul_ps(im_amps, im_Tgates));
     
-    __m256 first_set = _mm256_shuffle_ps(re_amps, im_amps, 0b01000100);
-    __m256 second_set = _mm256_shuffle_ps(re_amps, im_amps, 0b11101110);
+    __m256 first_set = _mm256_shuffle_ps(tre_amps, tim_amps, 0b01000100);
+    __m256 second_set = _mm256_shuffle_ps(tre_amps, tim_amps, 0b11101110);
     first_set = _mm256_permute_ps(first_set, 0b11011000);
     second_set = _mm256_permute_ps(second_set, 0b11011000);
     
@@ -112,12 +106,11 @@ SecondGroupOf8GatesHelper(bool& negate_Z,
     _mm256_store_ps(&t_amp[2*gray_codes[0]], second_set);
 }
 
-
 void
 ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
                         const int total_circuit_qubits,
-                        const valarray<idx_size>& CZ_bitmasks,
-                        const array<idx_size, 2>& T_bitmasks)
+                        const idx_size* __restrict CZ_bitmasks,
+                        const idx_size* __restrict T_bitmasks /*2*/)
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     const idx_size amp_size = 1ull << total_circuit_qubits;
@@ -129,17 +122,6 @@ ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
         idx_size gc0 = count ^ (count >> 1);
         idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
         const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-        {idx_size gc_t0[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-        sort(gc_t0, gc_t0 + sizeof(gc_t0) / sizeof(*gc_t0));
-        
-        assert(gc_t0[0] == gc_first[0]);
-        assert(gc_t0[1] == gc_first[1]);
-        assert(gc_t0[2] == gc_first[3]);
-        assert(gc_t0[3] == gc_first[2]);
-        assert(gc_t0[4] == gc_first[7]);
-        assert(gc_t0[5] == gc_first[6]);
-        assert(gc_t0[6] == gc_first[4]);
-            assert(gc_t0[7] == gc_first[5]);}
         
         FirstGroupOf8GatesHelper(negate_Z, t_amp, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
         prev_gc = gc_first[7];
@@ -147,21 +129,6 @@ ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
         gc0 = (count + 8) ^ ((count + 8) >> 1);
         gc4 = (count + 12) ^ ((count + 12) >> 1);
         const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-        {idx_size gc_t0[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-        sort(gc_t0, gc_t0 + sizeof(gc_t0) / sizeof(*gc_t0));
-        
-            if(gc_t0[0] != gc_second[7]) {
-                for (int i = 0; i < 8; ++i)
-                    cout << gc_first[i] << endl;
-                assert(0==1);
-            }
-        assert(gc_t0[1] == gc_second[6]);
-        assert(gc_t0[2] == gc_second[4]);
-        assert(gc_t0[3] == gc_second[5]);
-        assert(gc_t0[4] == gc_second[0]);
-        assert(gc_t0[5] == gc_second[1]);
-        assert(gc_t0[6] == gc_second[3]);
-        assert(gc_t0[7] == gc_second[2]);}
         
         SecondGroupOf8GatesHelper(negate_Z, t_amp, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
         prev_gc = gc_second[7];

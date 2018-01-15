@@ -146,7 +146,7 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
 void
 ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
                         const int total_circuit_qubits,
-                        const valarray<idx_size>& CZ_bitmasks,
-                        const array<idx_size, 2>& T_bitmasks);
+                        const idx_size* __restrict CZ_bitmasks,
+                        const idx_size* __restrict T_bitmasks);
 
 #endif /* kernelsAVX_h */
