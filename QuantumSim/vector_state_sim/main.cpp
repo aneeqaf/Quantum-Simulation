@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     int idx = 0;
     
     string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0, threshold = 0, depth = 0;
+    int numQ = 0, numG = 0, threshold = -1, depth = 0;
     vector<int> num_qubits, num_gates;
     
     while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:", longopts, &idx)) != -1)
@@ -116,6 +116,9 @@ int main(int argc, char *argv[])
             }
         } // switch
     } // while
+    
+    if (threshold == -1)
+        threshold = 14;
     
     cout << "Rollright ver 0.9 - a quantum circuit simulator\n\n";
     Circuit cir;

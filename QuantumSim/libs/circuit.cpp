@@ -128,7 +128,9 @@ GroupSimilarGates()
             ++last_Y;
         }
     }
-//    PrintGates();
+#ifdef Print
+    PrintGates();
+#endif
 }
 
 void Circuit::

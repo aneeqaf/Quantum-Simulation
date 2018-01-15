@@ -174,7 +174,9 @@ Simulate(const string &outfile,
     
     clock_t end = clock();
     
+#ifdef Print
     amp.PrintStateVector();
+#endif
     
     PrintReport(end , begin, amp, circuit);
 }
@@ -273,6 +275,7 @@ PrintReport(const clock_t end,
     cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
     
     cout << "Simulation type: state vector / lossless / single-threaded \n";
+    cout << "Number of threads : 1\n";
     cout << "Size of complex : " << sizeof(cmplx) << " B\n";
     
     idx_size temp_amp_size = amp.GetAmpSize();

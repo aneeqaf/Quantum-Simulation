@@ -64,8 +64,11 @@ ApplyBlockOfDiagGates(idx_size& gate_i,
                       const vector<Gate>& cluster,
                       const int total_circuit_qubits)
 {
-    array<idx_size, 2> T_bitmask = {0};
-    valarray<idx_size> CZ_bitmask (total_circuit_qubits);
+    idx_size T_bitmask[2] = {0};
+    idx_size CZ_bitmask[total_circuit_qubits];
+    
+    for (int i = 0; i < total_circuit_qubits; ++i)
+        CZ_bitmask[i] = 0;
 
     FormBlockOfCZTGates(gate_i, CZ_bitmask, T_bitmask, cluster, total_circuit_qubits);
    

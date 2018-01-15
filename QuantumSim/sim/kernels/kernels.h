@@ -168,12 +168,12 @@ ApplyGateOnAmps(cmplx* __restrict amp,
 }
 
 void
-GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
+GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
              const int total_circuit_qubits,
              const vector<int>& gate_qubits);
 
 void
-GroupTGates(array<idx_size, 2>& T_bitmasks,
+GroupTGates(idx_size* __restrict T_bitmasks,
             const int total_circuit_qubits,
             const vector<int>& gate_qubits);
 
@@ -186,8 +186,8 @@ ExtractIndicesForAmp(idx_size* strides,
 
 void
 FormBlockOfCZTGates(idx_size& gate_i,
-                    valarray<idx_size>& CZ_bitmasks,
-                    array<idx_size, 2>& T_bitmasks,
+                    idx_size* __restrict CZ_bitmasks,
+                    idx_size* __restrict T_bitmasks,
                     const vector<Gate>& cluster,
                     const int total_circuit_qubits);
 
@@ -199,8 +199,8 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
 void
 ApplyBlockOfCZTGates(cmplx* __restrict amp,
                      const int total_circuit_qubits,
-                     const valarray<idx_size>& CZ_bitmasks,
-                     const array<idx_size, 2>& T_bitmasks);
+                     const idx_size* __restrict CZ_bitmasks,
+                     const idx_size* __restrict T_bitmasks);
 
 void
 ApplyNonControl1QGates(cmplx* __restrict amp,
@@ -221,7 +221,7 @@ XYRecursiveTransform(cmplx* __restrict amp,
                      idx_size X_bitmask,
                      idx_size Y_bitmask,
                      const int num_qubits,
-                     const int th);
+                     const int th = 14);
 
 
 #endif /* kernels_h */

@@ -8,7 +8,7 @@
 #include "kernels.h"
 
 void
-GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
+GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
              const int total_circuit_qubits,
              const vector<int>& gate_qubits)
 {
@@ -24,7 +24,7 @@ GroupCZGates(valarray<idx_size>& qubits_CZ_bitmasks,
 }
 
 void
-GroupTGates(array<idx_size, 2>& T_bitmasks,
+GroupTGates(idx_size* __restrict T_bitmasks,
             const int total_circuit_qubits,
             const vector<int>& gate_qubits)
 {
@@ -38,9 +38,9 @@ GroupTGates(array<idx_size, 2>& T_bitmasks,
             throw "More than 2 T gates incident on a qubit.";
         
         bool found = false;
-        for (auto& t : T_bitmasks)
-            if ((t & t_mask) != t_mask) {
-                t |= t_mask;
+        for (int t = 0; t < 2; ++t)
+            if ((T_bitmasks[t] & t_mask) != t_mask) {
+                T_bitmasks[t] |= t_mask;
                 found = true;
             }
         if (!found) {
@@ -74,8 +74,8 @@ ExtractIndicesForAmp(idx_size* strides,
 
 void
 FormBlockOfCZTGates(idx_size& gate_i,
-                    valarray<idx_size>& CZ_bitmasks,
-                    array<idx_size, 2>& T_bitmasks,
+                    idx_size* __restrict CZ_bitmasks,
+                    idx_size* __restrict T_bitmasks /*2*/,
                     const vector<Gate>& cluster,
                     const int total_circuit_qubits)
 {
@@ -108,8 +108,8 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
 void
 ApplyBlockOfCZTGates(cmplx* __restrict amp,
                      const int total_circuit_qubits,
-                     const valarray<idx_size>& CZ_bitmasks,
-                     const array<idx_size, 2>& T_bitmasks)
+                     const idx_size* __restrict CZ_bitmasks,
+                     const idx_size* __restrict T_bitmasks)
 {
     const idx_size amp_size = 1ull << total_circuit_qubits;
     idx_size prev_gc = 0;
@@ -121,10 +121,6 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
         const idx_size changed_bit = gc ^ prev_gc;
         const idx_size bit_idx = __builtin_ctzl(changed_bit);
         
-//        cout << setw(2);
-//        cout <<  gc << " ";
-//        cout << bit_idx << endl;
-//
         cmplx mutated_amp = amp[gc];
       
         if (__builtin_parityl(CZ_bitmasks[bit_idx] & gc) == 1)
@@ -140,7 +136,6 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
         
         prev_gc = gc;
     }
-//    cout << "_________________" << endl;
 }
 
 void
