@@ -99,38 +99,10 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
     for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
-        if(gt.ids.back() == gate_type)
+        if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
             cluster.push_back(all_gates[gate_i]);
-        else if (gt.ids.back() == Gate::Type::Y_1_2 || gt.ids.back() == Gate::Type::X_1_2){
-            if (cluster.size() > 2) {
-                --gate_i;
-                cluster.pop_back();
-            }
-            else if (cluster.size() < 2)
-                cluster.push_back(all_gates[gate_i++]);
-            break;
-        }
-        else {
-            if (cluster.size() % 2 == 1) {
-                --gate_i;
-                cluster.pop_back();
-            }
-            break;
-        }
+        else break;
     }
-    
-    if (cluster.size() == 3) {
-        --gate_i;
-        cluster.pop_back();
-    }
-    
-//    for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
-//        const auto& gt = all_gates[gate_i];
-//
-//        if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
-//            cluster.push_back(all_gates[gate_i]);
-//        else break;
-//    }
 }
 
 void
@@ -145,10 +117,13 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
     bool negate_Z = false;
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
     for (idx_size count = 0; count < amp_size ; ++count) {
-        
         const idx_size gc = count ^ (count >> 1);
         const idx_size changed_bit = gc ^ prev_gc;
         const idx_size bit_idx = __builtin_ctzl(changed_bit);
+        
+//        cout << "gc : " << gc << endl;
+//        cout << "changed bit : " << changed_bit << endl;
+//        cout << "bit_idx : " << bit_idx << endl;
         
         cmplx mutated_amp = amp[gc];
       
@@ -165,6 +140,7 @@ ApplyBlockOfCZTGates(cmplx* __restrict amp,
         
         prev_gc = gc;
     }
+//    cout << "_________________" << endl;
 }
 
 void
@@ -202,9 +178,10 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
 template<typename function>
 void
 Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
-                           const int* gate_qubits,
-                           const int total_circuit_qubits,
-                           const function& gate_func)
+                            const int* gate_qubits,
+                            const int total_circuit_qubits,
+                            const function& gate_func,
+                            const idx_size add = 1)
 {
     const idx_size amp_size = 1ull << total_circuit_qubits;
     idx_size gate_bitmask = 0, iter_count = 0;
@@ -221,14 +198,14 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
     while(iter_count < (amp_size/num_indices)) {
         if ((idx & gate_bitmask) == 0) {
-            ++iter_count;
+            iter_count+=add;
             
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
             gate_func(amp, temp_indices.data());
             
-            ++idx;
+            idx+=add;
         }
         else
             idx += (idx & gate_bitmask);
@@ -282,12 +259,18 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
         if (next_qubit < Yunused_qubits) {
             const int gates_qubits[2] = {Xunused_qubits, next_qubit};
             X_bitmask ^= 1ull << next_qubit;
-            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12Gate);
+            if ((Xunused_qubits < num_qubits - 1 && next_qubit < num_qubits - 2))
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12GateAVX, 4);
+            else
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12Gate);
         }
         else {
             Y_bitmask ^= 1ull << Yunused_qubits;
             const int gates_qubits[2] = {Xunused_qubits, Yunused_qubits};
-            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12Gate);
+            if ((Xunused_qubits < num_qubits - 1 && Yunused_qubits < num_qubits - 2))
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12GateAVX, 4);
+            else
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12Gate);
         }
     }
     else {
@@ -296,13 +279,19 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
         if (next_qubit < Xunused_qubits) {
             const int gates_qubits[2] = {Yunused_qubits, next_qubit};
             Y_bitmask ^= 1ull << next_qubit;
-            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12Gate);
+            if ((Yunused_qubits < num_qubits - 1 && next_qubit < num_qubits - 2))
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12GateAVX, 4);
+            else
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12Gate);
             ++i_count;
         }
         else {
             X_bitmask ^= 1ull << Xunused_qubits;
             const int gates_qubits[2] = {Yunused_qubits, Xunused_qubits};
-            Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12Gate);
+            if ((Yunused_qubits < num_qubits - 1 && Xunused_qubits < num_qubits - 2))
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12GateAVX, 4);
+            else
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12Gate);
         }
     }
     return i_count;

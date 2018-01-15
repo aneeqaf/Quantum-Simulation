@@ -67,11 +67,6 @@ ApplyControlGate(cmplx* __restrict amp,
                  const Gate::Type gate_type);
 
 void
-Apply4MergedXY12Gates(vector<Gate>& cluster,
-                      cmplx* __restrict amp,
-                      const int total_circuit_qubits);
-
-void
 ApplyManyXOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits);
 

@@ -68,60 +68,6 @@ ApplyControlGate(cmplx* __restrict amp,
     }
 }
 
-template <typename function>
-void
-Apply4MergedXY12GatesHelper(cmplx* __restrict amp,
-                      const int* gate_qubits,
-                      const int total_circuit_qubits,
-                      const function& gate_func)
-{
-    const idx_size amp_size = 1ull << total_circuit_qubits;
-    idx_size gate_bitmask = 0, iter_count = 0;
-    constexpr idx_size num_bits = 4;
-    for (idx_size i = 0; i < num_bits; ++i)
-        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - gate_qubits[i]));
-    
-    constexpr idx_size num_indices = 16;
-    array<idx_size, num_indices> indices;
-    ExtractIndicesForAmp(indices.data(), gate_qubits, num_bits ,total_circuit_qubits);
-    array<idx_size, num_indices> temp_indices;
-    
-    idx_size idx = 0;
-    while(iter_count < (amp_size/num_indices)) {
-        if ((idx & gate_bitmask) == 0) {
-            ++iter_count;
-            
-            for (idx_size i = 0; i < num_indices; ++i)
-                temp_indices[i] = indices[i] + idx;
-            
-            gate_func(amp, temp_indices.data());
-            
-            ++idx;
-        }
-        else
-            idx += (idx & gate_bitmask);
-    }
-}
-
-void
-Apply4MergedXY12Gates(vector<Gate>& cluster,
-                cmplx* __restrict amp,
-                const int total_circuit_qubits)
-{
-    int block_qubits[4];
-    
-    for (idx_size i = 0; i < 4; ++i)
-        block_qubits[i] = cluster[i].qubits.back();
-    
-    Gate::Type g1t = (Gate::Type)cluster[0].ids.back();
-    
-    if(g1t == Gate::Type::X_1_2)
-        Apply4MergedXY12GatesHelper(amp, block_qubits, total_circuit_qubits, Apply4X12GateAVX);
-    
-    else if(g1t == Gate::Type::Y_1_2)
-        Apply4MergedXY12GatesHelper(amp, block_qubits, total_circuit_qubits, Apply4Y12GateAVX);
-}
-
 void
 ApplyManyXOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
