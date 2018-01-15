@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
         }
         else {
             cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, depth);
+            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
             State amp(cir.GetNumQubits());
             sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
         }

@@ -38,9 +38,9 @@ constexpr float kH = 0.707106781;
 
 using idx_size = size_t;
 
-constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH},
-    -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
-
+constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH}, -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
+constexpr float kTGate_re[8] = {1, kH, 0, -kH, -1, -kH, 0, kH};
+constexpr float kTGate_im[8] = {0, kH, 1, kH, 0, -kH, -1, -kH};
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx ki = {0,1};
 constexpr int kRT = 8 * sizeof(idx_size) + 1;
