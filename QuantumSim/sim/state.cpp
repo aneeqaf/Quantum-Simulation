@@ -109,8 +109,6 @@ ApplyMergedXYGate(idx_size& gate_i,
     
     if (num_gates == 2)
         Apply2MergedXY12Gates(cluster[0], cluster[1], amp, total_circuit_qubits);
-    else if (num_gates == 4)
-        Apply4MergedXY12Gates(cluster, amp, total_circuit_qubits);
     
     global_factor_power += num_gates;
     

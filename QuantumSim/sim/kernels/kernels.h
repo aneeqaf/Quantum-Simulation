@@ -30,6 +30,7 @@
 #include <utility>
 
 #include "gates.h"
+#include "kernelsAVX.h"
 
 using namespace std;
 
@@ -39,6 +40,7 @@ using idx_size = size_t;
 
 constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH},
     -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
+
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx ki = {0,1};
 constexpr int kRT = 8 * sizeof(idx_size) + 1;

@@ -285,7 +285,7 @@ PrintReport(const clock_t end,
         cout << "Recursion end-case(max) : " << th << " q\n\n";
 #endif
         double memory = amp.GetMemUsage();
-        ss << "State vector size: ";
+        ss << "State vector size : ";
 
         if (memory >= 1e9) {
             ss << memory / 1e9 << " GB \n";
@@ -313,7 +313,7 @@ PrintReport(const clock_t end,
         amp.ApplyGlobalICounter();
         auto temp_amp = amp.GetAmp();
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
-        cout << "Correctness check: ";
+        cout << "Correctness check : ";
         
         if (benchmark.count(key)) {
             if (real(temp_amp[3]) - real(benchmark[key][0]) < 1e-9
@@ -375,7 +375,7 @@ PrintReport(const clock_t end,
         }
         
         if (merged_X_Y) {
-            ss << "     Merged X & Y (" << merged_X_Y << ") : " << gate_time[4]
+            ss << "     X & Y (" << merged_X_Y << ") : " << gate_time[4]
             << "s = " << (gate_time[4]/total_time) * 100 << "%\n";
         }
         

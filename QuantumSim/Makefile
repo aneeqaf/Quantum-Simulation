@@ -21,10 +21,11 @@ KERNELSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard sim/kernels/*.cpp))
 LIBSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard libs/*.cpp))
 EXE = $(patsubst %.cpp, %.o, vector_state_sim/main.cpp)
 BM = $(patsubst %.cpp, %.o, benchmark/XYmicroBM.cpp)
+KERNELHEADERS = $(wildcard sim/kernels/*.h)
 
 OBJECTS = $(SIMOBJECTS) $(KERNELSOBJECTS) $(LIBSOBJECTS)
 
-$(OBJECTS) $(BM): %.o: %.cpp %.h
+$(OBJECTS) $(BM): %.o: %.cpp %.h 
 	@echo "Building dependencies..."
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
@@ -41,7 +42,7 @@ clean:
 	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/*
 
 # Benchmark
-bm: $(OBJECTS) $(BM)
+bm: $(OBJECTS) $(BM) $(KERNELHEADERS)
 	$(CC) $(CFLAGS) $(BM) $(OBJECTS) $(INC) $(LIBS) benchmark/main.cpp -o bin/bm
 
 
