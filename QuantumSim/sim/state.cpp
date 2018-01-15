@@ -69,7 +69,7 @@ ApplyBlockOfDiagGates(idx_size& gate_i,
 
     FormBlockOfCZTGates(gate_i, CZ_bitmask, T_bitmask, cluster, total_circuit_qubits);
    
-    ApplyBlockOfCZTGates(amp, total_circuit_qubits, CZ_bitmask, T_bitmask);
+    ApplyBlockOfCZTGatesAVX(amp, total_circuit_qubits, CZ_bitmask, T_bitmask);
 }
 
 void State::
