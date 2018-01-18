@@ -13,7 +13,7 @@
 #include <sstream>
 #include <fstream>
 #include <getopt.h>
-#include "../sim/simulation.h"
+#include "simulation.h"
 
 using namespace std;
 
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     if (threshold == -1)
         threshold = 14;
     
-    cout << "Rollright ver 0.9 - a quantum circuit simulator\n\n";
+    cout << "Rollright ver 1.1 - a quantum circuit simulator\n\n";
     Circuit cir;
     if (inputfile || googleInput) {
         SequentialSimulation sim(input_filename, true);
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
         }
         else {
             cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, depth);
-            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
+//            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
             State amp(cir.GetNumQubits());
             sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
         }

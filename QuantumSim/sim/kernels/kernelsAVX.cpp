@@ -33,8 +33,8 @@ FirstGroupOf8GatesHelper(bool& negate_Z,
         gate_counts[i] %= 8;
     }
     
-    const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2*gray_codes[0]]);
-    const __m256 temp_amp1 = _mm256_load_ps (&t_amp[2*gray_codes[7]]);
+    const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2 * gray_codes[0]]);
+    const __m256 temp_amp1 = _mm256_load_ps (&t_amp[2 * gray_codes[7]]);
     __m256 re_amps = _mm256_shuffle_ps (temp_amp0, temp_amp1, 0b10001000);
     __m256 im_amps = _mm256_shuffle_ps (temp_amp0, temp_amp1, 0b11011101);
     
@@ -53,8 +53,8 @@ FirstGroupOf8GatesHelper(bool& negate_Z,
     first_set = _mm256_permute_ps(first_set, 0b11011000);
     second_set = _mm256_permute_ps(second_set, 0b11011000);
     
-    _mm256_store_ps(&t_amp[2*gray_codes[0]], first_set);
-    _mm256_store_ps(&t_amp[2*gray_codes[7]], second_set);
+    _mm256_store_ps(&t_amp[2 * gray_codes[0]], first_set);
+    _mm256_store_ps(&t_amp[2 * gray_codes[7]], second_set);
 }
 
 __attribute__((always_inline)) inline void
@@ -80,8 +80,8 @@ SecondGroupOf8GatesHelper(bool& negate_Z,
         gate_counts[i] %= 8;
     }
     
-    const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2*gray_codes[7]]);
-    const __m256 temp_amp1 = _mm256_load_ps (&t_amp[2*gray_codes[0]]);
+    const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2 * gray_codes[7]]);
+    const __m256 temp_amp1 = _mm256_load_ps (&t_amp[2 * gray_codes[0]]);
     
     //The order of real and imag amps is 2 floats from 1st group of 4, 2 floats from 2nd group of 4, and so on.
     __m256 re_amps = _mm256_shuffle_ps (temp_amp0, temp_amp1, 0b10001000);
@@ -102,8 +102,8 @@ SecondGroupOf8GatesHelper(bool& negate_Z,
     first_set = _mm256_permute_ps(first_set, 0b11011000);
     second_set = _mm256_permute_ps(second_set, 0b11011000);
     
-    _mm256_store_ps(&t_amp[2*gray_codes[7]], first_set);
-    _mm256_store_ps(&t_amp[2*gray_codes[0]], second_set);
+    _mm256_store_ps(&t_amp[2 * gray_codes[7]], first_set);
+    _mm256_store_ps(&t_amp[2 * gray_codes[0]], second_set);
 }
 
 void

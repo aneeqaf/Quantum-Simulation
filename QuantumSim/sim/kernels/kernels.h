@@ -179,8 +179,7 @@ GroupTGates(idx_size* __restrict T_bitmasks,
 
 void
 ExtractIndicesForAmp(idx_size* strides,
-                     const int* gate_qubits,
-                     const idx_size gate_qubits_size,
+                     idx_size gate_qubits,
                      const int total_circuit_qubits,
                      const idx_size starting_idx = 0);
 

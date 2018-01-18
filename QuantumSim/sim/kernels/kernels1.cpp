@@ -35,17 +35,19 @@ ApplyControlGate(cmplx* __restrict amp,
 {
     int loop_count = total_circuit_qubits - num_controls;
     const idx_size modified_q = total_circuit_qubits -1, num_indices = 1ull << loop_count;
-    idx_size idx = 0, gate_bitmask = 0, c_bits = 0, iter_count = 0;
+    idx_size idx = 0, gate_bitmask = 0, c_bits = 0, iter_count = 0, gate_qubits_bitmask = 0;
     
     for (int j = 0 ; j < num_controls; ++j)
         c_bits |= (1 << (modified_q - (gate_qubits[j])));
     
-    for (idx_size i = 0; i < gate_qubits.size(); ++i)
+    for (idx_size i = 0; i < gate_qubits.size(); ++i) {
         gate_bitmask |= (1ull << (modified_q - gate_qubits[i]));
+        gate_qubits_bitmask |= 1ull << gate_qubits[i];
+    }
     
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, gate_qubits.data(), gate_qubits.size(),total_circuit_qubits, num_controls);
+    ExtractIndicesForAmp(indices, gate_qubits_bitmask, total_circuit_qubits, num_controls);
     idx_size temp_indices[num_indices];
     memset(temp_indices, 0, num_indices * sizeof(idx_size));
     
@@ -126,20 +128,23 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
 
 void
 ApplyFWHT(cmplx* __restrict amp,
-          const vector<int>& qubits_in_cluster,
+          idx_size qubits_in_cluster,
           const int total_circuit_qubits,
           const Gate::Type gate_type)
 {
-    const idx_size num_qubits = qubits_in_cluster.size(), amp_size = 1ull << total_circuit_qubits,
+    const idx_size num_qubits = __builtin_popcountll(qubits_in_cluster), amp_size = 1ull << total_circuit_qubits,
                     slice_size = 1ull << num_qubits;
     
-    idx_size gate_bitmask = 0;
-    for (idx_size i = 0; i < num_qubits; ++i)
-        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - qubits_in_cluster[i]));
+    idx_size gate_bitmask = 0, qubits_bitmask = qubits_in_cluster;
+    for (idx_size i = 0; i < num_qubits; ++i) {
+        idx_size q = __builtin_ctzl(qubits_in_cluster);
+        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - q));
+        qubits_in_cluster ^= 1ull << q;
+    }
     
     idx_size indices [slice_size];
     memset(indices, 0, slice_size * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, qubits_in_cluster.data(), qubits_in_cluster.size(), total_circuit_qubits);
+    ExtractIndicesForAmp(indices, qubits_bitmask, total_circuit_qubits);
     cmplx amp_slice[slice_size];
     memset(amp_slice, 0, slice_size * sizeof(cmplx));
     

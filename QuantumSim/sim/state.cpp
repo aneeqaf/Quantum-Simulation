@@ -59,35 +59,47 @@ State::
     amp = nullptr;
 }
 
-void State::
-ApplyBlockOfDiagGates(idx_size& gate_i,
-                      const vector<Gate>& cluster,
-                      const int total_circuit_qubits)
+idx_size State::
+FormBitmask(const vector<int>& qubits)
 {
-    idx_size T_bitmask[2] = {0};
-    idx_size CZ_bitmask[total_circuit_qubits];
+    idx_size qubits_bitmask = 0;
+    for (idx_size i = 0; i < qubits.size(); ++i)
+        qubits_bitmask |= qubits[i];
     
-    for (int i = 0; i < total_circuit_qubits; ++i)
-        CZ_bitmask[i] = 0;
-
-    FormBlockOfCZTGates(gate_i, CZ_bitmask, T_bitmask, cluster, total_circuit_qubits);
-   
-    ApplyBlockOfCZTGatesAVX(amp, total_circuit_qubits, CZ_bitmask, T_bitmask);
+    return qubits_bitmask;
 }
 
 void State::
-ApplyNonCGate(const vector<int>& gate_qubits,
+ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
+                      const idx_size __restrict T_bitmasks[2],
+                      const int total_circuit_qubits)
+{
+   ApplyBlockOfCZTGatesAVX(amp, total_circuit_qubits, CZ_bitmasks, T_bitmasks);
+}
+
+void State::
+ApplyNonCGate(const int gate_qubit,
               const int total_circuit_qubits,
               const Gate::Type gate_type,
               const Gate& g)
 {
-    ApplyNonControl1QGates(amp, gate_qubits[0], total_circuit_qubits, gate_type, g);
+    ApplyNonControl1QGates(amp, gate_qubit, total_circuit_qubits, gate_type, g);
 }
 
 void State::
-ApplyHGateOnAllAmps(const int total_circuit_qubits)
+ApplyHGateOnAllAmps()
 {
-    fill_n(amp, amp_size, 1);
+//    fill_n(amp, amp_size, 1);
+    const int total_circuit_qubits = log2(amp_size);
+    
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
+    for (idx_size i = 0; i < amp_size; i += 4) {
+        __m256 t = _mm256_load_ps(t_amp + (2 * i));
+        t = _mm256_or_ps(t, re_ones);
+        _mm256_store_ps(t_amp + (2 * i), t);
+    }
+    
     global_factor_power += total_circuit_qubits;
 }
 
@@ -102,20 +114,15 @@ ApplyCGate(const int num_controls,
 }
 
 void State::
-ApplyMergedXYGate(idx_size& gate_i,
-                  const vector<Gate>& all_gates,
+ApplyMergedXYGate(const Gate& gate1,
+                  const Gate& gate2,
                   const int total_circuit_qubits)
 {
-    vector<Gate> cluster;
-    FormBlockOfXYHGates(cluster, gate_i, (Gate::Type)all_gates[gate_i].ids.back(), all_gates);
-    idx_size num_gates = cluster.size();
+    Apply2MergedXY12Gates(gate1, gate2, amp, total_circuit_qubits);
     
-    if (num_gates == 2)
-        Apply2MergedXY12Gates(cluster[0], cluster[1], amp, total_circuit_qubits);
+    global_factor_power += 2;
     
-    global_factor_power += num_gates;
-    
-    if (cluster[0].ids.back() == Gate::Type::Y_1_2 && cluster[1].ids.back() == Gate::Type::Y_1_2)
+    if (gate1.ids.back() == Gate::Type::Y_1_2 && gate2.ids.back() == Gate::Type::Y_1_2)
         ++global_i_counter;
     
 }
@@ -146,11 +153,13 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     }
     
     if (qubits_in_cluster1.size()) {
-        ApplyFWHT(amp, qubits_in_cluster1, total_circuit_qubits, Gate::Type::X_1_2);
+        const idx_size clus1_q_bitmask = FormBitmask(qubits_in_cluster1);
+        ApplyFWHT(amp, clus1_q_bitmask, total_circuit_qubits, Gate::Type::X_1_2);
         global_factor_power += qubits_in_cluster1.size();
     }
     if (qubits_in_cluster2.size()) {
-        ApplyFWHT(amp, qubits_in_cluster2, total_circuit_qubits, Gate::Type::Y_1_2);
+        const idx_size clus2_q_bitmask = FormBitmask(qubits_in_cluster2);
+        ApplyFWHT(amp, clus2_q_bitmask, total_circuit_qubits, Gate::Type::Y_1_2);
         global_factor_power += qubits_in_cluster2.size();
         global_i_counter += qubits_in_cluster2.size()/2;
     }
@@ -162,23 +171,13 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
 }
 
 void State::
-ApplyXYRecursiveTransform(idx_size& gate_i,
-                          const vector<Gate>& all_gates,
+ApplyXYRecursiveTransform(idx_size X_bitmask,
+                          idx_size Y_bitmask,
                           const int total_circuit_qubits,
                           const int th)
 {
-     vector<int> Xcluster_qubits , Ycluster_qubits;
-     Xcluster_qubits = FormBlockOfXYHGates(gate_i, Gate::Type::X_1_2, all_gates);
-     Ycluster_qubits = FormBlockOfXYHGates(gate_i, Gate::Type::Y_1_2, all_gates);
-    
-    idx_size X_bitmask = 0, Y_bitmask = 0;
-    
-    for (idx_size i = 0; i < Xcluster_qubits.size(); ++i)
-        X_bitmask |= 1ull << Xcluster_qubits[i];
-    for (idx_size i = 0; i < Ycluster_qubits.size(); ++i)
-        Y_bitmask |= 1ull << Ycluster_qubits[i];
-    
-    if ((Xcluster_qubits.size() + Ycluster_qubits.size()) % 2 == 1) {
+    idx_size num_Xgates = __builtin_popcountll(X_bitmask), num_Ygates = __builtin_popcountll(Y_bitmask);
+    if ((num_Xgates + num_Ygates) % 2 == 1) {
         const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
         const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
         
@@ -186,23 +185,29 @@ ApplyXYRecursiveTransform(idx_size& gate_i,
             ApplyNonControl1QGates(amp, X_q, total_circuit_qubits, Gate::Type::X_1_2);
             X_bitmask ^= 1ull << X_q;
             global_factor_power += 2;
-            Xcluster_qubits.pop_back();
+            --num_Xgates;
         }
         else {
             ApplyNonControl1QGates(amp, Y_q, total_circuit_qubits, Gate::Type::Y_1_2);
             Y_bitmask ^= 1ull << Y_q;
             global_factor_power += 2;
-            Ycluster_qubits.pop_back();
+            --num_Ygates;
         }
     }
     
     if (X_bitmask || Y_bitmask)
       global_i_counter += XYRecursiveTransform(amp, X_bitmask, Y_bitmask, total_circuit_qubits, th);
     
-    if (Xcluster_qubits.size())
-        global_factor_power += Xcluster_qubits.size();
-    if (Ycluster_qubits.size())
-        global_factor_power += Ycluster_qubits.size();
+    if (num_Xgates)
+        global_factor_power += num_Xgates;
+    if (num_Ygates)
+        global_factor_power += num_Ygates;
+}
+
+cmplx State::
+operator[](idx_size i) const
+{
+    return amp[i];
 }
 
 double State::
@@ -305,13 +310,23 @@ ResetGlobalFactorPower()
 void State::
 Rescale()
 {
-    cmplx rescaling_factor = 1.0/pow(2,(global_factor_power/2));
+    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
     global_factor_power = 0;
     
-    for (idx_size i = 0; i < amp_size; ++i)
-        amp[i] *= rescaling_factor;
+//    for (idx_size i = 0; i < amp_size; ++i)
+//        amp[i] *= rescaling_factor;
+    
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
+        rescaling_factor, rescaling_factor , rescaling_factor, rescaling_factor};
+    for (idx_size i = 0; i < amp_size; i += 4) {
+        __m256 t = _mm256_load_ps(t_amp + (2 * i));
+        t = _mm256_mul_ps(t, rescaling);
+        _mm256_store_ps(t_amp + (2 * i), t);
+    }
+    
 }
 
 void State::

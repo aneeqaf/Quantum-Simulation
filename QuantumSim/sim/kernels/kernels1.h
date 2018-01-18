@@ -76,7 +76,7 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
 
 void
 ApplyFWHT(cmplx* __restrict amp,
-          const vector<int>& qubits_in_cluster,
+          idx_size qubits_in_cluster,
           const int total_circuit_qubits,
           const Gate::Type gate_type);
 

@@ -1,0 +1,40 @@
+Running Time,Self (ms),,Symbol Name
+3167.0ms  100.0%,0, ,Main Thread  0x4cb1bb
+1829.0ms   57.7%,0, , 0x7fff51996113
+1667.0ms   52.6%,1, , main
+1649.0ms   52.0%,83, , SequentialSimulation::Simulate(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, State&, Circuit&, int)
+1334.0ms   42.1%,374, , State::ApplyXYRecursiveTransform(unsigned long&, std::vector<Gate, std::allocator<Gate> > const&, int, int)
+1233.0ms   38.9%,1233, , State::ApplyBlockOfDiagGates(unsigned long&, std::vector<Gate, std::allocator<Gate> > const&, int)
+960.0ms   30.3%,960, , XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+333.0ms   10.5%,332, , SequentialSimulation::PrintReport(unsigned long, unsigned long, State&, Circuit const&) const
+162.0ms    5.1%,162, , State::State(int)
+17.0ms    0.5%,0, , free_large
+17.0ms    0.5%,17, , mvm_deallocate_pages
+2.0ms    0.0%,0, , _dyld_start
+2.0ms    0.0%,0, , dyldbootstrap::start(macho_header const*, int, char const**, long, macho_header const*, unsigned long*)
+2.0ms    0.0%,0, , dyld::_main(macho_header const*, unsigned long, int, char const**, char const**, char const**, unsigned long*)
+1.0ms    0.0%,0, , ImageLoader::recursiveInitialization(ImageLoader::LinkContext const&, unsigned int, char const*, ImageLoader::InitializerTimingList&, ImageLoader::UninitedUpwards&)
+1.0ms    0.0%,0, , dyld::loadPhase1(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.0%,1, , Gate::operator=(Gate const&)
+1.0ms    0.0%,1, , malloc_zone_malloc
+1.0ms    0.0%,0, , dyld::loadPhase0(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.0%,1, , dyld3::findInSharedCacheImage(dyld3::SharedCacheLoadInfo const&, char const*, dyld3::SharedCacheFindDylibResults*)
+1.0ms    0.0%,0, , dyld::loadPhase4(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.0%,0, , dyld::load(char const*, dyld::LoadContext const&, unsigned int&)
+1.0ms    0.0%,0, , _libxpc_initializer
+1.0ms    0.0%,0, , malloc
+1.0ms    0.0%,1, , system
+1.0ms    0.0%,1, , getenv
+1.0ms    0.0%,0, , dyld::loadPhase5(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.0%,0, , ImageLoader::link(ImageLoader::LinkContext const&, bool, bool, bool, ImageLoader::RPathChain const&, char const*)
+1.0ms    0.0%,0, , dyld::libraryLocator(char const*, bool, char const*, ImageLoader::RPathChain const*, unsigned int&)
+1.0ms    0.0%,0, , dyld::initializeMainExecutable()
+1.0ms    0.0%,0, , dyld::link(ImageLoader*, bool, bool, ImageLoader::RPathChain const&, unsigned int)
+1.0ms    0.0%,0, , ImageLoader::processInitializers(ImageLoader::LinkContext const&, unsigned int, ImageLoader::InitializerTimingList&, ImageLoader::UninitedUpwards&)
+1.0ms    0.0%,0, , ImageLoaderMachO::doModInitFunctions(ImageLoader::LinkContext const&)
+1.0ms    0.0%,0, , ImageLoader::recursiveLoadLibraries(ImageLoader::LinkContext const&, bool, ImageLoader::RPathChain const&, char const*)
+1.0ms    0.0%,0, , operator new(unsigned long)
+1.0ms    0.0%,0, , ImageLoaderMachO::doInitialization(ImageLoader::LinkContext const&)
+1.0ms    0.0%,0, , dyld::loadPhase3(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.0%,0, , libSystem_initializer
+1.0ms    0.0%,0, , ImageLoader::runInitializers(ImageLoader::LinkContext const&, ImageLoader::InitializerTimingList&)

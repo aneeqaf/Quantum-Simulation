@@ -90,13 +90,16 @@ Simulate(const string &outfile,
              if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
-                idx_size prev_i = i;
-                amp.ApplyBlockOfDiagGates(i, gates, total_circuit_qubits);
+                 idx_size prev_i = i;
+                 idx_size T_bitmasks[2] = {0};
+                 idx_size CZ_bitmasks[total_circuit_qubits];
+                 amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
+                 amp.ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks, total_circuit_qubits);
     
-                g_end = clock();
-                gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                CZ_T += i - prev_i;
-                i -= 1;
+                 g_end = clock();
+                 gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
+                 CZ_T += i - prev_i;
+                 i -= 1;
                 
             }
             else 
@@ -137,10 +140,13 @@ Simulate(const string &outfile,
                      }
 #endif
 #ifdef ManualMerging
-                      amp.ApplyMergedXYGate(i, gates, total_circuit_qubits);
+                      amp.ApplyMergedXYGate(gates[i], gates[i + 1] total_circuit_qubits);
+                      i += 2;
 #endif
 #ifdef RT
-                      amp.ApplyXYRecursiveTransform(i, gates, total_circuit_qubits, th);
+                     idx_size X_bitmask = amp.FormXGatesBitmask(i, gates);
+                     idx_size Y_bitmask = amp.FormYGatesBitmask(i, gates);
+                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, total_circuit_qubits, th);
 #endif
                      g_end = clock();
                      gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -148,13 +154,13 @@ Simulate(const string &outfile,
                      --i;
              }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
-                amp.ApplyHGateOnAllAmps(total_circuit_qubits);
+                amp.ApplyHGateOnAllAmps();
                 i += total_circuit_qubits - 1;
                 g_end = clock();
                 gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
             else {
-                amp.ApplyNonCGate(current_gate.qubits, total_circuit_qubits,
+                amp.ApplyNonCGate(current_gate.qubits[0], total_circuit_qubits,
                                   (Gate::Type)current_gate.ids.back(),  current_gate);
                 g_end = clock();
                 
@@ -274,7 +280,7 @@ PrintReport(const clock_t end,
     cout << "Gates : " << circuit.GetTotalNumGates() << "  ";
     cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
     
-    cout << "Simulation type: state vector / lossless / single-threaded \n";
+    cout << "Simulation type: state vector / lossless \n";
     cout << "Number of threads : 1\n";
     cout << "Size of complex : " << sizeof(cmplx) << " B\n";
     
@@ -314,31 +320,65 @@ PrintReport(const clock_t end,
     {
         amp.Rescale();
         amp.ApplyGlobalICounter();
-        auto temp_amp = amp.GetAmp();
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
         
         if (benchmark.count(key)) {
-            if (real(temp_amp[3]) - real(benchmark[key][0]) < 1e-9
-                && imag(temp_amp[3]) - imag(benchmark[key][0]) < 1e-9
-                && real(temp_amp[temp_amp_size/4]) - real(benchmark[key][1]) < 1e-9
-                && imag(temp_amp[temp_amp_size/4]) - imag(benchmark[key][1]) < 1e-9
-                && real(temp_amp[temp_amp_size/2]) - real(benchmark[key][2]) < 1e-9
-                && imag(temp_amp[temp_amp_size/2]) - imag(benchmark[key][2]) < 1e-9
-                && real(temp_amp[3 * temp_amp_size/4]) -  real(benchmark[key][3]) < 1e-9
-                && imag(temp_amp[3 * temp_amp_size/4]) -  imag(benchmark[key][3]) < 1e-9
-                && real(temp_amp[temp_amp_size - 3]) - real(benchmark[key][4]) < 1e-9
-                && imag(temp_amp[temp_amp_size - 3]) - imag(benchmark[key][4]) < 1e-9)
+            if (real(amp[3]) - real(benchmark[key][0]) < 1e-9
+                && imag(amp[3]) - imag(benchmark[key][0]) < 1e-9
+                && real(amp[temp_amp_size/4]) - real(benchmark[key][1]) < 1e-9
+                && imag(amp[temp_amp_size/4]) - imag(benchmark[key][1]) < 1e-9
+                && real(amp[temp_amp_size/2]) - real(benchmark[key][2]) < 1e-9
+                && imag(amp[temp_amp_size/2]) - imag(benchmark[key][2]) < 1e-9
+                && real(amp[3 * temp_amp_size/4]) -  real(benchmark[key][3]) < 1e-9
+                && imag(amp[3 * temp_amp_size/4]) -  imag(benchmark[key][3]) < 1e-9
+                && real(amp[temp_amp_size - 3]) - real(benchmark[key][4]) < 1e-9
+                && imag(amp[temp_amp_size - 3]) - imag(benchmark[key][4]) < 1e-9)
             {
                 cout << "passed\n";
             }
             else {
                 cout << "failed\nCorrect results: \n";
-                cout << "amp[3] = " << real(benchmark[key][0]) << "+" <<  imag(benchmark[key][0])
-                << "i\namp[1/4] = " << real(benchmark[key][1]) << "+" <<  imag(benchmark[key][1])
-                << "i\namp[1/2] = " << real(benchmark[key][2]) << "+" <<  imag(benchmark[key][2])
-                << "i\namp[3/4] = " << real(benchmark[key][3]) << "+" <<  imag(benchmark[key][3])
-                << "i\namp[-3] = "  << real(benchmark[key][4]) << "+" <<  imag(benchmark[key][4]) << "i\n";
+                
+                string imag0 = to_string(imag(benchmark[key][0])), imag1 = to_string(imag(benchmark[key][1])),
+                imag2 = to_string(imag(benchmark[key][2])), imag3 = to_string(imag(benchmark[key][3])),
+                imag4 = to_string(imag(benchmark[key][4]));
+                
+                cout << "amp[3]  = " << real(benchmark[key][0]) ;
+                if (imag(benchmark[key][0]) < 0) {
+                    imag0[0] = ' ';
+                    cout << " - " << imag0 << "i\n";
+                }
+                else
+                    cout << " + " << imag0 << "i\n";
+                cout << "amp[1/4] = " << real(benchmark[key][1]);
+                if (imag(benchmark[key][1]) < 0) {
+                    imag1[0] = ' ';
+                    cout << " - " << imag1 << "i\n";
+                }
+                else
+                    cout << " + " << imag1 << "i\n";
+                cout << "i\namp[1/2] = " << real(benchmark[key][2]);
+                if (imag(benchmark[key][2]) < 0) {
+                    imag2[0] = ' ';
+                    cout << " - " << imag2 << "i\n";
+                }
+                else
+                    cout << " + " << imag2 << "i\n";
+                cout << "i\namp[3/4] = " << real(benchmark[key][3]);
+                if (imag(benchmark[key][3]) < 0) {
+                    imag3[0] = ' ';
+                    cout << " - " << imag3 << "i\n";
+                }
+                else
+                    cout << " + " << imag3 << "i\n";
+                cout << "i\namp[-3]  = "  << real(benchmark[key][4]);
+                if (imag(benchmark[key][4]) < 0) {
+                    imag4[0] = ' ';
+                    cout << " - " << imag4 << "i\n";
+                }
+                else
+                    cout << " + " << imag4 << "i\n";
                 cout << "Incorrect results: \n";
             }
         }
@@ -346,44 +386,78 @@ PrintReport(const clock_t end,
             cout << "no data available\n";
     
     
-        cout << "amp[3] = " << real(temp_amp[3]) << "+" <<  imag(temp_amp[3])
-        << "i\namp[1/4] = " << real(temp_amp[temp_amp_size/4]) << "+" << imag(temp_amp[temp_amp_size/4])
-        << "i\namp[1/2] = " << real(temp_amp[temp_amp_size/2]) << "+" <<  imag(temp_amp[temp_amp_size/2])
-        << "i\namp[3/4] = " << real(temp_amp[3 * temp_amp_size/4]) << "+" << imag(temp_amp[3 * temp_amp_size/4])
-        << "i\namp[-3] = " << real(temp_amp[temp_amp_size - 3])   << "+" << imag(temp_amp[temp_amp_size - 3]) << "i\n\n";
+        string imag0 = to_string(imag(amp[3])), imag1 = to_string(imag(amp[temp_amp_size/4])),
+        imag2 = to_string(imag(amp[temp_amp_size/2])), imag3 = to_string(imag(amp[3 * temp_amp_size/4])),
+        imag4 = to_string(imag(amp[temp_amp_size - 3]));
+        
+        cout << "amp[3] = " << real(amp[3]);
+        if (imag(amp[3]) < 0) {
+            imag0[0] = ' ';
+            cout << " - " << imag0 << "i\n";
+        }
+        else
+            cout << " + " << imag0 << "i\n";
+        cout << "amp[1/4] = " << real(amp[temp_amp_size/4]);
+        if (imag(amp[temp_amp_size/4]) < 0) {
+            imag1[0] = ' ';
+            cout << " - " << imag1 << "i\n";
+        }
+        else
+            cout << " + " << imag1 << "i\n";
+        cout << "amp[1/2] = " << real(amp[temp_amp_size/2]);
+        if (imag(amp[temp_amp_size/2]) < 0) {
+            imag2[0] = ' ';
+            cout << " - " << imag2 << "i\n";
+        }
+        else
+            cout << " + " << imag2 << "i\n";
+        cout << "amp[3/4] = " << real(amp[3 * temp_amp_size/4]);
+        if (imag(amp[3 * temp_amp_size/4]) < 0) {
+            imag3[0] = ' ';
+            cout << " - " << imag3 << "i\n";
+        }
+        else
+            cout << " + " << imag3 << "i\n";
+        cout << "amp[-3] = " << real(amp[temp_amp_size - 3]);
+        if (imag(amp[temp_amp_size - 3]) < 0) {
+            imag4[0] = ' ';
+            cout << " - " << imag4 << "i\n\n";
+        }
+        else
+            cout << " + " << imag4 << "i\n\n";
     }
     
     {
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         double total_time = double(end - begin) / CLOCKS_PER_SEC;
-        ss << "Runtime (" << total_time << "s total) by category \n";
+        ss << "Runtime (" << total_time << " s total) by category \n";
         
         ss << "     H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
-        << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
+        << " s = " << (gate_time[0]/total_time) * 100 << "%\n";
 
         if(CZ_T) {
             ss << "     CZ & T (" << CZ_T << ") : " << gate_time[1]
-            << "s = " << (gate_time[1]/total_time) * 100 << "%\n";
+            << " s = " << (gate_time[1]/total_time) * 100 << "%\n";
         }
         
         if (X) {
-            ss << "     X (" << X << ") : " << gate_time[2] << "s = "
+            ss << "     X (" << X << ") : " << gate_time[2] << " s = "
             << (gate_time[2]/total_time) * 100 << "%\n";
         }
         
         if (Y) {
             ss << "     Y (" << Y << ") : " << gate_time[3]
-            << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
+            << " s = " << (gate_time[3]/total_time) * 100 << "%\n";
         }
         
         if (merged_X_Y) {
             ss << "     X & Y (" << merged_X_Y << ") : " << gate_time[4]
-            << "s = " << (gate_time[4]/total_time) * 100 << "%\n";
+            << " s = " << (gate_time[4]/total_time) * 100 << "%\n";
         }
         
         if (num_rescaling) {
-            ss << "     Rescaling passes (" << num_rescaling << ") : " << rescale_time << "s = "
+            ss << "     Rescaling passes (" << num_rescaling << ") : " << rescale_time << " s = "
             << (rescale_time/total_time) * 100 << "%\n\n";
         }
         

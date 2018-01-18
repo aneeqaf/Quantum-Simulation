@@ -1,29 +1,42 @@
 //
-//  state.h
-//  Quantum Circuit
+//  state_tensor.hpp
+//  vector_state_sim
 //
-//  Created by Aneeqa Fatima on 12/13/17.
+//  Created by Aneeqa Fatima on 1/16/18.
 //
 
-#ifndef state_h
-#define state_h
+#ifndef state_tensor_h
+#define state_tensor_h
 
-#include "state_interface.h"
+#include "state.h"
 
 using namespace std;
 
-class State : public GenericQuantumState {
+class TensorPartitions : public GenericQuantumState {
 private:
-    double max_prob;
-    double min_prob;
-    cmplx* amp;
-    idx_size amp_size;
-    idx_size global_factor_power;
-    idx_size global_i_counter;
+    State* state_A;
+    State* state_B;
+    idx_size A_qubits_bitmask;
+    idx_size B_qubits_bitmask;
     
-    idx_size FormBitmask(const vector<int>& qubits);
+    void HorizontalCut(int& num_qubits_A,
+                      int& num_qubits_B,
+                      const int total_qubits);
+    void VerticalCut(int& num_qubits_A,
+                    int& num_qubits_B,
+                    const int total_qubits);
+    void PreprocessXYBlock(idx_size& gate_i,
+                           vector<Gate>& stateA_XY_gates,
+                           vector<Gate>& stateB_XY_gates,
+                           const vector<Gate>& all_gates);
+    void PreprocessCZTBlock(idx_size& gate_i,
+                            vector<Gate>& stateA_CZT_gates,
+                            vector<Gate>& stateB_CZT_gates,
+                            vector<Gate>& across_AB_CZ_gates,
+                            const vector<Gate>& all_gates);
     
 public:
+    enum Cuts : int {vertical, horizontal};
     
     void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                                const idx_size __restrict T_bitmasks[2],
@@ -34,10 +47,10 @@ public:
                        const Gate& g = {});
     void ApplyHGateOnAllAmps();
     void ApplyCGate(const int num_controls,
-                   const vector<int>& gate_qubits,
-                   const int total_circuit_qubits,
-                   const Gate& g,
-                   const Gate::Type gate_type);
+                    const vector<int>& gate_qubits,
+                    const int total_circuit_qubits,
+                    const Gate& g,
+                    const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,
                            const Gate& gate2,
                            const int total_circuit_qubits);
@@ -75,11 +88,11 @@ public:
     cmplx Measure1(const short qubit);
     void Measure(const short qubit);
     
-    State(int qubits);
-    State(cmplx* a, idx_size size);
-    State(const State& rhs);
-    State& operator=(const State& rhs);
-    ~State();
+    TensorPartitions(int qubits, Cuts type);
+    TensorPartitions(const TensorPartitions& rhs);
+    TensorPartitions& operator=(const TensorPartitions& rhs);
+    ~TensorPartitions();
 };
 
-#endif /* state_h */
+
+#endif /* state_tensor_h */

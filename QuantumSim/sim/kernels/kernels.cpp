@@ -51,22 +51,23 @@ GroupTGates(idx_size* __restrict T_bitmasks,
 
 void
 ExtractIndicesForAmp(idx_size* strides,
-                     const int* gate_qubits,
-                     const idx_size gate_qubits_size,
+                     idx_size gate_qubits,
                      const int total_circuit_qubits,
                      const idx_size starting_idx)
 {
+    const idx_size gate_qubits_size =  __builtin_popcountll(gate_qubits);
     const idx_size num_q = gate_qubits_size;
     idx_size strides_size = 1, gap = 1ull << (num_q - 1);
     
     strides[0] = starting_idx;
     idx_size prev_gap = gap;
     for (idx_size i = starting_idx ; i < num_q; ++i) {
+        idx_size q = __builtin_ctzl(gate_qubits);
         for (idx_size n = 0; strides_size < (1ull << (i+1)); n += prev_gap) {
-            
-            strides[n + gap] = strides[n] + (1ull << ((total_circuit_qubits - 1) - gate_qubits[i]));
+            strides[n + gap] = strides[n] + (1ull << ((total_circuit_qubits - 1) - q));
             ++strides_size;
         }
+        gate_qubits ^= 1ull << q;
         prev_gap = gap;
         gap /= 2;
     }
@@ -173,20 +174,24 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
 template<typename function>
 void
 Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
-                            const int* gate_qubits,
+                            idx_size gate_qubits,
                             const int total_circuit_qubits,
                             const function& gate_func,
                             const idx_size add = 1)
 {
     const idx_size amp_size = 1ull << total_circuit_qubits;
-    idx_size gate_bitmask = 0, iter_count = 0;
+    idx_size gate_bitmask = 0, iter_count = 0, gate_qubits_bitmask = gate_qubits;
     constexpr idx_size num_bits = 2;
-    for (idx_size i = 0; i < num_bits; ++i)
-        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - gate_qubits[i]));
+    
+    for (idx_size i = 0; i < num_bits; ++i) {
+        idx_size q = __builtin_ctzl(gate_qubits);
+        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - q));
+        gate_qubits ^= (1ull << q);
+    }
     
     constexpr idx_size num_indices = 4;
     array<idx_size, num_indices> indices;
-    ExtractIndicesForAmp(indices.data(), gate_qubits, num_bits ,total_circuit_qubits);
+    ExtractIndicesForAmp(indices.data(), gate_qubits_bitmask, total_circuit_qubits);
     array<idx_size, num_indices> temp_indices;
     
     idx_size idx = 0;
@@ -213,7 +218,7 @@ Apply2MergedXY12Gates(Gate gate1,
                       cmplx* __restrict amp,
                       const int total_circuit_qubits)
 {
-    const int qubits[2] = {gate1.qubits.back(), gate2.qubits.back()};
+    const idx_size qubits = (1ull << gate1.qubits.back()) | (1ull << gate2.qubits.back());
 
     const Gate::Type g1t = (Gate::Type)gate1.ids.back();
     const Gate::Type g2t = (Gate::Type)gate2.ids.back();
@@ -252,7 +257,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
         X_bitmask ^= 1ull << Xunused_qubits;
         const int next_qubit = GetNextUsedQubitIndex(X_bitmask);
         if (next_qubit < Yunused_qubits) {
-            const int gates_qubits[2] = {Xunused_qubits, next_qubit};
+            const idx_size gates_qubits = (1ull << Xunused_qubits) | (1ull << next_qubit);
             X_bitmask ^= 1ull << next_qubit;
             if ((Xunused_qubits < num_qubits - 1 && next_qubit < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12GateAVX, 4);
@@ -261,7 +266,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
         }
         else {
             Y_bitmask ^= 1ull << Yunused_qubits;
-            const int gates_qubits[2] = {Xunused_qubits, Yunused_qubits};
+            const idx_size gates_qubits = (1ull << Xunused_qubits) | (1ull << Yunused_qubits);
             if ((Xunused_qubits < num_qubits - 1 && Yunused_qubits < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12GateAVX, 4);
             else
@@ -272,7 +277,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
         Y_bitmask ^= 1ull << Yunused_qubits;
         const int next_qubit = GetNextUsedQubitIndex(Y_bitmask);
         if (next_qubit < Xunused_qubits) {
-            const int gates_qubits[2] = {Yunused_qubits, next_qubit};
+            const idx_size gates_qubits = (1ull << Yunused_qubits) | (1ull << next_qubit);
             Y_bitmask ^= 1ull << next_qubit;
             if ((Yunused_qubits < num_qubits - 1 && next_qubit < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12GateAVX, 4);
@@ -282,7 +287,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
         }
         else {
             X_bitmask ^= 1ull << Xunused_qubits;
-            const int gates_qubits[2] = {Yunused_qubits, Xunused_qubits};
+            const idx_size gates_qubits = (1ull << Yunused_qubits) | (1ull << Xunused_qubits);
             if ((Yunused_qubits < num_qubits - 1 && Xunused_qubits < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12GateAVX, 4);
             else
