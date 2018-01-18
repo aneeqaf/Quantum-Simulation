@@ -1,0 +1,42 @@
+Rollright ver 1.0 - a quantum circuit simulator
+
+Hostname : horton
+CPU model name	: Intel(R) Xeon(R) CPU E5-1620 v3 @ 3.50GHz
+cpu cores	: 4
+Hardware threads : 8
+L3 cache size	: 10240 KB
+CPU supports : popcnt:4, sse4.2:256, avx:512, avx2:1024
+
+Compiler : gcc 7.2.0
+Compiled on : Jan 15 2018 11:53:42
+Executed on : 1/15/2018 11:58:22
+
+Circuit file : inst_6_5_100_5
+Circuit type : Google
+Qubits : 30  Gates : 419  Cycles : 26
+
+Simulation type: state vector / lossless 
+Number of threads : 1
+Size of complex : 8 B
+Recursion end-case(max) : 16 q
+
+State vector size : 8.59 GB 
+Norm : 1
+Probabilities : 5.08e-19(min), 2.01e-08(max), 9.31e-10(avg)
+Log_2 (max / min) = 35.2
+Avg inaccuracy per probability > 2.85e-17 (3.06e-06%)
+
+Correctness check : passed
+amp[3] = -2.88494e-05+-3.6528e-05i
+amp[1/4] = 1.01401e-05+6.81787e-06i
+amp[1/2] = 5.24095e-06+4.47689e-05i
+amp[3/4] = -6.54595e-06+-2.83312e-05i
+amp[-3] = 1.06338e-05+3.37055e-05i
+
+Runtime (86.3s total) by category 
+     H (30) : 0.764s = 0.885%
+     CZ & T (242) : 39.3s = 45.5%
+     X & Y (147) : 46.3s = 53.6%
+     Rescaling passes (1) : 0.74s = 0.858%
+
+¯\_(ツ)_/¯ 

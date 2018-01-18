@@ -6,11 +6,8 @@ qp-3.8-i386.tar.gz
 .DS_Store 
 ../.DS_Store 
 env/
-input/
-output/
 sftp-config.json
 ../QuantumSimProj.xcodeproj/
-*.txt
 ../qp-3.8-i386.tar_.gz
 ../qp-3.8-i386/
 ../test_25_2.txt
