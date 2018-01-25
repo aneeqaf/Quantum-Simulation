@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "gates.h"
+#include "state_interface.h"
 
 using namespace std;
 
@@ -45,8 +46,7 @@ public:
     void CreateGoogleCircuit(int qubits,
                              int clock_cycles);
     void WriteGeneratedCircuitFile(const string& out_file,
-                              const cmplx* const amp,
-                              const idx_size size_q);
+                                   const idx_size size_q);
     void CreateQuiddProScript(const string& out_file);
     
     int GetNumQubits() const;

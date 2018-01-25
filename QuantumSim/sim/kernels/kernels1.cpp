@@ -8,20 +8,37 @@
 
 #include "kernels1.h"
 
-vector<int>
-FormBlockOfXYHGates(idx_size& gate_i,
-                    const Gate::Type gate_type,
-                    const vector<Gate>& all_gates)
+
+void
+ApplyNonControl1QGates(cmplx* __restrict amp,
+                       const int q,
+                       const int num_qubits_amp,
+                       const Gate::Type gate_type,
+                       const Gate& g)
 {
-    vector<int> qubits_in_cluster;
-    for(;gate_i < all_gates.size(); ++gate_i) {
-        const auto& gt = all_gates[gate_i];
-        
-        if(gt.ids.back() == gate_type)
-            qubits_in_cluster.push_back(gt.qubits.back());
-        else break;
+    const idx_size amp_size = 1ull << num_qubits_amp;
+    idx_size iter_count = 0, idx = 0, gate_bitmask = 0;
+    
+    gate_bitmask |= (1ull << ((num_qubits_amp - 1) - q));
+    constexpr idx_size num_indices = 2;
+    const array<idx_size, num_indices> indices = {0, 1ull << ((num_qubits_amp - 1) - q)};
+    array<idx_size, num_indices> temp_indices;
+    
+    amp = (cmplx*)__builtin_assume_aligned(amp, 64);
+    while(iter_count < (amp_size/num_indices)) {
+        if ((idx & gate_bitmask) == 0) {
+            ++iter_count;
+            
+            for (idx_size i = 0; i < num_indices; ++i)
+                temp_indices[i] = indices[i] + idx;
+            
+            ApplyGateOnAmps(amp, temp_indices.data(), num_indices, gate_type, g);
+            
+            ++idx;
+        }
+        else
+            idx += (idx & gate_bitmask);
     }
-    return qubits_in_cluster;
 }
 
 //TODO: Test this
@@ -29,12 +46,12 @@ void
 ApplyControlGate(cmplx* __restrict amp,
                  const int num_controls,
                  const vector<int>& gate_qubits,
-                 const int total_circuit_qubits,
+                 const int num_qubits_amp,
                  const Gate& g,
                  const Gate::Type gate_type)
 {
-    int loop_count = total_circuit_qubits - num_controls;
-    const idx_size modified_q = total_circuit_qubits -1, num_indices = 1ull << loop_count;
+    int loop_count = num_qubits_amp - num_controls;
+    const idx_size modified_q = num_qubits_amp -1, num_indices = 1ull << loop_count;
     idx_size idx = 0, gate_bitmask = 0, c_bits = 0, iter_count = 0, gate_qubits_bitmask = 0;
     
     for (int j = 0 ; j < num_controls; ++j)
@@ -47,7 +64,7 @@ ApplyControlGate(cmplx* __restrict amp,
     
     idx_size indices [num_indices];
     memset(indices, 0, num_indices * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, gate_qubits_bitmask, total_circuit_qubits, num_controls);
+    ExtractIndicesForAmp(indices, gate_qubits_bitmask, num_qubits_amp, num_controls);
     idx_size temp_indices[num_indices];
     memset(temp_indices, 0, num_indices * sizeof(idx_size));
     
@@ -129,22 +146,22 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
 void
 ApplyFWHT(cmplx* __restrict amp,
           idx_size qubits_in_cluster,
-          const int total_circuit_qubits,
+          const int num_qubits_amp,
           const Gate::Type gate_type)
 {
-    const idx_size num_qubits = __builtin_popcountll(qubits_in_cluster), amp_size = 1ull << total_circuit_qubits,
+    const idx_size num_qubits = __builtin_popcountll(qubits_in_cluster), amp_size = 1ull << num_qubits_amp,
                     slice_size = 1ull << num_qubits;
     
     idx_size gate_bitmask = 0, qubits_bitmask = qubits_in_cluster;
     for (idx_size i = 0; i < num_qubits; ++i) {
         idx_size q = __builtin_ctzl(qubits_in_cluster);
-        gate_bitmask |= (1ull << ((total_circuit_qubits - 1) - q));
+        gate_bitmask |= (1ull << ((num_qubits_amp - 1) - q));
         qubits_in_cluster ^= 1ull << q;
     }
     
     idx_size indices [slice_size];
     memset(indices, 0, slice_size * sizeof(idx_size));
-    ExtractIndicesForAmp(indices, qubits_bitmask, total_circuit_qubits);
+    ExtractIndicesForAmp(indices, qubits_bitmask, num_qubits_amp);
     cmplx amp_slice[slice_size];
     memset(amp_slice, 0, slice_size * sizeof(cmplx));
     

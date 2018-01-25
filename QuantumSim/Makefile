@@ -6,7 +6,7 @@ BUILDDIR := build
 TARGET := bin/vector_state_sim
 LIBS = -lm -lstdc++
 INC = -I libs -I sim -I sim/kernels
-CFLAGS = -O3 -Wall -pg -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
+CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
 -fmodulo-sched-allow-regmoves -fsplit-ivs-in-unroller -ffast-math -fgcse-las -m64 -mavx -mavx2 -msse2avx \
 -DRT -march=core-avx-i -mtune=core-avx-i 
 # CFLAGS = -g3 -S -Wall -std=c++17 -mavx -mavx2 -msse2avx -DManualMerging

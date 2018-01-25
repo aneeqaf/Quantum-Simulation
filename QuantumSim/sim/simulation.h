@@ -14,11 +14,13 @@
 #include <unordered_map>
 
 #include "circuit.h"
-#include "state.h"
+#include "state_interface.h"
 
 using namespace std;
 
 class SequentialSimulation {
+public:
+    enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState};
 private:
     
     static unordered_map<string, array<cmplx, 5>> benchmark;
@@ -36,27 +38,29 @@ private:
     int CZ_T;
     int th;
     bool google;
+    SimType sim_type;
     
     void PopulateBenchmarkMap();
    
 public:
-    void PrintReport(const clock_t end,
-                     const clock_t begin,
-                     State& amp,
-                     const Circuit& circuit) const;
-    void PrintReport(const string& outfile,
+
+    void PrintReport(GenericQuantumState& amp,
                      const clock_t end,
                      const clock_t begin,
-                     State& amp,
+                     const Circuit& circuit) const;
+    void PrintReport(GenericQuantumState& amp,
+                     const string& outfile,
+                     const clock_t end,
+                     const clock_t begin,
                      const Circuit& circuit) const;
     
     void Simulate(const string& outfile,
-                  State& amp,
+                  GenericQuantumState& amp,
                   Circuit& circuit,
                   const int th = 0);
     
-    SequentialSimulation();
-    SequentialSimulation(const string filename, bool g);
+    SequentialSimulation(SimType st);
+    SequentialSimulation(const string filename, bool g, SimType st);
     SequentialSimulation(const SequentialSimulation& rhs);
     SequentialSimulation& operator=(const SequentialSimulation& rhs);
 };

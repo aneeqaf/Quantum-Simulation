@@ -1,0 +1,128 @@
+Running Time,Self (ms),,Symbol Name
+132.0ms   97.7%,0, ,main
+131.0ms   97.0%,0, , SequentialSimulation::Simulate(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, GenericQuantumState&, Circuit&, int)
+91.0ms   67.4%,0, ,  TensorExpansionOfState::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+91.0ms   67.4%,0, ,   SumOfTensorsProductsStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+78.0ms   57.7%,0, ,    TensorProductStateVector::ApplyCZGateAcrossTensorFactors(Gate::Type, Gate::Type, int, int)
+78.0ms   57.7%,12, ,     FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+7.0ms    5.1%,6, ,    TensorProductStateVector::TensorProductStateVector(TensorProductStateVector const&)
+1.0ms    0.7%,0, ,     FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, ,      posix_memalign
+6.0ms    4.4%,6, ,    TensorProductStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+37.0ms   27.4%,0, ,  SumOfTensorsProductsStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+37.0ms   27.4%,4, ,   FullAmpStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+19.0ms   14.0%,0, ,    operator new(unsigned long)
+11.0ms    8.1%,11, ,    ApplyNonControl1QGates(std::complex<float>*, int, int, Gate::Type, Gate const&)
+3.0ms    2.2%,1, ,    XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+3.0ms    2.2%,0, ,  SequentialSimulation::PrintReport(GenericQuantumState&, unsigned long, unsigned long, Circuit const&) const
+2.0ms    1.4%,0, ,   SumOfTensorsProductsStateVector::CalculateNormOfAmp()
+1.0ms    0.7%,0, ,   SumOfTensorsProductsStateVector::operator[](unsigned long) const
+1.0ms    0.7%,0, , Circuit::ReadGoogleCircuitFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
+132.0ms   97.7%,0, ,0x7fff4f841113
+132.0ms   97.7%,0, , main
+131.0ms   97.0%,0, ,  SequentialSimulation::Simulate(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, GenericQuantumState&, Circuit&, int)
+91.0ms   67.4%,0, ,   TensorExpansionOfState::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+91.0ms   67.4%,0, ,    SumOfTensorsProductsStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+78.0ms   57.7%,0, ,     TensorProductStateVector::ApplyCZGateAcrossTensorFactors(Gate::Type, Gate::Type, int, int)
+78.0ms   57.7%,12, ,      FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+7.0ms    5.1%,6, ,     TensorProductStateVector::TensorProductStateVector(TensorProductStateVector const&)
+1.0ms    0.7%,0, ,      FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, ,       posix_memalign
+6.0ms    4.4%,6, ,     TensorProductStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+37.0ms   27.4%,0, ,   SumOfTensorsProductsStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+37.0ms   27.4%,4, ,    FullAmpStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+19.0ms   14.0%,0, ,     operator new(unsigned long)
+11.0ms    8.1%,11, ,     ApplyNonControl1QGates(std::complex<float>*, int, int, Gate::Type, Gate const&)
+3.0ms    2.2%,1, ,     XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+3.0ms    2.2%,0, ,   SequentialSimulation::PrintReport(GenericQuantumState&, unsigned long, unsigned long, Circuit const&) const
+2.0ms    1.4%,0, ,    SumOfTensorsProductsStateVector::CalculateNormOfAmp()
+1.0ms    0.7%,0, ,    SumOfTensorsProductsStateVector::operator[](unsigned long) const
+1.0ms    0.7%,0, ,  Circuit::ReadGoogleCircuitFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
+131.0ms   97.0%,0, ,SequentialSimulation::Simulate(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, GenericQuantumState&, Circuit&, int)
+91.0ms   67.4%,0, , TensorExpansionOfState::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+91.0ms   67.4%,0, ,  SumOfTensorsProductsStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+78.0ms   57.7%,0, ,   TensorProductStateVector::ApplyCZGateAcrossTensorFactors(Gate::Type, Gate::Type, int, int)
+78.0ms   57.7%,12, ,    FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+7.0ms    5.1%,6, ,   TensorProductStateVector::TensorProductStateVector(TensorProductStateVector const&)
+1.0ms    0.7%,0, ,    FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, ,     posix_memalign
+6.0ms    4.4%,6, ,   TensorProductStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+37.0ms   27.4%,0, , SumOfTensorsProductsStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+37.0ms   27.4%,4, ,  FullAmpStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+19.0ms   14.0%,0, ,   operator new(unsigned long)
+11.0ms    8.1%,11, ,   ApplyNonControl1QGates(std::complex<float>*, int, int, Gate::Type, Gate const&)
+3.0ms    2.2%,1, ,   XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+3.0ms    2.2%,0, , SequentialSimulation::PrintReport(GenericQuantumState&, unsigned long, unsigned long, Circuit const&) const
+2.0ms    1.4%,0, ,  SumOfTensorsProductsStateVector::CalculateNormOfAmp()
+1.0ms    0.7%,0, ,  SumOfTensorsProductsStateVector::operator[](unsigned long) const
+91.0ms   67.4%,0, ,SumOfTensorsProductsStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+78.0ms   57.7%,0, , TensorProductStateVector::ApplyCZGateAcrossTensorFactors(Gate::Type, Gate::Type, int, int)
+78.0ms   57.7%,12, ,  FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+7.0ms    5.1%,6, , TensorProductStateVector::TensorProductStateVector(TensorProductStateVector const&)
+1.0ms    0.7%,0, ,  FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, ,   posix_memalign
+6.0ms    4.4%,6, , TensorProductStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+91.0ms   67.4%,0, ,TensorExpansionOfState::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+91.0ms   67.4%,0, , SumOfTensorsProductsStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+78.0ms   57.7%,0, ,  TensorProductStateVector::ApplyCZGateAcrossTensorFactors(Gate::Type, Gate::Type, int, int)
+78.0ms   57.7%,12, ,   FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+7.0ms    5.1%,6, ,  TensorProductStateVector::TensorProductStateVector(TensorProductStateVector const&)
+1.0ms    0.7%,0, ,   FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, ,    posix_memalign
+6.0ms    4.4%,6, ,  TensorProductStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+78.0ms   57.7%,12, ,FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+78.0ms   57.7%,0, ,TensorProductStateVector::ApplyCZGateAcrossTensorFactors(Gate::Type, Gate::Type, int, int)
+78.0ms   57.7%,12, , FullAmpStateVector::ApplyNonCGate(int, Gate::Type, Gate const&)
+54.0ms   40.0%,0, ,operator new(unsigned long)
+54.0ms   40.0%,5, ,malloc
+49.0ms   36.2%,49, ,malloc_zone_malloc
+42.0ms   31.1%,38, ,ApplyNonControl1QGates(std::complex<float>*, int, int, Gate::Type, Gate const&)
+37.0ms   27.4%,0, ,SumOfTensorsProductsStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+37.0ms   27.4%,4, , FullAmpStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+19.0ms   14.0%,0, ,  operator new(unsigned long)
+11.0ms    8.1%,11, ,  ApplyNonControl1QGates(std::complex<float>*, int, int, Gate::Type, Gate const&)
+3.0ms    2.2%,1, ,  XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+37.0ms   27.4%,4, ,FullAmpStateVector::ApplyXYRecursiveTransform(unsigned long, unsigned long, int)
+19.0ms   14.0%,0, , operator new(unsigned long)
+11.0ms    8.1%,11, , ApplyNonControl1QGates(std::complex<float>*, int, int, Gate::Type, Gate const&)
+3.0ms    2.2%,1, , XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+7.0ms    5.1%,6, ,TensorProductStateVector::TensorProductStateVector(TensorProductStateVector const&)
+1.0ms    0.7%,0, , FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, ,  posix_memalign
+6.0ms    4.4%,6, ,TensorProductStateVector::ApplyBlockOfDiagGates(unsigned long const*, unsigned long const*)
+4.0ms    2.9%,4, ,matrix_v_mult(std::vector<std::vector<std::complex<float>, std::allocator<std::complex<float> > >, std::allocator<std::vector<std::complex<float>, std::allocator<std::complex<float> > > > > const&, std::vector<std::complex<float>, std::allocator<std::complex<float> > > const&)
+3.0ms    2.2%,0, ,dyld::_main(macho_header const*, unsigned long, int, char const**, char const**, char const**, unsigned long*)
+3.0ms    2.2%,0, ,_dyld_start
+3.0ms    2.2%,0, ,dyldbootstrap::start(macho_header const*, int, char const**, long, macho_header const*, unsigned long*)
+3.0ms    2.2%,0, ,SequentialSimulation::PrintReport(GenericQuantumState&, unsigned long, unsigned long, Circuit const&) const
+2.0ms    1.4%,0, , SumOfTensorsProductsStateVector::CalculateNormOfAmp()
+1.0ms    0.7%,0, , SumOfTensorsProductsStateVector::operator[](unsigned long) const
+3.0ms    2.2%,1, ,XYRecursiveTransform(std::complex<float>*, unsigned long, unsigned long, int, int)
+2.0ms    1.4%,0, ,SumOfTensorsProductsStateVector::CalculateNormOfAmp()
+2.0ms    1.4%,0, ,ImageLoader::link(ImageLoader::LinkContext const&, bool, bool, bool, ImageLoader::RPathChain const&, char const*)
+2.0ms    1.4%,2, ,TensorProductStateVector::CalculateNormOfAmp()
+2.0ms    1.4%,0, ,dyld::link(ImageLoader*, bool, bool, ImageLoader::RPathChain const&, unsigned int)
+1.0ms    0.7%,0, ,large_malloc
+1.0ms    0.7%,0, ,ImageLoader::recursiveLoadLibraries(ImageLoader::LinkContext const&, bool, ImageLoader::RPathChain const&, char const*)
+1.0ms    0.7%,0, ,dyld::loadPhase0(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.7%,0, ,dyld::loadPhase3(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.7%,0, ,dyld::loadPhase4(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.7%,0, ,dyld::loadPhase1(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.7%,1, ,dyld::loadPhase5(char const*, char const*, dyld::LoadContext const&, unsigned int&, std::__1::vector<char const*, std::__1::allocator<char const*> >*)
+1.0ms    0.7%,1, ,ImageLoaderMachOCompressed::doBind(ImageLoader::LinkContext const&, bool)
+1.0ms    0.7%,0, ,malloc_zone_memalign
+1.0ms    0.7%,1, ,dyld::notifyBatchPartial(dyld_image_states, bool, char const* (*)(dyld_image_states, unsigned int, dyld_image_info const*), bool, bool)
+1.0ms    0.7%,1, ,mvm_allocate_pages
+1.0ms    0.7%,1, ,free_tiny
+1.0ms    0.7%,0, ,dyld::load(char const*, dyld::LoadContext const&, unsigned int&)
+1.0ms    0.7%,0, ,ImageLoader::recursiveBind(ImageLoader::LinkContext const&, bool, bool)
+1.0ms    0.7%,1, ,TensorProductStateVector::operator[](unsigned long) const
+1.0ms    0.7%,0, ,dyld::initializeMainExecutable()
+1.0ms    0.7%,0, ,dyld::libraryLocator(char const*, bool, char const*, ImageLoader::RPathChain const*, unsigned int&)
+1.0ms    0.7%,0, ,posix_memalign
+1.0ms    0.7%,0, ,SumOfTensorsProductsStateVector::operator[](unsigned long) const
+1.0ms    0.7%,0, ,szone_malloc_should_clear
+1.0ms    0.7%,0, ,Circuit::ReadGoogleCircuitFile(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)
+1.0ms    0.7%,0, ,ImageLoader::runInitializers(ImageLoader::LinkContext const&, ImageLoader::InitializerTimingList&)
+1.0ms    0.7%,0, ,FullAmpStateVector::FullAmpStateVector(FullAmpStateVector const&)
+1.0ms    0.7%,0, , posix_memalign

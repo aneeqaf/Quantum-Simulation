@@ -42,10 +42,30 @@ constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH}, -1, {-kH, -kH}, {0, 
 constexpr float kTGate_re[8] = {1, kH, 0, -kH, -1, -kH, 0, kH};
 constexpr float kTGate_im[8] = {0, kH, 1, kH, 0, -kH, -1, -kH};
 constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
+constexpr cmplx kCZDecomposition[4] = {{1,-1}, {0,1}, {1,1}, {1,0}};
 constexpr cmplx ki = {0,1};
 constexpr int kRT = 8 * sizeof(idx_size) + 1;
 
+__attribute__((always_inline)) inline void
+ApplyX12Gate(cmplx* __restrict amp,
+              const idx_size* indices)
+{
+    cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
+   
+    amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
+    amp[indices[1]] = (temp_amp[0]*X12[1][0]) + (temp_amp[1]*X12[1][1]);
+}
 
+__attribute__((always_inline)) inline void
+ApplyY12Gate(cmplx* __restrict amp,
+             const idx_size* indices)
+{
+    cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
+    
+    amp[indices[0]] = (temp_amp[0]*Y12[0][0]) + (temp_amp[1]*Y12[0][1]);
+    amp[indices[1]] = (temp_amp[0]*Y12[1][0]) + (temp_amp[1]*Y12[1][1]);
+}
+              
 __attribute__((always_inline)) inline void
 ApplyXX12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
@@ -121,7 +141,7 @@ ApplyGateOnAmps(cmplx* __restrict amp,
     for (idx_size i = 0; i < indices_size; ++i)
         temp_amp[i] = amp[indices[i]];
     
-    if (indices_size >= 2 && !(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
+    if (indices_size <= 2 && !(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
         switch (gate_type) {
             case (Gate::Type::X_1_2):{
                 amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
@@ -135,6 +155,21 @@ ApplyGateOnAmps(cmplx* __restrict amp,
             }
             case (Gate::Type::Z):{
                 amp[indices[1]] *= -1;
+                break;
+            }
+            case (Gate::Type::CZ_D1):{
+                amp[indices[1]] *= -1;
+                break;
+            }
+            case (Gate::Type::CZ_D2):{
+                amp[indices[0]] = 0;
+                break;
+            }
+            case (Gate::Type::CZ_D3):{
+                break;
+            }
+            case (Gate::Type::CZ_D4):{
+                amp[indices[1]] = 0;
                 break;
             }
             case (Gate::Type::T):{
@@ -169,18 +204,18 @@ ApplyGateOnAmps(cmplx* __restrict amp,
 
 void
 GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
-             const int total_circuit_qubits,
+             const int num_qubits_amp,
              const vector<int>& gate_qubits);
 
 void
 GroupTGates(idx_size* __restrict T_bitmasks,
-            const int total_circuit_qubits,
+            const int num_qubits_amp,
             const vector<int>& gate_qubits);
 
 void
 ExtractIndicesForAmp(idx_size* strides,
                      idx_size gate_qubits,
-                     const int total_circuit_qubits,
+                     const int num_qubits_amp,
                      const idx_size starting_idx = 0);
 
 void
@@ -188,7 +223,12 @@ FormBlockOfCZTGates(idx_size& gate_i,
                     idx_size* __restrict CZ_bitmasks,
                     idx_size* __restrict T_bitmasks,
                     const vector<Gate>& cluster,
-                    const int total_circuit_qubits);
+                    const int num_qubits_amp);
+
+vector<int>
+FormBlockOfXYHGates(idx_size& gate_i,
+                    const Gate::Type gate_type,
+                    const vector<Gate>& all_gates);
 
 void
 FormBlockOfXYHGates(vector<Gate>& cluster,
@@ -197,23 +237,28 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     const vector<Gate>& all_gates);
 void
 ApplyBlockOfCZTGates(cmplx* __restrict amp,
-                     const int total_circuit_qubits,
+                     const int num_qubits_amp,
                      const idx_size* __restrict CZ_bitmasks,
                      const idx_size* __restrict T_bitmasks);
 
 void
-ApplyNonControl1QGates(cmplx* __restrict amp,
-                       const int q,
-                       const int total_circuit_qubits,
-                       const Gate::Type gate_type,
-                       const Gate& g = {});
+ApplyCZDecomposition(cmplx* __restrict amp,
+                     const int num_qubits_amp,
+                     const int gate_qubit,
+                     const Gate::Type gate_type);
+
+void
+Apply1QXYGates(cmplx* __restrict amp,
+               const int q,
+               const int num_qubits,
+               const Gate::Type gate_type);
 
 
 void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
                       cmplx* __restrict amp,
-                      const int total_circuit_qubits);
+                      const int num_qubits_amp);
 
 idx_size
 XYRecursiveTransform(cmplx* __restrict amp,

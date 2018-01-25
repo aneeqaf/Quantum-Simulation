@@ -410,7 +410,6 @@ CreateQuiddProScript(const string& out_file)
 
 void Circuit::
 WriteGeneratedCircuitFile(const string& out_file,
-                          const cmplx* const amp,
                           const idx_size size_q)
 {
     if ( size_q == 0)
@@ -425,7 +424,7 @@ WriteGeneratedCircuitFile(const string& out_file,
         file << classical_bits[0] << " ";
     file << "\n";
     for (idx_size i = 0; i < size_q; ++i) {
-        file << amp[i];
+        file << 0;
         file << " " ;
     }
     file << "\n";

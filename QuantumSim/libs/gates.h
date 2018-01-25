@@ -30,10 +30,16 @@ constexpr cmplx I[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
 constexpr cmplx T[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {0.707106781, 0.707106781}}};
 constexpr cmplx X12[2][2] = {{{1, 1}, {1, -1}}, {{1, -1} , {1, 1}}};
 constexpr cmplx Y12[2][2] = {{{1, 1}, {-1, -1}}, {{1, 1} , {1, 1}}};
+constexpr cmplx CZ_D1[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {-1, 0}}};
+constexpr cmplx CZ_D2[2][2] = {{{0, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
+constexpr cmplx CZ_D3[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
+constexpr cmplx CZ_D4[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {0, 0}}};
 
 struct Gate {
     enum Type : int { Hadamard, X, Y, Z, Random, X_rotation, Y_rotation,
-        Z_rotation, Phase, Control, Identity, T, Measurement, X_1_2, Y_1_2};
+        Z_rotation, Phase, Control, Identity, T, Measurement, X_1_2, Y_1_2,
+        CZ_D1, CZ_D2, CZ_D3, CZ_D4
+    };
     
     vector<vector<cmplx>> rows;
     vector<int> qubits;

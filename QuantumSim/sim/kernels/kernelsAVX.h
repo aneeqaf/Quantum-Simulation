@@ -13,7 +13,58 @@
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};
+constexpr __m256 kneg2 = {-0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f};
 
+__attribute__((always_inline)) inline void
+ApplyX12GateAVX(cmplx* __restrict amp,
+                const idx_size* indices /*2*/)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    
+    __m256 a0_p = _mm256_permute_ps(a0, 0b10110001);
+    __m256 a1_p = _mm256_permute_ps(a1, 0b10110001);
+    a0_p = _mm256_xor_ps(a0_p, kneg1);
+    a1_p = _mm256_xor_ps(a1_p, kneg1);
+   
+    __m256 t0 = _mm256_add_ps(a0, a0_p);
+    __m256 t1 = _mm256_sub_ps(a1, a1_p);
+    __m256 t2 = _mm256_sub_ps(a0, a0_p);
+    __m256 t3 = _mm256_add_ps(a1, a1_p);
+    
+    a0 = _mm256_add_ps(t0, t1);
+    a1 = _mm256_add_ps(t2, t3);
+    
+    _mm256_store_ps(&t_amp[2*indices[0]], a0);
+    _mm256_store_ps(&t_amp[2*indices[1]], a1);
+}
+
+__attribute__((always_inline)) inline void
+ApplyY12GateAVX(cmplx* __restrict amp,
+                const idx_size* indices /*2*/)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    
+    __m256 a1_neg = _mm256_xor_ps(a1, kneg2);
+    __m256 a0_p = _mm256_permute_ps(a0, 0b10110001);
+    __m256 a1_p = _mm256_permute_ps(a1, 0b10110001);
+    a0_p = _mm256_xor_ps(a0_p, kneg1);
+    a1_p = _mm256_xor_ps(a1_p, kneg1);
+    
+    __m256 t0 = _mm256_add_ps(a0, a0_p);
+    __m256 t1 = _mm256_sub_ps(a1_neg, a1_p);
+    __m256 t2 = t0;
+    __m256 t3 = _mm256_add_ps(a1, a1_p);
+    
+    a0 = _mm256_add_ps(t0, t1);
+    a1 = _mm256_add_ps(t2, t3);
+    
+    _mm256_store_ps(&t_amp[2*indices[0]], a0);
+    _mm256_store_ps(&t_amp[2*indices[1]], a1);
+}
 
 __attribute__((always_inline)) inline void
 ApplyXX12GateAVX(cmplx* __restrict amp,
@@ -145,7 +196,7 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
 
 void
 ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
-                        const int total_circuit_qubits,
+                        const int num_qubits_amp,
                         const idx_size* __restrict CZ_bitmasks,
                         const idx_size* __restrict T_bitmasks);
 

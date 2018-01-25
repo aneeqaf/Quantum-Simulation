@@ -52,17 +52,19 @@ FindStrides (const vector<int>& gate_qubits,
     return strides;
 }
 
-vector<int>
-FormBlockOfXYHGates(idx_size& gate_i,
-                    const Gate::Type gate_type,
-                    const vector<Gate>& all_gates);
+void
+ApplyNonControl1QGates(cmplx* __restrict amp,
+                       const int q,
+                       const int num_qubits_amp,
+                       const Gate::Type gate_type,
+                       const Gate& g = {});
 
 //TODO: Test this
 void
 ApplyControlGate(cmplx* __restrict amp,
                  const int num_controls,
                  const vector<int>& gate_qubits,
-                 const int total_circuit_qubits,
+                 const int num_qubits_amp,
                  const Gate& g,
                  const Gate::Type gate_type);
 
@@ -77,7 +79,7 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
 void
 ApplyFWHT(cmplx* __restrict amp,
           idx_size qubits_in_cluster,
-          const int total_circuit_qubits,
+          const int num_qubits_amp,
           const Gate::Type gate_type);
 
 #endif /* kernels1_h */

@@ -10,15 +10,15 @@
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
-SequentialSimulation(): filename({}),g_begin(0), g_end(0), rescale_time(0),
-                        num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(false)
+SequentialSimulation(SimType st): filename({}),g_begin(0), g_end(0), rescale_time(0),
+num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(false), sim_type(st)
 {
     gate_time.resize(5, 0);
 }
 
 SequentialSimulation::
-SequentialSimulation(const string fname, bool g): filename(fname),g_begin(0), g_end(0), rescale_time(0),
-num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(g)
+SequentialSimulation(const string fname, bool g, SimType st): filename(fname),g_begin(0), g_end(0), rescale_time(0),
+num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(g), sim_type(st)
 {
     gate_time.resize(5, 0);
 }
@@ -36,6 +36,7 @@ SequentialSimulation(const SequentialSimulation& rhs)
     Y = rhs.Y;
     CZ_T = rhs.CZ_T;
     th = rhs.th;
+    sim_type = rhs.sim_type;
 }
 
 void SequentialSimulation::
@@ -49,11 +50,13 @@ PopulateBenchmarkMap()
         cmplx(-6.54596e-06, -2.83312e-05), cmplx(1.06338e-05, 3.37055e-05)};
     benchmark["30_101"] = {cmplx(-9.25684e-06, 5.20232e-05), cmplx(-3.33498e-05, 2.11104e-05), cmplx(-4.62867e-05, -1.58411e-05),
         cmplx(-1.64932e-05, 3.05876e-05), cmplx(-1.56987e-05, -7.06633e-06)};
+    benchmark["35_26"] = {cmplx(2.26241e-06, -2.0497e-06), cmplx(-2.16094e-06, -4.74918e-06), cmplx(2.07073e-06, -1.09369e-06),
+        cmplx(-3.07386e-06, 2.53828e-06), cmplx(2.9415e-06, 4.65522e-06)};
 }
 
 void SequentialSimulation::
 Simulate(const string &outfile,
-         State& amp,
+         GenericQuantumState& amp,
          Circuit& circuit,
          const int threshold)
 {
@@ -94,7 +97,7 @@ Simulate(const string &outfile,
                  idx_size T_bitmasks[2] = {0};
                  idx_size CZ_bitmasks[total_circuit_qubits];
                  amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
-                 amp.ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks, total_circuit_qubits);
+                 amp.ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
     
                  g_end = clock();
                  gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -104,7 +107,7 @@ Simulate(const string &outfile,
             }
             else 
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
-                              total_circuit_qubits, current_gate, (Gate::Type)current_gate.ids.back());
+                               current_gate, (Gate::Type)current_gate.ids.back());
         }
         else {
              if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
@@ -113,40 +116,15 @@ Simulate(const string &outfile,
                  (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                   circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
                      idx_size prev_i = i;
-#ifdef Clustering
-                     idx_size odd_Xi = 0;
-                     idx_size odd_Yi = 0;
-                     amp.ApplyClusterOfXYHGates(i, odd_Xi, odd_Yi, gates, total_circuit_qubits);
-                     g_end = clock();
-                     gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                     merged_X_Y += i - prev_i;
-                     if (odd_Xi && !odd_Yi) {
-                         --merged_X_Y;
-                         g_begin = clock();
-                         amp.ApplyNonCGate(gates[odd_Xi].qubits, total_circuit_qubits, Gate::Type::X_1_2);
-                         g_end = clock();
-                         gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                         X++;
-                         amp.IncrementGlobalFactorPower(2);
-                     }
-                     else if (odd_Yi && !odd_Xi) {
-                         --merged_X_Y;
-                         g_begin = clock();
-                         amp.ApplyNonCGate(gates[odd_Yi].qubits, total_circuit_qubits, Gate::Type::Y_1_2);
-                         g_end = clock();
-                         gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                         Y++;
-                         amp.IncrementGlobalFactorPower(2);
-                     }
-#endif
+
 #ifdef ManualMerging
                       amp.ApplyMergedXYGate(gates[i], gates[i + 1] total_circuit_qubits);
                       i += 2;
 #endif
 #ifdef RT
-                     idx_size X_bitmask = amp.FormXGatesBitmask(i, gates);
-                     idx_size Y_bitmask = amp.FormYGatesBitmask(i, gates);
-                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, total_circuit_qubits, th);
+                     idx_size X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
+                     idx_size Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
 #endif
                      g_end = clock();
                      gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
@@ -160,19 +138,17 @@ Simulate(const string &outfile,
                 gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
             else {
-                amp.ApplyNonCGate(current_gate.qubits[0], total_circuit_qubits,
+                amp.ApplyNonCGate(current_gate.qubits[0],
                                   (Gate::Type)current_gate.ids.back(),  current_gate);
                 g_end = clock();
                 
                 if(current_gate.ids.back() == Gate::Type::X_1_2){
                     gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     X++;
-                    amp.IncrementGlobalFactorPower(2);
                 }
                 else if(current_gate.ids.back() == Gate::Type::Y_1_2) {
                     gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                     Y++;
-                    amp.IncrementGlobalFactorPower(2);
                 }
             }
         }
@@ -184,7 +160,7 @@ Simulate(const string &outfile,
     amp.PrintStateVector();
 #endif
     
-    PrintReport(end , begin, amp, circuit);
+    PrintReport(amp, end , begin, circuit);
 }
 
 SequentialSimulation& SequentialSimulation::
@@ -203,9 +179,9 @@ operator=(const SequentialSimulation& rhs)
 }
 
 void SequentialSimulation::
-PrintReport(const clock_t end,
+PrintReport(GenericQuantumState& amp,
+            const clock_t end,
             const clock_t begin,
-            State& amp,
             const Circuit& circuit) const
 {
     char hostname[20] = {};
@@ -215,7 +191,8 @@ PrintReport(const clock_t end,
         cout << h;
     }
     cout << "\n";
-    
+    amp.Rescale();
+    amp.ApplyGlobalICounter();
    
 #ifdef __APPLE__
     cout << "CPU model name : "; flush(cout);
@@ -280,11 +257,19 @@ PrintReport(const clock_t end,
     cout << "Gates : " << circuit.GetTotalNumGates() << "  ";
     cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
     
-    cout << "Simulation type: state vector / lossless \n";
+    cout << "Simulation type: ";
+    if (sim_type == SequentialSimulation::SimType::FullState)
+        cout << "full state vector / lossless \n";
+    else if (sim_type == SequentialSimulation::SimType::LosslessH)
+        cout << "sum of tensor products / horiz cut / lossless \n";
+    else if (sim_type == SequentialSimulation::SimType::LosslessV)
+        cout << "sum of tensor products / vert cut / lossless \n";
+    
     cout << "Number of threads : 1\n";
     cout << "Size of complex : " << sizeof(cmplx) << " B\n";
     
-    idx_size temp_amp_size = amp.GetAmpSize();
+    idx_size temp_amp_size = amp.GetFullStateSize();
+    
     {
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
@@ -318,8 +303,6 @@ PrintReport(const clock_t end,
     }
     
     {
-        amp.Rescale();
-        amp.ApplyGlobalICounter();
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
         
@@ -344,35 +327,35 @@ PrintReport(const clock_t end,
                 imag2 = to_string(imag(benchmark[key][2])), imag3 = to_string(imag(benchmark[key][3])),
                 imag4 = to_string(imag(benchmark[key][4]));
                 
-                cout << "amp[3]  = " << real(benchmark[key][0]) ;
+                cout << "amp[3] b\t= " << real(benchmark[key][0]) ;
                 if (imag(benchmark[key][0]) < 0) {
                     imag0[0] = ' ';
                     cout << " - " << imag0 << "i\n";
                 }
                 else
                     cout << " + " << imag0 << "i\n";
-                cout << "amp[1/4] = " << real(benchmark[key][1]);
+                cout << "amp[1/4]\t= " << real(benchmark[key][1]);
                 if (imag(benchmark[key][1]) < 0) {
                     imag1[0] = ' ';
                     cout << " - " << imag1 << "i\n";
                 }
                 else
                     cout << " + " << imag1 << "i\n";
-                cout << "i\namp[1/2] = " << real(benchmark[key][2]);
+                cout << "i\namp[1/2]\t= " << real(benchmark[key][2]);
                 if (imag(benchmark[key][2]) < 0) {
                     imag2[0] = ' ';
                     cout << " - " << imag2 << "i\n";
                 }
                 else
                     cout << " + " << imag2 << "i\n";
-                cout << "i\namp[3/4] = " << real(benchmark[key][3]);
+                cout << "i\namp[3/4]\t= " << real(benchmark[key][3]);
                 if (imag(benchmark[key][3]) < 0) {
                     imag3[0] = ' ';
                     cout << " - " << imag3 << "i\n";
                 }
                 else
                     cout << " + " << imag3 << "i\n";
-                cout << "i\namp[-3]  = "  << real(benchmark[key][4]);
+                cout << "i\namp[-3] \t= "  << real(benchmark[key][4]);
                 if (imag(benchmark[key][4]) < 0) {
                     imag4[0] = ' ';
                     cout << " - " << imag4 << "i\n";
@@ -390,35 +373,35 @@ PrintReport(const clock_t end,
         imag2 = to_string(imag(amp[temp_amp_size/2])), imag3 = to_string(imag(amp[3 * temp_amp_size/4])),
         imag4 = to_string(imag(amp[temp_amp_size - 3]));
         
-        cout << "amp[3] = " << real(amp[3]);
+        cout << "amp[3]  \t= " << real(amp[3]);
         if (imag(amp[3]) < 0) {
             imag0[0] = ' ';
             cout << " - " << imag0 << "i\n";
         }
         else
             cout << " + " << imag0 << "i\n";
-        cout << "amp[1/4] = " << real(amp[temp_amp_size/4]);
+        cout << "amp[1/4]\t= " << real(amp[temp_amp_size/4]);
         if (imag(amp[temp_amp_size/4]) < 0) {
             imag1[0] = ' ';
             cout << " - " << imag1 << "i\n";
         }
         else
             cout << " + " << imag1 << "i\n";
-        cout << "amp[1/2] = " << real(amp[temp_amp_size/2]);
+        cout << "amp[1/2]\t= " << real(amp[temp_amp_size/2]);
         if (imag(amp[temp_amp_size/2]) < 0) {
             imag2[0] = ' ';
             cout << " - " << imag2 << "i\n";
         }
         else
             cout << " + " << imag2 << "i\n";
-        cout << "amp[3/4] = " << real(amp[3 * temp_amp_size/4]);
+        cout << "amp[3/4]\t= " << real(amp[3 * temp_amp_size/4]);
         if (imag(amp[3 * temp_amp_size/4]) < 0) {
             imag3[0] = ' ';
             cout << " - " << imag3 << "i\n";
         }
         else
             cout << " + " << imag3 << "i\n";
-        cout << "amp[-3] = " << real(amp[temp_amp_size - 3]);
+        cout << "amp[-3] \t= " << real(amp[temp_amp_size - 3]);
         if (imag(amp[temp_amp_size - 3]) < 0) {
             imag4[0] = ' ';
             cout << " - " << imag4 << "i\n\n";
@@ -433,31 +416,37 @@ PrintReport(const clock_t end,
         double total_time = double(end - begin) / CLOCKS_PER_SEC;
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        ss << "     H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
+        string H_s = "     H (" + to_string(circuit.GetNumQubits()) +  ")";
+        ss << H_s << setw(28 - H_s.size()) << right << ": " << gate_time[0]
         << " s = " << (gate_time[0]/total_time) * 100 << "%\n";
 
         if(CZ_T) {
-            ss << "     CZ & T (" << CZ_T << ") : " << gate_time[1]
+            string CZ_T_s = "     CZ & T (" + to_string(CZ_T) + ")" ;
+            ss << CZ_T_s << setw(28 - CZ_T_s.size()) << right << ": " << gate_time[1]
             << " s = " << (gate_time[1]/total_time) * 100 << "%\n";
         }
         
         if (X) {
-            ss << "     X (" << X << ") : " << gate_time[2] << " s = "
+            string X_s = "     X (" + to_string(X) + ")";
+            ss << X_s << setw(28 - X_s.size()) << right << ": " << gate_time[2] << " s = "
             << (gate_time[2]/total_time) * 100 << "%\n";
         }
         
         if (Y) {
-            ss << "     Y (" << Y << ") : " << gate_time[3]
+            string Y_s = "     Y (" + to_string(Y) + ")";
+            ss << Y_s << setw(28 - Y_s.size()) << right << ": " << gate_time[3]
             << " s = " << (gate_time[3]/total_time) * 100 << "%\n";
         }
         
         if (merged_X_Y) {
-            ss << "     X & Y (" << merged_X_Y << ") : " << gate_time[4]
+            string X_Y_s = "     X & Y (" + to_string(merged_X_Y) + ")";
+            ss << X_Y_s << setw(28 - X_Y_s.size()) << right << ": " << gate_time[4]
             << " s = " << (gate_time[4]/total_time) * 100 << "%\n";
         }
         
         if (num_rescaling) {
-            ss << "     Rescaling passes (" << num_rescaling << ") : " << rescale_time << " s = "
+            string RP_s = "     Rescaling passes (" + to_string(num_rescaling) + ")";
+            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": " << rescale_time << " s = "
             << (rescale_time/total_time) * 100 << "%\n\n";
         }
         
@@ -469,10 +458,10 @@ PrintReport(const clock_t end,
 }
 
 void SequentialSimulation::
-PrintReport(const string &outfile,
+PrintReport(GenericQuantumState& amp,
+            const string &outfile,
             const clock_t end,
             const clock_t begin,
-            State& amp,
             const Circuit& circuit) const
 {
     ofstream file;

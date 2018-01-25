@@ -1,31 +1,27 @@
 //
-//  state.h
-//  Quantum Circuit
+//  state_sum_tensor.hpp
+//  vector_state_sim
 //
-//  Created by Aneeqa Fatima on 12/13/17.
+//  Created by Aneeqa Fatima on 1/18/18.
 //
 
-#ifndef state_h
-#define state_h
+#ifndef state_sum_tensor_h
+#define state_sum_tensor_h
 
-#include "state_interface.h"
+#include "state_tensor.h"
 
 using namespace std;
 
-class FullAmpStateVector : public GenericQuantumState {
-private:
-    double max_prob;
-    double min_prob;
-    cmplx* amp;
-    idx_size amp_size;
-    idx_size global_factor_power;
-    idx_size global_i_counter;
-    int num_qubits;
+class SumOfTensorsProductsStateVector : public GenericQuantumState {
+public:
+    enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts};
     
-    idx_size FormBitmask(const vector<int>& qubits);
+private:
+    SimType sim_type;
+    vector<TensorProductStateVector*> tensor_addends;
+    idx_size num_addends;
     
 public:
-    
     void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                                const idx_size __restrict T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,
@@ -33,30 +29,29 @@ public:
                        const Gate& g = {});
     void ApplyHGateOnAllAmps();
     void ApplyCGate(const int num_controls,
-                   const vector<int>& gate_qubits,
-                   const Gate& g,
-                   const Gate::Type gate_type);
+                    const vector<int>& gate_qubits,
+                    const Gate& g,
+                    const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,
                            const Gate& gate2);
     void ApplyClusterOfXYHGates(idx_size& gate_i,
                                 idx_size& odd_Xi,
                                 idx_size& odd_Yi,
-                                const vector<Gate>& all_gates);
+                                const vector<Gate>& all_gates) {};
     void ApplyXYRecursiveTransform(idx_size X_bitmask,
                                    idx_size Y_bitmask,
                                    const int th);
-    void ApplyCZDecompositions(const int gate_qubit,
-                               const Gate::Type gate_type);
+    FullAmpStateVector* ConvertSumOfTensorsToState();
     
     cmplx operator[](idx_size i) const;
     double GetMinProb() const;
     double GetMaxProb() const;
     double GetAvgProb() const;
     double GetMemUsage() const;
+    idx_size GetNumAddends() const;
     idx_size GetSize() const;
     idx_size GetFullStateSize() const;
     idx_size GetGlobalFactorPower() const;
-    int GetNumQubits() const;
     double CalculateNormOfAmp();
     
     void Rescale();
@@ -67,11 +62,13 @@ public:
     void PrintStateVector();
     void PrintProbabilities(const string& out_file) const;
     
-    FullAmpStateVector(int qubits);
-    FullAmpStateVector(cmplx* a, idx_size size);
-    FullAmpStateVector(const FullAmpStateVector& rhs);
-    FullAmpStateVector& operator=(const FullAmpStateVector& rhs) = delete;
-    ~FullAmpStateVector();
+    SumOfTensorsProductsStateVector(int qubits,
+                                    SimType type);
+    SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs) = delete;
+    SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs) = delete;
+    ~SumOfTensorsProductsStateVector();
 };
 
-#endif /* state_h */
+
+
+#endif /* state_sum_tensor_h */

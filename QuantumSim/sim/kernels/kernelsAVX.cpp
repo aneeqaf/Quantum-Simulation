@@ -108,12 +108,12 @@ SecondGroupOf8GatesHelper(bool& negate_Z,
 
 void
 ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
-                        const int total_circuit_qubits,
+                        const int num_qubits_amp,
                         const idx_size* __restrict CZ_bitmasks,
                         const idx_size* __restrict T_bitmasks /*2*/)
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    const idx_size amp_size = 1ull << total_circuit_qubits;
+    const idx_size amp_size = 1ull << num_qubits_amp;
     idx_size prev_gc = 0;
     
     bool negate_Z = false;
