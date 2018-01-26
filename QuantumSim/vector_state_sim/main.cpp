@@ -21,6 +21,18 @@
 
 using namespace std;
 
+string ReadMultipleArgs(char* optarg) {
+    string opt = "";
+    int i = 0;
+    for (; optarg[i] != '-' && optarg[i] != '_'; ++i) {
+        if(optarg[i] == '\0')
+            opt += " ";
+        else
+            opt += optarg[i];
+    }
+    return opt;
+}
+
 int main(int argc, char *argv[])
 {    
 #ifdef __APPLE__
@@ -40,6 +52,8 @@ int main(int argc, char *argv[])
         { "googleInput",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "simType",    required_argument,       nullptr, 's' },
+        { "cutSizes",    required_argument,       nullptr, 'c' },
+        { "verbose",    required_argument,       nullptr, 'v' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
@@ -48,13 +62,19 @@ int main(int argc, char *argv[])
     int idx = 0;
     
     string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0, threshold = -1, depth = 0;
+    int numQ = 0, numG = 0, threshold = -1, depth = 0, cut = 0;
     SequentialSimulation::SimType sim_type = SequentialSimulation::FullState;
+    SequentialSimulation::Verbose verbose = SequentialSimulation::Default;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:c:v:", longopts, &idx)) != -1)
     {
         switch (c) {
+            case 'c': {
+                string s_c = string(optarg);
+                cut = stoi(s_c);
+                break;
+            }
             case 'd': {
                 string s_d = string(optarg);
                 depth = stoi(s_d);
@@ -66,21 +86,13 @@ int main(int argc, char *argv[])
                     cerr << "Please enter number of qubits and number of gates in circuit\n";
                     exit(1);
                 }
-                string opt = "";
-                int i = 0;
-                for (; optarg[i] != '-' && optarg[i] != '_'; ++i) {
-                    if(optarg[i] == '\0')
-                        opt += " ";
-                    else
-                        opt += optarg[i];
-                }
+                string opt = ReadMultipleArgs(optarg);
                 istringstream iss(opt);
                 
                 while (iss >> numQ >> numG) {
                     num_qubits.push_back(numQ);
                     num_gates.push_back(numG);
                 }
-                
                 break;
             }
             case 'h': {
@@ -120,6 +132,11 @@ int main(int argc, char *argv[])
                 threshold = stoi(s_th);
                 break;
             }
+            case 'v': {
+                string s_v = string(optarg);
+                verbose = (SequentialSimulation::Verbose)stoi(s_v);
+                break;
+            }
             default: {
                 cerr << "Unknown option " << c << '\n';
                 exit(1);
@@ -134,7 +151,7 @@ int main(int argc, char *argv[])
     cout << "Rollright ver 1.2 - a quantum circuit simulator\n\n";
     Circuit cir;
     if (inputfile || googleInput) {
-        SequentialSimulation sim(input_filename, true, sim_type);
+        SequentialSimulation sim(input_filename, true, sim_type, cut, verbose);
         
         cmplx* amp_v = nullptr;
         idx_size size = 0;
@@ -146,7 +163,8 @@ int main(int argc, char *argv[])
                 sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             }
             else {
-                AdaptiveStateVector amp(cir.GetNumQubits(), (SumOfTensorsProductsStateVector::SimType)sim_type);
+                AdaptiveStateVector amp(cir.GetNumQubits(),
+                                        (SumOfTensorsProductsStateVector::SimType)sim_type, cut);
                 sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             }
             delete [] amp_v;
@@ -160,13 +178,14 @@ int main(int argc, char *argv[])
                 sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             }
             else {
-                AdaptiveStateVector amp(cir.GetNumQubits(), (SumOfTensorsProductsStateVector::SimType)sim_type);
+                AdaptiveStateVector amp(cir.GetNumQubits(),
+                                        (SumOfTensorsProductsStateVector::SimType)sim_type, cut);
                 sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             }
         }
     }
     else if(create) {
-        SequentialSimulation sim("Custom circuit", true, sim_type);
+        SequentialSimulation sim("Custom circuit", true, sim_type, cut, verbose);
         for (idx_size i = 0; i < num_qubits.size(); ++i){
             cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             
@@ -181,7 +200,8 @@ int main(int argc, char *argv[])
                 sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             }
             else {
-                AdaptiveStateVector amp(cir.GetNumQubits(), (SumOfTensorsProductsStateVector::SimType)sim_type);
+                AdaptiveStateVector amp(cir.GetNumQubits(),
+                                        (SumOfTensorsProductsStateVector::SimType)sim_type, cut);
                 sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
             }
         }

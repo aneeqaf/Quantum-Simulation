@@ -15,47 +15,33 @@ using namespace std;
 class TensorProductStateVector : public GenericQuantumState {
 public:
     enum Cuts : int {Vertical, Horizontal};
-    
-    static idx_size Project1QBitmask(const idx_size gate_bitmask,
-                                     const idx_size partition_bitmask,
-                                     const int num_qubits,
-                                     const bool zero_least_sig,
-                                     const bool leading_ones = false);
-    
-    static int ProjectQubit(const int qubit_to_project,
-                            const idx_size partition_bitmask,
-                            const int num_qubits);
-    
-    static bool ProjectCZBitmask(idx_size* __restrict projected_bitmasks,
-                                 const idx_size partition_bitmask,
-                                 const idx_size* __restrict gate_bitmasks,
-                                 const int total_circuit_qubits);
-    static idx_size ScatterGlobalIndex(const idx_size i,
-                               const idx_size partition_bitmask,
-                               const idx_size total_qubits);
+
 private:
-    FullAmpStateVector* state_A;
-    FullAmpStateVector* state_B;
-    idx_size A_qubits_bitmask;
-    idx_size B_qubits_bitmask;
-    int num_q_A;
-    int num_q_B;
+    idx_size a_qubits_bitmask;
+    idx_size b_qubits_bitmask;
+    int num_q_a;
+    int num_q_b;
     Cuts cut_type; 
     
-    void HorizontalCut(int& num_qubits_A,
-                      int& num_qubits_B,
-                      const int total_qubits);
-    void VerticalCut(int& num_qubits_A,
-                    int& num_qubits_B,
-                    const int total_qubits);
+    void HorizontalCut(int& num_qubits_a,
+                       int& num_qubits_b,
+                       const int total_qubits,
+                       const int cut = 0);
+    void VerticalCut(int& num_qubits_a,
+                     int& num_qubits_b,
+                     const int total_qubits,
+                     const int cut = 0);
 
 public:
+    FullAmpStateVector* state_a;
+    FullAmpStateVector* state_b;
+    
     void FindCZGatesBetweenPartitions(vector<pair<int,idx_size>>& CZ_bitmasks,
                                       const idx_size* __restrict gate_bitmasks);
     void ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
                                         const Gate::Type CZ_D_B,
-                                        const int qubit_A,
-                                        const int qubit_B);
+                                        const int qubit_a,
+                                        const int qubit_b);
     void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                                const idx_size __restrict T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,
@@ -77,16 +63,22 @@ public:
                                    const int th);
     
     cmplx operator[](idx_size i) const;
+    cmplx GetAmpFromGlobalState(const idx_size a,
+                                const idx_size b) const;
     double GetMinProb() const;
     double GetMaxProb() const;
     double GetAvgProb() const;
     double GetMemUsage() const;
     idx_size GetSize() const;
-    idx_size GetFullStateSize() const;
+    idx_size GetFullStateVectorSize() const;
     int GetStateANumQ() const;
     int GetStateBNumQ() const;
+    idx_size GetStateABitmask() const;
+    idx_size GetStateBBitmask() const;
     idx_size GetGlobalFactorPower() const;
-    double CalculateNormOfAmp();
+    double CalculateNormSquared();
+    double CalculateAverageInaccuracy(double norm) const;
+    
     
     void Rescale();
     void ApplyGlobalICounter();
@@ -96,12 +88,32 @@ public:
     void PrintStateVector() ;
     void PrintProbabilities(const string& out_file) const;
     
-    TensorProductStateVector(int qubits,
-                             Cuts type);
+    TensorProductStateVector(const int qubits,
+                             const Cuts type,
+                             const int cut_size = 0);
     TensorProductStateVector(const TensorProductStateVector& rhs) ;
     TensorProductStateVector& operator=(const TensorProductStateVector& rhs) = delete;
     ~TensorProductStateVector();
 };
+
+idx_size Project1QBitmask(const idx_size gate_bitmask,
+                          const idx_size partition_bitmask,
+                          const int num_qubits,
+                          const bool zero_least_sig,
+                          const bool leading_ones = false);
+
+int ProjectQubit(const int qubit_to_project,
+                 const idx_size partition_bitmask,
+                 const int num_qubits);
+
+bool ProjectCZBitmask(idx_size* __restrict projected_bitmasks,
+                      const idx_size partition_bitmask,
+                      const idx_size* __restrict gate_bitmasks,
+                      const int total_circuit_qubits);
+
+idx_size ScatterGlobalIndex(const idx_size i,
+                            const idx_size partition_bitmask,
+                            const idx_size total_qubits);
 
 
 #endif /* state_tensor_h */

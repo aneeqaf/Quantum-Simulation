@@ -19,6 +19,10 @@
 #include "kernels1.h"
 
 class GenericQuantumState {
+protected:
+    ostringstream log;
+    double maintenance_time;
+    
 public:
     
     virtual void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
@@ -55,9 +59,10 @@ public:
     virtual double GetAvgProb() const = 0;
     virtual double GetMemUsage() const = 0;
     virtual idx_size GetSize() const = 0;
-    virtual idx_size GetFullStateSize() const = 0;
+    virtual idx_size GetFullStateVectorSize() const = 0;
     virtual idx_size GetGlobalFactorPower() const = 0;
-    virtual double CalculateNormOfAmp() = 0;
+    virtual double CalculateNormSquared() = 0;
+    virtual double CalculateAverageInaccuracy(double norm) const = 0;
     
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
@@ -66,10 +71,14 @@ public:
     virtual void PrintStateVector(const string& outfile) const = 0;
     virtual void PrintStateVector() = 0;
     virtual void PrintProbabilities(const string& out_file) const = 0;
+    virtual double GetMaintenanceTimeSpentByClass();
+    virtual ostringstream& GetClassDataLog();
         
-    GenericQuantumState(){}
+    GenericQuantumState();
     virtual ~GenericQuantumState(){}
 };
+
+int FindDivisor(int num);
 
 
 #endif /* state_interface_h */

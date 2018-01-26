@@ -21,10 +21,12 @@ using namespace std;
 class SequentialSimulation {
 public:
     enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState};
+    enum Verbose : int {None, NCCV, NCC, Default, Cycles};
 private:
     
     static unordered_map<string, array<cmplx, 5>> benchmark;
     vector<double> gate_time;
+    ostringstream log;
     string filename;
     clock_t g_begin;
     clock_t g_end;
@@ -37,8 +39,11 @@ private:
     int Y;
     int CZ_T;
     int th;
+    int cut_sizes;
+    int conv_cycle;
     bool google;
     SimType sim_type;
+    Verbose verbose;
     
     void PopulateBenchmarkMap();
    
@@ -59,8 +64,14 @@ public:
                   Circuit& circuit,
                   const int th = 0);
     
-    SequentialSimulation(SimType st);
-    SequentialSimulation(const string filename, bool g, SimType st);
+    SequentialSimulation(const SimType st,
+                         const int cut_sizes = 0,
+                         const Verbose v = Default);
+    SequentialSimulation(const string filename,
+                         const bool g,
+                         const SimType st,
+                         const int cut_sizes = 0,
+                         const Verbose v = Default);
     SequentialSimulation(const SequentialSimulation& rhs);
     SequentialSimulation& operator=(const SequentialSimulation& rhs);
 };

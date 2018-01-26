@@ -50,9 +50,12 @@ public:
     double GetMemUsage() const;
     idx_size GetNumAddends() const;
     idx_size GetSize() const;
-    idx_size GetFullStateSize() const;
+    idx_size GetFullStateVectorSize() const;
     idx_size GetGlobalFactorPower() const;
-    double CalculateNormOfAmp();
+    int GetStateANumQ() const;
+    int GetStateBNumQ() const;
+    double CalculateNormSquared();
+    double CalculateAverageInaccuracy(double norm) const;
     
     void Rescale();
     void ApplyGlobalICounter();
@@ -62,8 +65,9 @@ public:
     void PrintStateVector();
     void PrintProbabilities(const string& out_file) const;
     
-    SumOfTensorsProductsStateVector(int qubits,
-                                    SimType type);
+    SumOfTensorsProductsStateVector(const int qubits,
+                                    const SimType type,
+                                    const int cut_size = 0);
     SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs) = delete;
     SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs) = delete;
     ~SumOfTensorsProductsStateVector();

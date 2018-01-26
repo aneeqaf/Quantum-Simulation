@@ -8,6 +8,9 @@
 
 #include "state_interface.h"
 
+GenericQuantumState::
+GenericQuantumState(): log(ostringstream::ate), maintenance_time(0) {}
+
 idx_size GenericQuantumState::
 FormXYGatesBitmask(idx_size& gate_i,
                   const vector<Gate>& all_gates,
@@ -34,4 +37,26 @@ FormCZTGatesBitmask(idx_size* __restrict CZ_bitmasks /*total_circuit_qubits*/,
         CZ_bitmasks[i] = 0;
     
     FormBlockOfCZTGates(gate_i, CZ_bitmasks, T_bitmasks, all_gates, total_circuit_qubits);    
+}
+
+double GenericQuantumState::
+GetMaintenanceTimeSpentByClass()
+{
+    return maintenance_time;
+}
+
+ostringstream& GenericQuantumState::
+GetClassDataLog() 
+{
+    return log;
+}
+
+int FindDivisor(int num)
+{
+    int div = 0;
+    for (int i = 1; i <= floor(sqrt(num)); ++i){
+        if (num % i == 0)
+            div = i;
+    }
+    return div;
 }

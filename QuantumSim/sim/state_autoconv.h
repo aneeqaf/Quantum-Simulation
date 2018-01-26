@@ -45,9 +45,10 @@ public:
     double GetAvgProb() const;
     double GetMemUsage() const;
     idx_size GetSize() const;
-    idx_size GetFullStateSize() const;
+    idx_size GetFullStateVectorSize() const;
     idx_size GetGlobalFactorPower() const;
-    double CalculateNormOfAmp();
+    double CalculateNormSquared();
+    double CalculateAverageInaccuracy(double norm) const;
     
     void Rescale();
     void ApplyGlobalICounter();
@@ -57,7 +58,9 @@ public:
     void PrintStateVector() ;
     void PrintProbabilities(const string& out_file) const;
     
-    AdaptiveStateVector(int qubits, SumOfTensorsProductsStateVector::SimType type);
+    AdaptiveStateVector(const int qubits,
+                        const SumOfTensorsProductsStateVector::SimType type,
+                        const int cut_size = 0);
     AdaptiveStateVector(const AdaptiveStateVector& rhs) = delete;
     AdaptiveStateVector& operator=(const AdaptiveStateVector& rhs) = delete;
     ~AdaptiveStateVector();

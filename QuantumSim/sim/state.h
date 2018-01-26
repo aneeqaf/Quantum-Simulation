@@ -54,10 +54,11 @@ public:
     double GetAvgProb() const;
     double GetMemUsage() const;
     idx_size GetSize() const;
-    idx_size GetFullStateSize() const;
+    idx_size GetFullStateVectorSize() const;
     idx_size GetGlobalFactorPower() const;
     int GetNumQubits() const;
-    double CalculateNormOfAmp();
+    double CalculateNormSquared();
+    double CalculateAverageInaccuracy(double norm) const;
     
     void Rescale();
     void ApplyGlobalICounter();
@@ -67,8 +68,8 @@ public:
     void PrintStateVector();
     void PrintProbabilities(const string& out_file) const;
     
-    FullAmpStateVector(int qubits);
-    FullAmpStateVector(cmplx* a, idx_size size);
+    FullAmpStateVector(const int qubits);
+    FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);
     FullAmpStateVector& operator=(const FullAmpStateVector& rhs) = delete;
     ~FullAmpStateVector();

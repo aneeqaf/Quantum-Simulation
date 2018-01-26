@@ -10,7 +10,7 @@
 using namespace std;
 
 FullAmpStateVector::
-FullAmpStateVector(int qubits): max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
+FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
 global_factor_power(0), global_i_counter(0), num_qubits(qubits)
 {
     amp_size = 1ull << qubits;
@@ -20,7 +20,8 @@ global_factor_power(0), global_i_counter(0), num_qubits(qubits)
 }
 
 FullAmpStateVector::
-FullAmpStateVector(cmplx* a, idx_size size): max_prob(numeric_limits<double>::min()),
+FullAmpStateVector(cmplx* a,
+                   const idx_size size): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0), global_i_counter(0),
 num_qubits(__builtin_log2l(size))
 {
@@ -231,12 +232,12 @@ GetAvgProb() const
 double FullAmpStateVector::
 GetMemUsage() const
 {
-    return sizeof(vector<cmplx>) + (sizeof(cmplx) * amp_size) ;
+    return sizeof(cmplx) * amp_size;
 }
 
 
 double FullAmpStateVector::
-CalculateNormOfAmp()
+CalculateNormSquared()
 {
     double norm = 0;
     idx_size qubits = log2(amp_size);
@@ -272,6 +273,12 @@ CalculateNormOfAmp()
     return norm;
 }
 
+double FullAmpStateVector::
+CalculateAverageInaccuracy(double norm) const
+{
+    return abs(1.0 - norm) /(double)amp_size;
+}
+
 idx_size FullAmpStateVector::
 GetSize() const
 {
@@ -279,7 +286,7 @@ GetSize() const
 }
 
 idx_size FullAmpStateVector::
-GetFullStateSize() const
+GetFullStateVectorSize() const
 {
     return amp_size;
 }

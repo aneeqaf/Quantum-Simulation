@@ -9,17 +9,26 @@
 #include "state_sum_tensor.h"
 
 SumOfTensorsProductsStateVector::
-SumOfTensorsProductsStateVector(int qubits,
-             SimType type): num_addends(1)
+SumOfTensorsProductsStateVector(const int qubits,
+                                const SimType type,
+                                const int cut_size): num_addends(1)
 {
     sim_type = type;
     if (type == SimType::LosslessH || type == SimType::Approx1CutH)
-        tensor_addends.push_back(new TensorProductStateVector(qubits, TensorProductStateVector::Cuts::Horizontal));
+        tensor_addends.push_back(new TensorProductStateVector(qubits,
+                                                              TensorProductStateVector::Cuts::Horizontal,
+                                                              cut_size));
     else if (type == SimType::LosslessV || type == SimType::Approx1CutV)
-        tensor_addends.push_back(new TensorProductStateVector(qubits, TensorProductStateVector::Cuts::Vertical));
+        tensor_addends.push_back(new TensorProductStateVector(qubits,
+                                                              TensorProductStateVector::Cuts::Vertical,
+                                                              cut_size));
     else {
-        tensor_addends.push_back(new TensorProductStateVector(qubits, TensorProductStateVector::Cuts::Horizontal));
-        tensor_addends.push_back(new TensorProductStateVector(qubits, TensorProductStateVector::Cuts::Vertical));
+        tensor_addends.push_back(new TensorProductStateVector(qubits,
+                                                              TensorProductStateVector::Cuts::Horizontal,
+                                                              cut_size));
+        tensor_addends.push_back(new TensorProductStateVector(qubits,
+                                                              TensorProductStateVector::Cuts::Vertical,
+                                                              cut_size));
         ++num_addends;
     }
 }
@@ -112,17 +121,25 @@ ConvertSumOfTensorsToState()
 {
     Rescale();
     ApplyGlobalICounter();
-    int total_q = tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ();
-    idx_size size = 1ull << total_q;
+    const int num_q_B = tensor_addends[0] -> GetStateBNumQ(), num_q_A = tensor_addends[0] -> GetStateANumQ(),
+    total_q = num_q_A  + num_q_B;
+    const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A, B_size = 1ull << num_q_B,
+    B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
+    
     cmplx* amp;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * size);
     memset(amp, 0, size * sizeof(amp));
-    for (idx_size i = 0; i < size; ++i) {
-        cmplx state_v = 0;
-        for (idx_size j = 0; j < num_addends; ++j)
-            state_v += (*tensor_addends[j])[i];
-        
-        amp[i] = state_v;
+     
+    for (idx_size j = 0; j < num_addends; ++j) {
+        auto& state_A = *(tensor_addends[j] -> state_a);
+        auto& state_B = *(tensor_addends[j] -> state_b);
+        for (idx_size a = 0; a < A_size; ++a) {
+            const cmplx t_a = state_A[a];
+            for (idx_size b = 0; b < B_size; ++b) {
+                idx_size i = (a << num_q_B) | (b & B_qubits_bitmask);
+                amp[i] += t_a * state_B[b];
+            }
+        }
     }
     FullAmpStateVector* full_state = new FullAmpStateVector(amp, size);
     return full_state;
@@ -151,14 +168,14 @@ GetMaxProb() const
 {
     double max = 0;
     for (auto& t : tensor_addends)
-        max += t -> GetMinProb();
+        max += t -> GetMaxProb();
     return max;
 }
 
 double SumOfTensorsProductsStateVector::
 GetAvgProb() const
 {
-    return 1.0/GetFullStateSize();
+    return 1.0/GetFullStateVectorSize();
 }
 
 double SumOfTensorsProductsStateVector::
@@ -186,7 +203,7 @@ GetSize() const
 }
 
 idx_size SumOfTensorsProductsStateVector::
-GetFullStateSize() const
+GetFullStateVectorSize() const
 {
     return (idx_size)(1ull << (tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ()));
 }
@@ -201,13 +218,31 @@ GetGlobalFactorPower() const
     return max;
 }
 
+int SumOfTensorsProductsStateVector::
+GetStateANumQ() const
+{
+    return tensor_addends[0] -> GetStateANumQ();
+}
+
+int SumOfTensorsProductsStateVector::
+GetStateBNumQ() const
+{
+  return tensor_addends[0] -> GetStateBNumQ();
+}
+
 double SumOfTensorsProductsStateVector::
-CalculateNormOfAmp()
+CalculateNormSquared()
 {
     double norm = 0;
     for (auto& t : tensor_addends)
-        norm += t -> CalculateNormOfAmp();
+        norm += t -> CalculateNormSquared();
     return norm;
+}
+
+double SumOfTensorsProductsStateVector::
+CalculateAverageInaccuracy(double norm) const
+{
+    return abs(1.0 - norm)/ (GetFullStateVectorSize());
 }
 
 void SumOfTensorsProductsStateVector::

@@ -10,15 +10,25 @@
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
-SequentialSimulation(SimType st): filename({}),g_begin(0), g_end(0), rescale_time(0),
-num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(false), sim_type(st)
+SequentialSimulation(const SimType st,
+                     const int cut,
+                     const Verbose v):
+filename({}),g_begin(0), g_end(0), rescale_time(0),
+num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), cut_sizes(cut), conv_cycle(0),
+google(false), sim_type(st), verbose(v)
 {
     gate_time.resize(5, 0);
 }
 
 SequentialSimulation::
-SequentialSimulation(const string fname, bool g, SimType st): filename(fname),g_begin(0), g_end(0), rescale_time(0),
-num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), google(g), sim_type(st)
+SequentialSimulation(const string fname,
+                     const bool g,
+                     const SimType st,
+                     const int cut,
+                     const Verbose v):
+filename(fname),g_begin(0), g_end(0), rescale_time(0),
+num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), cut_sizes(cut), conv_cycle(0),
+google(g), sim_type(st), verbose(v)
 {
     gate_time.resize(5, 0);
 }
@@ -62,7 +72,7 @@ Simulate(const string &outfile,
 {
     PopulateBenchmarkMap();
     idx_size size = circuit.GetTotalNumGates();
-    int total_circuit_qubits = circuit.GetNumQubits();
+    int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
     th = threshold;
     
     if (circuit.google) {
@@ -73,7 +83,7 @@ Simulate(const string &outfile,
     
     auto gates = circuit.GetGates();
     
-    clock_t begin = clock();
+    clock_t begin = clock(), cycle_start = clock();
     for (idx_size i = 0; i < size; ++i) {
         
         g_begin = clock();
@@ -90,9 +100,28 @@ Simulate(const string &outfile,
         if(current_gate.ids.front() == Gate::Type::Control ||
            current_gate.ids.back() == Gate::Type::T) {
             
+            current_cycle += 2;
              if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
+                 clock_t cycle_end = clock();
+                 
+                 log << setprecision(3);
+                 log << "Cycle : " << current_cycle << "\t Runtime : "
+                 << double(cycle_end - cycle_start)/ CLOCKS_PER_SEC << " s \t" << "Memory : ";
+                 double memory = amp.GetMemUsage();
+                 if (memory >= 1e9) {
+                     log << memory / 1e9 << " GB \n";
+                 }
+                 else if (memory >= 1e6) {
+                     log << memory / 1e6 << " MB \n";
+                 }
+                 else if (memory >= 1e3) {
+                     log << memory / 1e3 << " KB \n";
+                 }
+                 else
+                     log << memory << " B \n";
+                 
                  idx_size prev_i = i;
                  idx_size T_bitmasks[2] = {0};
                  idx_size CZ_bitmasks[total_circuit_qubits];
@@ -103,7 +132,11 @@ Simulate(const string &outfile,
                  gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
                  CZ_T += i - prev_i;
                  i -= 1;
-                
+                 
+                 if (amp.GetMaintenanceTimeSpentByClass())
+                     conv_cycle = current_cycle;
+                 
+                cycle_start = clock();
             }
             else 
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
@@ -132,6 +165,7 @@ Simulate(const string &outfile,
                      --i;
              }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
+                cycle_start = clock();
                 amp.ApplyHGateOnAllAmps();
                 i += total_circuit_qubits - 1;
                 g_end = clock();
@@ -160,7 +194,8 @@ Simulate(const string &outfile,
     amp.PrintStateVector();
 #endif
     
-    PrintReport(amp, end , begin, circuit);
+    if (verbose)
+        PrintReport(amp, end , begin, circuit);
 }
 
 SequentialSimulation& SequentialSimulation::
@@ -194,49 +229,51 @@ PrintReport(GenericQuantumState& amp,
     amp.Rescale();
     amp.ApplyGlobalICounter();
    
+    if (verbose != Verbose::NCCV && verbose != Verbose::NCC) {
 #ifdef __APPLE__
-    cout << "CPU model name : "; flush(cout);
-    system("sysctl -n machdep.cpu.brand_string");
-    cout << "CPU cores : "; flush(cout);
-    system("sysctl -n machdep.cpu.core_count");
-    cout << "Hardware threads : "; flush(cout);
-    system("sysctl -n machdep.cpu.thread_count");
-    cout << "L2 cache size : "; flush(cout);
-    system("sysctl -n hw.l2cachesize");
-    cout << "L3 cache size : "; flush(cout);
-    system("sysctl -n hw.l3cachesize");
-#endif
-#ifndef __APPLE__
-    cout << "CPU "; flush(cout);
-    system("egrep CPU /proc/cpuinfo | head -1");
-    system("egrep cores /proc/cpuinfo | head -1");
-    cout << "Hardware threads : "; flush(cout);
-    system("egrep cores  /proc/cpuinfo | wc -l");
-    cout << "L3 " ; flush(cout);
-    system("egrep cache /proc/cpuinfo | head -1");
-#endif
-    cout << "CPU supports :"
-    << " popcnt:" << __builtin_cpu_supports("popcnt");
-    
-    if (__builtin_cpu_supports("sse4.2"))
-        cout << ", sse4.2:" << __builtin_cpu_supports("sse4.2");
-    else if (__builtin_cpu_supports("sse4.1"))
-        cout << ", sse4.1:" << __builtin_cpu_supports("sse4.1");
-    else if (__builtin_cpu_supports("sse4.1"))
-        cout << ", sse4.1:" << __builtin_cpu_supports("sse4.1");
-    else if (__builtin_cpu_supports("ssse3"))
-        cout << ", ssse3:" << __builtin_cpu_supports("ssse3");
-    else if (__builtin_cpu_supports("sse3"))
-        cout << ", sse3:" << __builtin_cpu_supports("sse3");
-    else if (__builtin_cpu_supports("sse2"))
-        cout << ", sse2:" << __builtin_cpu_supports("sse2");
-    else if (__builtin_cpu_supports("sse"))
-        cout << ", sse:" << __builtin_cpu_supports("sse");
-    
-    cout << ", avx:" << __builtin_cpu_supports("avx")
-         << ", avx2:" << __builtin_cpu_supports("avx2") << "\n\n";
-    cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
-    <<  __GNUC_PATCHLEVEL__<< "\n";
+        cout << "CPU model name : "; flush(cout);
+        system("sysctl -n machdep.cpu.brand_string");
+        cout << "CPU cores : "; flush(cout);
+        system("sysctl -n machdep.cpu.core_count");
+        cout << "Hardware threads : "; flush(cout);
+        system("sysctl -n machdep.cpu.thread_count");
+        cout << "L2 cache size : "; flush(cout);
+        system("sysctl -n hw.l2cachesize");
+        cout << "L3 cache size : "; flush(cout);
+        system("sysctl -n hw.l3cachesize");
+    #endif
+    #ifndef __APPLE__
+        cout << "CPU "; flush(cout);
+        system("egrep CPU /proc/cpuinfo | head -1");
+        system("egrep cores /proc/cpuinfo | head -1");
+        cout << "Hardware threads : "; flush(cout);
+        system("egrep cores  /proc/cpuinfo | wc -l");
+        cout << "L3 " ; flush(cout);
+        system("egrep cache /proc/cpuinfo | head -1");
+    #endif
+        cout << "CPU supports :"
+        << " popcnt:" << __builtin_cpu_supports("popcnt");
+        
+        if (__builtin_cpu_supports("sse4.2"))
+            cout << ", sse4.2:" << __builtin_cpu_supports("sse4.2");
+        else if (__builtin_cpu_supports("sse4.1"))
+            cout << ", sse4.1:" << __builtin_cpu_supports("sse4.1");
+        else if (__builtin_cpu_supports("sse4.1"))
+            cout << ", sse4.1:" << __builtin_cpu_supports("sse4.1");
+        else if (__builtin_cpu_supports("ssse3"))
+            cout << ", ssse3:" << __builtin_cpu_supports("ssse3");
+        else if (__builtin_cpu_supports("sse3"))
+            cout << ", sse3:" << __builtin_cpu_supports("sse3");
+        else if (__builtin_cpu_supports("sse2"))
+            cout << ", sse2:" << __builtin_cpu_supports("sse2");
+        else if (__builtin_cpu_supports("sse"))
+            cout << ", sse:" << __builtin_cpu_supports("sse");
+        
+        cout << ", avx:" << __builtin_cpu_supports("avx")
+             << ", avx2:" << __builtin_cpu_supports("avx2") << "\n\n";
+        cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
+        <<  __GNUC_PATCHLEVEL__<< "\n";
+    }
     cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
     time_t t = time(0);
     struct tm * now = localtime (&t);
@@ -260,23 +297,27 @@ PrintReport(GenericQuantumState& amp,
     cout << "Simulation type: ";
     if (sim_type == SequentialSimulation::SimType::FullState)
         cout << "full state vector / lossless \n";
-    else if (sim_type == SequentialSimulation::SimType::LosslessH)
-        cout << "sum of tensor products / horiz cut / lossless \n";
-    else if (sim_type == SequentialSimulation::SimType::LosslessV)
-        cout << "sum of tensor products / vert cut / lossless \n";
+    else if (sim_type == SequentialSimulation::SimType::LosslessH) {
+        cout << "sum of tensor products / lossless \n";
+        cout << amp.GetClassDataLog().str();
+    }
+    else if (sim_type == SequentialSimulation::SimType::LosslessV) {
+        cout << "sum of tensor products / lossless \n";
+        cout << amp.GetClassDataLog().str();
+    }
     
-    cout << "Number of threads : 1\n";
     cout << "Size of complex : " << sizeof(cmplx) << " B\n";
     
-    idx_size temp_amp_size = amp.GetFullStateSize();
+    idx_size temp_amp_size = amp.GetFullStateVectorSize();
     
     {
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
-        double norm = amp.CalculateNormOfAmp();
-        double avg_inacc = (1.0 - norm)/(double)temp_amp_size;
+        double norm = amp.CalculateNormSquared();
+        double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 #ifdef RT
-        cout << "Recursion end-case(max) : " << th << " q\n\n";
+        cout << "Recursion end-case(max) : " << th << " q\n";
+        cout << "Number of threads : 1\n\n";
 #endif
         double memory = amp.GetMemUsage();
         ss << "State vector size : ";
@@ -293,7 +334,11 @@ PrintReport(GenericQuantumState& amp,
         else
             ss << memory << " B \n";
 
-        ss << "Norm : " << norm << "\n";
+        ss << "Norm ";
+        if (sim_type != SequentialSimulation::SimType::FullState)
+            ss << "(assuming orthogonal addends)";
+        
+        ss << " : " << sqrt(norm) << "\n";
         ss << "Probabilities : " << amp.GetMinProb() << "(min), "
              << amp.GetMaxProb() << "(max), "
              << amp.GetAvgProb() << "(avg)\n";
@@ -302,6 +347,7 @@ PrintReport(GenericQuantumState& amp,
         cout << ss.str();
     }
     
+    if (verbose != Verbose::NCCV)
     {
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
@@ -453,7 +499,11 @@ PrintReport(GenericQuantumState& amp,
         cout << ss.str();
     }
     
-    cout << "¯\\_(ツ)_/¯ \n\n";
+    if (verbose == Verbose::Cycles)
+        cout << log.str();
+    
+    
+    cout << "\n¯\\_(ツ)_/¯ \n\n";
     
 }
 
@@ -508,7 +558,7 @@ PrintReport(GenericQuantumState& amp,
         file << memory << " B \n";
     
     double total_time = double(end - begin) / CLOCKS_PER_SEC;
-    file << "Norm : " << amp.CalculateNormOfAmp() << "\n";
+    file << "Norm : " << sqrt(amp.CalculateNormSquared()) << "\n";
     file << "Probabilities : " << amp.GetMinProb() << "(min), "
     << amp.GetMaxProb() << "(max), "
     << amp.GetAvgProb() << "(avg)\n";

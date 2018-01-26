@@ -8,9 +8,18 @@
 #include "state_autoconv.h"
 
 AdaptiveStateVector::
-AdaptiveStateVector(int qubits, SumOfTensorsProductsStateVector::SimType type) : full_state(nullptr), total_q(qubits)
+AdaptiveStateVector(const int qubits,
+                    const SumOfTensorsProductsStateVector::SimType type,
+                    const int cut_size) : full_state(nullptr), total_q(qubits)
 {
-    sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type);
+    sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, cut_size);
+    
+    if (type == SumOfTensorsProductsStateVector::SimType::LosslessH)
+        log << "Type of cut : horizontal (";
+    else if (type == SumOfTensorsProductsStateVector::SimType::LosslessV)
+        log << "Type of cut : vertical (";
+    log << sumOfTensors -> GetStateANumQ()
+    << ", " << sumOfTensors -> GetStateBNumQ() << ")\n";
 }
 
 AdaptiveStateVector::
@@ -28,11 +37,29 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
         full_state -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
     else {
         sumOfTensors -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
-        if (sumOfTensors -> GetMemUsage() > (sizeof(vector<cmplx>) + (sizeof(cmplx) * (1ull << total_q)))/8) {
+        if (sumOfTensors -> GetMemUsage() > (sizeof(cmplx) * (1ull << total_q))/4) {
+            clock_t begin = clock();
+#ifdef V4
+            double memory = sumOfTensors -> GetMemUsage();
+            log << "Tensor addends size (" << sumOfTensors -> GetNumAddends() << ") : ";
+            if (memory >= 1e9) {
+                log << memory / 1e9 << " GB \n";
+            }
+            else if (memory >= 1e6) {
+                log << memory / 1e6 << " MB \n";
+            }
+            else if (memory >= 1e3) {
+                log << memory / 1e3 << " KB \n";
+            }
+            else
+                log << memory << " B \n";
+#endif
+            
             full_state = sumOfTensors -> ConvertSumOfTensorsToState();
+            clock_t end = clock();
+            maintenance_time += double(end - begin) / CLOCKS_PER_SEC;
             delete sumOfTensors;
             sumOfTensors = nullptr;
-            cout << "kk" << endl;
         }
     }
     
@@ -145,12 +172,12 @@ GetSize() const
 }
 
 idx_size AdaptiveStateVector::
-GetFullStateSize() const
+GetFullStateVectorSize() const
 {
     if (full_state)
-        return full_state -> GetFullStateSize();
+        return full_state -> GetFullStateVectorSize();
     else
-        return sumOfTensors -> GetFullStateSize();
+        return sumOfTensors -> GetFullStateVectorSize();
 }
 
 
@@ -164,12 +191,21 @@ GetGlobalFactorPower() const
 }
 
 double AdaptiveStateVector::
-CalculateNormOfAmp()
+CalculateNormSquared()
 {
     if (full_state)
-        return full_state -> CalculateNormOfAmp();
+        return full_state -> CalculateNormSquared();
     else
-        return sumOfTensors -> CalculateNormOfAmp();
+        return sumOfTensors -> CalculateNormSquared();
+}
+
+double AdaptiveStateVector::
+CalculateAverageInaccuracy(double norm) const
+{
+    if (full_state)
+        return full_state -> CalculateAverageInaccuracy(norm);
+    else
+        return sumOfTensors -> CalculateAverageInaccuracy(norm);
 }
 
 void AdaptiveStateVector::
@@ -209,7 +245,7 @@ void AdaptiveStateVector::
 PrintStateVector() 
 {
     if (sumOfTensors)
-        sumOfTensors -> ConvertSumOfTensorsToState();
+        sumOfTensors -> PrintStateVector();
     else
         full_state -> PrintStateVector();
 }
