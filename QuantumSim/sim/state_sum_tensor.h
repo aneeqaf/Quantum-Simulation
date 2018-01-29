@@ -42,6 +42,7 @@ public:
                                    idx_size Y_bitmask,
                                    const int th);
     FullAmpStateVector* ConvertSumOfTensorsToState();
+    FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
     
     cmplx operator[](idx_size i) const;
     double GetMinProb() const;

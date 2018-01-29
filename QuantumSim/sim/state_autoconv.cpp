@@ -73,7 +73,7 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
        
         if (sumOfTensors -> GetNumAddends() > 10) {
             clock_t begin = clock();
-            full_state = sumOfTensors -> ConvertSumOfTensorsToState();
+            full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX(); //won't work for less than 4 q in a split
             clock_t end = clock();
             time_by_category.conversion += double(end - begin) / CLOCKS_PER_SEC;
             

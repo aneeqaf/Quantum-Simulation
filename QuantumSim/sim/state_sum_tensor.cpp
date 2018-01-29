@@ -116,8 +116,8 @@ ApplyMergedXYGate(const Gate& gate1,
 
 void SumOfTensorsProductsStateVector::
 ApplyXYRecursiveTransform(idx_size X_bitmask,
-                          idx_size Y_bitmask,
-                          const int th)
+                             idx_size Y_bitmask,
+                             const int th)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
     for (auto& t : tensor_addends)
@@ -130,7 +130,7 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
 }
 
 FullAmpStateVector* SumOfTensorsProductsStateVector::
-ConvertSumOfTensorsToState()
+ConvertSumOfTensorsToStateAVX()
 {
     RescaleAndApplyGlobalICounter();
     const int num_q_b = tensor_addends[0] -> GetStateBNumQ(), num_q_a = tensor_addends[0] -> GetStateANumQ(),
@@ -196,6 +196,35 @@ ConvertSumOfTensorsToState()
         
     }
     
+    FullAmpStateVector* full_state = new FullAmpStateVector(amp, size);
+    return full_state;
+}
+
+FullAmpStateVector* SumOfTensorsProductsStateVector::
+ConvertSumOfTensorsToState()
+{
+    Rescale();
+    ApplyGlobalICounter();
+    const int num_q_B = tensor_addends[0] -> GetStateBNumQ(), num_q_A = tensor_addends[0] -> GetStateANumQ(),
+    total_q = num_q_A  + num_q_B;
+    const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A, B_size = 1ull << num_q_B,
+    B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
+    
+    cmplx* amp;
+    posix_memalign((void**)&amp, 64, sizeof(cmplx) * size);
+    memset(amp, 0, size * sizeof(amp));
+    
+    for (idx_size j = 0; j < num_addends; ++j) {
+        auto& state_A = *(tensor_addends[j] -> state_a);
+        auto& state_B = *(tensor_addends[j] -> state_b);
+        for (idx_size a = 0; a < A_size; ++a) {
+            const cmplx t_a = state_A[a];
+            for (idx_size b = 0; b < B_size; ++b) {
+                idx_size i = (a << num_q_B) | (b & B_qubits_bitmask);
+                amp[i] += t_a * state_B[b];
+            }
+        }
+    }
     FullAmpStateVector* full_state = new FullAmpStateVector(amp, size);
     return full_state;
 }
