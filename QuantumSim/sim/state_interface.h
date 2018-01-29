@@ -15,15 +15,18 @@
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 
 #include "kernels1.h"
+#include "profile.h"
 
 class GenericQuantumState {
 protected:
-    ostringstream log;
-    double maintenance_time;
+    static vector<string> log;
     
 public:
+    static Counts count_of_category;
+    static Times time_by_category;
     
     virtual void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                                        const idx_size __restrict T_bitmasks[2]) = 0;
@@ -63,6 +66,8 @@ public:
     virtual idx_size GetGlobalFactorPower() const = 0;
     virtual double CalculateNormSquared() = 0;
     virtual double CalculateAverageInaccuracy(double norm) const = 0;
+    virtual double CalculateMeanEntropy() const = 0;
+    virtual double CalculateCrossEntropy(int range) const = 0;
     
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
@@ -71,10 +76,9 @@ public:
     virtual void PrintStateVector(const string& outfile) const = 0;
     virtual void PrintStateVector() = 0;
     virtual void PrintProbabilities(const string& out_file) const = 0;
-    virtual double GetMaintenanceTimeSpentByClass();
-    virtual ostringstream& GetClassDataLog();
+    virtual vector<string> GetClassDataLog();
         
-    GenericQuantumState();
+    GenericQuantumState(){}
     virtual ~GenericQuantumState(){}
 };
 

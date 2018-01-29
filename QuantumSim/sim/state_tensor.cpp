@@ -38,7 +38,7 @@ Project1QBitmask(const idx_size gate_bitmask,
         }
     }
     else
-        return gate_bitmask & partition_bitmask;
+        return gate_bitmask & partition_bitmask; //TODO:FIX
     
     return projected_bitmask;
 }
@@ -180,11 +180,11 @@ FindCZGatesBetweenPartitions(vector<pair<int,idx_size>>& CZ_bitmasks,
 {
     const int qubits_a = state_a -> GetNumQubits();
     const int modified_q = qubits_a + state_b -> GetNumQubits() - 1;
+    pair<int,idx_size> temp;
     int c = 0;
     for (int i = 0; c <  qubits_a; ++i) {
         if ((1ull << (modified_q - i)) & a_qubits_bitmask) {
             if ((gate_bitmasks[modified_q - i] & a_qubits_bitmask) != gate_bitmasks[modified_q - i]) {
-                pair<int,idx_size> temp;
                 temp.second = Project1QBitmask(gate_bitmasks[modified_q - i],
                                                b_qubits_bitmask, modified_q + 1,
                                                false);
@@ -211,6 +211,7 @@ void TensorProductStateVector::
 ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                       const idx_size __restrict T_bitmasks[2])
 {
+    clock_t begin = clock();
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
     total_circuit_qubits = num_q_a + num_q_b;
     idx_size CZ_bitmasks_a[num_q_a];
@@ -230,6 +231,8 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
         T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
         T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
     }
+    clock_t end = clock();
+    time_by_category.CZ_T +=  double(end - begin) / CLOCKS_PER_SEC;
     
     if (applyCZ_a || T_bitmasks_a[0])
         state_a -> ApplyBlockOfDiagGates(CZ_bitmasks_a, T_bitmasks_a);
@@ -402,6 +405,61 @@ CalculateAverageInaccuracy(double norm) const
     return abs(1.0 - norm) /(double)GetFullStateVectorSize();
 }
 
+double TensorProductStateVector::
+CalculateMeanEntropy() const
+{
+    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    auto& state_v_a = (*state_a), state_v_b = (*state_b);
+    double entropy = 0.0;
+    
+    float rescaling_factor_a = 1.0/pow(2,(state_a -> GetGlobalFactorPower()/2)),
+    rescaling_factor_b = 1.0/pow(2,(state_b -> GetGlobalFactorPower()/2));
+    if ((state_a -> GetGlobalFactorPower() % 2) == 1)
+        rescaling_factor_a *= 1.0/sqrt(2.0);
+    if ((state_b -> GetGlobalFactorPower() % 2) == 1)
+        rescaling_factor_b *= 1.0/sqrt(2.0);
+    
+    for (idx_size a = 0; a < a_size; ++a) {
+        auto s_a = state_v_a[a];
+        for (idx_size b = 0; b < b_size; ++b) {
+            auto s_b = state_v_b[b];
+           if ((real(s_b) > 1e-20 || imag(s_b) > 1e-20) &&
+                (real(s_a) > 1e-20 || imag(s_a) > 1e-20))
+                entropy += norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b)
+               * log2l(norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b));
+        }
+    }
+    
+    return -entropy;
+}
+
+double TensorProductStateVector::
+CalculateCrossEntropy(int range) const
+{
+    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    auto& state_v_a = (*state_a), state_v_b = (*state_b);
+    double xe = 0.0, num_ranges_a = a_size/range, num_ranges_b = b_size/range;
+    
+    float rescaling_factor_a = 1.0/pow(2,(state_a -> GetGlobalFactorPower()/2)),
+    rescaling_factor_b = 1.0/pow(2,(state_b -> GetGlobalFactorPower()/2));
+    if ((state_a -> GetGlobalFactorPower() % 2) == 1)
+        rescaling_factor_a *= 1.0/sqrt(2.0);
+    if ((state_b -> GetGlobalFactorPower() % 2) == 1)
+        rescaling_factor_b *= 1.0/sqrt(2.0);
+    
+    for (idx_size a = 0; a < num_ranges_a; ++a) {
+        auto s_a = state_v_a[(a * range) + (rand() % range)];
+        for (idx_size b = 0; b < num_ranges_b; ++b) {
+            auto s_b = state_v_b[(b * range) + (rand() % range)];
+            if ((real(s_b) > 1e-20 || imag(s_b) > 1e-20) &&
+                (real(s_a) > 1e-20 || imag(s_a) > 1e-20))
+                xe += log2l(norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b));
+        }
+    }
+    
+    return -xe / (num_ranges_a * num_ranges_b);
+}
+
 void TensorProductStateVector::
 Rescale()
 {
@@ -429,7 +487,6 @@ GetGlobalFactorPower() const
     return state_a -> GetGlobalFactorPower() > state_b -> GetGlobalFactorPower() ?
     state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
 }
-
 
 void TensorProductStateVector::
 PrintStateVector(const string& outfile) const

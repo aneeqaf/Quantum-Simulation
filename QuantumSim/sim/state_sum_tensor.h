@@ -56,13 +56,15 @@ public:
     int GetStateBNumQ() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
+    double CalculateMeanEntropy() const;
+    double CalculateCrossEntropy(int range) const;
     
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
     
     void PrintStateVector(const string& outfile) const;
-    void PrintStateVector();
+    void PrintStateVector() ;
     void PrintProbabilities(const string& out_file) const;
     
     SumOfTensorsProductsStateVector(const int qubits,

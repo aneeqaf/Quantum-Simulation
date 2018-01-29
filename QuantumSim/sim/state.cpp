@@ -65,10 +65,13 @@ void FullAmpStateVector::
 ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                       const idx_size __restrict T_bitmasks[2])
 {
+    clock_t begin = clock();
     if (num_qubits >= 4)
         ApplyBlockOfCZTGatesAVX(amp, num_qubits, CZ_bitmasks, T_bitmasks);
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+    clock_t end = clock();
+    time_by_category.CZ_T +=  double(end - begin) / CLOCKS_PER_SEC;
 }
 
 void FullAmpStateVector::
@@ -93,6 +96,7 @@ void FullAmpStateVector::
 ApplyHGateOnAllAmps()
 {
 //    fill_n(amp, amp_size, 1);
+    clock_t begin = clock();
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
     for (idx_size i = 0; i < amp_size; i += 4) {
@@ -102,6 +106,8 @@ ApplyHGateOnAllAmps()
     }
     
     global_factor_power += num_qubits;
+    clock_t end = clock();
+    time_by_category.H +=  double(end - begin) / CLOCKS_PER_SEC;
 }
 
 void FullAmpStateVector::
@@ -117,13 +123,15 @@ void FullAmpStateVector::
 ApplyMergedXYGate(const Gate& gate1,
                   const Gate& gate2)
 {
+    clock_t begin = clock();
     Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits);
     
     global_factor_power += 2;
     
     if (gate1.ids.back() == Gate::Type::Y_1_2 && gate2.ids.back() == Gate::Type::Y_1_2)
         ++global_i_counter;
-    
+    clock_t end = clock();
+    time_by_category.merged_XY1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
 }
 
 void FullAmpStateVector::
@@ -173,6 +181,7 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
                           idx_size Y_bitmask,
                           const int th)
 {
+    clock_t begin = clock();
     idx_size num_Xgates = __builtin_popcountll(X_bitmask), num_Ygates = __builtin_popcountll(Y_bitmask);
     if ((num_Xgates + num_Ygates) % 2 == 1) {
         const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
@@ -183,15 +192,22 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
             X_bitmask ^= 1ull << X_q;
             global_factor_power += 2;
             --num_Xgates;
+            clock_t end = clock();
+            time_by_category.X1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+            ++count_of_category.X1_2;
         }
         else {
             Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2);
             Y_bitmask ^= 1ull << Y_q;
             global_factor_power += 2;
             --num_Ygates;
+            clock_t end = clock();
+            time_by_category.Y1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+             ++count_of_category.Y1_2;
         }
     }
     
+    begin = clock();
     if (X_bitmask || Y_bitmask)
       global_i_counter += XYRecursiveTransform(amp, X_bitmask, Y_bitmask, num_qubits, th);
     
@@ -199,6 +215,8 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
         global_factor_power += num_Xgates;
     if (num_Ygates)
         global_factor_power += num_Ygates;
+    clock_t end = clock();
+    time_by_category.merged_XY1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
 }
 
 cmplx FullAmpStateVector::
@@ -209,6 +227,12 @@ operator[](idx_size i) const
 //    if (global_factor_power % 2 == 1)
 //        a /= sqrt(2);
     return amp[i];
+}
+
+const cmplx* const FullAmpStateVector::
+GetAmpVector() const
+{
+    return amp;
 }
 
 double FullAmpStateVector::
@@ -239,44 +263,72 @@ GetMemUsage() const
 double FullAmpStateVector::
 CalculateNormSquared()
 {
-    double norm = 0;
-    idx_size qubits = log2(amp_size);
+    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
+    if ((global_factor_power % 2) == 1)
+        rescaling_factor *= 1.0/sqrt(2.0);
+    
+    double norm_sq = 0;
     
     for (idx_size i = 0; i < amp_size; ++i) {
-        cmplx t = amp[i];
-        t /= pow(2,(global_factor_power/2));
-        if (global_factor_power % 2 == 1)
-            t /= sqrt(2);
+        float t = norm(amp[i] * rescaling_factor);
         
-        t *= conj(t);
-        if (real(t) > (1.0/(1ull << qubits)))
-            norm += real(t);
+        if (t > (1.0/(1ull << num_qubits)))
+            norm_sq += t;
         
-        if (min_prob > real(t))
-            min_prob = real(t);
+        if (min_prob > t)
+            min_prob = t;
         
-        if (max_prob < real(t))
-            max_prob = real(t);
+        if (max_prob < t)
+            max_prob = t;
     }
     
     for (idx_size i = 0; i < amp_size; ++i) {
-        auto t = amp[i];
-        t /= pow(2,(global_factor_power/2));
-        if (global_factor_power % 2 == 1)
-            t /= sqrt(2);
-        
-        t *= conj(t);
-        if (real(t) <= (1.0/(1ull << qubits)))
-            norm += real(t);
+        float t = norm(amp[i] * rescaling_factor);
+    
+        if (t <= (1.0/(1ull << num_qubits)))
+            norm_sq += t;
     }
     
-    return norm;
+    return norm_sq;
 }
 
 double FullAmpStateVector::
 CalculateAverageInaccuracy(double norm) const
 {
     return abs(1.0 - norm) /(double)amp_size;
+}
+
+double FullAmpStateVector::
+CalculateMeanEntropy() const
+{
+    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
+    if ((global_factor_power % 2) == 1)
+        rescaling_factor *= 1.0/sqrt(2.0);
+    
+    double entropy = 0.0;
+    for (idx_size i = 0; i < amp_size; ++i)
+         if (real(amp[i]) > 1e-20 || imag(amp[i]) > 1e-20)
+             entropy += norm(amp[i] * rescaling_factor) * __builtin_log2l(norm(amp[i] * rescaling_factor));
+    
+    return -entropy;
+}
+
+double FullAmpStateVector::
+CalculateCrossEntropy(int range) const
+{
+    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
+    if ((global_factor_power % 2) == 1)
+        rescaling_factor *= 1.0/sqrt(2.0);
+    
+    double xe = 0.0, num_ranges = amp_size / range;
+    
+    for (idx_size i = 0; i < num_ranges; ++i) {
+        idx_size idx = (i * range) + (rand() % range);
+         if (real(amp[idx]) > 1e-20 || imag(amp[idx]) > 1e-20)
+            xe += log2l(norm(amp[idx] * rescaling_factor)) ;
+    }
+    
+    return -xe / num_ranges;
 }
 
 idx_size FullAmpStateVector::
@@ -296,6 +348,13 @@ GetGlobalFactorPower() const
 {
     return global_factor_power;
 }
+
+idx_size FullAmpStateVector::
+GetGlobalICounter() const
+{
+    return global_i_counter;
+}
+
 
 int FullAmpStateVector::
 GetNumQubits() const
@@ -322,7 +381,6 @@ Rescale()
         t = _mm256_mul_ps(t, rescaling);
         _mm256_store_ps(t_amp + (2 * i), t);
     }
-    
 }
 
 void FullAmpStateVector::

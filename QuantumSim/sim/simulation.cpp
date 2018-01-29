@@ -9,16 +9,14 @@
 
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
+
+
 SequentialSimulation::
 SequentialSimulation(const SimType st,
                      const int cut,
                      const Verbose v):
-filename({}),g_begin(0), g_end(0), rescale_time(0),
-num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), cut_sizes(cut), conv_cycle(0),
-google(false), sim_type(st), verbose(v)
-{
-    gate_time.resize(5, 0);
-}
+filename({}),g_begin(0), g_end(0), th(0), cut_sizes(cut), conv_cycle(0),
+google(false), sim_type(st), verbose(v) {}
 
 SequentialSimulation::
 SequentialSimulation(const string fname,
@@ -26,28 +24,30 @@ SequentialSimulation(const string fname,
                      const SimType st,
                      const int cut,
                      const Verbose v):
-filename(fname),g_begin(0), g_end(0), rescale_time(0),
-num_rescaling(0), merged_X_Y(0), X(0), Y(0), CZ_T(0), th(0), cut_sizes(cut), conv_cycle(0),
-google(g), sim_type(st), verbose(v)
-{
-    gate_time.resize(5, 0);
-}
+filename(fname) ,g_begin(0), g_end(0), th(0), cut_sizes(cut), conv_cycle(0),
+google(g), sim_type(st), verbose(v) {}
+
 SequentialSimulation::
 SequentialSimulation(const SequentialSimulation& rhs)
 {
-    gate_time = rhs.gate_time;
     filename = rhs.filename;
     g_begin = rhs.g_begin;
     g_end = rhs.g_end;
-    rescale_time = rhs.rescale_time;
-    num_rescaling = rhs.num_rescaling;
-    merged_X_Y = rhs.merged_X_Y;
-    X = rhs.X;
-    Y = rhs.Y;
-    CZ_T = rhs.CZ_T;
     th = rhs.th;
     sim_type = rhs.sim_type;
 }
+
+SequentialSimulation& SequentialSimulation::
+operator=(const SequentialSimulation& rhs)
+{
+    filename = rhs.filename;
+    g_begin = rhs.g_begin;
+    g_end = rhs.g_end;
+    th = rhs.th;
+    sim_type = rhs.sim_type;
+    return *this;
+}
+
 
 void SequentialSimulation::
 PopulateBenchmarkMap()
@@ -82,18 +82,16 @@ Simulate(const string &outfile,
     }
     
     auto gates = circuit.GetGates();
-    
+    log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     clock_t begin = clock(), cycle_start = clock();
     for (idx_size i = 0; i < size; ++i) {
         
-        g_begin = clock();
-        
         if (amp.GetGlobalFactorPower() > 100) {
-            clock_t r_b = clock();
+            clock_t begin = clock();
+            ++amp.count_of_category.rescale;
             amp.Rescale();
-            ++num_rescaling;
-            clock_t r_e = clock();
-            rescale_time += double(r_e - r_b)/ CLOCKS_PER_SEC;
+            clock_t end = clock();
+            amp.time_by_category.rescale +=  double(end - begin) / CLOCKS_PER_SEC;
         }
         
         Gate& current_gate = circuit.GetGateFromIndex(i);
@@ -104,23 +102,32 @@ Simulate(const string &outfile,
              if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
+                 double cross_entropy = 0;
+#ifdef CrossEntropy
+                 if (verbose == 4) 
+                    cross_entropy = amp.CalculateCrossEntropy(1000);
+#endif
                  clock_t cycle_end = clock();
                  
-                 log << setprecision(3);
-                 log << "Cycle : " << current_cycle << "\t Runtime : "
-                 << double(cycle_end - cycle_start)/ CLOCKS_PER_SEC << " s \t" << "Memory : ";
+                 log <<  setprecision(3) ;
+                 log << current_cycle << "\t"
+                 << double(cycle_end - cycle_start)/ CLOCKS_PER_SEC << " s    \t";
                  double memory = amp.GetMemUsage();
                  if (memory >= 1e9) {
-                     log << memory / 1e9 << " GB \n";
+                     log << memory / 1e9 << " GB";
                  }
                  else if (memory >= 1e6) {
-                     log << memory / 1e6 << " MB \n";
+                     log << memory / 1e6 << " MB";
                  }
                  else if (memory >= 1e3) {
-                     log << memory / 1e3 << " KB \n";
+                     log << memory / 1e3 << " KB";
                  }
                  else
-                     log << memory << " B \n";
+                     log << memory << " B";
+                 
+                 if (cross_entropy)
+                     log << "\t\t" << cross_entropy ;
+                 log << "\n";
                  
                  idx_size prev_i = i;
                  idx_size T_bitmasks[2] = {0};
@@ -128,12 +135,10 @@ Simulate(const string &outfile,
                  amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
                  amp.ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
     
-                 g_end = clock();
-                 gate_time[1] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                 CZ_T += i - prev_i;
+                 amp.count_of_category.CZ_T += i - prev_i;
                  i -= 1;
                  
-                 if (amp.GetMaintenanceTimeSpentByClass())
+                 if (amp.GetSize() == amp.GetFullStateVectorSize())
                      conv_cycle = current_cycle;
                  
                 cycle_start = clock();
@@ -159,31 +164,19 @@ Simulate(const string &outfile,
                      idx_size Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
                      amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
 #endif
-                     g_end = clock();
-                     gate_time[4] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                     merged_X_Y += i - prev_i;
+                     amp.count_of_category.merged_XY1_2 += i - prev_i;
                      --i;
              }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 cycle_start = clock();
                 amp.ApplyHGateOnAllAmps();
+                amp.count_of_category.H = circuit.GetNumQubits();
                 i += total_circuit_qubits - 1;
-                g_end = clock();
-                gate_time[0] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
             }
             else {
                 amp.ApplyNonCGate(current_gate.qubits[0],
                                   (Gate::Type)current_gate.ids.back(),  current_gate);
-                g_end = clock();
-                
-                if(current_gate.ids.back() == Gate::Type::X_1_2){
-                    gate_time[2] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                    X++;
-                }
-                else if(current_gate.ids.back() == Gate::Type::Y_1_2) {
-                    gate_time[3] += double(g_end - g_begin)/ CLOCKS_PER_SEC;
-                    Y++;
-                }
+                //TODO: Need to be able to count different types of non-control gates.
             }
         }
     }
@@ -196,21 +189,6 @@ Simulate(const string &outfile,
     
     if (verbose)
         PrintReport(amp, end , begin, circuit);
-}
-
-SequentialSimulation& SequentialSimulation::
-operator=(const SequentialSimulation& rhs)
-{
-    SequentialSimulation temp(rhs);
-    swap(gate_time, temp.gate_time);
-    g_begin = temp.g_begin;
-    g_end = temp.g_end;
-    num_rescaling = temp.num_rescaling;
-    merged_X_Y = temp.merged_X_Y;
-    X = temp.X;
-    Y = temp.Y;
-    CZ_T = temp.CZ_T;
-    return *this;
 }
 
 void SequentialSimulation::
@@ -228,6 +206,7 @@ PrintReport(GenericQuantumState& amp,
     cout << "\n";
     amp.Rescale();
     amp.ApplyGlobalICounter();
+    vector<string> class_log = amp.GetClassDataLog();
    
     if (verbose != Verbose::NCCV && verbose != Verbose::NCC) {
 #ifdef __APPLE__
@@ -273,17 +252,18 @@ PrintReport(GenericQuantumState& amp,
              << ", avx2:" << __builtin_cpu_supports("avx2") << "\n\n";
         cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
         <<  __GNUC_PATCHLEVEL__<< "\n";
+    
+        cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
+        time_t t = time(0);
+        struct tm * now = localtime (&t);
+        cout << "Executed on : "
+        << (now->tm_mon + 1) << "/"
+        <<  now->tm_mday << "/"
+        << (now->tm_year + 1900) << " "
+        <<  now->tm_hour << ":" << now->tm_min << ":"
+        << std::setw(2) << std::setfill('0') << now->tm_sec
+        <<"\n\n";
     }
-    cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
-    time_t t = time(0);
-    struct tm * now = localtime (&t);
-    cout << "Executed on : "
-    << (now->tm_mon + 1) << "/"
-    <<  now->tm_mday << "/"
-    << (now->tm_year + 1900) << " "
-    <<  now->tm_hour << ":" << now->tm_min << ":"
-    << std::setw(2) << std::setfill('0') << now->tm_sec
-    <<"\n\n";
     
     if (google) {
         cout << "Circuit file : " + filename + "\n";
@@ -299,11 +279,11 @@ PrintReport(GenericQuantumState& amp,
         cout << "full state vector / lossless \n";
     else if (sim_type == SequentialSimulation::SimType::LosslessH) {
         cout << "sum of tensor products / lossless \n";
-        cout << amp.GetClassDataLog().str();
+        cout << class_log[0];
     }
     else if (sim_type == SequentialSimulation::SimType::LosslessV) {
         cout << "sum of tensor products / lossless \n";
-        cout << amp.GetClassDataLog().str();
+        cout << class_log[0];
     }
     
     cout << "Size of complex : " << sizeof(cmplx) << " B\n";
@@ -317,7 +297,8 @@ PrintReport(GenericQuantumState& amp,
         double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 #ifdef RT
         cout << "Recursion end-case(max) : " << th << " q\n";
-        cout << "Number of threads : 1\n\n";
+        cout << "Number of threads : 1\n";
+        cout << "Verbosity : " << verbose << "\n\n";
 #endif
         double memory = amp.GetMemUsage();
         ss << "State vector size : ";
@@ -339,6 +320,8 @@ PrintReport(GenericQuantumState& amp,
             ss << "(assuming orthogonal addends)";
         
         ss << " : " << sqrt(norm) << "\n";
+        ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
+        ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(10) << "\n";
         ss << "Probabilities : " << amp.GetMinProb() << "(min), "
              << amp.GetMaxProb() << "(max), "
              << amp.GetAvgProb() << "(avg)\n";
@@ -347,8 +330,7 @@ PrintReport(GenericQuantumState& amp,
         cout << ss.str();
     }
     
-    if (verbose != Verbose::NCCV)
-    {
+    
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
         
@@ -368,53 +350,55 @@ PrintReport(GenericQuantumState& amp,
             }
             else {
                 cout << "failed\nCorrect results: \n";
-                
-                string imag0 = to_string(imag(benchmark[key][0])), imag1 = to_string(imag(benchmark[key][1])),
-                imag2 = to_string(imag(benchmark[key][2])), imag3 = to_string(imag(benchmark[key][3])),
-                imag4 = to_string(imag(benchmark[key][4]));
-                
-                cout << "amp[3] b\t= " << real(benchmark[key][0]) ;
-                if (imag(benchmark[key][0]) < 0) {
-                    imag0[0] = ' ';
-                    cout << " - " << imag0 << "i\n";
+                if (verbose != Verbose::NCCV) {
+                    string imag0 = to_string(imag(benchmark[key][0])), imag1 = to_string(imag(benchmark[key][1])),
+                    imag2 = to_string(imag(benchmark[key][2])), imag3 = to_string(imag(benchmark[key][3])),
+                    imag4 = to_string(imag(benchmark[key][4]));
+                    
+                    cout << "amp[3] b\t= " << real(benchmark[key][0]) ;
+                    if (imag(benchmark[key][0]) < 0) {
+                        imag0[0] = ' ';
+                        cout << " - " << imag0 << "i\n";
+                    }
+                    else
+                        cout << " + " << imag0 << "i\n";
+                    cout << "amp[1/4]\t= " << real(benchmark[key][1]);
+                    if (imag(benchmark[key][1]) < 0) {
+                        imag1[0] = ' ';
+                        cout << " - " << imag1 << "i\n";
+                    }
+                    else
+                        cout << " + " << imag1 << "i\n";
+                    cout << "i\namp[1/2]\t= " << real(benchmark[key][2]);
+                    if (imag(benchmark[key][2]) < 0) {
+                        imag2[0] = ' ';
+                        cout << " - " << imag2 << "i\n";
+                    }
+                    else
+                        cout << " + " << imag2 << "i\n";
+                    cout << "i\namp[3/4]\t= " << real(benchmark[key][3]);
+                    if (imag(benchmark[key][3]) < 0) {
+                        imag3[0] = ' ';
+                        cout << " - " << imag3 << "i\n";
+                    }
+                    else
+                        cout << " + " << imag3 << "i\n";
+                    cout << "i\namp[-3] \t= "  << real(benchmark[key][4]);
+                    if (imag(benchmark[key][4]) < 0) {
+                        imag4[0] = ' ';
+                        cout << " - " << imag4 << "i\n";
+                    }
+                    else
+                        cout << " + " << imag4 << "i\n";
+                    cout << "Incorrect results: \n";
                 }
-                else
-                    cout << " + " << imag0 << "i\n";
-                cout << "amp[1/4]\t= " << real(benchmark[key][1]);
-                if (imag(benchmark[key][1]) < 0) {
-                    imag1[0] = ' ';
-                    cout << " - " << imag1 << "i\n";
-                }
-                else
-                    cout << " + " << imag1 << "i\n";
-                cout << "i\namp[1/2]\t= " << real(benchmark[key][2]);
-                if (imag(benchmark[key][2]) < 0) {
-                    imag2[0] = ' ';
-                    cout << " - " << imag2 << "i\n";
-                }
-                else
-                    cout << " + " << imag2 << "i\n";
-                cout << "i\namp[3/4]\t= " << real(benchmark[key][3]);
-                if (imag(benchmark[key][3]) < 0) {
-                    imag3[0] = ' ';
-                    cout << " - " << imag3 << "i\n";
-                }
-                else
-                    cout << " + " << imag3 << "i\n";
-                cout << "i\namp[-3] \t= "  << real(benchmark[key][4]);
-                if (imag(benchmark[key][4]) < 0) {
-                    imag4[0] = ' ';
-                    cout << " - " << imag4 << "i\n";
-                }
-                else
-                    cout << " + " << imag4 << "i\n";
-                cout << "Incorrect results: \n";
             }
         }
         else
             cout << "no data available\n";
     
-    
+    if (verbose != Verbose::NCCV)
+    {
         string imag0 = to_string(imag(amp[3])), imag1 = to_string(imag(amp[temp_amp_size/4])),
         imag2 = to_string(imag(amp[temp_amp_size/2])), imag3 = to_string(imag(amp[3 * temp_amp_size/4])),
         imag4 = to_string(imag(amp[temp_amp_size - 3]));
@@ -455,53 +439,67 @@ PrintReport(GenericQuantumState& amp,
         else
             cout << " + " << imag4 << "i\n\n";
     }
-    
+
     {
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         double total_time = double(end - begin) / CLOCKS_PER_SEC;
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "     H (" + to_string(circuit.GetNumQubits()) +  ")";
-        ss << H_s << setw(28 - H_s.size()) << right << ": " << gate_time[0]
-        << " s = " << (gate_time[0]/total_time) * 100 << "%\n";
+        string H_s = "     H (" + to_string(amp.count_of_category.H) +  ")";
+        ss << H_s << setw(28 - H_s.size()) << right << ": " << amp.time_by_category.H
+        << " s \t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
-        if(CZ_T) {
-            string CZ_T_s = "     CZ & T (" + to_string(CZ_T) + ")" ;
-            ss << CZ_T_s << setw(28 - CZ_T_s.size()) << right << ": " << gate_time[1]
-            << " s = " << (gate_time[1]/total_time) * 100 << "%\n";
+        if(amp.count_of_category.CZ_T) {
+            string CZ_T_s = "     CZ & T (" +
+            to_string(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ) + ")" ;
+            ss << CZ_T_s << setw(28 - CZ_T_s.size()) << right << ": "
+            << amp.time_by_category.CZ_T << " s \t= "
+            << (amp.time_by_category.CZ_T/total_time) * 100 << "%\n";
         }
         
-        if (X) {
-            string X_s = "     X (" + to_string(X) + ")";
-            ss << X_s << setw(28 - X_s.size()) << right << ": " << gate_time[2] << " s = "
-            << (gate_time[2]/total_time) * 100 << "%\n";
+        if(amp.count_of_category.decomposed_CZ) {
+            string CZ_s = "     Decomposed CZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
+            ss << CZ_s << setw(28 - CZ_s.size()) << right << ": "
+            << amp.time_by_category.decomposed_CZ << " s \t= " << (amp.time_by_category.decomposed_CZ/total_time) * 100 << "%\n";
         }
         
-        if (Y) {
-            string Y_s = "     Y (" + to_string(Y) + ")";
-            ss << Y_s << setw(28 - Y_s.size()) << right << ": " << gate_time[3]
-            << " s = " << (gate_time[3]/total_time) * 100 << "%\n";
+        if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
+            string XY_s = "     Single X (" + to_string(amp.count_of_category.X1_2)
+            + ") & Y (" + to_string(amp.count_of_category.Y1_2) + ")";
+            ss << XY_s << setw(28 - XY_s.size()) << right << ": "
+            << amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2 << " s \t= "
+            << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100 << "%\n";
         }
         
-        if (merged_X_Y) {
-            string X_Y_s = "     X & Y (" + to_string(merged_X_Y) + ")";
-            ss << X_Y_s << setw(28 - X_Y_s.size()) << right << ": " << gate_time[4]
-            << " s = " << (gate_time[4]/total_time) * 100 << "%\n";
+        if (amp.count_of_category.merged_XY1_2) {
+            string X_Y_s = "     Merged X & Y ("
+            + to_string(amp.count_of_category.merged_XY1_2 - amp.count_of_category.Y1_2 - amp.count_of_category.X1_2) + ")";
+            ss << X_Y_s << setw(28 - X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
+            << " s \t= " << (amp.time_by_category.merged_XY1_2/total_time) * 100 << "%\n";
         }
         
-        if (num_rescaling) {
-            string RP_s = "     Rescaling passes (" + to_string(num_rescaling) + ")";
-            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": " << rescale_time << " s = "
-            << (rescale_time/total_time) * 100 << "%\n\n";
+        if (amp.count_of_category.rescale) {
+            string RP_s = "     Rescaling passes (" + to_string(amp.count_of_category.rescale) + ")";
+            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": " << amp.time_by_category.rescale
+            << " s \t= " << (amp.time_by_category.rescale/total_time) * 100 << "%\n";
         }
         
-        cout << ss.str();
+        if (amp.time_by_category.conversion) {
+            string RP_s = "     Conversion ";
+            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": "
+            << amp.time_by_category.conversion << " s \t= "
+            << (amp.time_by_category.conversion/total_time) * 100 << "%\n";
+        }
+        
+        cout << ss.str() << "\n";
     }
     
-    if (verbose == Verbose::Cycles)
-        cout << log.str();
-    
+    if (verbose == Verbose::Cycles) {
+        cout << log.str() << "\n";
+        for (idx_size s = 1; s < class_log.size(); ++s)
+            cout << setprecision(3) << class_log[s];
+    }
     
     cout << "\n¯\\_(ツ)_/¯ \n\n";
     
@@ -514,74 +512,7 @@ PrintReport(GenericQuantumState& amp,
             const clock_t begin,
             const Circuit& circuit) const
 {
-    ofstream file;
-    file.open("output/simulation_reports/" + outfile);
     
-    char hostname[20] = {};
-    gethostname(hostname, 20);
-    file << "Hostname : ";
-    for(auto h : hostname) {
-        file << h;
-    }
-    file << "\n";
-    file << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
-    <<  __GNUC_PATCHLEVEL__<< "\n";
-    file << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
-    time_t t = time(0);
-    struct tm * now = localtime (&t);
-    file << "Executed on : "
-    << (now->tm_mon + 1) << "/"
-    <<  now->tm_mday << "/"
-    << (now->tm_year + 1900) << " "
-    <<  now->tm_hour << ":" << now->tm_min << ":"
-    << std::setw(2) << std::setfill('0') << now->tm_sec
-    <<"\n\n";
-    
-    file << "Qubits : " << circuit.GetNumQubits() << "  ";
-    file << "Gates : " << circuit.GetTotalNumGates() << "  ";
-    file << "Cycles : " << circuit.GetNumCycles() << "\n\n";
-    
-    file << setprecision(3);
-    double memory = amp.GetMemUsage();
-    file << "State vector size: ";
-    
-    if (memory >= 1e9) {
-        file << memory / 1e9 << " GB \n";
-    }
-    else if (memory >= 1e6) {
-        file << memory / 1e6 << " MB \n";
-    }
-    else if (memory >= 1e3) {
-        file << memory / 1e3 << " KB \n";
-    }
-    else
-        file << memory << " B \n";
-    
-    double total_time = double(end - begin) / CLOCKS_PER_SEC;
-    file << "Norm : " << sqrt(amp.CalculateNormSquared()) << "\n";
-    file << "Probabilities : " << amp.GetMinProb() << "(min), "
-    << amp.GetMaxProb() << "(max), "
-    << amp.GetAvgProb() << "(avg)\n";
-    file << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n\n" ;
-    
-    file << "Runtimes by gate type\n";
-    file << "   H (" << circuit.GetNumQubits() << ") : " << gate_time[0]
-    << "s = " << (gate_time[0]/total_time) * 100 << "%\n";
-    
-    file << "   CZ & T (" << CZ_T << ") : " << gate_time[1]
-    << "s = " << (gate_time[1]/total_time) * 100 << "%\n";
-    
-    file << "   X (" << X << ") : " << gate_time[2] << "s = "
-    << (gate_time[2]/total_time) * 100 << "%\n";
-    
-    file << "   Y (" << Y << ") : " << gate_time[3]
-    << "s = " << (gate_time[3]/total_time) * 100 << "%\n";
-    
-    file << "   Merged X & Y (" << merged_X_Y << ") : " << gate_time[4]
-    << "s = " << (gate_time[4]/total_time) * 100 << "%\n\n";
-    
-    file << "Total runtime : " << total_time << "s\n";
-    file << "Rescaling time (" << num_rescaling << ") : " << rescale_time << "s\n\n";
 }
 
 

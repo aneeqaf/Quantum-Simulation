@@ -49,6 +49,8 @@ public:
     idx_size GetGlobalFactorPower() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
+    double CalculateMeanEntropy() const;
+    double CalculateCrossEntropy(int range) const;
     
     void Rescale();
     void ApplyGlobalICounter();

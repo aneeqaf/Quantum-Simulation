@@ -49,6 +49,7 @@ public:
                                const Gate::Type gate_type);
     
     cmplx operator[](idx_size i) const;
+    const cmplx* const GetAmpVector() const;
     double GetMinProb() const;
     double GetMaxProb() const;
     double GetAvgProb() const;
@@ -56,9 +57,12 @@ public:
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
     idx_size GetGlobalFactorPower() const;
+    idx_size GetGlobalICounter() const;
     int GetNumQubits() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
+    double CalculateMeanEntropy() const;
+    double CalculateCrossEntropy(int range) const;
     
     void Rescale();
     void ApplyGlobalICounter();

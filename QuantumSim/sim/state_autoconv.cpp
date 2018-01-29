@@ -14,12 +14,20 @@ AdaptiveStateVector(const int qubits,
 {
     sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, cut_size);
     
-    if (type == SumOfTensorsProductsStateVector::SimType::LosslessH)
-        log << "Type of cut : horizontal (";
-    else if (type == SumOfTensorsProductsStateVector::SimType::LosslessV)
-        log << "Type of cut : vertical (";
-    log << sumOfTensors -> GetStateANumQ()
-    << ", " << sumOfTensors -> GetStateBNumQ() << ")\n";
+    {
+        string data = "";
+        if (type == SumOfTensorsProductsStateVector::SimType::LosslessH)
+             data += "Cut : horizontal ";
+        else if (type == SumOfTensorsProductsStateVector::SimType::LosslessV)
+            data += "Cut : vertical ";
+        data += to_string(sumOfTensors -> GetStateANumQ()) + " + " + to_string(sumOfTensors -> GetStateBNumQ()) + "\n";
+        log.push_back(data);
+    }
+    
+    {
+        string data = "Cycle\txCZ\tAddends\t  Memory\n";
+        log.push_back(data);
+    }
 }
 
 AdaptiveStateVector::
@@ -33,34 +41,46 @@ void AdaptiveStateVector::
 ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                       const idx_size __restrict T_bitmasks[2])
 {
+    
+    
     if (full_state)
         full_state -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
     else {
+        static int cycle_count = 2;
+        {
+            string data = to_string(cycle_count) + "\t";
+            log.push_back(data);
+        }
+        
         sumOfTensors -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
-        if (sumOfTensors -> GetMemUsage() > (sizeof(cmplx) * (1ull << total_q))/4) {
+
+        double memory = sumOfTensors -> GetMemUsage();
+        ostringstream ss;
+        ss << setprecision(3) << to_string(sumOfTensors -> GetNumAddends()) << "\t  ";
+        if (memory >= 1e9) {
+            ss << memory / 1e9 << " GB \n";
+        }
+        else if (memory >= 1e6) {
+            ss << memory / 1e6 << " MB \n";
+        }
+        else if (memory >= 1e3) {
+            ss << memory / 1e3 << " KB \n";
+        }
+        else
+            ss << memory << " B \n";
+        string data = ss.str();
+        log.push_back(data);
+       
+        if (sumOfTensors -> GetNumAddends() > 10) {
             clock_t begin = clock();
-#ifdef V4
-            double memory = sumOfTensors -> GetMemUsage();
-            log << "Tensor addends size (" << sumOfTensors -> GetNumAddends() << ") : ";
-            if (memory >= 1e9) {
-                log << memory / 1e9 << " GB \n";
-            }
-            else if (memory >= 1e6) {
-                log << memory / 1e6 << " MB \n";
-            }
-            else if (memory >= 1e3) {
-                log << memory / 1e3 << " KB \n";
-            }
-            else
-                log << memory << " B \n";
-#endif
-            
             full_state = sumOfTensors -> ConvertSumOfTensorsToState();
             clock_t end = clock();
-            maintenance_time += double(end - begin) / CLOCKS_PER_SEC;
+            time_by_category.conversion += double(end - begin) / CLOCKS_PER_SEC;
+            
             delete sumOfTensors;
             sumOfTensors = nullptr;
         }
+        cycle_count += 2;
     }
     
 }
@@ -206,6 +226,24 @@ CalculateAverageInaccuracy(double norm) const
         return full_state -> CalculateAverageInaccuracy(norm);
     else
         return sumOfTensors -> CalculateAverageInaccuracy(norm);
+}
+
+double AdaptiveStateVector::
+CalculateMeanEntropy() const
+{
+    if (full_state)
+        return full_state -> CalculateMeanEntropy();
+    else
+        return sumOfTensors -> CalculateMeanEntropy();
+}
+
+double AdaptiveStateVector::
+CalculateCrossEntropy(int range) const
+{
+    if (full_state)
+        return full_state -> CalculateCrossEntropy(range);
+    else
+        return sumOfTensors -> CalculateCrossEntropy(range);
 }
 
 void AdaptiveStateVector::

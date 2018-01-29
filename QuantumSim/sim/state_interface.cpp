@@ -8,8 +8,9 @@
 
 #include "state_interface.h"
 
-GenericQuantumState::
-GenericQuantumState(): log(ostringstream::ate), maintenance_time(0) {}
+Times GenericQuantumState::time_by_category({});
+Counts GenericQuantumState::count_of_category({});
+vector<string> GenericQuantumState::log({});
 
 idx_size GenericQuantumState::
 FormXYGatesBitmask(idx_size& gate_i,
@@ -39,13 +40,7 @@ FormCZTGatesBitmask(idx_size* __restrict CZ_bitmasks /*total_circuit_qubits*/,
     FormBlockOfCZTGates(gate_i, CZ_bitmasks, T_bitmasks, all_gates, total_circuit_qubits);    
 }
 
-double GenericQuantumState::
-GetMaintenanceTimeSpentByClass()
-{
-    return maintenance_time;
-}
-
-ostringstream& GenericQuantumState::
+vector<string> GenericQuantumState::
 GetClassDataLog() 
 {
     return log;

@@ -25,19 +25,12 @@ public:
 private:
     
     static unordered_map<string, array<cmplx, 5>> benchmark;
-    vector<double> gate_time;
     ostringstream log;
     string filename;
     clock_t g_begin;
     clock_t g_end;
-    double rescale_time;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
-    int num_rescaling;
-    int merged_X_Y;
-    int X;
-    int Y;
-    int CZ_T;
     int th;
     int cut_sizes;
     int conv_cycle;
@@ -75,5 +68,6 @@ public:
     SequentialSimulation(const SequentialSimulation& rhs);
     SequentialSimulation& operator=(const SequentialSimulation& rhs);
 };
+
 
 #endif /* simulation_h */
