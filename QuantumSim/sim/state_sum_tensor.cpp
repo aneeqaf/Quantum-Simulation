@@ -10,15 +10,15 @@
 
 SumOfTensorsProductsStateVector::
 SumOfTensorsProductsStateVector(const int qubits,
-                                const SimType type,
+                                const Config::SimType type,
                                 const int cut_size): num_addends(1)
 {
     sim_type = type;
-    if (type == SimType::LosslessH || type == SimType::Approx1CutH)
+    if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
                                                               cut_size));
-    else if (type == SimType::LosslessV || type == SimType::Approx1CutV)
+    else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
                                                               cut_size));
@@ -354,7 +354,7 @@ CalculateMeanEntropy() const
         }
     }
 
-    return -entropy;
+    return -entropy * 1000;
 }
 
 double SumOfTensorsProductsStateVector::

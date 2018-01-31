@@ -57,14 +57,11 @@ int main(int argc, char *argv[])
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    int c = 0;
     bool inputfile = false, googleInput = false, create = false, to_write = false;
-    int idx = 0;
-    
     string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0, threshold = -1, depth = 0, cut = 0;
-    SequentialSimulation::SimType sim_type = SequentialSimulation::FullState;
-    SequentialSimulation::Verbose verbose = SequentialSimulation::Default;
+    int numQ = 0, numG = 0, threshold = -1, depth = 0, cut = 0, idx = 0, c = 0;
+    Config::SimType sim_type = Config::FullState;
+    Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
     
     while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:c:v:", longopts, &idx)) != -1)
@@ -124,7 +121,7 @@ int main(int argc, char *argv[])
             }
             case 's': {
                 string s_type = string(optarg);
-                sim_type = (SequentialSimulation::SimType)stoi(s_type);
+                sim_type = (Config::SimType)stoi(s_type);
                 break;
             }
             case 't': {
@@ -134,7 +131,7 @@ int main(int argc, char *argv[])
             }
             case 'v': {
                 string s_v = string(optarg);
-                verbose = (SequentialSimulation::Verbose)stoi(s_v);
+                verbose = (Config::Verbose)stoi(s_v);
                 break;
             }
             default: {
@@ -150,42 +147,22 @@ int main(int argc, char *argv[])
     
     cout << "Rollright ver 1.2 - a quantum circuit simulator\n\n";
     Circuit cir;
+    Config config(input_filename ,"output/probabilities/" + out_file, sim_type, verbose, cut, depth, threshold);
+    SequentialSimulation sim(config);
     if (inputfile || googleInput) {
-        SequentialSimulation sim(input_filename, true, sim_type, cut, verbose);
-        
         cmplx* amp_v = nullptr;
         idx_size size = 0;
         //write a function for printing google files.
         if (inputfile) {
             cir.ReadCustomInputFiles("input/random_circuits_aneeqa/" + input_filename, amp_v, size);
-            if (sim_type == SequentialSimulation::SimType::FullState) {
-                FullAmpStateVector amp(amp_v, size);
-                sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
-            }
-            else {
-                AdaptiveStateVector amp(cir.GetNumQubits(),
-                                        (SumOfTensorsProductsStateVector::SimType)sim_type, cut);
-                sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
-            }
             delete [] amp_v;
             amp_v = nullptr;
         }
-        else {
+        else
             cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, depth);
 //            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
-            if (sim_type == SequentialSimulation::SimType::FullState) {
-                FullAmpStateVector amp(cir.GetNumQubits());
-                sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
-            }
-            else {
-                AdaptiveStateVector amp(cir.GetNumQubits(),
-                                        (SumOfTensorsProductsStateVector::SimType)sim_type, cut);
-                sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
-            }
-        }
     }
     else if(create) {
-        SequentialSimulation sim("Custom circuit", true, sim_type, cut, verbose);
         for (idx_size i = 0; i < num_qubits.size(); ++i){
             cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             
@@ -194,17 +171,27 @@ int main(int argc, char *argv[])
                                               cir.GetNumQubits());
                 cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
-            
-            if (sim_type == SequentialSimulation::SimType::FullState) {
-                FullAmpStateVector amp(cir.GetNumQubits());
-                sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
-            }
-            else {
-                AdaptiveStateVector amp(cir.GetNumQubits(),
-                                        (SumOfTensorsProductsStateVector::SimType)sim_type, cut);
-                sim.Simulate("output/probabilities/" + out_file, amp, cir, threshold);
-            }
         }
+    }
+    
+    if (sim_type == Config::FullState) {
+        FullAmpStateVector amp(cir.GetNumQubits());
+        sim.Simulate(amp, cir);
+    }
+    else if (sim_type == Config::Approx1CutH) {
+        TensorProductStateVector amp (cir.GetNumQubits(),
+                                      TensorProductStateVector::Cuts::Horizontal, cut);
+        sim.Simulate(amp, cir);
+    }
+    else if (sim_type == Config::Approx1CutV) {
+        TensorProductStateVector amp (cir.GetNumQubits(),
+                                      TensorProductStateVector::Cuts::Vertical, cut);
+        sim.Simulate(amp, cir);
+    }
+    else {
+        AdaptiveStateVector amp(cir.GetNumQubits(),
+                                (Config::SimType)sim_type, cut);
+        sim.Simulate(amp, cir);
     }
     return 0;
     

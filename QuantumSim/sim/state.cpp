@@ -306,11 +306,14 @@ CalculateMeanEntropy() const
         rescaling_factor *= 1.0/sqrt(2.0);
     
     double entropy = 0.0;
-    for (idx_size i = 0; i < amp_size; ++i)
-         if (real(amp[i]) > 1e-20 || imag(amp[i]) > 1e-20)
-             entropy += norm(amp[i] * rescaling_factor) * __builtin_log2l(norm(amp[i] * rescaling_factor));
+    idx_size num_ranges = amp_size / 100;
+    for (idx_size i = 0; i < num_ranges; ++i) {
+        idx_size idx = (i * 100) + (rand() % 100);
+//        if (real(amp[idx]) > 1e-50 || imag(amp[idx]) > 1e-50)
+             entropy += norm(amp[idx] * rescaling_factor) * log2l(norm(amp[idx] * rescaling_factor));
+    }
     
-    return -entropy;
+    return -entropy * 100;
 }
 
 double FullAmpStateVector::
@@ -320,8 +323,8 @@ CalculateCrossEntropy(int range) const
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
     
-    double xe = 0.0, num_ranges = amp_size / range;
-    
+    double xe = 0.0;
+    idx_size num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
          if (real(amp[idx]) > 1e-20 || imag(amp[idx]) > 1e-20)
@@ -418,29 +421,15 @@ ApplyGlobalICounter()
 void FullAmpStateVector::
 PrintProbabilities(const string &out_file) const
 {
-    static int count = 0;
     ofstream file;
-    file.open(out_file + to_string(count) + ".txt");
+    file.open(out_file + ".txt");
     
-    for (idx_size i = 0; i < amp_size; ++i) {
-        auto state_v = amp[i];
-        state_v /= pow(2,(global_factor_power/2));
-        if (global_factor_power % 2 == 1)
-            state_v /= sqrt(2);
-        state_v *= conj(state_v); /// cmplx(pow(2, qubits));
-        
-        file << real(state_v) ;
-        
-        if (imag(state_v) > 0) {
-            file << "+" << imag(state_v) << "i";
-        }
-        else if (imag(state_v) < 0) {
-            file << imag(state_v) << "i";
-        }
-        file << "\n";
-    }
-    //file << "\n";
-    ++count;
+    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
+    if ((global_factor_power % 2) == 1)
+        rescaling_factor *= 1.0/sqrt(2.0);
+    
+    for (idx_size i = 0; i < amp_size; ++i)
+        file << norm(amp[i] * rescaling_factor) << "\n";
 }
 
 void FullAmpStateVector::

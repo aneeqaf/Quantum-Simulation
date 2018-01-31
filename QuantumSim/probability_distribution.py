@@ -32,7 +32,6 @@ def main(input_files, qubits):
 
 	for i, a in enumerate(arr):
 		if int(a) < 1.0:
-			print(a)
 			arr[i] = log10(a)
 
 	x_size = pow(2, int(qubits))
@@ -42,7 +41,7 @@ def main(input_files, qubits):
 	# smoother estimates.
 	# density_est.covariance_factor = lambda : .0001
 	# density_est._compute_covariance()
-	x_data = np.arange(0, 10, 1)
+	x_data = np.arange(-10, 10, 1)
 
 	# Call the function to create plot
 	densityplot( x_data = x_data

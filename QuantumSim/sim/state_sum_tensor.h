@@ -8,16 +8,14 @@
 #ifndef state_sum_tensor_h
 #define state_sum_tensor_h
 
+#include "config.h"
 #include "state_tensor.h"
 
 using namespace std;
 
 class SumOfTensorsProductsStateVector : public GenericQuantumState {
-public:
-    enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts};
-    
 private:
-    SimType sim_type;
+    Config::SimType sim_type;
     vector<TensorProductStateVector*> tensor_addends;
     idx_size num_addends;
     
@@ -69,7 +67,7 @@ public:
     void PrintProbabilities(const string& out_file) const;
     
     SumOfTensorsProductsStateVector(const int qubits,
-                                    const SimType type,
+                                    const Config::SimType type,
                                     const int cut_size = 0);
     SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs) = delete;
     SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs) = delete;

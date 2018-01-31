@@ -9,45 +9,8 @@
 
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
-
-
 SequentialSimulation::
-SequentialSimulation(const SimType st,
-                     const int cut,
-                     const Verbose v):
-filename({}),g_begin(0), g_end(0), th(0), cut_sizes(cut), conv_cycle(0),
-google(false), sim_type(st), verbose(v) {}
-
-SequentialSimulation::
-SequentialSimulation(const string fname,
-                     const bool g,
-                     const SimType st,
-                     const int cut,
-                     const Verbose v):
-filename(fname) ,g_begin(0), g_end(0), th(0), cut_sizes(cut), conv_cycle(0),
-google(g), sim_type(st), verbose(v) {}
-
-SequentialSimulation::
-SequentialSimulation(const SequentialSimulation& rhs)
-{
-    filename = rhs.filename;
-    g_begin = rhs.g_begin;
-    g_end = rhs.g_end;
-    th = rhs.th;
-    sim_type = rhs.sim_type;
-}
-
-SequentialSimulation& SequentialSimulation::
-operator=(const SequentialSimulation& rhs)
-{
-    filename = rhs.filename;
-    g_begin = rhs.g_begin;
-    g_end = rhs.g_end;
-    th = rhs.th;
-    sim_type = rhs.sim_type;
-    return *this;
-}
-
+SequentialSimulation(const Config& c): total_time(0), config(c) {}
 
 void SequentialSimulation::
 PopulateBenchmarkMap()
@@ -65,24 +28,23 @@ PopulateBenchmarkMap()
 }
 
 void SequentialSimulation::
-Simulate(const string &outfile,
-         GenericQuantumState& amp,
-         Circuit& circuit,
-         const int threshold)
+Simulate(GenericQuantumState& amp,
+         Circuit& circuit)
 {
     PopulateBenchmarkMap();
     idx_size size = circuit.GetTotalNumGates();
     int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
-    th = threshold;
+    double XE_time = 0;
     
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
             circuit.GroupAlternateCycles();
         circuit.GroupSimilarGates();
     }
-    
     auto gates = circuit.GetGates();
+    
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
+    
     clock_t begin = clock(), cycle_start = clock();
     for (idx_size i = 0; i < size; ++i) {
         
@@ -102,12 +64,15 @@ Simulate(const string &outfile,
              if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
-                 double cross_entropy = 0;
-#ifdef CrossEntropy
-                 if (verbose == 4) 
-                    cross_entropy = amp.CalculateCrossEntropy(1000);
-#endif
                  clock_t cycle_end = clock();
+                 double cross_entropy = 0;
+
+                 if (config.verbose == 4) {
+                     clock_t xe_t_b = clock();
+                     cross_entropy = amp.CalculateCrossEntropy(100);
+                     clock_t xe_t_e = clock();
+                     XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
+                 }
                  
                  log <<  setprecision(3) ;
                  log << current_cycle << "\t"
@@ -138,9 +103,6 @@ Simulate(const string &outfile,
                  amp.count_of_category.CZ_T += i - prev_i;
                  i -= 1;
                  
-                 if (amp.GetSize() == amp.GetFullStateVectorSize())
-                     conv_cycle = current_cycle;
-                 
                 cycle_start = clock();
             }
             else 
@@ -162,7 +124,7 @@ Simulate(const string &outfile,
 #ifdef RT
                      idx_size X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
                      idx_size Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
-                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
+                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config.th);
 #endif
                      amp.count_of_category.merged_XY1_2 += i - prev_i;
                      --i;
@@ -182,19 +144,22 @@ Simulate(const string &outfile,
     }
     
     clock_t end = clock();
+    total_time = (double(end - begin)/ CLOCKS_PER_SEC) - XE_time;
     
 #ifdef Print
     amp.PrintStateVector();
 #endif
     
-    if (verbose)
-        PrintReport(amp, end , begin, circuit);
+    if (config.verbose)
+        PrintReport(amp, circuit);
+    
+#ifdef PorterThomas
+    amp.PrintProbabilities(config.outfile);
+#endif
 }
 
 void SequentialSimulation::
 PrintReport(GenericQuantumState& amp,
-            const clock_t end,
-            const clock_t begin,
             const Circuit& circuit) const
 {
     char hostname[20] = {};
@@ -208,7 +173,7 @@ PrintReport(GenericQuantumState& amp,
     amp.ApplyGlobalICounter();
     vector<string> class_log = amp.GetClassDataLog();
    
-    if (verbose != Verbose::NCCV && verbose != Verbose::NCC) {
+    if (config.verbose != Config::Verbose::NCCV && config.verbose != Config::Verbose::NCC) {
 #ifdef __APPLE__
         cout << "CPU model name : "; flush(cout);
         system("sysctl -n machdep.cpu.brand_string");
@@ -265,8 +230,8 @@ PrintReport(GenericQuantumState& amp,
         <<"\n\n";
     }
     
-    if (google) {
-        cout << "Circuit file : " + filename + "\n";
+    if (config.google) {
+        cout << "Circuit file : " + config.infile + "\n";
         cout << "Circuit type : Google\n";
     }
     
@@ -275,14 +240,28 @@ PrintReport(GenericQuantumState& amp,
     cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
     
     cout << "Simulation type: ";
-    if (sim_type == SequentialSimulation::SimType::FullState)
+    if (config.sim_type == Config::SimType::FullState) {
         cout << "full state vector / lossless \n";
-    else if (sim_type == SequentialSimulation::SimType::LosslessH) {
+        cout << "xCZ gates simulated : exact\n";
+    }
+    else if (config.sim_type == Config::SimType::LosslessH) {
         cout << "sum of tensor products / lossless \n";
+        cout << "xCZ gates simulated : exact\n";
         cout << class_log[0];
     }
-    else if (sim_type == SequentialSimulation::SimType::LosslessV) {
+    else if (config.sim_type == Config::SimType::LosslessV) {
         cout << "sum of tensor products / lossless \n";
+        cout << "xCZ gates simulated : exact\n";
+        cout << class_log[0];
+    }
+    else if (config.sim_type == Config::SimType::Approx1CutH) {
+        cout << "tensor products / approx \n";
+        cout << "xCZ gates simulated : ignored\n";
+        cout << class_log[0];
+    }
+    else if (config.sim_type == Config::SimType::Approx1CutV) {
+        cout << "tensor products / approx \n";
+        cout << "xCZ gates simulated : ignored\n";
         cout << class_log[0];
     }
     
@@ -296,9 +275,9 @@ PrintReport(GenericQuantumState& amp,
         double norm = amp.CalculateNormSquared();
         double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 #ifdef RT
-        cout << "Recursion end-case(max) : " << th << " q\n";
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
         cout << "Number of threads : 1\n";
-        cout << "Verbosity : " << verbose << "\n\n";
+        cout << "Verbosity : " << config.verbose << "\n\n";
 #endif
         double memory = amp.GetMemUsage();
         ss << "State vector size : ";
@@ -316,7 +295,7 @@ PrintReport(GenericQuantumState& amp,
             ss << memory << " B \n";
 
         ss << "Norm ";
-        if (sim_type != SequentialSimulation::SimType::FullState)
+        if (config.sim_type != Config::SimType::FullState)
             ss << "(assuming orthogonal addends)";
         
         ss << " : " << sqrt(norm) << "\n";
@@ -350,18 +329,19 @@ PrintReport(GenericQuantumState& amp,
             }
             else {
                 cout << "failed\nCorrect results: \n";
-                if (verbose != Verbose::NCCV) {
+                if (config.verbose != Config::Verbose::NCCV) {
                     string imag0 = to_string(imag(benchmark[key][0])), imag1 = to_string(imag(benchmark[key][1])),
                     imag2 = to_string(imag(benchmark[key][2])), imag3 = to_string(imag(benchmark[key][3])),
                     imag4 = to_string(imag(benchmark[key][4]));
                     
-                    cout << "amp[3] b\t= " << real(benchmark[key][0]) ;
+                    cout << "amp[3]  \t= "  << real(benchmark[key][0]) ;
                     if (imag(benchmark[key][0]) < 0) {
                         imag0[0] = ' ';
                         cout << " - " << imag0 << "i\n";
                     }
                     else
                         cout << " + " << imag0 << "i\n";
+                    
                     cout << "amp[1/4]\t= " << real(benchmark[key][1]);
                     if (imag(benchmark[key][1]) < 0) {
                         imag1[0] = ' ';
@@ -369,21 +349,24 @@ PrintReport(GenericQuantumState& amp,
                     }
                     else
                         cout << " + " << imag1 << "i\n";
-                    cout << "i\namp[1/2]\t= " << real(benchmark[key][2]);
+                    
+                    cout << "amp[1/2]\t= " << real(benchmark[key][2]);
                     if (imag(benchmark[key][2]) < 0) {
                         imag2[0] = ' ';
                         cout << " - " << imag2 << "i\n";
                     }
                     else
                         cout << " + " << imag2 << "i\n";
-                    cout << "i\namp[3/4]\t= " << real(benchmark[key][3]);
+                    
+                    cout << "amp[3/4]\t= " << real(benchmark[key][3]);
                     if (imag(benchmark[key][3]) < 0) {
                         imag3[0] = ' ';
                         cout << " - " << imag3 << "i\n";
                     }
                     else
                         cout << " + " << imag3 << "i\n";
-                    cout << "i\namp[-3] \t= "  << real(benchmark[key][4]);
+                    
+                    cout << "amp[-3] \t= "  << real(benchmark[key][4]);
                     if (imag(benchmark[key][4]) < 0) {
                         imag4[0] = ' ';
                         cout << " - " << imag4 << "i\n";
@@ -397,7 +380,7 @@ PrintReport(GenericQuantumState& amp,
         else
             cout << "no data available\n";
     
-    if (verbose != Verbose::NCCV)
+    if (config.verbose != Config::Verbose::NCCV)
     {
         string imag0 = to_string(imag(amp[3])), imag1 = to_string(imag(amp[temp_amp_size/4])),
         imag2 = to_string(imag(amp[temp_amp_size/2])), imag3 = to_string(imag(amp[3 * temp_amp_size/4])),
@@ -443,7 +426,6 @@ PrintReport(GenericQuantumState& amp,
     {
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
-        double total_time = double(end - begin) / CLOCKS_PER_SEC;
         ss << "Runtime (" << total_time << " s total) by category \n";
         
         string H_s = "     H (" + to_string(amp.count_of_category.H) +  ")";
@@ -495,7 +477,7 @@ PrintReport(GenericQuantumState& amp,
         cout << ss.str() << "\n";
     }
     
-    if (verbose == Verbose::Cycles) {
+    if (config.verbose == Config::Verbose::Cycles) {
         cout << log.str() << "\n";
         for (idx_size s = 1; s < class_log.size(); ++s)
             cout << setprecision(3) << class_log[s];
@@ -508,8 +490,6 @@ PrintReport(GenericQuantumState& amp,
 void SequentialSimulation::
 PrintReport(GenericQuantumState& amp,
             const string &outfile,
-            const clock_t end,
-            const clock_t begin,
             const Circuit& circuit) const
 {
     

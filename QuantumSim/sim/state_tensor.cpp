@@ -105,15 +105,28 @@ TensorProductStateVector(const int qubits,
                          const Cuts cut,
                          const int cut_size):a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0)
 {
+    static int count = 0;
     cut_type = cut;
 
     if (cut == Cuts::Horizontal)
-       HorizontalCut(num_q_a, num_q_b, qubits, cut_size);
+        HorizontalCut(num_q_a, num_q_b, qubits, cut_size);
     else
-       VerticalCut(num_q_a, num_q_b, qubits, cut_size);
+        VerticalCut(num_q_a, num_q_b, qubits, cut_size);
+    
     
     state_a = new FullAmpStateVector(num_q_a);
     state_b = new FullAmpStateVector(num_q_b);
+    
+    if (!count) {
+        string data = "";
+        if (cut == Cuts::Horizontal)
+            data += "Cut : horizontal ";
+        else
+            data += "Cut : vertical ";
+        data += to_string(num_q_a) + " + " + to_string(num_q_b) + "\n";
+        log.push_back(data);
+    }
+    ++count;
 }
 
 TensorProductStateVector::
@@ -408,9 +421,10 @@ CalculateAverageInaccuracy(double norm) const
 double TensorProductStateVector::
 CalculateMeanEntropy() const
 {
-    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b, range = 10;
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
     double entropy = 0.0;
+    const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;
     
     float rescaling_factor_a = 1.0/pow(2,(state_a -> GetGlobalFactorPower()/2)),
     rescaling_factor_b = 1.0/pow(2,(state_b -> GetGlobalFactorPower()/2));
@@ -419,18 +433,18 @@ CalculateMeanEntropy() const
     if ((state_b -> GetGlobalFactorPower() % 2) == 1)
         rescaling_factor_b *= 1.0/sqrt(2.0);
     
-    for (idx_size a = 0; a < a_size; ++a) {
-        auto s_a = state_v_a[a];
-        for (idx_size b = 0; b < b_size; ++b) {
-            auto s_b = state_v_b[b];
-           if ((real(s_b) > 1e-20 || imag(s_b) > 1e-20) &&
+    for (idx_size a = 0; a < num_ranges_a; ++a) {
+        auto s_a = state_v_a[(a * range) + (rand() % range)];
+        for (idx_size b = 0; b < num_ranges_b; ++b) {
+            auto s_b = state_v_b[(b * range) + (rand() % range)];
+            if ((real(s_b) > 1e-20 || imag(s_b) > 1e-20) &&
                 (real(s_a) > 1e-20 || imag(s_a) > 1e-20))
                 entropy += norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b)
                * log2l(norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b));
         }
     }
     
-    return -entropy;
+    return -entropy * range * range;
 }
 
 double TensorProductStateVector::
@@ -438,7 +452,8 @@ CalculateCrossEntropy(int range) const
 {
     const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
-    double xe = 0.0, num_ranges_a = a_size/range, num_ranges_b = b_size/range;
+    double xe = 0.0;
+    const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;
     
     float rescaling_factor_a = 1.0/pow(2,(state_a -> GetGlobalFactorPower()/2)),
     rescaling_factor_b = 1.0/pow(2,(state_b -> GetGlobalFactorPower()/2));
@@ -491,7 +506,7 @@ GetGlobalFactorPower() const
 void TensorProductStateVector::
 PrintStateVector(const string& outfile) const
 {
-    
+   
 }
 
 void TensorProductStateVector::
@@ -518,5 +533,25 @@ PrintStateVector()
 void TensorProductStateVector::
 PrintProbabilities(const string& out_file) const
 {
+    ofstream file;
+    file.open(out_file + ".txt");
     
+    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    auto& state_v_a = (*state_a), state_v_b = (*state_b);
+    const idx_size range = 10 , num_ranges_a = a_size/range, num_ranges_b = b_size/range;
+    
+    float rescaling_factor_a = 1.0/pow(2,(state_a -> GetGlobalFactorPower()/2)),
+    rescaling_factor_b = 1.0/pow(2,(state_b -> GetGlobalFactorPower()/2));
+    if ((state_a -> GetGlobalFactorPower() % 2) == 1)
+        rescaling_factor_a *= 1.0/sqrt(2.0);
+    if ((state_b -> GetGlobalFactorPower() % 2) == 1)
+        rescaling_factor_b *= 1.0/sqrt(2.0);
+    
+    for (idx_size a = 0; a < num_ranges_a; ++a) {
+        auto s_a = state_v_a[(a * range) + (rand() % range)];
+        for (idx_size b = 0; b < num_ranges_b; ++b) {
+            auto s_b = state_v_b[(b * range) + (rand() % range)];
+            file << norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b) << "\n";
+        }
+    }
 }

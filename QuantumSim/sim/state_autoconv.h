@@ -61,7 +61,7 @@ public:
     void PrintProbabilities(const string& out_file) const;
     
     AdaptiveStateVector(const int qubits,
-                        const SumOfTensorsProductsStateVector::SimType type,
+                        const Config::SimType type,
                         const int cut_size = 0);
     AdaptiveStateVector(const AdaptiveStateVector& rhs) = delete;
     AdaptiveStateVector& operator=(const AdaptiveStateVector& rhs) = delete;

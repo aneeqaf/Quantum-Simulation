@@ -9,16 +9,16 @@
 
 AdaptiveStateVector::
 AdaptiveStateVector(const int qubits,
-                    const SumOfTensorsProductsStateVector::SimType type,
+                    const Config::SimType type,
                     const int cut_size) : full_state(nullptr), total_q(qubits)
 {
     sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, cut_size);
     
     {
         string data = "";
-        if (type == SumOfTensorsProductsStateVector::SimType::LosslessH)
+        if (type == Config::SimType::LosslessH)
              data += "Cut : horizontal ";
-        else if (type == SumOfTensorsProductsStateVector::SimType::LosslessV)
+        else if (type == Config::SimType::LosslessV)
             data += "Cut : vertical ";
         data += to_string(sumOfTensors -> GetStateANumQ()) + " + " + to_string(sumOfTensors -> GetStateBNumQ()) + "\n";
         log.push_back(data);
