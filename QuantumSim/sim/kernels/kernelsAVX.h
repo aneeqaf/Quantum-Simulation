@@ -9,6 +9,10 @@
 #ifndef kernelsAVX_h
 #define kernelsAVX_h
 
+#ifndef Xcode
+#include <omp.h>
+#endif
+
 #include "kernels.h"
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};

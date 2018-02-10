@@ -8,7 +8,8 @@ LIBS = -lm -lstdc++
 INC = -I libs -I sim -I sim/kernels
 CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
 -fmodulo-sched-allow-regmoves -fsplit-ivs-in-unroller -ffast-math -fgcse-las -m64 -mavx -mavx2 -msse2avx \
--march=core-avx-i -mtune=core-avx-i -DCrossEntropy -DRT -DPorterThomas
+-march=core-avx-i -mtune=core-avx-i  -DRT -fopenmp -DCosineSimilarityDoubled -DCosineSimilarity
+# -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled
 # CFLAGS = -g3 -S -Wall -std=c++17 -mavx -mavx2 -msse2avx -DManualMerging
 
 .PHONY: clean all
@@ -36,10 +37,10 @@ $(EXE): %.o: %.cpp
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(EXE) $(OBJECTS)
-	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -o $@
+	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -fopenmp -o $@
 
 clean:
-	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/*
+	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/vector_state_sim bin/bm
 
 # Benchmark
 bm: $(OBJECTS) $(BM) $(KERNELHEADERS)

@@ -169,14 +169,15 @@ ApplyCZDecomposition(cmplx* __restrict amp,
     
     if (gate_type == Gate::Type::CZ_D1)
         multiplier = -1;
+   
     if (gate_type == Gate::Type::CZ_D2)
         q = 0;
     
     while (count < amp_size) {
-        if ((count & gate_bitmask) == q) {
-            amp[count] *= multiplier;
-            ++count;
-        }
+        if ((count & gate_bitmask) == q) 
+            amp[count++] *= multiplier;
+        else if (gate_type == Gate::Type::CZ_D5)
+            amp[count++] *= 2;
         else
             count += gate_bitmask;
     }

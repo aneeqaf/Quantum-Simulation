@@ -22,6 +22,7 @@ private:
 public:
     void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                                const idx_size __restrict T_bitmasks[2]);
+    inline void ApplyXCZGatesExact(const idx_size* __restrict CZ_bitmasks);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
                        const Gate& g = {});
@@ -57,14 +58,21 @@ public:
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
-    
+    double CalculateMeanEntropyHCuts() const;
+    double CalculateCrossEntropyHCuts(int range) const;
+    double CalculateMeanEntropy2Cuts() const;
+    double CalculateCrossEntropy2Cuts(int range) const;
+    void Normalize();
+
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
     
-    void PrintStateVector(const string& outfile) const;
+    void PrintStateVector(const string& outfile,
+                          const int cycle_num);
     void PrintStateVector() ;
-    void PrintProbabilities(const string& out_file) const;
+    void PrintProbabilities(const string& out_file,
+                            const int cycle_num) ;
     
     SumOfTensorsProductsStateVector(const int qubits,
                                     const Config::SimType type,

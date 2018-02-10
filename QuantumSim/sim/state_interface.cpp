@@ -11,6 +11,7 @@
 Times GenericQuantumState::time_by_category({});
 Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
+Data GenericQuantumState::data_per_cycles({});
 
 idx_size GenericQuantumState::
 FormXYGatesBitmask(idx_size& gate_i,
@@ -38,12 +39,6 @@ FormCZTGatesBitmask(idx_size* __restrict CZ_bitmasks /*total_circuit_qubits*/,
         CZ_bitmasks[i] = 0;
     
     FormBlockOfCZTGates(gate_i, CZ_bitmasks, T_bitmasks, all_gates, total_circuit_qubits);    
-}
-
-vector<string> GenericQuantumState::
-GetClassDataLog() 
-{
-    return log;
 }
 
 int FindDivisor(int num)

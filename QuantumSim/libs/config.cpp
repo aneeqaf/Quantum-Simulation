@@ -12,7 +12,10 @@ Config::
 Config(const Config& rhs)
 {
     infile = rhs.infile;
-    outfile = rhs.outfile;
+    prob_outfile = rhs.prob_outfile;
+    amp_outfile = rhs.amp_outfile;
+    report_outfile = rhs.report_outfile;
+    misc_outfile = rhs.misc_outfile;
     depth = rhs.depth;
     th = rhs.th;
     cut = rhs.cut;
@@ -25,7 +28,10 @@ Config& Config::
 operator=(const Config& rhs)
 {
     infile = rhs.infile;
-    outfile = rhs.outfile;
+    prob_outfile = rhs.prob_outfile;
+    amp_outfile = rhs.amp_outfile;
+    report_outfile = rhs.report_outfile;
+    misc_outfile = rhs.misc_outfile;
     depth = rhs.depth;
     th = rhs.th;
     cut = rhs.cut;

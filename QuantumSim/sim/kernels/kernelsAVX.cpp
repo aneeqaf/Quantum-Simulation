@@ -113,11 +113,14 @@ ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
                         const idx_size* __restrict T_bitmasks /*2*/)
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    const idx_size amp_size = 1ull << num_qubits_amp;
+    const idx_size amp_size = (1ull << num_qubits_amp) - 15;
     idx_size prev_gc = 0;
     
     bool negate_Z = false;
-    for (idx_size count = 0; count + 15 < amp_size ; count+=16) {
+    #pragma omp for schedule(dynamic, ((amp_size + 15))/omp_get_num_threads()) 
+    for (idx_size count = 0; count < amp_size ; count+=16) {
+        
+        
         
         idx_size gc0 = count ^ (count >> 1);
         idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);

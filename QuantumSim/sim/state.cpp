@@ -90,6 +90,8 @@ ApplyCZDecompositions(const int gate_qubit,
 {
     if (gate_type != Gate::Type::CZ_D3)
         ApplyCZDecomposition(amp, num_qubits, gate_qubit, gate_type);
+    if (gate_type == Gate::Type::CZ_D5)
+        ++global_factor_power;
 }
 
 void FullAmpStateVector::
@@ -187,23 +189,25 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
         const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
         const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
         
-        if (X_q < Y_q) {
-            Apply1QXYGates(amp, X_q, num_qubits, Gate::Type::X_1_2);
-            X_bitmask ^= 1ull << X_q;
-            global_factor_power += 2;
-            --num_Xgates;
-            clock_t end = clock();
-            time_by_category.X1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
-            ++count_of_category.X1_2;
-        }
-        else {
-            Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2);
-            Y_bitmask ^= 1ull << Y_q;
-            global_factor_power += 2;
-            --num_Ygates;
-            clock_t end = clock();
-            time_by_category.Y1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
-             ++count_of_category.Y1_2;
+        if (!(X_q == 1000 && Y_q == 1000)) {
+            if (X_q < Y_q) {
+                Apply1QXYGates(amp, X_q, num_qubits, Gate::Type::X_1_2);
+                X_bitmask ^= 1ull << X_q;
+                global_factor_power += 2;
+                --num_Xgates;
+                clock_t end = clock();
+                time_by_category.X1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+                ++count_of_category.X1_2;
+            }
+            else {
+                Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2);
+                Y_bitmask ^= 1ull << Y_q;
+                global_factor_power += 2;
+                --num_Ygates;
+                clock_t end = clock();
+                time_by_category.Y1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+                 ++count_of_category.Y1_2;
+            }
         }
     }
     
@@ -309,7 +313,7 @@ CalculateMeanEntropy() const
     idx_size num_ranges = amp_size / 100;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * 100) + (rand() % 100);
-//        if (real(amp[idx]) > 1e-50 || imag(amp[idx]) > 1e-50)
+        if (real(amp[idx]) > 1e-50 || imag(amp[idx]) > 1e-50)
              entropy += norm(amp[idx] * rescaling_factor) * log2l(norm(amp[idx] * rescaling_factor));
     }
     
@@ -332,6 +336,27 @@ CalculateCrossEntropy(int range) const
     }
     
     return -xe / num_ranges;
+}
+
+void FullAmpStateVector::
+Normalize()
+{
+    double norm = sqrt(CalculateNormSquared());
+    if (norm != 0)
+        for (idx_size i = 0; i < amp_size; ++i)
+            amp[i] /= norm;
+}
+
+void FullAmpStateVector::
+IncrementGlobalFactorPower()
+{
+    ++global_factor_power;
+}
+
+void FullAmpStateVector::
+IncrementGlobalICounter()
+{
+    ++global_i_counter;
 }
 
 idx_size FullAmpStateVector::
@@ -395,6 +420,7 @@ RescaleAndApplyGlobalICounter()
     global_factor_power = 0;
     
     const auto i_multiplier = cmplx(pow(ki, global_i_counter));
+    global_i_counter = 0;
     
     for (idx_size i = 0; i < amp_size; ++i)
         amp[i] *= rescaling_factor * i_multiplier;
@@ -416,66 +442,68 @@ ApplyGlobalICounter()
     const auto multiplier = pow(ki, global_i_counter);
     for (idx_size i = 0; i < amp_size; ++i)
         amp[i] *= multiplier;
+    global_i_counter = 0;
 }
 
 void FullAmpStateVector::
-PrintProbabilities(const string &out_file) const
+PrintProbabilities(const string &out_file,
+                   const int cycle_num)
 {
     ofstream file;
-    file.open(out_file + ".txt");
+    file.open(out_file + "_" + to_string(cycle_num) + ".txt");
     
-    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
-    if ((global_factor_power % 2) == 1)
-        rescaling_factor *= 1.0/sqrt(2.0);
+    RescaleAndApplyGlobalICounter();
+    double norm_f = sqrt(CalculateNormSquared());
     
-    for (idx_size i = 0; i < amp_size; ++i)
-        file << norm(amp[i] * rescaling_factor) << "\n";
+    srand(6);
+    idx_size off = 0;
+    for (idx_size i = 0; i + off < amp_size; i += off) {
+        float prob = (norm(amp[i])/norm_f) * amp_size;
+        file << prob << "\n";
+        
+        off = 1 + rand() % 100;
+    }
 }
 
 void FullAmpStateVector::
 PrintStateVector() 
 {
+    RescaleAndApplyGlobalICounter();
+    
     for (idx_size i = 0; i < amp_size; ++i) {
-        auto state_v = amp[i];
-        state_v /= pow(2,(global_factor_power/2));
-        if (global_factor_power % 2 == 1)
-            state_v /= sqrt(2);
-        state_v *= pow(ki, global_i_counter);
-        
-        cout << real(state_v) ;
-        
-        if (imag(state_v) > 0) {
-            cout << "+" << imag(state_v) << "i";
-        }
-        else if (imag(state_v) < 0) {
-            cout << imag(state_v) << "i";
-        }
+        auto a = amp[i];
+        cout << real(a) ;
+
+        if (imag(a) > 0)
+            cout << "+" << imag(a) << "j";
+        else if (imag(a) < 0)
+            cout << imag(a) << "j";
         cout << "\n";
     }
-    cout << "\n\n";
+     cout << "\n\n";
 }
 
 void FullAmpStateVector::
-PrintStateVector(const string& outfile) const
+PrintStateVector(const string& outfile,
+                 const int cycle_num)
 {
-    static ofstream file;
-    file.open(outfile + ".txt");
+    ofstream file;
+    file.open(outfile + "_" + to_string(cycle_num) + ".txt");
     
-    for (idx_size i = 0; i < amp_size; ++i) {
-        auto state_v = amp[i];
-        state_v /= pow(2,(global_factor_power/2));
-        if (global_factor_power % 2 == 1)
-            state_v /= sqrt(2);
+    RescaleAndApplyGlobalICounter();
+    
+    srand(6);
+    idx_size off = 0;
+    for (idx_size i = 0; i + off < amp_size; i += off) {
+        auto a = amp[i];
+        file << real(a) ;
         
-        file << real(state_v) ;
-        
-        if (imag(state_v) > 0) {
-            file << "+" << imag(state_v) << "i";
-        }
-        else if (imag(state_v) < 0) {
-            file << imag(state_v) << "i";
-        }
+        if (imag(a) > 0)
+            file << "+" << imag(a) << "j";
+        else if (imag(a) < 0)
+            file << imag(a) << "j";
         file << "\n";
+        
+        off = 1 + rand() % 100;
     }
-    file << "\n\n";
 }

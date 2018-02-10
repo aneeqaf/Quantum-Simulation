@@ -37,8 +37,10 @@ Project1QBitmask(const idx_size gate_bitmask,
             }
         }
     }
-    else
-        return gate_bitmask & partition_bitmask; //TODO:FIX
+    else {
+        assert(false);
+        return gate_bitmask & partition_bitmask;
+    }//TODO:FIX
     
     return projected_bitmask;
 }
@@ -103,9 +105,11 @@ ScatterGlobalIndex(const idx_size i,
 TensorProductStateVector::
 TensorProductStateVector(const int qubits,
                          const Cuts cut,
-                         const int cut_size):a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0)
+                         const int cut_size,
+                         const Config::SimType sim):
+a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0), sim_type(sim) 
 {
-    static int count = 0;
+    static int count_h = 0, count_v = 0;
     cut_type = cut;
 
     if (cut == Cuts::Horizontal)
@@ -117,16 +121,18 @@ TensorProductStateVector(const int qubits,
     state_a = new FullAmpStateVector(num_q_a);
     state_b = new FullAmpStateVector(num_q_b);
     
-    if (!count) {
+    if (!count_h && cut == Cuts::Horizontal) {
         string data = "";
-        if (cut == Cuts::Horizontal)
-            data += "Cut : horizontal ";
-        else
-            data += "Cut : vertical ";
-        data += to_string(num_q_a) + " + " + to_string(num_q_b) + "\n";
+        data += "Cut : horizontal " + to_string(num_q_a) + " + " + to_string(num_q_b) + "\n";
         log.push_back(data);
+        ++count_h;
     }
-    ++count;
+    if (!count_v && cut == Cuts::Vertical) {
+        string data = "";
+        data += "Cut : vertical " + to_string(num_q_a) + " + " + to_string(num_q_b) + "\n";
+        log.push_back(data);
+        ++count_v;
+    }
 }
 
 TensorProductStateVector::
@@ -251,6 +257,72 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
         state_a -> ApplyBlockOfDiagGates(CZ_bitmasks_a, T_bitmasks_a);
     if (applyCZ_b || T_bitmasks_b[0])
         state_b -> ApplyBlockOfDiagGates(CZ_bitmasks_b, T_bitmasks_b);
+    
+    if (sim_type == Config::SimType::Approx2011)
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
+    else if (sim_type == Config::SimType::Approx1_101) //compute norm and divide by the norm
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D1, Gate::Type::CZ_D2);
+    else if (sim_type == Config::SimType::Approx1110)
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
+    else if (sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV)) {
+        CountXCZGates(CZ_bitmasks);
+        if (cut_type == Cuts::Horizontal)
+            data_per_cycles.xCZ_V.push_back(0);
+        else
+            data_per_cycles.xCZ_H.push_back(0);
+    }
+}
+
+void TensorProductStateVector::
+CountXCZGates(const idx_size* __restrict CZ_bitmasks)
+{
+    vector<pair<int,idx_size>> qubits_gates_across;
+    FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
+    
+    idx_size new_count = 0;
+    for (idx_size i = 0; i < qubits_gates_across.size(); ++i) {
+        while (qubits_gates_across[i].second) {
+            ++new_count;
+            const int q1 = __builtin_ctzl(qubits_gates_across[i].second);
+            qubits_gates_across[i].second ^= 1ull << q1;
+        }
+    }
+    
+    if (cut_type == Cuts::Horizontal)
+        data_per_cycles.xCZ_H.push_back(new_count);
+    else
+        data_per_cycles.xCZ_V.push_back(new_count);
+}
+
+void TensorProductStateVector::
+ApplyXCZGateApprox(const idx_size* __restrict CZ_bitmasks,
+                   const Gate::Type CZ_D_A,
+                   const Gate::Type CZ_D_B)
+{
+    clock_t begin = clock();
+    vector<pair<int,idx_size>> qubits_gates_across;
+    FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
+    
+    const int modified_num_q_B = num_q_a + num_q_b - 1;
+    const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
+    for (auto& g : qubits_gates_across) {
+        while (g.second) {
+            const int q = __builtin_ctzl(g.second);
+            ++count_of_category.decomposed_CZ;
+            ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, g.first, modified_num_q_B - q);
+            g.second ^= 1ull << q;
+        }
+    }
+    clock_t end = clock();
+    time_by_category.decomposed_CZ +=  double(end - begin) / CLOCKS_PER_SEC;
+    if (cut_type == Cuts::Horizontal) {
+        data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+        data_per_cycles.xCZ_V.push_back(0);
+    }
+    else {
+        data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+        data_per_cycles.xCZ_H.push_back(0);
+    }
 }
 
 void TensorProductStateVector::
@@ -476,6 +548,13 @@ CalculateCrossEntropy(int range) const
 }
 
 void TensorProductStateVector::
+Normalize()
+{
+    state_a -> Normalize();
+    state_b -> Normalize();
+}
+
+void TensorProductStateVector::
 Rescale()
 {
     state_a -> Rescale();
@@ -504,54 +583,73 @@ GetGlobalFactorPower() const
 }
 
 void TensorProductStateVector::
-PrintStateVector(const string& outfile) const
+PrintStateVector(const string& outfile,
+                 const int cycle_num) 
 {
-   
+    ofstream file;
+    file.open(outfile + "_" + to_string(cycle_num) + ".txt");
+    
+    const idx_size amp_size = GetFullStateVectorSize();
+    
+    RescaleAndApplyGlobalICounter();
+    
+    srand(6);
+    idx_size off = 0;
+    for (idx_size i = 0; i + off < amp_size; i += off) {
+        auto amp = (*this)[i];
+        
+        file << real(amp) ;
+        
+        if (imag(amp) > 0)
+            file << "+" << imag(amp) << "j";
+        else if (imag(amp) < 0)
+            file << imag(amp) << "j";
+        file << "\n";
+        
+        off = 1 + rand() % 100;
+    }
 }
 
 void TensorProductStateVector::
 PrintStateVector() 
 {
-    for (idx_size i = 0; i < state_a -> GetSize(); ++i) {
-        for (idx_size j = 0; j < state_b -> GetSize(); ++j) {
-            auto state_v = (*state_a)[i] * (*state_b)[i];
-           
-            cout << real(state_v) ;
-            
-            if (imag(state_v) > 0) {
-                cout << "+" << imag(state_v) << "i";
-            }
-            else if (imag(state_v) < 0) {
-                cout << imag(state_v) << "i";
-            }
-            cout << "\n";
-        }
+    const idx_size amp_size = GetFullStateVectorSize();
+    
+    RescaleAndApplyGlobalICounter();
+    
+    for (idx_size i = 0; i < amp_size; ++i) {
+        auto amp =  (*this)[i];
+        
+        cout << real(amp) ;
+        
+        if (imag(amp) > 0)
+            cout << "+" << imag(amp) << "j";
+        else if (imag(amp) < 0)
+            cout << imag(amp) << "j";
+        cout << "\n";
     }
-    cout << "\n";
+     cout << "\n\n";
 }
 
 void TensorProductStateVector::
-PrintProbabilities(const string& out_file) const
+PrintProbabilities(const string& out_file,
+                   const int cycle_num)
 {
     ofstream file;
-    file.open(out_file + ".txt");
+    file.open(out_file + "_" + to_string(cycle_num) + ".txt");
     
-    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
-    auto& state_v_a = (*state_a), state_v_b = (*state_b);
-    const idx_size range = 10 , num_ranges_a = a_size/range, num_ranges_b = b_size/range;
+    const idx_size amp_size = GetFullStateVectorSize();
     
-    float rescaling_factor_a = 1.0/pow(2,(state_a -> GetGlobalFactorPower()/2)),
-    rescaling_factor_b = 1.0/pow(2,(state_b -> GetGlobalFactorPower()/2));
-    if ((state_a -> GetGlobalFactorPower() % 2) == 1)
-        rescaling_factor_a *= 1.0/sqrt(2.0);
-    if ((state_b -> GetGlobalFactorPower() % 2) == 1)
-        rescaling_factor_b *= 1.0/sqrt(2.0);
-    
-    for (idx_size a = 0; a < num_ranges_a; ++a) {
-        auto s_a = state_v_a[(a * range) + (rand() % range)];
-        for (idx_size b = 0; b < num_ranges_b; ++b) {
-            auto s_b = state_v_b[(b * range) + (rand() % range)];
-            file << norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b) << "\n";
-        }
+    RescaleAndApplyGlobalICounter();
+    double norm_f = sqrt(CalculateNormSquared());
+
+    srand(6);
+    idx_size off = 0;
+    for (idx_size i = 0; i + off < amp_size; i += off) {
+        float prob = (norm((*this)[i])/norm_f) * amp_size;
+        
+        file << prob << "\n";
+        
+        off = 1 + rand() % 100;
     }
 }

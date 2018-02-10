@@ -128,8 +128,8 @@ GroupSimilarGates()
             ++last_Y;
         }
     }
-#ifdef Print
-    PrintGates();
+#ifdef PrintG
+    PrintGatesAndCycles();
 #endif
 }
 
@@ -655,7 +655,7 @@ ClockCycleEmpty() const
 int Circuit::
 GateIndexForCycle(int cycle_num) const
 {
-    if (cycle_num <= 0 || cycle_num > (int)clock_cycles.size())
+    if (cycle_num < 0 || cycle_num > (int)clock_cycles.size())
         return -1;
     
     return (int)clock_cycles[cycle_num] - 1;

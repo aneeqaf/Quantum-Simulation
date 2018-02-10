@@ -17,18 +17,24 @@ SumOfTensorsProductsStateVector(const int qubits,
     if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
-                                                              cut_size));
+                                                              cut_size,
+                                                              sim_type));
     else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
-                                                              cut_size));
+                                                              cut_size,
+                                                              sim_type));
     else {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
-                                                              cut_size));
+                                                              cut_size,
+                                                              Config::SimType::Approx2011));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
-                                                              cut_size));
+                                                              cut_size,
+                                                              Config::SimType::Approx2011));
+        tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
+        tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
         ++num_addends;
     }
 }
@@ -50,24 +56,38 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
     for (auto& t : tensor_addends)
         t -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
     
+    if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV)
+        ApplyXCZGatesExact(CZ_bitmasks);
+    else if (sim_type == Config::SimType::Approx2Cuts){
+        tensor_addends[0] -> CountXCZGates(CZ_bitmasks);
+        tensor_addends[1] -> CountXCZGates(CZ_bitmasks);
+    }
+    
+    data_per_cycles.memory.push_back(GetMemUsage());
+    data_per_cycles.addends.push_back(GetNumAddends());
+}
+
+inline void SumOfTensorsProductsStateVector::
+ApplyXCZGatesExact(const idx_size* __restrict CZ_bitmasks)
+{
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
     //of tensor product.
     clock_t begin = clock();
     vector<pair<int,idx_size>> qubits_gates_across;
     tensor_addends[0] -> FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
     const int modified_num_q_B = tensor_addends[0] -> GetStateBNumQ() - 1;
-    const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
+    const ul prev_CZ_count = count_of_category.decomposed_CZ;
     for (auto& g : qubits_gates_across) {
         while (g.second) {
             const int q = __builtin_ctzl(g.second);
             ++count_of_category.decomposed_CZ;
             for (idx_size i = 0; i < num_addends; ++i) {
-                    TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[i]);
-                    tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
-                                                                        g.first, modified_num_q_B - q);
-                    new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
-                                                            g.first, modified_num_q_B - q);
-                    tensor_addends.push_back(new_t);
+                TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[i]);
+                tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                                                                    g.first, modified_num_q_B - q);
+                new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                                                        g.first, modified_num_q_B - q);
+                tensor_addends.push_back(new_t);
             }
             g.second ^= 1ull << q;
             num_addends = tensor_addends.size();
@@ -75,8 +95,15 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
     }
     clock_t end = clock();
     time_by_category.decomposed_CZ +=  double(end - begin) / CLOCKS_PER_SEC;
-    string data = to_string(count_of_category.decomposed_CZ - prev_CZ_count) + "\t";
-    log.push_back(data);
+    
+    if (sim_type == Config::SimType::LosslessH) {
+        data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+        data_per_cycles.xCZ_V.push_back(0);
+    }
+    else if (sim_type == Config::SimType::LosslessV) {
+        data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+        data_per_cycles.xCZ_H.push_back(0);
+    }
 }
 
 void SumOfTensorsProductsStateVector::
@@ -214,14 +241,22 @@ ConvertSumOfTensorsToState()
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * size);
     memset(amp, 0, size * sizeof(amp));
     
-    for (idx_size j = 0; j < num_addends; ++j) {
-        auto& state_A = *(tensor_addends[j] -> state_a);
-        auto& state_B = *(tensor_addends[j] -> state_b);
-        for (idx_size a = 0; a < A_size; ++a) {
-            const cmplx t_a = state_A[a];
-            for (idx_size b = 0; b < B_size; ++b) {
-                idx_size i = (a << num_q_B) | (b & B_qubits_bitmask);
-                amp[i] += t_a * state_B[b];
+    if (sim_type == Config::SimType::LosslessV) {
+        for (idx_size i = 0; i < size; ++i) {
+            for (idx_size n = 0; n < num_addends; ++n)
+                amp[i] += (*tensor_addends[n])[i];
+        }
+    }
+    else {
+        for (idx_size j = 0; j < num_addends; ++j) {
+            auto& state_A = *(tensor_addends[j] -> state_a);
+            auto& state_B = *(tensor_addends[j] -> state_b);
+            for (idx_size a = 0; a < A_size; ++a) {
+                const cmplx t_a = state_A[a];
+                for (idx_size b = 0; b < B_size; ++b) {
+                    idx_size i = (a << num_q_B) | (b & B_qubits_bitmask);
+                    amp[i] += t_a * state_B[b];
+                }
             }
         }
     }
@@ -332,9 +367,28 @@ CalculateAverageInaccuracy(double norm) const
 double SumOfTensorsProductsStateVector::
 CalculateMeanEntropy() const
 {
+    if (sim_type == Config::SimType::Approx2Cuts)
+        return CalculateMeanEntropy2Cuts();
+    else
+        return CalculateMeanEntropyHCuts();
+}
+
+double SumOfTensorsProductsStateVector::
+CalculateCrossEntropy(int range) const
+{
+    if (sim_type == Config::SimType::Approx2Cuts)
+        return CalculateCrossEntropy2Cuts(range);
+    else
+        return CalculateCrossEntropyHCuts(range);
+}
+
+double SumOfTensorsProductsStateVector::
+CalculateMeanEntropyHCuts() const
+{
     const idx_size a_size = 1ull << tensor_addends[0] -> GetStateANumQ(),
     b_size = 1ull << tensor_addends[0] -> GetStateBNumQ();
-    long double entropy = 0.0, num_ranges_a = a_size / 100, num_ranges_b = b_size / 10;
+    long double entropy = 0.0;
+    const idx_size num_ranges_a = a_size / 100, num_ranges_b = b_size / 10;
     
     for (idx_size n = 0; n < num_addends; ++n)
         tensor_addends[n] -> Rescale();
@@ -353,12 +407,12 @@ CalculateMeanEntropy() const
                 entropy += norm(ampl) * log2l(norm(ampl));
         }
     }
-
+    
     return -entropy * 1000;
 }
 
 double SumOfTensorsProductsStateVector::
-CalculateCrossEntropy(int range) const
+CalculateCrossEntropyHCuts(int range) const
 {
     const idx_size a_size = 1ull << tensor_addends[0] -> GetStateANumQ(),
     b_size = 1ull << tensor_addends[0] -> GetStateBNumQ();
@@ -368,7 +422,7 @@ CalculateCrossEntropy(int range) const
         tensor_addends[n] -> Rescale();
     
     for (idx_size a = 0; a < num_ranges_a; ++a) {
-       idx_size idx_a = (a * range) + (rand() % range);
+        idx_size idx_a = (a * range) + (rand() % range);
         for (idx_size b = 0; b < num_ranges_b; ++b) {
             idx_size idx_b = (b * 10) + (rand() % 10);
             cmplx ampl = 0;
@@ -383,6 +437,57 @@ CalculateCrossEntropy(int range) const
     return -xe / (num_ranges_a * num_ranges_b);
 }
 
+double SumOfTensorsProductsStateVector::
+CalculateMeanEntropy2Cuts() const
+{
+    for (idx_size n = 0; n < num_addends; ++n)
+        tensor_addends[n] -> Rescale();
+    
+    const idx_size amp_size = GetFullStateVectorSize();
+    double entropy = 0.0;
+    
+    const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+    idx_size range = 100 , num_ranges = amp_size / range;
+    for (idx_size i = 0; i < num_ranges; ++i) {
+        idx_size idx = (i * range) + (rand() % range);
+        cmplx ampl =  t0[idx] + t1[idx];
+        
+        if ((real(ampl) > 1e-20 || imag(ampl) > 1e-20))
+             entropy += norm(ampl) * log2l(norm(ampl));
+    }
+    
+    return -entropy * range;
+}
+
+double SumOfTensorsProductsStateVector::
+CalculateCrossEntropy2Cuts(int range) const
+{
+    for (idx_size n = 0; n < num_addends; ++n)
+        tensor_addends[n] -> Rescale();
+    
+    const idx_size amp_size = GetFullStateVectorSize();
+    long double xe = 0.0;
+    
+    srand(6);
+    const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+    idx_size num_ranges = amp_size / range;
+    for (idx_size i = 0; i < num_ranges; ++i) {
+        idx_size idx = (i * range) + (rand() % range);
+        cmplx ampl =  t0[idx] + t1[idx];
+        
+        if ((real(ampl) > 1e-20 || imag(ampl) > 1e-20))
+            xe += log2l(norm(ampl));
+    }
+    
+    return -xe / num_ranges;
+}
+
+void SumOfTensorsProductsStateVector::
+Normalize()
+{
+    for (auto& t : tensor_addends)
+        t -> Normalize();
+}
 
 void SumOfTensorsProductsStateVector::
 Rescale()
@@ -406,22 +511,85 @@ ApplyGlobalICounter()
 }
 
 void SumOfTensorsProductsStateVector::
-PrintStateVector(const string& outfile) const
+PrintStateVector(const string& outfile,
+                 const int cycle_num) 
 {
+    ofstream file;
+    file.open(outfile + "_" + to_string(cycle_num) + ".txt");
     
+    RescaleAndApplyGlobalICounter();
+    
+    if (sim_type == Config::SimType::Approx2Cuts) {
+        srand(6);
+        const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+        
+        idx_size off = 0, amp_size = GetFullStateVectorSize();
+        for (idx_size i = 0; i + off < amp_size; i += off) {
+            cmplx amp =  t0[i] + t1[i];
+            
+            file << real(amp) ;
+            
+            if (imag(amp) > 0)
+                file << "+" << imag(amp) << "j";
+            else if (imag(amp) < 0)
+                file << imag(amp) << "j";
+            file << "\n";
+            
+            off = 1 + rand() % 100;
+        }
+    }
+    else {
+        
+    }
 }
 
 void SumOfTensorsProductsStateVector::
 PrintStateVector() 
 {
-    FullAmpStateVector* f_st = ConvertSumOfTensorsToState();
-    f_st -> PrintStateVector();
-    delete f_st;
+    RescaleAndApplyGlobalICounter();
+    
+    idx_size amp_size = GetFullStateVectorSize();
+    for (idx_size i = 0; i < amp_size; ++i) {
+        cmplx amp =  0;
+        for (idx_size n = 0; n < num_addends; ++n)
+            amp += (*tensor_addends[n])[i];
+        
+        cout << real(amp) ;
+        
+        if (imag(amp) > 0)
+            cout << "+" << imag(amp) << "j";
+        else if (imag(amp) < 0)
+            cout << imag(amp) << "j";
+        cout << "\n";
+    }
+     cout << "\n\n";
 }
 
 void SumOfTensorsProductsStateVector::
-PrintProbabilities(const string& out_file) const
+PrintProbabilities(const string& out_file,
+                   const int cycle_num)
 {
+    ofstream file;
+    file.open(out_file + "_" + to_string(cycle_num) + ".txt");
     
+    RescaleAndApplyGlobalICounter();
+    double norm_f = sqrt(CalculateNormSquared());
+    
+    if (sim_type == Config::SimType::Approx2Cuts) {
+        srand(6);
+        const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+        
+        idx_size off = 0, amp_size = GetFullStateVectorSize();
+        for (idx_size i = 0; i + off < amp_size; i += off) {
+            float prob =  (norm(t0[i] + t1[i])/norm_f) * (amp_size/2);
+            
+            file << prob << "\n";
+            
+            off = 1 + rand() % 100;
+        }
+    }
+    else {
+        
+    }
 }
 

@@ -32,12 +32,10 @@ private:
     void PopulateBenchmarkMap();
    
 public:
-
     void PrintReport(GenericQuantumState& amp,
                      const Circuit& circuit) const;
-    void PrintReport(GenericQuantumState& amp,
-                     const string& outfile,
-                     const Circuit& circuit) const;
+    void PrintReportToFile(GenericQuantumState& amp,
+                           const Circuit& circuit) const;
     
     void Simulate(GenericQuantumState& amp,
                   Circuit& circuit);

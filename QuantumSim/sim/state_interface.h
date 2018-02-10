@@ -20,11 +20,21 @@
 #include "kernels1.h"
 #include "profile.h"
 
+typedef struct DataPerCycle {
+    vector<ul> cycles;
+    vector<ul> XY_gates;
+    vector<ul> CZ_gates;
+    vector<ul> T_gates;
+    vector<ul> xCZ_H;
+    vector<ul> xCZ_V;
+    vector<ul> addends;
+    vector<ul> memory;
+} Data;
+
 class GenericQuantumState {
-protected:
-    static vector<string> log;
-    
 public:
+    static Data data_per_cycles;
+    static vector<string> log;
     static Counts count_of_category;
     static Times time_by_category;
     
@@ -68,15 +78,17 @@ public:
     virtual double CalculateAverageInaccuracy(double norm) const = 0;
     virtual double CalculateMeanEntropy() const = 0;
     virtual double CalculateCrossEntropy(int range) const = 0;
+    virtual void Normalize() = 0;
     
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
     virtual void RescaleAndApplyGlobalICounter() = 0;
     
-    virtual void PrintStateVector(const string& outfile) const = 0;
+    virtual void PrintStateVector(const string& outfile,
+                                  const int cycle_num) = 0;
     virtual void PrintStateVector() = 0;
-    virtual void PrintProbabilities(const string& out_file) const = 0;
-    virtual vector<string> GetClassDataLog();
+    virtual void PrintProbabilities(const string& out_file,
+                                    const int cycle_num)  = 0;
         
     GenericQuantumState(){}
     virtual ~GenericQuantumState(){}

@@ -8,6 +8,7 @@
 #ifndef state_tensor_h
 #define state_tensor_h
 
+#include "config.h"
 #include "state.h"
 
 using namespace std;
@@ -21,7 +22,8 @@ private:
     idx_size b_qubits_bitmask;
     int num_q_a;
     int num_q_b;
-    Cuts cut_type; 
+    Cuts cut_type;
+    Config::SimType sim_type;
     
     void HorizontalCut(int& num_qubits_a,
                        int& num_qubits_b,
@@ -44,6 +46,10 @@ public:
                                         const int qubit_b);
     void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                                const idx_size __restrict T_bitmasks[2]);
+    void CountXCZGates(const idx_size* __restrict CZ_bitmasks);
+    void ApplyXCZGateApprox(const idx_size* __restrict CZ_bitmasks,
+                            const Gate::Type CZ_D_A,
+                            const Gate::Type CZ_D_B);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
                        const Gate& g = {});
@@ -80,18 +86,22 @@ public:
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
-    
+    void Normalize();
+
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
     
-    void PrintStateVector(const string& outfile) const;
+    void PrintStateVector(const string& outfile,
+                          const int cycle_num);
     void PrintStateVector() ;
-    void PrintProbabilities(const string& out_file) const;
+    void PrintProbabilities(const string& out_file,
+                            const int cycle_num) ;
     
     TensorProductStateVector(const int qubits,
                              const Cuts type,
-                             const int cut_size = 0);
+                             const int cut_size = 0,
+                             const Config::SimType sim = Config::LosslessH);
     TensorProductStateVector(const TensorProductStateVector& rhs) ;
     TensorProductStateVector& operator=(const TensorProductStateVector& rhs) = delete;
     ~TensorProductStateVector();

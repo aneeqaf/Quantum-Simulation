@@ -51,14 +51,17 @@ public:
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
-    
+    void Normalize();
+
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
     
-    void PrintStateVector(const string& outfile) const;
+    void PrintStateVector(const string& outfile,
+                          const int cycle_num);
     void PrintStateVector() ;
-    void PrintProbabilities(const string& out_file) const;
+    void PrintProbabilities(const string& out_file,
+                            const int cycle_num) ;
     
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,

@@ -34,11 +34,12 @@ constexpr cmplx CZ_D1[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {-1, 0}}};
 constexpr cmplx CZ_D2[2][2] = {{{0, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
 constexpr cmplx CZ_D3[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
 constexpr cmplx CZ_D4[2][2] = {{{1, 0}, {0, 0}}, {{0, 0} , {0, 0}}};
+constexpr cmplx CZ_D5[2][2] = {{{2, 0}, {0, 0}}, {{0, 0} , {0, 0}}};
 
 struct Gate {
     enum Type : int { Hadamard, X, Y, Z, Random, X_rotation, Y_rotation,
         Z_rotation, Phase, Control, Identity, T, Measurement, X_1_2, Y_1_2,
-        CZ_D1, CZ_D2, CZ_D3, CZ_D4
+        CZ_D1, CZ_D2, CZ_D3, CZ_D4, CZ_D5
     };
     
     vector<vector<cmplx>> rows;

@@ -145,9 +145,9 @@ int main(int argc, char *argv[])
     if (threshold == -1)
         threshold = 14;
     
-    cout << "Rollright ver 1.2 - a quantum circuit simulator\n\n";
     Circuit cir;
-    Config config(input_filename ,"output/probabilities/" + out_file, sim_type, verbose, cut, depth, threshold);
+    Config config(input_filename ,"output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
+                  "output/reports/" + out_file, "output/misc/g_" + out_file, sim_type, verbose, cut, depth, threshold);
     SequentialSimulation sim(config);
     if (inputfile || googleInput) {
         cmplx* amp_v = nullptr;
@@ -178,14 +178,15 @@ int main(int argc, char *argv[])
         FullAmpStateVector amp(cir.GetNumQubits());
         sim.Simulate(amp, cir);
     }
-    else if (sim_type == Config::Approx1CutH) {
+    else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011
+             || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Horizontal, cut);
+                                      TensorProductStateVector::Cuts::Horizontal, cut, sim_type);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Vertical, cut);
+                                      TensorProductStateVector::Cuts::Vertical, cut, sim_type);
         sim.Simulate(amp, cir);
     }
     else {

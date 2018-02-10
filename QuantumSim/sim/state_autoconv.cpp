@@ -13,21 +13,6 @@ AdaptiveStateVector(const int qubits,
                     const int cut_size) : full_state(nullptr), total_q(qubits)
 {
     sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, cut_size);
-    
-    {
-        string data = "";
-        if (type == Config::SimType::LosslessH)
-             data += "Cut : horizontal ";
-        else if (type == Config::SimType::LosslessV)
-            data += "Cut : vertical ";
-        data += to_string(sumOfTensors -> GetStateANumQ()) + " + " + to_string(sumOfTensors -> GetStateBNumQ()) + "\n";
-        log.push_back(data);
-    }
-    
-    {
-        string data = "Cycle\txCZ\tAddends\t  Memory\n";
-        log.push_back(data);
-    }
 }
 
 AdaptiveStateVector::
@@ -43,44 +28,27 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
 {
     
     
-    if (full_state)
+    if (full_state) {
+        data_per_cycles.xCZ_H.push_back(0);
+        data_per_cycles.xCZ_V.push_back(0);
         full_state -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
+    }
     else {
-        static int cycle_count = 2;
-        {
-            string data = to_string(cycle_count) + "\t";
-            log.push_back(data);
-        }
-        
         sumOfTensors -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
-
-        double memory = sumOfTensors -> GetMemUsage();
-        ostringstream ss;
-        ss << setprecision(3) << to_string(sumOfTensors -> GetNumAddends()) << "\t  ";
-        if (memory >= 1e9) {
-            ss << memory / 1e9 << " GB \n";
-        }
-        else if (memory >= 1e6) {
-            ss << memory / 1e6 << " MB \n";
-        }
-        else if (memory >= 1e3) {
-            ss << memory / 1e3 << " KB \n";
-        }
-        else
-            ss << memory << " B \n";
-        string data = ss.str();
-        log.push_back(data);
-       
+        
         if (sumOfTensors -> GetNumAddends() > 10) {
             clock_t begin = clock();
-            full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX(); //won't work for less than 4 q in a split
+            
+            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4)
+                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
+            else
+                full_state = sumOfTensors -> ConvertSumOfTensorsToState();
             clock_t end = clock();
             time_by_category.conversion += double(end - begin) / CLOCKS_PER_SEC;
             
             delete sumOfTensors;
             sumOfTensors = nullptr;
         }
-        cycle_count += 2;
     }
     
 }
@@ -237,6 +205,15 @@ CalculateMeanEntropy() const
         return sumOfTensors -> CalculateMeanEntropy();
 }
 
+void AdaptiveStateVector::
+Normalize()
+{
+    if (full_state)
+        full_state -> Normalize();
+    else
+        sumOfTensors -> Normalize();
+}
+
 double AdaptiveStateVector::
 CalculateCrossEntropy(int range) const
 {
@@ -274,9 +251,13 @@ ApplyGlobalICounter()
 }
 
 void AdaptiveStateVector::
-PrintStateVector(const string& outfile) const
+PrintStateVector(const string& outfile,
+                 const int cycle_num)
 {
-
+    if (sumOfTensors)
+        sumOfTensors -> PrintStateVector(outfile, cycle_num);
+    else
+        full_state -> PrintStateVector(outfile, cycle_num);
 }
 
 void AdaptiveStateVector::
@@ -289,7 +270,11 @@ PrintStateVector()
 }
 
 void AdaptiveStateVector::
-PrintProbabilities(const string& out_file) const
+PrintProbabilities(const string& out_file,
+                   const int cycle_num)
 {
-    
+    if (sumOfTensors)
+        sumOfTensors -> PrintProbabilities(out_file, cycle_num);
+    else
+        full_state -> PrintProbabilities(out_file, cycle_num);
 }

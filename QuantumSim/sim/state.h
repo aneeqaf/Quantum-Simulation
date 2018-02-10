@@ -63,14 +63,19 @@ public:
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    void Normalize();
+    void IncrementGlobalFactorPower();
+    void IncrementGlobalICounter();
     
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
     
-    void PrintStateVector(const string& outfile) const;
+    void PrintStateVector(const string& outfile,
+                          const int cycle_num);
     void PrintStateVector();
-    void PrintProbabilities(const string& out_file) const;
+    void PrintProbabilities(const string& out_file,
+                            const int cycle_num) ;
     
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
