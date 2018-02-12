@@ -590,13 +590,14 @@ PrintStateVector(const string& outfile,
     file.open(outfile + "_" + to_string(cycle_num) + ".txt");
     
     const idx_size amp_size = GetFullStateVectorSize();
+    double norm = sqrt(CalculateNormSquared());
     
     RescaleAndApplyGlobalICounter();
     
     srand(6);
     idx_size off = 0;
     for (idx_size i = 0; i + off < amp_size; i += off) {
-        auto amp = (*this)[i];
+        auto amp = (*this)[i]/cmplx(norm);
         
         file << real(amp) ;
         

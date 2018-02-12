@@ -35,6 +35,7 @@ Simulate(GenericQuantumState& amp,
     idx_size size = circuit.GetTotalNumGates();
     int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
     double XE_time = 0;
+    clock_t xe_t_b, xe_t_e;
     
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -69,15 +70,21 @@ Simulate(GenericQuantumState& amp,
             }
             amp.data_per_cycles.cycles.push_back(current_cycle);
 #ifdef CosineSimilarityDoubled
-            clock_t xe_t_b = clock();
+            xe_t_b = clock();
             amp.PrintProbabilities(config.prob_outfile, current_cycle);
-            clock_t xe_t_e = clock();
+            xe_t_e = clock();
             XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
 #endif
 #ifdef XEDoubled
-            clock_t xe_t_b = clock();
+            xe_t_b = clock();
             amp.PrintProbabilities(config.prob_outfile, current_cycle);
-            clock_t xe_t_e = clock();
+            xe_t_e = clock();
+            XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
+#endif
+#ifdef FidelityDoubled
+            xe_t_b = clock();
+            amp.PrintStateVector(config.amp_outfile, current_cycle);
+            xe_t_e = clock();
             XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
 #endif
 

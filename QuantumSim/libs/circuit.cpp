@@ -129,7 +129,7 @@ GroupSimilarGates()
         }
     }
 #ifdef PrintG
-    PrintGatesAndCycles();
+    PrintGates();
 #endif
 }
 

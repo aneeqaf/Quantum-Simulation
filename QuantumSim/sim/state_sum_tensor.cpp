@@ -28,11 +28,11 @@ SumOfTensorsProductsStateVector(const int qubits,
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
                                                               cut_size,
-                                                              Config::SimType::Approx2011));
+                                                              Config::SimType::LosslessH));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
                                                               cut_size,
-                                                              Config::SimType::Approx2011));
+                                                              Config::SimType::LosslessV));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
         ++num_addends;
@@ -516,6 +516,7 @@ PrintStateVector(const string& outfile,
 {
     ofstream file;
     file.open(outfile + "_" + to_string(cycle_num) + ".txt");
+    double norm = sqrt(CalculateNormSquared());
     
     RescaleAndApplyGlobalICounter();
     
@@ -525,7 +526,7 @@ PrintStateVector(const string& outfile,
         
         idx_size off = 0, amp_size = GetFullStateVectorSize();
         for (idx_size i = 0; i + off < amp_size; i += off) {
-            cmplx amp =  t0[i] + t1[i];
+            cmplx amp =  (t0[i] + t1[i])/cmplx(norm);
             
             file << real(amp) ;
             
