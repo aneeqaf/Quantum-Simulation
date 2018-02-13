@@ -199,9 +199,15 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
 }
 
 void
-ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
-                        const int num_qubits_amp,
-                        const idx_size* __restrict CZ_bitmasks,
-                        const idx_size* __restrict T_bitmasks);
+ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
+                           const int num_qubits_amp,
+                           const idx_size* __restrict CZ_bitmasks,
+                           const idx_size* __restrict T_bitmasks);
+
+void
+ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
+                                const int num_qubits_amp,
+                                const idx_size* __restrict CZ_bitmasks,
+                                const idx_size* __restrict T_bitmasks);
 
 #endif /* kernelsAVX_h */

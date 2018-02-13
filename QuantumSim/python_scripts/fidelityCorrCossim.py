@@ -3,6 +3,7 @@ import numpy as np
 from scipy import spatial, stats
 from scipy.stats import linregress
 import click
+from math import sqrt
 
 @click.command()
 @click.argument("qubits", nargs=1)
@@ -16,15 +17,13 @@ def main(qubits, prob_files, amp_files):
 			lines = f.readlines()
 			probs.append(np.loadtxt(lines, dtype=complex))
 
-	amps = [[2,2,0,0], [1,1,1,-1]]
-	a = amps[0]/np.linalg.norm(amps[0])
-	b = amps[1]/np.linalg.norm(amps[1])
-	# for file in amp_files:
-	# 	with open(file, "r") as f:
-	# 		lines = f.readlines()
-	# 		amps.append(np.loadtxt(lines, dtype=complex))
+	amps = []
+	for file in amp_files:
+		with open(file, "r") as f:
+			lines = f.readlines()
+			amps.append(np.loadtxt(lines, dtype=complex))
 
-	dotp_exact_approx = np.dot(a, b)
+	dotp_exact_approx = np.dot(amps[0], amps[1]) / sqrt(np.linalg.norm(amps[0]) * np.linalg.norm(amps[1]))
 	print("Fidelity : " + str(np.linalg.norm(dotp_exact_approx)))
 	print("Corr : " + str(np.corrcoef(probs[0], probs[1])))
 	print ("Cos sim: " + str((float)((1 - spatial.distance.cosine(probs[0], probs[1]) - (1/pow(2,int(qubits)))))))
@@ -37,3 +36,17 @@ def main(qubits, prob_files, amp_files):
 	
 if __name__ == "__main__":
     main()
+
+# for i in range(1000):
+# 		amps[0].append(1)
+# 		if i % 2 == 0:
+# 			amps[1].append(1)
+# 		else:
+# 			amps[1].append(0)
+
+# 		probs[0].append(amps[0][i] * amps[0][i])
+# 		probs[1].append(amps[1][i] * amps[1][i])
+	
+# 	amps[0] = amps[0]/np.linalg.norm(amps[0])
+# 	amps[1] = amps[1]/np.linalg.norm(amps[1])
+

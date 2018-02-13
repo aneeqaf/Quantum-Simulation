@@ -516,7 +516,6 @@ PrintStateVector(const string& outfile,
 {
     ofstream file;
     file.open(outfile + "_" + to_string(cycle_num) + ".txt");
-    double norm = sqrt(CalculateNormSquared());
     
     RescaleAndApplyGlobalICounter();
     
@@ -526,7 +525,7 @@ PrintStateVector(const string& outfile,
         
         idx_size off = 0, amp_size = GetFullStateVectorSize();
         for (idx_size i = 0; i + off < amp_size; i += off) {
-            cmplx amp =  (t0[i] + t1[i])/cmplx(norm);
+            cmplx amp =  (t0[i] + t1[i]);
             
             file << real(amp) ;
             

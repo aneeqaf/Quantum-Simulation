@@ -66,8 +66,13 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                       const idx_size __restrict T_bitmasks[2])
 {
     clock_t begin = clock();
-    if (num_qubits >= 4)
-        ApplyBlockOfCZTGatesAVX(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+    if (num_qubits >= 4) {
+//#ifdef Parallel
+        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+//#else
+//        ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+//#endif
+    }
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks, T_bitmasks);
     clock_t end = clock();
@@ -489,14 +494,13 @@ PrintStateVector(const string& outfile,
 {
     ofstream file;
     file.open(outfile + "_" + to_string(cycle_num) + ".txt");
-    double norm = sqrt(CalculateNormSquared());
     
     RescaleAndApplyGlobalICounter();
     
     srand(6);
     idx_size off = 0;
     for (idx_size i = 0; i + off < amp_size; i += off) {
-        auto a = amp[i]/cmplx(norm);
+        auto a = amp[i];
         file << real(a) ;
         
         if (imag(a) > 0)

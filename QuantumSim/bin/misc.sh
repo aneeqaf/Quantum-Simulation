@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e 
 python3 python_scripts/fidelityCorrCossim.py 20 output/probabilities/25q_41d_exact_1.txt \
 	output/probabilities/25q_41d_exact_1.txt output/amp_vectors/25q_41d_exact_1.txt \
 	output/amp_vectors/25q_41d_exact_1.txt

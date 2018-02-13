@@ -94,36 +94,66 @@ SecondGroupOf8GatesHelper(float* __restrict t_amp,
 }
 
 void
-ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
-                        const int num_qubits_amp,
-                        const idx_size* __restrict CZ_bitmasks,
-                        const idx_size* __restrict T_bitmasks /*2*/)
+ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
+                                const int num_qubits_amp,
+                                const idx_size* __restrict CZ_bitmasks,
+                                const idx_size* __restrict T_bitmasks /*2*/)
 {
+    const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1 << 12) ? (1 << 12) : amp_size,
+    num_iters = amp_size/block_size;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    const idx_size amp_size = (1ull << num_qubits_amp) - 15;
-//    idx_size prev_gc = 0;
-//    bool negate_Z = false;
-    #pragma omp parallel for
-    for (idx_size count = 0; count < amp_size ; count+=16) {
+    
+    #pragma omp parallel for schedule(dynamic, num_iters)
+    for (idx_size iter = 0; iter < num_iters; ++iter) {
+        const idx_size count_len = (iter + 1) * block_size, curr_idx = iter * block_size;
+        idx_size prev_gc = !curr_idx ? 0 : (curr_idx - 1) ^ ((curr_idx - 1) >> 1);
         
-//        idx_size prev_gc = 0;
-//        bool negate_Z = false;
-//        for (idx_size c = 0; c + 7 < count ; c+=8) {
-//            idx_size gc0 = c ^ (c >> 1);
-//            idx_size gc4 = (c + 4) ^ ((c + 4) >> 1);
-//            const idx_size gc[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-//
-//             const idx_size bit_idx[8] = {static_cast<idx_size>(__builtin_ctzl(gc[0] ^ prev_gc)), 0, 1 , 0,
-//                 static_cast<idx_size>(__builtin_ctzl(gc[4] ^ gc[3])), 0 , 1, 0};
-//
-//             for (int i = 0; i < 8; ++i) {
-//                 if (__builtin_parityl(CZ_bitmasks[bit_idx[i]] & gc[i]) == 1)
-//                     negate_Z = !negate_Z;
-//             }
-//             prev_gc = gc[7];
-//        }
         bool negate_Z = false;
-        idx_size prev_gc = !count ? 0 : (count - 1) ^ ((count - 1) >> 1);
+        idx_size gate_count = 0;
+        for (idx_size i = 0; i < num_qubits_amp; ++i) {
+            if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i])) {
+                gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
+            }
+        }
+        if ((gate_count/2) % 2)
+            negate_Z = true;
+       
+        for (idx_size count = curr_idx; count + 15 < count_len ; count+=16) {
+            
+            idx_size gc0 = count ^ (count >> 1);
+            idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
+            const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
+            
+            idx_size Tgate_count_1[8] = {0};
+            GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
+            FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
+            prev_gc = gc_first[7];
+            
+            gc0 = (count + 8) ^ ((count + 8) >> 1);
+            gc4 = (count + 12) ^ ((count + 12) >> 1);
+            const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
+            
+            idx_size Tgate_count_2[8] = {0};
+            GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
+            FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
+            prev_gc = gc_second[7];
+        }
+    }
+}
+
+void
+ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
+                           const int num_qubits_amp,
+                           const idx_size* __restrict CZ_bitmasks,
+                           const idx_size* __restrict T_bitmasks /*2*/)
+{
+    const idx_size amp_size = (1ull << num_qubits_amp);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    bool negate_Z = false;
+    idx_size prev_gc = 0;
+
+    for (idx_size count = 0; count + 15 < amp_size ; count+=16) {
+        
         idx_size gc0 = count ^ (count >> 1);
         idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
         const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
@@ -140,6 +170,7 @@ ApplyBlockOfCZTGatesAVX(cmplx* __restrict amp,
         idx_size Tgate_count_2[8] = {0};
         GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
         FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
-//        prev_gc = gc_second[7];
+        prev_gc = gc_second[7];
     }
+    
 }
