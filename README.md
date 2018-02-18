@@ -47,7 +47,7 @@
 #### Notes:
 * The simulator needs c++17 and g++-7 to build successfully.
 * A Makefile is provided with the simulator that takes care of creating directories that do not already exist in your directory structure but are required by the program.
-* Modifications to the Makefile to alter the macros for compilation will be needed for detailed experiments.
+* Modifications to the Makefile to alter the preprocessor macros needed for compilation should be done for detailed experiments.
 * Using the -o flag when reading input files is used for outputting other types of files, like the probabilities of the entire state vector.
 
 Navigate to the working directory (QuantumSim).
