@@ -37,7 +37,11 @@
 #include <omp.h>
 #endif
 
+#ifdef Xcode
 #define NUM_THREADS 4
+#else
+#define NUM_THREADS 8
+#endif
 
 using namespace std;
 

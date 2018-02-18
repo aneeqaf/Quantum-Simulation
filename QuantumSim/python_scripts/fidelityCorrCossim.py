@@ -31,43 +31,46 @@ def main(qubits, prob_files, amp_files):
 	med_approx = median(probs[1])
 	amp_size = len(amps[0])
 
-	confusion_matrix = [[[0, 0],[0,0]], [[0, 0],[0,0]]]
+	confusion_matrix = [[[0.0, 0.0],[0.0,0.0]], [[0.0, 0.0],[0.0,0.0]]]
 
 	for i, p in enumerate(probs[0]):
-		if probs[0][i] >= med_exact && probs[0][i] >= med_approx:
-			confusion_matrix[0][0][0]++;
-		else if probs[0][i] >= med_exact && probs[0][i] < med_approx:
-			confusion_matrix[0][1][0]++;
-		else if probs[0][i] < med_exact && probs[0][i] >= med_approx:
-			confusion_matrix[1][0][0]++;
-		else if probs[0][i] < med_exact && probs[0][i] < med_approx:
-			confusion_matrix[1][1][0]++;
+		if probs[0][i] >= med_exact and probs[0][i] >= med_approx:
+			confusion_matrix[0][0][0] += 1.0;
+		elif probs[0][i] >= med_exact and probs[0][i] < med_approx:
+			confusion_matrix[0][1][0] += 1.0;
+		elif probs[0][i] < med_exact and probs[0][i] >= med_approx:
+			confusion_matrix[1][0][0] += 1.0;
+		elif probs[0][i] < med_exact and probs[0][i] < med_approx:
+			confusion_matrix[1][1][0] += 1.0;
 
-		if probs[1][i] >= med_exact && probs[1][i] >= med_approx:
-			confusion_matrix[0][0][1]++;
-		else if probs[1][i] >= med_exact && probs[1][i] < med_approx:
-			confusion_matrix[0][1][1]++;
-		else if probs[1][i] < med_exact && probs[1][i] >= med_approx:
-			confusion_matrix[1][0][1]++;
-		else if probs[1][i] < med_exact && probs[1][i] < med_approx:
-			confusion_matrix[1][1][1]++;
+		if probs[1][i] >= med_exact and probs[1][i] >= med_approx:
+			confusion_matrix[0][0][1] += 1.0;
+		elif probs[1][i] >= med_exact and probs[1][i] < med_approx:
+			confusion_matrix[0][1][1] += 1.0;
+		elif probs[1][i] < med_exact and probs[1][i] >= med_approx:
+			confusion_matrix[1][0][1] += 1.0;
+		elif probs[1][i] < med_exact and probs[1][i] < med_approx:
+			confusion_matrix[1][1][1] += 1.0;
 
+	cos_sim = (float)(1.0 - spatial.distance.cosine(probs[0], probs[1]) - (1.0/pow(2,int(qubits))))
 
 	dotp_exact_approx = np.vdot(amps[0], amps[1]) / sqrt(np.linalg.norm(amps[0]) * np.linalg.norm(amps[1]))
-	print("Cycle : " + prob_files[0].split("_")[3])
-	print("Fidelity : " + str(np.linalg.norm(dotp_exact_approx)))
+	print("Cycle : " + prob_files[0].split("_")[3].split(".")[0])
+	print("Fidelity : " + str(round(np.linalg.norm(dotp_exact_approx), 5)))
 	print("Corr : " + str(np.corrcoef(probs[0], probs[1])))
-	print ("Cos sim: " + str((float)((1 - spatial.distance.cosine(probs[0], probs[1]) - (1/pow(2,int(qubits)))))))
-	print ("				Approx >= median		Approx < median")
-	print ("Exact >= median	   " + str (confusion_matrix[0][0][0]/amp_size*100) + "%, " + \
-		str ((confusion_matrix[0][0][1]/amp_size)*100) + "%		" + \
-		str ((confusion_matrix[0][1][0]/amp_size)*100) + "%, " + \
-		str ((confusion_matrix[0][1][1]/amp_size)*100) + "%")
+	print ("Cos sim: " + str(round(cos_sim, 5)))
+	print ("Approx median : " + str(round(med_approx, 5)));
+	print ("Exact median : " + str(round(med_exact, 5)));
+	print ("				Approx >= median			Approx < median")
+	print ("Exact >= median	   " + str (round(confusion_matrix[0][0][0]/amp_size*100, 5)) + "%, " + \
+		str (round(confusion_matrix[0][0][1]/amp_size, 5)*100) + "%		" + \
+		str (round(confusion_matrix[0][1][0]/amp_size, 5)*100) + "%, " + \
+		str (round(confusion_matrix[0][1][1]/amp_size, 5)*100) + "%")
 
-	print ("Exact < median	   " + str (confusion_matrix[1][0][0]/amp_size*100) + "%, " + \
-		str ((confusion_matrix[1][0][1]/amp_size)*100) + "%		" + \
-		str ((confusion_matrix[1][1][0]/amp_size)*100) + "%, " + \
-		str ((confusion_matrix[1][1][1]/amp_size)*100) + "%")
+	print ("Exact < median	   " + str (round(confusion_matrix[1][0][0]/amp_size*100, 5)) + "%, " + \
+		str (round(confusion_matrix[1][0][1]/amp_size, 5)*100) + "%		" + \
+		str (round(confusion_matrix[1][1][0]/amp_size, 5)*100) + "%, " + \
+		str (round(confusion_matrix[1][1][1]/amp_size, 5)*100) + "%")
 	# slope, intercept, r_value, p_value, std_err = stats.linregress(arrs[0], arrs[1])
 	# print ("slope: " + str(round(slope, 3)) + ", intercept: " + str(round(intercept, 3)) \
 	# 	+ ", r_value: " + str(round(r_value, 3)))

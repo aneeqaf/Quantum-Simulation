@@ -18,9 +18,10 @@
 #include <string>
 #include "sys/time.h"
 
-
 #include "kernels1.h"
 #include "profile.h"
+
+constexpr int sampling_factor = 100;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;

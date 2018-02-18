@@ -328,14 +328,14 @@ CalculateMeanEntropy() const
         rescaling_factor *= 1.0/sqrt(2.0);
     
     double entropy = 0.0;
-    idx_size num_ranges = amp_size / 100;
+    idx_size num_ranges = amp_size / sampling_factor;
     for (idx_size i = 0; i < num_ranges; ++i) {
-        idx_size idx = (i * 100) + (rand() % 100);
+        idx_size idx = (i * sampling_factor) + (rand() % sampling_factor);
         if (real(amp[idx]) > 1e-50 || imag(amp[idx]) > 1e-50)
              entropy += norm(amp[idx] * rescaling_factor) * log2l(norm(amp[idx] * rescaling_factor));
     }
     
-    return -entropy * 100;
+    return -entropy * sampling_factor;
 }
 
 double FullAmpStateVector::
@@ -481,7 +481,7 @@ PrintProbabilities(const string &out_file,
         float prob = (norm(amp[i])/norm_f) * amp_size;
         file << prob << "\n";
         
-        off = 1 + rand() % 100;
+        off = 1 + rand() % sampling_factor;
     }
 }
 
@@ -524,6 +524,6 @@ PrintStateVector(const string& outfile,
             file << imag(a) << "j";
         file << "\n";
         
-        off = 1 + rand() % 100;
+        off = 1 + rand() % sampling_factor;
     }
 }

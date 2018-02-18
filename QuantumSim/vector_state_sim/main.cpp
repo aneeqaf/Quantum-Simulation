@@ -48,11 +48,11 @@ int main(int argc, char *argv[])
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "threshold",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
-        { "google",    required_argument,       nullptr, 'g' },
-        { "googleInput",    required_argument,       nullptr, 'h' },
+        { "google_spec",    required_argument,       nullptr, 'g' },
+        { "google_input",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
-        { "simType",    required_argument,       nullptr, 's' },
-        { "cutSizes",    required_argument,       nullptr, 'c' },
+        { "sim_type",    required_argument,       nullptr, 's' },
+        { "cut_sizes",    required_argument,       nullptr, 'c' },
         { "verbose",    required_argument,       nullptr, 'v' },
         { nullptr,  0,                 nullptr, '\0' }
     };
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
         idx_size size = 0;
         //write a function for printing google files.
         if (inputfile) {
-            cir.ReadCustomInputFiles("input/random_circuits_aneeqa/" + input_filename, amp_v, size);
+            cir.ReadCustomInputFiles("input/random_circuits_rollright/" + input_filename, amp_v, size);
             delete [] amp_v;
             amp_v = nullptr;
         }
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
             cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             
             if(to_write && num_qubits[0] <= 20) {
-                cir.WriteGeneratedCircuitFile("input/random_circuits_aneeqa/" + out_file + to_string(i) + ".txt",
+                cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file + to_string(i) + ".txt",
                                               cir.GetNumQubits());
                 cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }

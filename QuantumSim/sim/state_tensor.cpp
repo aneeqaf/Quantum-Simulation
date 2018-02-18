@@ -494,7 +494,7 @@ CalculateAverageInaccuracy(double norm) const
 double TensorProductStateVector::
 CalculateMeanEntropy() const
 {
-    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b, range = 10;
+    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b, range = sampling_factor;
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
     double entropy = 0.0;
     const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;
@@ -607,7 +607,7 @@ PrintStateVector(const string& outfile,
             file << imag(amp) << "j";
         file << "\n";
         
-        off = 1 + rand() % 100;
+        off = 1 + rand() % sampling_factor;
     }
 }
 
@@ -651,6 +651,6 @@ PrintProbabilities(const string& out_file,
         
         file << prob << "\n";
         
-        off = 1 + rand() % 100;
+        off = 1 + rand() % sampling_factor;
     }
 }

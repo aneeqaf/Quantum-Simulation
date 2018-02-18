@@ -397,8 +397,8 @@ XYRecursiveTransform(cmplx* __restrict amp,
         Y_bitmask >>= k;
         idx_size temp_i = 0;
         
-        if (branches > thread::hardware_concurrency()) {
-            #pragma omp parallel for reduction(+:temp_i) num_threads(NUM_THREADS)
+        if (branches > NUM_THREADS) {
+            #pragma omp parallel for reduction(+:temp_i) num_threads(omp_get_num_procs())
             for (idx_size i = 0; i < num_iters ; ++i)
                 temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - k, th);
         }

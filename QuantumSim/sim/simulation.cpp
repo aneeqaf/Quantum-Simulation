@@ -104,7 +104,7 @@ Simulate(GenericQuantumState& amp,
 
                  if (config.verbose == 4) {
                      gettimeofday(&xe_t_b, NULL);
-                     cross_entropy = amp.CalculateCrossEntropy(100);
+                     cross_entropy = amp.CalculateCrossEntropy(10);
                      gettimeofday(&xe_t_e, NULL);
                      XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
                                  xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
@@ -373,7 +373,7 @@ PrintReport(GenericQuantumState& amp,
         
         ss << " : " << sqrt(norm) << "\n";
         ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
-        ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(10) << "\n";
+        ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
         ss << "Probabilities : " << amp.GetMinProb() << "(min), "
              << amp.GetMaxProb() << "(max), "
              << amp.GetAvgProb() << "(avg)\n";

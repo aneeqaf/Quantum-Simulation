@@ -447,7 +447,7 @@ CalculateMeanEntropy2Cuts() const
     double entropy = 0.0;
     
     const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
-    idx_size range = 100 , num_ranges = amp_size / range;
+    idx_size range = sampling_factor , num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
         cmplx ampl =  t0[idx] + t1[idx];
@@ -535,7 +535,7 @@ PrintStateVector(const string& outfile,
                 file << imag(amp) << "j";
             file << "\n";
             
-            off = 1 + rand() % 100;
+            off = 1 + rand() % sampling_factor;
         }
     }
     else {
@@ -585,7 +585,7 @@ PrintProbabilities(const string& out_file,
             
             file << prob << "\n";
             
-            off = 1 + rand() % 100;
+            off = 1 + rand() % sampling_factor;
         }
     }
     else {
