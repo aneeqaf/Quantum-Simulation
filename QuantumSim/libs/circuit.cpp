@@ -596,7 +596,7 @@ ReadGoogleCircuitFile(const string& input_file,
     short q1, q2;
     while (file >> current_cycle >> gate_type) {
         
-        if (current_cycle >= depth)
+        if (current_cycle >= depth && depth != 0)
             break;
         if (prev_cycle != current_cycle) {
             clock_cycles.push_back(gates.size());
