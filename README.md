@@ -1,6 +1,6 @@
 # Rollright - A Quantum Simulator
 
-## How to run the Simulator
+## Run the Simulator
 
 ### Command line options
 * **-depth, -d** 
@@ -43,11 +43,9 @@
 
 **Mandatory option** : You must either specify the input file (-h or -i) or tell the simulator to create its own random circuit (-g).
 
-###Macros (TODO)
+### Macros (TODO)
 
-###Running the simulator:
-
-####Notes:
+#### Notes:
 * The simulator needs c++17 and g++-7 to build successfully.
 * A Makefile is provided with the simulator that takes care of creating directories that do not already exist in your directory structure but are required by the program.
 * Modifications to the Makefile to alter the macros for compilation will be needed for detailed experiments.
@@ -55,7 +53,7 @@
 
 Navigate to the working directory (QuantumSim).
 
-####Examples runs:
+#### Examples runs:
 1. Create and simulate entire circuit of 6 qubits and 100 cycles using full state-vector simulation and with default report:
 ```shellsession
 $ make all
@@ -81,5 +79,3 @@ $ ./bin/rollright_sim -i test0.txt
 $ make all
 $ ./bin/rollright_sim -h inst_5_5_100_5 -d 26
 ```
-
-5. 
