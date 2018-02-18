@@ -3,14 +3,14 @@
 ## Run the Simulator
 
 ### Command line options
-* **-depth, -d** 
-	* Required argument : integer to specify the number of cycles to simulate
-	* If flag is not used then the default is set to simulating all the cycles. 
-	* This option is not used when creating a random circuit. It is only relevant when reading from inputfiles.
 * **-cutSizes, -c**
 	* Required argument : integer to specify the size of one side of a horizontal or vertical cut in a 2D circuit.
 	* This flag is only relevant when the simulation involves sum of tensors. 
 	* If flag is not used then, the program decides the best cut for sum of tensors simulation.
+* **-depth, -d** 
+	* Required argument : integer to specify the number of cycles to simulate
+	* The default setting simulates all cycles. 
+	* This option is not used when creating a random circuit. It is only relevant when reading from inputfiles.
 * **-google, -g**
 	* Required arguments : this flag takes in two arguments - number of qubits and total depth of the circuits.
 	* It is responsible for creating a google circuit.
@@ -24,13 +24,13 @@
 	* Required argument : name of the file to write output to.
 	* The file specified is always created in a directory in the `output` directory, except for the circuit files that the simulator produces upon creating a new random circuit. Newly generated random cicuits are written to `input\random_circuits_aneeqa`. 
 	* The argument only takes the name of a file not path. The file name is used to write to predetermined locations pertinent to the type of output. (Namely, `output\amp_vectors`, `output\probabilities`, `output\qpro_scripts`, and `output\reports`. Please create these folders if not already present.)
-* **-threshold, -t**
-	* Required argument : integer that is smaller than the total number of qubits. This is used to control the base case of the Recursive Transform algorithm.
-	* If flag is not used than the default threshold is 14.
 * **-simType, -s**
 	* Required argument : integer between 0 and 8 that specify the type of simulation.
 	* The simulator supports 9 different types of simulations : LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState, Approx2011, Approx1_101, Approx1110. The order reflects the integer applicable to the simulation type. 
 	* Default simulation type is FullState. 
+* **-threshold, -t**
+	* Required argument : integer that is smaller than the total number of qubits. This is used to control the base case of the Recursive Transform algorithm.
+	* Default threshold is 14.
 * **-verbose, -v**
 	* Required argument : integer between 0 and 4 that specify the level of verbosity of the final report that is output by the simulator.
 	* Default verbosity is set at level 3.
