@@ -16,6 +16,7 @@ sftp-config.json
 temp.cpp
 output/misc/
 output/amp_vectors/
+output/probabilties/
 output/qpro_scripts/
 output/reports/
 profiling_data/
