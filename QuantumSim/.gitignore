@@ -15,7 +15,6 @@ sftp-config.json
 ../QuantumSim1
 temp.cpp
 output/misc/
-output/probabilities/
 output/amp_vectors/
 output/qpro_scripts/
 output/reports/
