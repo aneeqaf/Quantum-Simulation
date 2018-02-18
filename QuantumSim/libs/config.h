@@ -39,11 +39,10 @@ public:
            string mfile,
            SimType sim = FullState,
            Verbose v = Default,
-           int cut = 0,
-           int depth = 26,
-           int th = 14,
-           bool google = true) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
-        misc_outfile(mfile), depth(depth), th(th), cut(cut), google(google), sim_type(sim), verbose(v) {}
+           int c = 0,
+           int d = 26,
+           int t = 14,
+           bool google = true);
     Config(const Config& rhs);
     Config& operator=(const Config& rhs);
 };

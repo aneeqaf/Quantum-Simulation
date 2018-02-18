@@ -2,8 +2,10 @@ CC := g++-7
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := vector_state_sim
-BUILDDIR := build
-TARGET := bin/vector_state_sim
+TARGETDIR := bin
+OUTPUT := output/amp_vectors output/probabilities output/qpro_scripts output/reports
+INPUT := input/random_circuits_aneeqa
+TARGET := bin/rollright_sim
 LIBS = -lm -lstdc++
 INC = -I libs -I sim -I sim/kernels
 CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
@@ -34,13 +36,22 @@ $(EXE): %.o: %.cpp
 	@echo "Building exe..."
 	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
+$(TARGETDIR): 
+	mkdir -p $(TARGETDIR)
+
+$(OUTPUT): 
+	mkdir -p $(OUTPUT)
+
+$(INPUT): 
+	mkdir -p $(INPUT)
+
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
-$(TARGET): $(EXE) $(OBJECTS)
+$(TARGET): $(TARGETDIR) $(OUTPUT) $(INPUT) $(EXE) $(OBJECTS) 
 	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -fopenmp -o $@
 
 clean:
-	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/vector_state_sim bin/bm
+	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/rollright_sim bin/bm
 
 # Benchmark
 bm: $(OBJECTS) $(BM) $(KERNELHEADERS)

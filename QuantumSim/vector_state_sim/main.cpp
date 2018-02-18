@@ -142,9 +142,6 @@ int main(int argc, char *argv[])
         } // switch
     } // while
     
-    if (threshold == -1)
-        threshold = 14;
-    
     Circuit cir;
     Config config(input_filename ,"output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
                   "output/reports/" + out_file, "output/misc/g_" + out_file, sim_type, verbose, cut, depth, threshold);

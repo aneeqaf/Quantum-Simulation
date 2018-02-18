@@ -9,6 +9,24 @@
 #include "config.h"
 
 Config::
+Config(string ifile,
+       string pfile,
+       string afile,
+       string rfile,
+       string mfile,
+       SimType sim,
+       Verbose v,
+       int c,
+       int d,
+       int t,
+       bool google) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
+misc_outfile(mfile), depth(d), th(t), cut(c), google(google), sim_type(sim), verbose(v)
+{
+    if (t == -1)
+        th = 14;
+}
+
+Config::
 Config(const Config& rhs)
 {
     infile = rhs.infile;
