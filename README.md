@@ -43,8 +43,7 @@
 
 **Mandatory option** : You must either specify the input file (-h or -i) or tell the simulator to create its own random circuit (-g).
 
-### Macros (TODO)
-
+### Quick runs
 #### Notes:
 * The simulator needs c++17 and g++-7 to build successfully.
 * A Makefile is provided with the simulator that takes care of creating directories that do not already exist in your directory structure but are required by the program.
@@ -79,3 +78,4 @@ $ ./bin/rollright_sim -i test0.txt
 $ make all
 $ ./bin/rollright_sim -h inst_5_5_100_5 -d 26
 ```
+### Macros (TODO)
