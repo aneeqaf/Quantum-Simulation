@@ -411,9 +411,9 @@ GetNumQubits() const
 void FullAmpStateVector::
 Rescale()
 {
-    float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
-    if ((global_factor_power % 2) == 1)
-        rescaling_factor *= 1.0/sqrt(2.0);
+    const float rescaling_factor = (global_factor_power % 2) ? 1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0))
+                            : 1.0/pow(2,(global_factor_power/2));
+
     global_factor_power = 0;
     
 //    for (idx_size i = 0; i < amp_size; ++i)
@@ -422,6 +422,8 @@ Rescale()
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
         rescaling_factor, rescaling_factor , rescaling_factor, rescaling_factor};
+    
+    #pragma omp parallel for
     for (idx_size i = 0; i < amp_size; i += 4) {
         __m256 t = _mm256_load_ps(t_amp + (2 * i));
         t = _mm256_mul_ps(t, rescaling);

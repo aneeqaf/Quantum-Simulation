@@ -50,11 +50,13 @@ Simulate(GenericQuantumState& amp,
     for (idx_size i = 0; i < size; ++i) {
         
         if (amp.GetGlobalFactorPower() > 100) {
-            clock_t begin = clock();
+            struct timeval r_begin, r_end;
+            gettimeofday(&r_begin, NULL);
             ++amp.count_of_category.rescale;
             amp.Rescale();
-            clock_t end = clock();
-            amp.time_by_category.rescale +=  double(end - begin) / CLOCKS_PER_SEC;
+            gettimeofday(&r_end, NULL);
+            amp.time_by_category.rescale +=  ((r_end.tv_sec  - r_begin.tv_sec) * 1000000u +
+                                              r_end.tv_usec - r_begin.tv_usec) / 1.e6;
         }
         
         Gate& current_gate = circuit.GetGateFromIndex(i);
@@ -215,7 +217,7 @@ void SequentialSimulation::
 PrintReport(GenericQuantumState& amp,
             const Circuit& circuit) const
 {
-    cout << "Rollright ver 1.2 - a quantum circuit simulator\n\n";
+    cout << "Rollright ver 1.3 - a quantum circuit simulator\n\n";
 
     char hostname[20] = {};
     gethostname(hostname, 20);
@@ -294,39 +296,39 @@ PrintReport(GenericQuantumState& amp,
     cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
     
     idx_size log_count = 0;
-    cout << "Simulation type: ";
+    cout << "Simulation type : ";
     if (config.sim_type == Config::SimType::FullState) {
-        cout << "full state vector / lossless \n";
-        cout << "xCZ gates simulated : exact\n";
+        cout << "full state-vector  \n";
+        cout << "Simulation of xCZ gates : exact\n";
     }
     else if (config.sim_type == Config::SimType::LosslessH) {
         cout << "sum of tensor products / losslessH \n";
-        cout << "xCZ gates simulated : exact\n";
+        cout << "Simulation xCZ gates : exact\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::LosslessV) {
         cout << "sum of tensor products / losslessV \n";
-        cout << "xCZ gates simulated : exact\n";
+        cout << "Simulation xCZ gates : exact\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx1CutH) {
         cout << "tensor products / approx1CutH \n";
-        cout << "xCZ gates simulated : ignored\n";
+        cout << "Simulation xCZ gates : ignored\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx1CutV) {
         cout << "tensor products / approx1CutV \n";
-        cout << "xCZ gates simulated : ignored\n";
+        cout << "Simulation xCZ gates : ignored\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx2011) {
         cout << "tensor products / approx2011 \n";
-        cout << "xCZ gates simulated : approx\n";
+        cout << "Simulation xCZ gates : approx\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx2Cuts) {
         cout << "sum of tensor products / approx2Cuts\n";
-        cout << "xCZ gates simulated : approx\n";
+        cout << "Simulation xCZ gates : approx\n";
         cout << amp.log[log_count++];
         cout << amp.log[log_count++];
         amp.Normalize();
@@ -365,7 +367,7 @@ PrintReport(GenericQuantumState& amp,
         else
             ss << memory << " B \n";
 
-        ss << "Norm ";
+        ss << "Norm";
         if (config.sim_type != Config::SimType::FullState)
             ss << "(assuming orthogonal addends)";
         
@@ -592,7 +594,7 @@ PrintReportToFile(GenericQuantumState& amp,
     ofstream file;
     file.open(config.report_outfile + ".txt");
     
-    file << "Rollright ver 1.2 - a quantum circuit simulator\n\n";
+    file << "Rollright ver 1.3 - a quantum circuit simulator\n\n";
     
     char hostname[20] = {};
     gethostname(hostname, 20);
@@ -673,7 +675,7 @@ PrintReportToFile(GenericQuantumState& amp,
     idx_size log_count = 0;
     file << "Simulation type: ";
     if (config.sim_type == Config::SimType::FullState) {
-        file << "full state vector / lossless \n";
+        file << "full-state vector \n";
         file << "xCZ gates simulated : exact\n";
     }
     else if (config.sim_type == Config::SimType::LosslessH) {

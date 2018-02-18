@@ -28,6 +28,7 @@
 #include <vector>
 #include <unistd.h>
 #include <utility>
+#include <thread>
 
 #include "gates.h"
 #include "kernelsAVX.h"
@@ -36,6 +37,7 @@
 #include <omp.h>
 #endif
 
+#define NUM_THREADS 4
 
 using namespace std;
 

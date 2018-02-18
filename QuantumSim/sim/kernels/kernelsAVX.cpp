@@ -102,7 +102,7 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
     const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1u << 12) ? (1u << 12) : amp_size;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-    #pragma omp parallel for schedule(guided)
+    #pragma omp parallel for schedule(guided) 
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
         const idx_size block_end = block_begin + block_size;
    

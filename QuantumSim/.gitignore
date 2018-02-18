@@ -20,3 +20,5 @@ output/amp_vectors/
 output/qpro_scripts/
 output/reports/
 profiling_data/
+../omp.o
+../openmp.cpp

@@ -190,7 +190,10 @@ Apply1QXYGates(cmplx* __restrict amp,
                const Gate::Type gate_type)
 {
     constexpr idx_size num_indices = 2;
-    const idx_size amp_size = 1ull << num_qubits, block_size = amp_size/(1ull << q) ,
+    const idx_size amp_size = 1ull << num_qubits, 
+    possible_block_size = amp_size/(1ull << q),
+    block_size = possible_block_size < (1ull << 12) && (1ull << 12) < amp_size
+    ? (1ull << 12) : possible_block_size,
     num_iters = block_size/num_indices, gate_bitmask = (1ull << ((num_qubits - 1) - q));
     const array<idx_size, num_indices> indices = {0, 1ull << ((num_qubits - 1) - q)};
 
@@ -216,7 +219,7 @@ Apply1QXYGates(cmplx* __restrict amp,
     }
     
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
-    #pragma omp parallel for schedule(guided)
+    #pragma omp parallel for schedule(guided) 
     for (idx_size idx = 0; idx < amp_size; idx += block_size) {
         idx_size iter_count = 0, block_idx = idx;
         array<idx_size, num_indices> temp_indices;
@@ -248,36 +251,30 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
 {
     constexpr idx_size num_indices = 4;
     const idx_size amp_size = 1ull << num_qubits_amp,
-    possible_block_size = amp_size/(1ull <<  __builtin_ctzl(gate_qubits)),
-    block_size = possible_block_size < (1ull << 12) && (1ull << 12) < amp_size
-                ? (1ull << 12) : possible_block_size,
-    num_iters = block_size/num_indices,
     gate_bitmask = (1ull << ((num_qubits_amp - 1) - __builtin_ctzl(gate_qubits))) |
-                    (1ull << ((num_qubits_amp - 1) - (63 -  __builtin_clzl(gate_qubits))));
-   
+    (1ull << ((num_qubits_amp - 1) - (63 -  __builtin_clzl(gate_qubits)))),
+    num_iters = amp_size/num_indices;
+    
     array<idx_size, num_indices> indices;
     ExtractIndicesForAmp(indices.data(), gate_qubits, num_qubits_amp);
     
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
-    #pragma omp parallel for schedule(guided)
-    for (idx_size idx = 0; idx < amp_size; idx += block_size) {
-        idx_size iter_count = 0, block_idx = idx;
-        array<idx_size, num_indices> temp_indices;
-        
-        while(iter_count < num_iters) {
-            if ((block_idx & gate_bitmask) == 0) {
-                iter_count += add;
-                
-                for (idx_size i = 0; i < num_indices; ++i)
-                    temp_indices[i] = indices[i] + block_idx;
-                
-                gate_func(amp, temp_indices.data());
-                
-                block_idx += add;
-            }
-            else
-                block_idx += (block_idx & gate_bitmask);
+    idx_size iter_count = 0, idx = 0;
+    array<idx_size, num_indices> temp_indices;
+    
+    while(iter_count < num_iters) {
+        if ((idx & gate_bitmask) == 0) {
+            iter_count += add;
+            
+            for (idx_size i = 0; i < num_indices; ++i)
+                temp_indices[i] = indices[i] + idx;
+            
+            gate_func(amp, temp_indices.data());
+            
+            idx += add;
         }
+        else
+            idx += (idx & gate_bitmask);
     }
 }
 
@@ -331,7 +328,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
             if ((Xunused_qubits < num_qubits - 1 && next_qubit < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12GateAVX, 4);
             else
-                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12Gate);
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXX12Gate, 1);
         }
         else {
             Y_bitmask ^= 1ull << Yunused_qubits;
@@ -339,7 +336,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
             if ((Xunused_qubits < num_qubits - 1 && Yunused_qubits < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12GateAVX, 4);
             else
-                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12Gate);
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyXY12Gate, 1);
         }
     }
     else {
@@ -351,7 +348,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
             if ((Yunused_qubits < num_qubits - 1 && next_qubit < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12GateAVX, 4);
             else
-                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12Gate);
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYY12Gate, 1);
             ++i_count;
         }
         else {
@@ -360,7 +357,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
             if ((Yunused_qubits < num_qubits - 1 && Xunused_qubits < num_qubits - 2))
                 Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12GateAVX, 4);
             else
-                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12Gate);
+                Apply2MergedXY12GatesHelper(amp, gates_qubits, num_qubits, ApplyYX12Gate, 1);
         }
     }
     return i_count;
@@ -373,6 +370,8 @@ XYRecursiveTransform(cmplx* __restrict amp,
                      const int num_qubits,
                      const int th)
 {
+    static idx_size branches = 0;
+    ++branches;
     idx_size i_count = 0;
     //base case
     if (num_qubits <= th) {
@@ -397,8 +396,16 @@ XYRecursiveTransform(cmplx* __restrict amp,
         X_bitmask >>= k;
         Y_bitmask >>= k;
         idx_size temp_i = 0;
-        for (idx_size i = 0; i < num_iters ; ++i)
-            temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - k, th);
+        
+        if (branches > thread::hardware_concurrency()) {
+            #pragma omp parallel for reduction(+:temp_i) num_threads(NUM_THREADS)
+            for (idx_size i = 0; i < num_iters ; ++i)
+                temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - k, th);
+        }
+        else {
+            for (idx_size i = 0; i < num_iters ; ++i)
+                temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - k, th);
+        }
         i_count += temp_i / num_iters;
     }
     
