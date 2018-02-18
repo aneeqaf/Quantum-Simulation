@@ -35,11 +35,11 @@
 	* Required argument : integer between 0 and 4 that specify the level of verbosity of the final report that is output by the simulator.
 	* Default verbosity is set at level 3.
 	* The verbosity levels are: None, NCCV, NCC, Default, Cycles, where the order reflects the numerical level of verbosity. 
-		1. None : no report
-		2. NCCV : no hardware information, no compilation information, and no correctness verification 
-		3. NCC : no hardware information and no compilation information
-		4. Default 
-		5. Cycles : monitor doubled cycles and output it in report
+		(0) None : no report
+		(1) NCCV : no hardware information, no compilation information, and no correctness verification 
+		(2) NCC : no hardware information and no compilation information
+		(3) Default 
+		(4) Cycles : monitor doubled cycles and output it in report
 
 **Mandatory option** : You must either specify the input file (-h or -i) or tell the simulator to create its own random circuit (-g).
 
