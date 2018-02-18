@@ -1,51 +1,50 @@
 # Rollright - A Quantum Simulator
 
+Rollright is a Schrondinger-style quantum simulator that is particularly efficient on Google quantum-supremacy circuits. In addition, to a full state-vector representation, it also uses sum-of-tensors representations. 
+
 ## Run the Simulator
 
 ### Command line options
 * **-depth, -d** 
 	* Must be followed by an integer to specify the number of cycles to simulate
-	* The default setting simulates all cycles. 
-	* This option is not used when creating a random circuit. It is only relevant when reading from inputfiles.
+	* The default setting simulates all cycles specified in the input. 
+	* This option is only relevant when reading from input files.
 * **-google_spec, -g**
-	* Must be followed by two arguments - number of qubits and total depth of the circuits.
-	* It is responsible for creating a google circuit.
+	* Must be followed by two arguments - number of qubits and total depth of the circuit.
+	* It is used to generate Google-style circuits.
 * **-google_input, -h**
-	* Must be followed by the name of a Google circuit input file. The file needs to be in the Google circuit file's format.
-	* Input files need to be in `input\random_circuits_google`.
+	* Must be followed by a filename of a circuit in the Google format.
+	* The file is assumed to be in `input\random_circuits_google`.
 * **-inputfile, -i**
-	* Must be followed by the name of the input file (currently only reads the file the Rollright format).
-	* Input files need to be in `input\random_circuits_aneeqa`.
+	* Must be followed by a filename (currently only reads the file in the Rollright format).
+	* The file is assumed to be in `input\random_circuits_rollright`.
 * **-outfile, -o**
-	* Must be followed by the filename to write output to.
-	* The file specified is always created in a directory in the `output` directory, except for the circuit files that the simulator produces upon creating a new random circuit. Newly generated random cicuits are written to `input\random_circuits_aneeqa`. 
-	* The argument only includes the name of a file not, path. The filename is used to write to predetermined locations pertinent to the type of output. (Namely, `output\amp_vectors`, `output\probabilities`, `output\qpro_scripts`, and `output\reports`. Please create these folders if not already present.)
+	* Must be followed by a filename.
+	* The file specified is always created in the `output` directory, except when creating new random cicuits that are written to `input\random_circuits_rollright`. 
+	* The argument only includes the name of a file, not a path. The filename is used to write to predetermined locations pertinent to the type of output. (Namely, `output\amp_vectors`, `output\probabilities`, `output\qpro_scripts`, and `output\reports`.)
 * **-sim_type, -s**
-	* Must be followed by an integer between 0 and 8 that specify the type of simulation.
-	* The simulator supports 9 different simulation types : LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState, Approx2011, Approx1_101, Approx1110. The order reflects the integer applicable to the simulation type. 
-	* Default simulation type is FullState. 
+	* Must be followed by an integer between 0 and 8 that specifies the type of simulation.
+	* The simulation types supported (in order): LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState, Approx2011, Approx1_101, Approx1110. Default simulation type is FullState. 
 * **-threshold, -t**
-	* Must be followed by an integer that is smaller than the total number of qubits. It controls the base case of the Recursive Transform algorithm.
-	* Default threshold is 14.
+	* Must be followed by an integer that is smaller than the total number of qubits (default is 14). It controls the base case of the Recursive Transform algorithm for X and Y gates.
 * **-verbose, -v**
-	* Must be followed by an integer between 0 and 4 that specify the level of verbosity of the final report that is output by the simulator.
-	* Default verbosity is set at level 3.
-	* The verbosity levels are: None, NCCV, NCC, Default, Cycles, where the order reflects the numerical level of verbosity. 
+	* Must be followed by an integer between 0 and 4 that specifies the level of verbosity of the final report (default is 3).
+	* The verbosity levels are (in order) :
 	```
 	(0) None : no report
 	(1) NCCV : no hardware information, no compilation information, and no correctness verification 
 	(2) NCC : no hardware information and no compilation information
 	(3) Default 
-	(4) Cycles : monitor doubled cycles and output it in report
+	(4) Cycles : monitor doubled cycles and output it in report. May significantly increase runtime.
 	```
 
-**Mandatory option** : You must either specify the input file (-h or -i) or tell the simulator to create its own random circuit (-g).
+**Mandatory option** : You must either specify the input file (-h or -i) or specify that the simulator creates its own random circuit (-g).
 
 ### Building a binary
 
 * The simulator needs c++17 and g++-7 to build successfully.
-* A Makefile is provided with the simulator that takes care of creating directories that do not already exist in your directory structure but are required by the program.
-* Modifications to the Makefile to alter the preprocessor macros needed for compilation should be done for detailed experiments.
+* The provided Makefile takes care of creating new directories if needed.
+* Preprocessor macros specified in the Makefile can be modified for specific simulation types.
 
 Navigate to the working directory (QuantumSim)
 ```shellsession
@@ -53,9 +52,6 @@ $ make all
 ```
 
 ### Quick runs
-
-#### Notes
-* The -o flag when specified for a simulation that reads input files, is used for outputting files other than circuit files ( like the probabilities of the entire state vector).
 
 Navigate to the working directory (QuantumSim).
 
