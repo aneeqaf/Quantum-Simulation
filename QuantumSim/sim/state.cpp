@@ -65,18 +65,21 @@ void FullAmpStateVector::
 ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
                       const idx_size __restrict T_bitmasks[2])
 {
-    clock_t begin = clock();
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
     if (num_qubits >= 4) {
-//#ifdef Parallel
+#ifdef Parallel
         ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks, T_bitmasks);
-//#else
-//        ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks, T_bitmasks);
-//#endif
+#else
+        ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+#endif
     }
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks, T_bitmasks);
-    clock_t end = clock();
-    time_by_category.CZ_T +=  double(end - begin) / CLOCKS_PER_SEC;
+    gettimeofday(&end, NULL);
+    
+    time_by_category.CZ_T += ((end.tv_sec  - start.tv_sec) * 1000000u +
+             end.tv_usec - start.tv_usec) / 1.e6;
 }
 
 void FullAmpStateVector::
@@ -102,10 +105,12 @@ ApplyCZDecompositions(const int gate_qubit,
 void FullAmpStateVector::
 ApplyHGateOnAllAmps()
 {
-//    fill_n(amp, amp_size, 1);
-    clock_t begin = clock();
+    struct timeval begin, end;
+    gettimeofday(&begin, NULL);
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
+    
+    #pragma omp parallel for
     for (idx_size i = 0; i < amp_size; i += 4) {
         __m256 t = _mm256_load_ps(t_amp + (2 * i));
         t = _mm256_or_ps(t, re_ones);
@@ -113,8 +118,10 @@ ApplyHGateOnAllAmps()
     }
     
     global_factor_power += num_qubits;
-    clock_t end = clock();
-    time_by_category.H +=  double(end - begin) / CLOCKS_PER_SEC;
+    
+    gettimeofday(&end, NULL);
+    time_by_category.H +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                            end.tv_usec - begin.tv_usec) / 1.e6;
 }
 
 void FullAmpStateVector::
@@ -188,9 +195,11 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
                           idx_size Y_bitmask,
                           const int th)
 {
-    clock_t begin = clock();
+    struct timeval begin, end;
+    
     idx_size num_Xgates = __builtin_popcountll(X_bitmask), num_Ygates = __builtin_popcountll(Y_bitmask);
     if ((num_Xgates + num_Ygates) % 2 == 1) {
+        gettimeofday(&begin, NULL);
         const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
         const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
         
@@ -200,8 +209,9 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
                 X_bitmask ^= 1ull << X_q;
                 global_factor_power += 2;
                 --num_Xgates;
-                clock_t end = clock();
-                time_by_category.X1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+                gettimeofday(&end, NULL);
+                time_by_category.X1_2 += ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                                          end.tv_usec - begin.tv_usec) / 1.e6;
                 ++count_of_category.X1_2;
             }
             else {
@@ -209,14 +219,15 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
                 Y_bitmask ^= 1ull << Y_q;
                 global_factor_power += 2;
                 --num_Ygates;
-                clock_t end = clock();
-                time_by_category.Y1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+                gettimeofday(&end, NULL);
+                time_by_category.Y1_2 += ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                                          end.tv_usec - begin.tv_usec) / 1.e6;
                  ++count_of_category.Y1_2;
             }
         }
     }
     
-    begin = clock();
+    gettimeofday(&begin, NULL);
     if (X_bitmask || Y_bitmask)
       global_i_counter += XYRecursiveTransform(amp, X_bitmask, Y_bitmask, num_qubits, th);
     
@@ -224,8 +235,10 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
         global_factor_power += num_Xgates;
     if (num_Ygates)
         global_factor_power += num_Ygates;
-    clock_t end = clock();
-    time_by_category.merged_XY1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+    
+    gettimeofday(&end, NULL);
+    time_by_category.merged_XY1_2 +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                                       end.tv_usec - begin.tv_usec) / 1.e6;
 }
 
 cmplx FullAmpStateVector::

@@ -99,26 +99,31 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const idx_size* __restrict CZ_bitmasks,
                                 const idx_size* __restrict T_bitmasks /*2*/)
 {
-    const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1 << 12) ? (1 << 12) : amp_size,
-    num_iters = amp_size/block_size;
+    const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1u << 12) ? (1u << 12) : amp_size;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-    #pragma omp parallel for schedule(dynamic, num_iters)
-    for (idx_size iter = 0; iter < num_iters; ++iter) {
-        const idx_size count_len = (iter + 1) * block_size, curr_idx = iter * block_size;
-        idx_size prev_gc = !curr_idx ? 0 : (curr_idx - 1) ^ ((curr_idx - 1) >> 1);
-        
+    #pragma omp parallel for schedule(guided)
+    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
+        const idx_size block_end = block_begin + block_size;
+   
+        // Before starting a block compute `negate_Z`
         bool negate_Z = false;
-        idx_size gate_count = 0;
-        for (idx_size i = 0; i < num_qubits_amp; ++i) {
-            if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i])) {
-                gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
+        idx_size prev_gc = 0;
+        
+        if (block_begin) {
+            prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
+//            idx_size leading_0 = 64 - __builtin_clzl(prev_gc);// last_non0_bit = num_qubits_amp - trailing_0;
+            idx_size gate_count = 0;
+            for (idx_size i = 0; i < num_qubits_amp; ++i) {
+                if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i]))
+                    gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
             }
+            if (gate_count & 2)
+                negate_Z = true;
         }
-        if ((gate_count/2) % 2)
-            negate_Z = true;
        
-        for (idx_size count = curr_idx; count + 15 < count_len ; count+=16) {
+        //Use `negate_Z` to enable a Gray-code optimized loop.
+        for (idx_size count = block_begin; count + 15 < block_end ; count+=16) {
             
             idx_size gc0 = count ^ (count >> 1);
             idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);

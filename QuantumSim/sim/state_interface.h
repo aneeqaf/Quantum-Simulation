@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include "sys/time.h"
+
 
 #include "kernels1.h"
 #include "profile.h"

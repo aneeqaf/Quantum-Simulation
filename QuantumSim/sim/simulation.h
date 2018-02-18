@@ -12,6 +12,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <unordered_map>
+#include <thread>
 
 #include "circuit.h"
 #include "config.h"

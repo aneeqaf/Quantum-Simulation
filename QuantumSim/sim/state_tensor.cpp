@@ -266,6 +266,7 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
     else if (sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV)) {
         CountXCZGates(CZ_bitmasks);
+        data_per_cycles.memory.push_back(GetMemUsage());
         if (cut_type == Cuts::Horizontal)
             data_per_cycles.xCZ_V.push_back(0);
         else

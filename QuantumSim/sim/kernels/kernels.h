@@ -32,6 +32,11 @@
 #include "gates.h"
 #include "kernelsAVX.h"
 
+#ifndef Xcode
+#include <omp.h>
+#endif
+
+
 using namespace std;
 
 constexpr float kH = 0.707106781;

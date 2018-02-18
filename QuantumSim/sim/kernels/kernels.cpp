@@ -189,14 +189,14 @@ Apply1QXYGates(cmplx* __restrict amp,
                const int num_qubits,
                const Gate::Type gate_type)
 {
-    const idx_size amp_size = 1ull << num_qubits;
-    idx_size iter_count = 0, idx = 0, gate_bitmask = 0, add = 1;
-    
-    gate_bitmask |= (1ull << ((num_qubits - 1) - q));
     constexpr idx_size num_indices = 2;
+    const idx_size amp_size = 1ull << num_qubits, block_size = amp_size/(1ull << q) ,
+    num_iters = block_size/num_indices, gate_bitmask = (1ull << ((num_qubits - 1) - q));
     const array<idx_size, num_indices> indices = {0, 1ull << ((num_qubits - 1) - q)};
-    array<idx_size, num_indices> temp_indices;
-    
+
+    idx_size add = 1;
+   
+    //AVX functions handles 4 amps at a time.
     void (*gate_func)(cmplx* __restrict, const idx_size*) ;
     if (gate_type == Gate::Type::X_1_2) {
         if (q < num_qubits - 1) {
@@ -216,60 +216,68 @@ Apply1QXYGates(cmplx* __restrict amp,
     }
     
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
-    while(iter_count < (amp_size/num_indices)) {
-        if ((idx & gate_bitmask) == 0) {
-            iter_count += add;
-  
-            for (idx_size i = 0; i < num_indices; ++i)
-                temp_indices[i] = indices[i] + idx;
-            
-            gate_func(amp, temp_indices.data());
-            
-            idx += add;
+    #pragma omp parallel for schedule(guided)
+    for (idx_size idx = 0; idx < amp_size; idx += block_size) {
+        idx_size iter_count = 0, block_idx = idx;
+        array<idx_size, num_indices> temp_indices;
+        
+        while(iter_count < num_iters) {
+            if ((block_idx & gate_bitmask) == 0) {
+                iter_count += add;
+      
+                for (idx_size i = 0; i < num_indices; ++i)
+                    temp_indices[i] = indices[i] + block_idx;
+                
+                gate_func(amp, temp_indices.data());
+                
+                block_idx += add;
+            }
+            else
+                block_idx += (block_idx & gate_bitmask);
         }
-        else
-            idx += (idx & gate_bitmask);
     }
 }
 
 template<typename function>
 void
 Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
-                            idx_size gate_qubits,
+                            const idx_size gate_qubits,
                             const int num_qubits_amp,
                             const function& gate_func,
                             const idx_size add = 1)
 {
-    const idx_size amp_size = 1ull << num_qubits_amp;
-    idx_size gate_bitmask = 0, iter_count = 0, gate_qubits_bitmask = gate_qubits;
-    constexpr idx_size num_bits = 2;
-    
-    for (idx_size i = 0; i < num_bits; ++i) {
-        idx_size q = __builtin_ctzl(gate_qubits);
-        gate_bitmask |= (1ull << ((num_qubits_amp - 1) - q));
-        gate_qubits ^= (1ull << q);
-    }
-    
     constexpr idx_size num_indices = 4;
+    const idx_size amp_size = 1ull << num_qubits_amp,
+    possible_block_size = amp_size/(1ull <<  __builtin_ctzl(gate_qubits)),
+    block_size = possible_block_size < (1ull << 12) && (1ull << 12) < amp_size
+                ? (1ull << 12) : possible_block_size,
+    num_iters = block_size/num_indices,
+    gate_bitmask = (1ull << ((num_qubits_amp - 1) - __builtin_ctzl(gate_qubits))) |
+                    (1ull << ((num_qubits_amp - 1) - (63 -  __builtin_clzl(gate_qubits))));
+   
     array<idx_size, num_indices> indices;
-    ExtractIndicesForAmp(indices.data(), gate_qubits_bitmask, num_qubits_amp);
-    array<idx_size, num_indices> temp_indices;
+    ExtractIndicesForAmp(indices.data(), gate_qubits, num_qubits_amp);
     
-    idx_size idx = 0;
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
-    while(iter_count < (amp_size/num_indices)) {
-        if ((idx & gate_bitmask) == 0) {
-            iter_count+=add;
-            
-            for (idx_size i = 0; i < num_indices; ++i)
-                temp_indices[i] = indices[i] + idx;
-            
-            gate_func(amp, temp_indices.data());
-            
-            idx+=add;
+    #pragma omp parallel for schedule(guided)
+    for (idx_size idx = 0; idx < amp_size; idx += block_size) {
+        idx_size iter_count = 0, block_idx = idx;
+        array<idx_size, num_indices> temp_indices;
+        
+        while(iter_count < num_iters) {
+            if ((block_idx & gate_bitmask) == 0) {
+                iter_count += add;
+                
+                for (idx_size i = 0; i < num_indices; ++i)
+                    temp_indices[i] = indices[i] + block_idx;
+                
+                gate_func(amp, temp_indices.data());
+                
+                block_idx += add;
+            }
+            else
+                block_idx += (block_idx & gate_bitmask);
         }
-        else
-            idx += (idx & gate_bitmask);
     }
 }
 

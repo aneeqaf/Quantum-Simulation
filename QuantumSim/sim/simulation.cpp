@@ -35,7 +35,6 @@ Simulate(GenericQuantumState& amp,
     idx_size size = circuit.GetTotalNumGates();
     int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
     double XE_time = 0;
-    clock_t xe_t_b, xe_t_e;
     
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -46,7 +45,8 @@ Simulate(GenericQuantumState& amp,
     
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     
-    clock_t begin = clock(), cycle_start = clock();
+    struct timeval start_p, end_p, cycle_start, xe_t_b, xe_t_e;
+    gettimeofday(&start_p, NULL);
     for (idx_size i = 0; i < size; ++i) {
         
         if (amp.GetGlobalFactorPower() > 100) {
@@ -61,7 +61,8 @@ Simulate(GenericQuantumState& amp,
         if(current_gate.ids.front() == Gate::Type::Control ||
            current_gate.ids.back() == Gate::Type::T) {
             
-            clock_t cycle_end = clock();
+            struct timeval cycle_end;
+            gettimeofday(&cycle_end, NULL);
             for (int c = 0; c < circuit.GetNumCycles(); ++c) {
                 if (i < circuit.GateIndexForCycle(c)) {
                     current_cycle = c;
@@ -70,22 +71,28 @@ Simulate(GenericQuantumState& amp,
             }
             amp.data_per_cycles.cycles.push_back(current_cycle);
 #ifdef CosineSimilarityDoubled
-            xe_t_b = clock();
+            gettimeofday(&xe_t_b, NULL);
             amp.PrintProbabilities(config.prob_outfile, current_cycle);
-            xe_t_e = clock();
-            XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
+            gettimeofday(&xe_t_e, NULL);
+            XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                        xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+            
 #endif
 #ifdef XEDoubled
-            xe_t_b = clock();
+            gettimeofday(&xe_t_b, NULL);
             amp.PrintProbabilities(config.prob_outfile, current_cycle);
-            xe_t_e = clock();
-            XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
+            gettimeofday(&xe_t_e, NULL);
+            XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                        xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+            
 #endif
 #ifdef FidelityDoubled
-            xe_t_b = clock();
+            gettimeofday(&xe_t_b, NULL);
             amp.PrintStateVector(config.amp_outfile, current_cycle);
-            xe_t_e = clock();
-            XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
+            gettimeofday(&xe_t_e, NULL);
+            XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                        xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+            
 #endif
 
              if (current_gate.ids.back() == Gate::Type::T ||
@@ -94,15 +101,16 @@ Simulate(GenericQuantumState& amp,
                  double cross_entropy = 0;
 
                  if (config.verbose == 4) {
-                     clock_t xe_t_b = clock();
+                     gettimeofday(&xe_t_b, NULL);
                      cross_entropy = amp.CalculateCrossEntropy(100);
-                     clock_t xe_t_e = clock();
-                     XE_time += double(xe_t_e - xe_t_b)/ CLOCKS_PER_SEC;
-                 
+                     gettimeofday(&xe_t_e, NULL);
+                     XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                                 xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
                  
                      log <<  setprecision(3) ;
                      log << current_cycle << "\t"
-                     << double(cycle_end - cycle_start)/ CLOCKS_PER_SEC << " s    \t";
+                     << ((cycle_end.tv_sec  - cycle_start.tv_sec) * 1000000u +
+                        cycle_end.tv_usec - cycle_start.tv_usec) / 1.e6 << " s    \t";
                      double memory = amp.GetMemUsage();
                      if (memory >= 1e9) {
                          log << memory / 1e9 << " GB";
@@ -121,7 +129,7 @@ Simulate(GenericQuantumState& amp,
                      log << "\n";
                  }
                  
-                 cycle_start = clock();
+                 gettimeofday(&cycle_start, NULL);
                  idx_size prev_i = i;
                  idx_size T_bitmasks[2] = {0};
                  idx_size CZ_bitmasks[total_circuit_qubits];
@@ -166,7 +174,7 @@ Simulate(GenericQuantumState& amp,
                      --i;
              }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
-                cycle_start = clock();
+                gettimeofday(&cycle_start, NULL);
                 amp.ApplyHGateOnAllAmps();
                 amp.count_of_category.H = circuit.GetNumQubits();
                 i += total_circuit_qubits - 1;
@@ -179,9 +187,10 @@ Simulate(GenericQuantumState& amp,
             }
         }
     }
+    gettimeofday(&end_p, NULL);
     
-    clock_t end = clock();
-    total_time = (double(end - begin)/ CLOCKS_PER_SEC) - XE_time;
+    total_time = ((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
+             end_p.tv_usec - start_p.tv_usec) / 1.e6;
 
 #ifdef Print
     amp.PrintStateVector();
@@ -334,7 +343,11 @@ PrintReport(GenericQuantumState& amp,
         double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 #ifdef RT
         cout << "Recursion end-case(max) : " << config.th << " q\n";
+#ifdef Parallel
+        cout << "Number of threads : " << thread::hardware_concurrency() << "\n";
+#else
         cout << "Number of threads : 1\n";
+#endif
         cout << "Verbosity : " << config.verbose << "\n\n";
 #endif
         double memory = amp.GetMemUsage();
@@ -706,7 +719,11 @@ PrintReportToFile(GenericQuantumState& amp,
         double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 #ifdef RT
         file << "Recursion end-case(max) : " << config.th << " q\n";
+#ifdef Parallel
+        file << "Number of threads : " << thread::hardware_concurrency() << "\n";
+#else
         file << "Number of threads : 1\n";
+#endif
         file << "Verbosity : " << config.verbose << "\n\n";
 #endif
         double memory = amp.GetMemUsage();

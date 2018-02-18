@@ -28,11 +28,11 @@ SumOfTensorsProductsStateVector(const int qubits,
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
                                                               cut_size,
-                                                              Config::SimType::LosslessH));
+                                                              Config::SimType::Approx2011));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
                                                               cut_size,
-                                                              Config::SimType::LosslessV));
+                                                              Config::SimType::Approx2011));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
         ++num_addends;

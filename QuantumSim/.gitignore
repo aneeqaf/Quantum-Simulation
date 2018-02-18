@@ -14,9 +14,9 @@ sftp-config.json
 ../test_25_5.txt
 ../QuantumSim1
 temp.cpp
-output/misc/*
-output/probabilities/*
-output/amp_vectors/*
-output/qpro_scripts/*
-output/reports/*
+output/misc/
+output/probabilities/
+output/amp_vectors/
+output/qpro_scripts/
+output/reports/
 profiling_data/
