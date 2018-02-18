@@ -5,3 +5,5 @@ Vagrantfile
 .vagrant
 QuantumSim1/
 QuantumSimProj.xcodeproj/
+qp-3.8-i386/
+
