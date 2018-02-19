@@ -191,8 +191,8 @@ Simulate(GenericQuantumState& amp,
     }
     gettimeofday(&end_p, NULL);
     
-    total_time = ((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
-             end_p.tv_usec - start_p.tv_usec) / 1.e6;
+    total_time = (((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
+             end_p.tv_usec - start_p.tv_usec) / 1.e6) - XE_time;
 
 #ifdef Print
     amp.PrintStateVector();
