@@ -16,11 +16,12 @@ Config(string ifile,
        string mfile,
        SimType sim,
        Verbose v,
-       int c,
+       int a,
+       int b,
        int d,
        int t,
        bool google) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
-misc_outfile(mfile), depth(d), th(t), cut(c), google(google), sim_type(sim), verbose(v)
+misc_outfile(mfile), depth(d), th(t), vcut(a), hcut(b), google(google), sim_type(sim), verbose(v)
 {
     if (t == -1)
         th = 14;
@@ -36,7 +37,8 @@ Config(const Config& rhs)
     misc_outfile = rhs.misc_outfile;
     depth = rhs.depth;
     th = rhs.th;
-    cut = rhs.cut;
+    vcut = rhs.vcut;
+    hcut = rhs.hcut;
     google = rhs.google;
     sim_type = rhs.sim_type;
     verbose = rhs.verbose;
@@ -52,7 +54,8 @@ operator=(const Config& rhs)
     misc_outfile = rhs.misc_outfile;
     depth = rhs.depth;
     th = rhs.th;
-    cut = rhs.cut;
+    vcut = rhs.vcut;
+    hcut = rhs.hcut;
     google = rhs.google;
     sim_type = rhs.sim_type;
     verbose = rhs.verbose;

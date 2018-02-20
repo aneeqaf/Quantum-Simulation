@@ -47,7 +47,7 @@ using namespace std;
 
 constexpr float kH = 0.707106781;
 
-using idx_size = size_t;
+using idx_size = idx_size;
 
 constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH}, -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
 constexpr float kTGate_re[8] = {1, kH, 0, -kH, -1, -kH, 0, kH};

@@ -11,27 +11,32 @@
 SumOfTensorsProductsStateVector::
 SumOfTensorsProductsStateVector(const int qubits,
                                 const Config::SimType type,
-                                const int cut_size): num_addends(1)
+                                const int hcut,
+                                const int vcut): num_addends(1)
 {
     sim_type = type;
     if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
-                                                              cut_size,
+                                                              hcut,
+                                                              vcut,
                                                               sim_type));
     else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
-                                                              cut_size,
+                                                              hcut,
+                                                              vcut,
                                                               sim_type));
     else {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
-                                                              cut_size,
+                                                              hcut,
+                                                              vcut,
                                                               Config::SimType::Approx2011));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
-                                                              cut_size,
+                                                              hcut,
+                                                              vcut,
                                                               Config::SimType::Approx2011));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();

@@ -191,9 +191,7 @@ Apply1QXYGates(cmplx* __restrict amp,
 {
     constexpr idx_size num_indices = 2;
     const idx_size amp_size = 1ull << num_qubits, 
-    possible_block_size = amp_size/(1ull << q),
-    block_size = possible_block_size < (1ull << 12) && (1ull << 12) < amp_size
-    ? (1ull << 12) : possible_block_size,
+    block_size = amp_size/(1ull << q),
     num_iters = block_size/num_indices, gate_bitmask = (1ull << ((num_qubits - 1) - q));
     const array<idx_size, num_indices> indices = {0, 1ull << ((num_qubits - 1) - q)};
 

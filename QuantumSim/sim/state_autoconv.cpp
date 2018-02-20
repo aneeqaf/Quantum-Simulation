@@ -10,9 +10,10 @@
 AdaptiveStateVector::
 AdaptiveStateVector(const int qubits,
                     const Config::SimType type,
-                    const int cut_size) : full_state(nullptr), total_q(qubits)
+                    const int hcut,
+                    const int vcut) : full_state(nullptr), total_q(qubits)
 {
-    sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, cut_size);
+    sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, hcut, vcut);
 }
 
 AdaptiveStateVector::
@@ -31,6 +32,8 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
     if (full_state) {
         data_per_cycles.xCZ_H.push_back(0);
         data_per_cycles.xCZ_V.push_back(0);
+        data_per_cycles.addends.push_back(0);
+        data_per_cycles.memory.push_back(GetMemUsage());
         full_state -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
     }
     else {
@@ -39,9 +42,10 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
         if (sumOfTensors -> GetNumAddends() > 10) {
             clock_t begin = clock();
             
-            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4)
-                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
-            else
+            //Add support for finding the cut type
+//            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4)
+//                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
+//            else
                 full_state = sumOfTensors -> ConvertSumOfTensorsToState();
             clock_t end = clock();
             time_by_category.conversion += double(end - begin) / CLOCKS_PER_SEC;

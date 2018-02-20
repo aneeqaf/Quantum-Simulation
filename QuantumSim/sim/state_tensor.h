@@ -100,7 +100,8 @@ public:
     
     TensorProductStateVector(const int qubits,
                              const Cuts type,
-                             const int cut_size = 0,
+                             const int hcut = 0,
+                             const int vcut = 0,
                              const Config::SimType sim = Config::LosslessH);
     TensorProductStateVector(const TensorProductStateVector& rhs) ;
     TensorProductStateVector& operator=(const TensorProductStateVector& rhs) = delete;

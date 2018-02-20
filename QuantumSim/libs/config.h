@@ -25,13 +25,14 @@ public:
     string misc_outfile;
     int depth;
     int th;
-    int cut;
+    int vcut;
+    int hcut;
     bool google;
     SimType sim_type;
     Verbose verbose;
     
     Config() : infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile("") ,depth(26),
-    th(14), cut(0), google(true), sim_type(FullState), verbose(Default) {}
+    th(14), vcut(0), hcut(0), google(true), sim_type(FullState), verbose(Default) {}
     Config(string ifile,
            string pfile,
            string afile,
@@ -39,7 +40,8 @@ public:
            string mfile,
            SimType sim = FullState,
            Verbose v = Default,
-           int c = 0,
+           int a = 0,
+           int b = 0,
            int d = 26,
            int t = 14,
            bool google = true);

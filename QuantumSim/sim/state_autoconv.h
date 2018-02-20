@@ -65,7 +65,8 @@ public:
     
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,
-                        const int cut_size = 0);
+                        const int hcut = 0,
+                        const int vcut = 0);
     AdaptiveStateVector(const AdaptiveStateVector& rhs) = delete;
     AdaptiveStateVector& operator=(const AdaptiveStateVector& rhs) = delete;
     ~AdaptiveStateVector();

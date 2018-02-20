@@ -94,10 +94,10 @@ ScatterGlobalIndex(const idx_size i,
     idx_size local_idx = 0, count = 0;
     
     for (idx_size j = 0; j < total_qubits; ++j) {
-        if (((1ull << j) & partition_bitmask) && ((1ull << j) & i))
-            local_idx |= (1ull << count++);
-        else if (((1ull << j) & partition_bitmask) && !((1ull << j) & i))
-            ++count;
+        idx_size j_bit = 1ull << j;
+        if (!(j_bit & partition_bitmask)) continue;
+        if (j_bit & i) local_idx |= (1ull << count++);
+        else ++count;
     }
     return local_idx;
 }
@@ -105,7 +105,8 @@ ScatterGlobalIndex(const idx_size i,
 TensorProductStateVector::
 TensorProductStateVector(const int qubits,
                          const Cuts cut,
-                         const int cut_size,
+                         const int hcut,
+                         const int vcut,
                          const Config::SimType sim):
 a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0), sim_type(sim) 
 {
@@ -113,9 +114,9 @@ a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0), sim_type(sim)
     cut_type = cut;
 
     if (cut == Cuts::Horizontal)
-        HorizontalCut(num_q_a, num_q_b, qubits, cut_size);
+        HorizontalCut(num_q_a, num_q_b, qubits, hcut);
     else
-        VerticalCut(num_q_a, num_q_b, qubits, cut_size);
+        VerticalCut(num_q_a, num_q_b, qubits, vcut);
     
     
     state_a = new FullAmpStateVector(num_q_a);
@@ -267,6 +268,7 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
     else if (sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV)) {
         CountXCZGates(CZ_bitmasks);
         data_per_cycles.memory.push_back(GetMemUsage());
+        data_per_cycles.addends.push_back(1);
         if (cut_type == Cuts::Horizontal)
             data_per_cycles.xCZ_V.push_back(0);
         else
@@ -316,13 +318,18 @@ ApplyXCZGateApprox(const idx_size* __restrict CZ_bitmasks,
     }
     clock_t end = clock();
     time_by_category.decomposed_CZ +=  double(end - begin) / CLOCKS_PER_SEC;
-    if (cut_type == Cuts::Horizontal) {
-        data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-        data_per_cycles.xCZ_V.push_back(0);
-    }
-    else {
-        data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-        data_per_cycles.xCZ_H.push_back(0);
+    
+    if (sim_type != Config::SimType::Approx2011) {
+        data_per_cycles.memory.push_back(GetMemUsage());
+        data_per_cycles.addends.push_back(1);
+        if (cut_type == Cuts::Horizontal) {
+            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_V.push_back(0);
+        }
+        else {
+            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_H.push_back(0);
+        }
     }
 }
 

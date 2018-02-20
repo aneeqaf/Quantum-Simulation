@@ -21,7 +21,7 @@
 #include "kernels1.h"
 #include "profile.h"
 
-constexpr int sampling_factor = 100;
+constexpr int sampling_factor = 10;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;
@@ -32,6 +32,9 @@ typedef struct DataPerCycle {
     vector<ul> xCZ_V;
     vector<ul> addends;
     vector<ul> memory;
+    
+    DataPerCycle():cycles({}), XY_gates({}), CZ_gates({}), T_gates({}), xCZ_H({}), xCZ_V({}),
+    addends({}), memory({}){}
 } Data;
 
 class GenericQuantumState {

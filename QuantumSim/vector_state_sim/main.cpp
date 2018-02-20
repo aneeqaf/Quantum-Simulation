@@ -52,24 +52,30 @@ int main(int argc, char *argv[])
         { "google_input",    required_argument,       nullptr, 'h' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
-        { "cut_sizes",    required_argument,       nullptr, 'c' },
+        { "vcut_sizes",    required_argument,       nullptr, 'a' },
+        { "hcut_sizes",    required_argument,       nullptr, 'b' },
         { "verbose",    required_argument,       nullptr, 'v' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool inputfile = false, googleInput = false, create = false, to_write = false;
     string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0, threshold = -1, depth = 0, cut = 0, idx = 0, c = 0;
+    int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0;
     Config::SimType sim_type = Config::FullState;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:c:v:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:a:v:b:", longopts, &idx)) != -1)
     {
         switch (c) {
-            case 'c': {
+            case 'a': {
                 string s_c = string(optarg);
-                cut = stoi(s_c);
+                vcut = stoi(s_c);
+                break;
+            }
+            case 'b': {
+                string s_c = string(optarg);
+                hcut = stoi(s_c);
                 break;
             }
             case 'd': {
@@ -144,7 +150,8 @@ int main(int argc, char *argv[])
     
     Circuit cir;
     Config config(input_filename ,"output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
-                  "output/reports/" + out_file, "output/misc/g_" + out_file, sim_type, verbose, cut, depth, threshold);
+                  "output/reports/" + out_file, "output/misc/g_" + out_file, sim_type, verbose, vcut, hcut,
+                  depth, threshold);
     SequentialSimulation sim(config);
     if (inputfile || googleInput) {
         cmplx* amp_v = nullptr;
@@ -178,17 +185,17 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Horizontal, cut, sim_type);
+                                      TensorProductStateVector::Cuts::Horizontal, hcut, vcut, sim_type);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Vertical, cut, sim_type);
+                                      TensorProductStateVector::Cuts::Vertical, hcut, vcut, sim_type);
         sim.Simulate(amp, cir);
     }
     else {
         AdaptiveStateVector amp(cir.GetNumQubits(),
-                                (Config::SimType)sim_type, cut);
+                                (Config::SimType)sim_type, hcut, vcut);
         sim.Simulate(amp, cir);
     }
     return 0;

@@ -76,7 +76,8 @@ public:
     
     SumOfTensorsProductsStateVector(const int qubits,
                                     const Config::SimType type,
-                                    const int cut_size = 0);
+                                    const int hcut = 0,
+                                    const int vcut = 0);
     SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs) = delete;
     SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs) = delete;
     ~SumOfTensorsProductsStateVector();
