@@ -23,29 +23,30 @@ AdaptiveStateVector::
     delete sumOfTensors;
 }
 
-void AdaptiveStateVector::
-ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
-                      const idx_size __restrict T_bitmasks[2])
+bool AdaptiveStateVector::
+ApplyBlockOfDiagGates(string& cz_bits,
+                      const bitset<128>* __restrict CZ_bitmasks,
+                      const bitset<128> __restrict T_bitmasks[2])
 {
-    
-    
+    bool terminate = false;
     if (full_state) {
         data_per_cycles.xCZ_H.push_back(0);
         data_per_cycles.xCZ_V.push_back(0);
         data_per_cycles.addends.push_back(0);
         data_per_cycles.memory.push_back(GetMemUsage());
-        full_state -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
+        full_state -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
     }
     else {
-        sumOfTensors -> ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
+        terminate = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
         
-        if (sumOfTensors -> GetNumAddends() > 10) {
+        if (sumOfTensors -> GetNumAddends() > 10 || cz_bits == "") {
             clock_t begin = clock();
             
             //Add support for finding the cut type
-//            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4)
-//                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
-//            else
+            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
+                && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
+                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
+            else
                 full_state = sumOfTensors -> ConvertSumOfTensorsToState();
             clock_t end = clock();
             time_by_category.conversion += double(end - begin) / CLOCKS_PER_SEC;
@@ -54,7 +55,7 @@ ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
             sumOfTensors = nullptr;
         }
     }
-    
+    return terminate;
 }
 
 void AdaptiveStateVector::
@@ -98,8 +99,8 @@ ApplyMergedXYGate(const Gate& gate1,
 }
 
 void AdaptiveStateVector::
-ApplyXYRecursiveTransform(idx_size X_bitmask,
-                          idx_size Y_bitmask,
+ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                          bitset<128> Y_bitmask,
                           const int th)
 {
     if (full_state)

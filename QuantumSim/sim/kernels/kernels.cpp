@@ -8,28 +8,29 @@
 #include "kernels.h"
 
 void
-GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
+GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
              const int num_qubits_amp,
              const vector<int>& gate_qubits)
 {
-    idx_size bits = 0;
+    bitset<128> bits = 0;
     const int new_q = num_qubits_amp - 1;
     
     for (auto q : gate_qubits) {
-        bits |= ( 1ull << (new_q - q));
-        qubits_CZ_bitmasks[new_q - q] |= (1ull << (new_q - q));
+        bits[new_q - q] = 1;
+        qubits_CZ_bitmasks[new_q - q][new_q - q] = 1;
     }
     for (auto q : gate_qubits)
         qubits_CZ_bitmasks[new_q - q] ^= bits;
 }
 
 void
-GroupTGates(idx_size* __restrict T_bitmasks,
+GroupTGates(bitset<128>* __restrict T_bitmasks,
             const int num_qubits_amp,
             const vector<int>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
-    const idx_size t_mask = (1ull << ((num_qubits_amp - 1) - gate_qubits[0]));
+    bitset<128> t_mask;
+    t_mask[(num_qubits_amp - 1) - gate_qubits[0]] = 1;
     if ((T_bitmasks[0] & t_mask) != t_mask)
         T_bitmasks[0] |= t_mask;
     
@@ -75,8 +76,8 @@ ExtractIndicesForAmp(idx_size* strides,
 
 void
 FormBlockOfCZTGates(idx_size& gate_i,
-                    idx_size* __restrict CZ_bitmasks,
-                    idx_size* __restrict T_bitmasks /*2*/,
+                    bitset<128>* __restrict CZ_bitmasks,
+                    bitset<128>* __restrict T_bitmasks /*2*/,
                     const vector<Gate>& cluster,
                     const int num_qubits_amp)
 {
@@ -187,7 +188,8 @@ void
 Apply1QXYGates(cmplx* __restrict amp,
                const int q,
                const int num_qubits,
-               const Gate::Type gate_type)
+               const Gate::Type gate_type,
+               const int num_threads)
 {
     constexpr idx_size num_indices = 2;
     const idx_size amp_size = 1ull << num_qubits, 
@@ -217,7 +219,7 @@ Apply1QXYGates(cmplx* __restrict amp,
     }
     
     amp = (cmplx*)__builtin_assume_aligned(amp, 64);
-    #pragma omp parallel for schedule(guided) 
+    #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size idx = 0; idx < amp_size; idx += block_size) {
         idx_size iter_count = 0, block_idx = idx;
         array<idx_size, num_indices> temp_indices;
@@ -362,11 +364,12 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
 }
 
 idx_size
-XYRecursiveTransform(cmplx* __restrict amp,
-                     idx_size X_bitmask,
-                     idx_size Y_bitmask,
-                     const int num_qubits,
-                     const int th)
+XYFastTransform(cmplx* __restrict amp,
+                idx_size X_bitmask,
+                idx_size Y_bitmask,
+                const int num_qubits,
+                const int num_threads,
+                const int th)
 {
     static idx_size branches = 0;
     ++branches;
@@ -395,14 +398,16 @@ XYRecursiveTransform(cmplx* __restrict amp,
         Y_bitmask >>= k;
         idx_size temp_i = 0;
         
-        if (branches > NUM_THREADS) {
-            #pragma omp parallel for reduction(+:temp_i) num_threads(omp_get_num_procs())
+        if (branches > kNUM_BRANCHES) {
+            #pragma omp parallel for reduction(+:temp_i) num_threads(num_threads)
             for (idx_size i = 0; i < num_iters ; ++i)
-                temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - k, th);
+                temp_i += XYFastTransform(amp + (i * stride), X_bitmask,
+                                          Y_bitmask, num_qubits - k, num_threads, th);
         }
         else {
             for (idx_size i = 0; i < num_iters ; ++i)
-                temp_i += XYRecursiveTransform(amp + (i * stride), X_bitmask, Y_bitmask, num_qubits - k, th);
+                temp_i += XYFastTransform(amp + (i * stride), X_bitmask,
+                                          Y_bitmask, num_qubits - k, num_threads ,th);
         }
         i_count += temp_i / num_iters;
     }

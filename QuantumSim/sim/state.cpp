@@ -51,35 +51,44 @@ FullAmpStateVector::
     amp = nullptr;
 }
 
-idx_size FullAmpStateVector::
+bitset<128> FullAmpStateVector::
 FormBitmask(const vector<int>& qubits)
 {
-    idx_size qubits_bitmask = 0;
+    bitset<128> qubits_bitmask = 0;
     for (idx_size i = 0; i < qubits.size(); ++i)
         qubits_bitmask |= qubits[i];
     
     return qubits_bitmask;
 }
 
-void FullAmpStateVector::
-ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
-                      const idx_size __restrict T_bitmasks[2])
+bool FullAmpStateVector::
+ApplyBlockOfDiagGates(string& cz_bits,
+                      const bitset<128>* __restrict CZ_bitmasks,
+                      const bitset<128> __restrict T_bitmasks[2])
 {
     struct timeval start, end;
     gettimeofday(&start, NULL);
+    
+    idx_size CZ_bitmasks_64[num_qubits];
+    idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
+    for (int i = 0; i < num_qubits; ++i)
+        CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
+    
     if (num_qubits >= 4) {
 #ifdef Parallel
-        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads);
 #else
-        ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+        ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
 #endif
     }
     else
-        ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks, T_bitmasks);
+        ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
     gettimeofday(&end, NULL);
     
     time_by_category.CZ_T += ((end.tv_sec  - start.tv_sec) * 1000000u +
              end.tv_usec - start.tv_usec) / 1.e6;
+    
+    return false;
 }
 
 void FullAmpStateVector::
@@ -110,7 +119,7 @@ ApplyHGateOnAllAmps()
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
     
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(num_threads)
     for (idx_size i = 0; i < amp_size; i += 4) {
         __m256 t = _mm256_load_ps(t_amp + (2 * i));
         t = _mm256_or_ps(t, re_ones);
@@ -173,13 +182,13 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     }
     
     if (qubits_in_cluster1.size()) {
-        const idx_size clus1_q_bitmask = FormBitmask(qubits_in_cluster1);
-        ApplyFWHT(amp, clus1_q_bitmask, num_qubits, Gate::Type::X_1_2);
+        const bitset<128> clus1_q_bitmask = FormBitmask(qubits_in_cluster1);
+        ApplyFWHT(amp, clus1_q_bitmask.to_ulong(), num_qubits, Gate::Type::X_1_2);
         global_factor_power += qubits_in_cluster1.size();
     }
     if (qubits_in_cluster2.size()) {
-        const idx_size clus2_q_bitmask = FormBitmask(qubits_in_cluster2);
-        ApplyFWHT(amp, clus2_q_bitmask, num_qubits, Gate::Type::Y_1_2);
+        const bitset<128> clus2_q_bitmask = FormBitmask(qubits_in_cluster2);
+        ApplyFWHT(amp, clus2_q_bitmask.to_ulong(), num_qubits, Gate::Type::Y_1_2);
         global_factor_power += qubits_in_cluster2.size();
         global_i_counter += qubits_in_cluster2.size()/2;
     }
@@ -191,21 +200,21 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
 }
 
 void FullAmpStateVector::
-ApplyXYRecursiveTransform(idx_size X_bitmask,
-                          idx_size Y_bitmask,
+ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                          bitset<128> Y_bitmask,
                           const int th)
 {
     struct timeval begin, end;
     
-    idx_size num_Xgates = __builtin_popcountll(X_bitmask), num_Ygates = __builtin_popcountll(Y_bitmask);
+    idx_size num_Xgates = X_bitmask.count(), num_Ygates = Y_bitmask.count();
     if ((num_Xgates + num_Ygates) % 2 == 1) {
         gettimeofday(&begin, NULL);
-        const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
-        const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+        const int X_q = X_bitmask != 0 ? __builtin_ctzl(X_bitmask.to_ulong()) : 1000;
+        const int Y_q = Y_bitmask != 0 ? __builtin_ctzl(Y_bitmask.to_ulong()) : 1000;
         
         if (!(X_q == 1000 && Y_q == 1000)) {
             if (X_q < Y_q) {
-                Apply1QXYGates(amp, X_q, num_qubits, Gate::Type::X_1_2);
+                Apply1QXYGates(amp, X_q, num_qubits, Gate::Type::X_1_2, num_threads);
                 X_bitmask ^= 1ull << X_q;
                 global_factor_power += 2;
                 --num_Xgates;
@@ -215,7 +224,7 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
                 ++count_of_category.X1_2;
             }
             else {
-                Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2);
+                Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
                 Y_bitmask ^= 1ull << Y_q;
                 global_factor_power += 2;
                 --num_Ygates;
@@ -228,8 +237,8 @@ ApplyXYRecursiveTransform(idx_size X_bitmask,
     }
     
     gettimeofday(&begin, NULL);
-    if (X_bitmask || Y_bitmask)
-      global_i_counter += XYRecursiveTransform(amp, X_bitmask, Y_bitmask, num_qubits, th);
+    if (X_bitmask != 0 || Y_bitmask != 0)
+      global_i_counter += XYFastTransform(amp, X_bitmask.to_ulong(), Y_bitmask.to_ulong(), num_qubits, num_threads, th);
     
     if (num_Xgates)
         global_factor_power += num_Xgates;
@@ -415,7 +424,6 @@ Rescale()
                             : 1.0/pow(2,(global_factor_power/2));
 
     global_factor_power = 0;
-    
 //    for (idx_size i = 0; i < amp_size; ++i)
 //        amp[i] *= rescaling_factor;
     
@@ -423,7 +431,7 @@ Rescale()
     const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
         rescaling_factor, rescaling_factor , rescaling_factor, rescaling_factor};
     
-    #pragma omp parallel for
+    #pragma omp parallel for num_threads(num_threads)
     for (idx_size i = 0; i < amp_size; i += 4) {
         __m256 t = _mm256_load_ps(t_amp + (2 * i));
         t = _mm256_mul_ps(t, rescaling);

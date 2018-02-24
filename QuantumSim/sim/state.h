@@ -22,12 +22,13 @@ private:
     idx_size global_i_counter;
     int num_qubits;
     
-    idx_size FormBitmask(const vector<int>& qubits);
+    bitset<128> FormBitmask(const vector<int>& qubits);
     
 public:
     
-    void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
-                               const idx_size __restrict T_bitmasks[2]);
+    bool ApplyBlockOfDiagGates(string& cz_bits,
+                               const bitset<128>* __restrict CZ_bitmasks,
+                               const bitset<128> __restrict T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
                        const Gate& g = {});
@@ -42,8 +43,8 @@ public:
                                 idx_size& odd_Xi,
                                 idx_size& odd_Yi,
                                 const vector<Gate>& all_gates);
-    void ApplyXYRecursiveTransform(idx_size X_bitmask,
-                                   idx_size Y_bitmask,
+    void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                                   bitset<128> Y_bitmask,
                                    const int th);
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);

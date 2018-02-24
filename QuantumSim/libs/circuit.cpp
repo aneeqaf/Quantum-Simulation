@@ -622,13 +622,13 @@ ReadGoogleCircuitFile(const string& input_file,
             ids.insert(gates[gates.size() - 1].ids.begin(),
                                        Gate::Type::Control);
             gates[gates.size() - 1].num_controls = 1;
-            gates[gates.size() - 1].qubits.push_back(q1);
-            gates[gates.size() - 1].qubits.push_back(q2);
+            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
+            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q2);
         }
         
         if (gate_type != "cz") {
             file >> q1;
-            gates[gates.size() - 1].qubits.push_back(q1);
+            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
         }
     }
     clock_cycles.push_back(gates.size());

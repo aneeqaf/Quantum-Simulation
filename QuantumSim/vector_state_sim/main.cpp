@@ -46,7 +46,9 @@ int main(int argc, char *argv[])
     
     static struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
-        { "threshold",    required_argument,       nullptr, 't' },
+        { "idx",    required_argument,       nullptr, 'x' },
+        { "FTthreshold",    required_argument,       nullptr, 'f' },
+        { "num_threads",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
         { "google_spec",    required_argument,       nullptr, 'g' },
         { "google_input",    required_argument,       nullptr, 'h' },
@@ -55,17 +57,23 @@ int main(int argc, char *argv[])
         { "vcut_sizes",    required_argument,       nullptr, 'a' },
         { "hcut_sizes",    required_argument,       nullptr, 'b' },
         { "verbose",    required_argument,       nullptr, 'v' },
+        { "cbits",    required_argument,       nullptr, 'c' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool inputfile = false, googleInput = false, create = false, to_write = false;
-    string input_filename = "", out_file = "";
-    int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0;
+    bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false, print_idx = false;
+    string input_filename = "", out_file = "", idx_filename = "", cz_bits = "";
+    int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
+    num_threads = 1;
     Config::SimType sim_type = Config::FullState;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
     
-    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:a:v:b:", longopts, &idx)) != -1)
+#ifndef Xcode
+    num_threads = omp_get_num_procs();
+#endif
+    
+    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:a:v:b:x:f:c:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -76,6 +84,10 @@ int main(int argc, char *argv[])
             case 'b': {
                 string s_c = string(optarg);
                 hcut = stoi(s_c);
+                break;
+            }
+            case 'c': {
+                cz_bits = string(optarg);
                 break;
             }
             case 'd': {
@@ -130,7 +142,7 @@ int main(int argc, char *argv[])
                 sim_type = (Config::SimType)stoi(s_type);
                 break;
             }
-            case 't': {
+            case 'f': {
                 string s_th = string(optarg);
                 threshold = stoi(s_th);
                 break;
@@ -138,6 +150,38 @@ int main(int argc, char *argv[])
             case 'v': {
                 string s_v = string(optarg);
                 verbose = (Config::Verbose)stoi(s_v);
+                break;
+            }
+            case 't': {
+                string threads = string(optarg);
+                num_threads = stoi(threads);
+#ifndef Xcode
+                if (num_threads > omp_get_max_threads()) {
+                    cerr << "Number of threads specified greater than max number of threads\n";
+                    exit(1);
+                }
+#endif
+                break;
+            }
+            case 'x': {
+                if (argc < 2) {
+                    cerr << "Please enter filename\n";
+                    exit(1);
+                }
+                string idx_arg = string(optarg);
+                print_amp = true;
+                if (idx_arg.find(".") == string::npos) {
+                    string seed_str = idx_arg.substr(0, idx_arg.find_first_of(","));
+                    string num_idx_str = idx_arg.substr(idx_arg.find_first_of(",") + 1, idx_arg.find_first_of("+"));
+                    seed = stoi(seed_str);
+                    num_idx = stoi(num_idx_str);
+                    if (num_idx > 10000)
+                        throw "Cannot print more than 10000 amps";
+                    print_idx = idx_arg.find_first_of("+") != string::npos;
+                }
+                else {
+                    idx_filename = idx_arg;
+                }
                 break;
             }
             default: {
@@ -149,10 +193,6 @@ int main(int argc, char *argv[])
     } // while
     
     Circuit cir;
-    Config config(input_filename ,"output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
-                  "output/reports/" + out_file, "output/misc/g_" + out_file, sim_type, verbose, vcut, hcut,
-                  depth, threshold);
-    SequentialSimulation sim(config);
     if (inputfile || googleInput) {
         cmplx* amp_v = nullptr;
         idx_size size = 0;
@@ -178,6 +218,19 @@ int main(int argc, char *argv[])
         }
     }
     
+    Config config(input_filename ,"output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
+                  "output/reports/" + out_file, "output/misc/g_" + out_file, cz_bits, print_amp, print_idx, sim_type,
+                  verbose, vcut, hcut, depth, threshold, num_threads);
+    
+    if (print_amp) {
+        if (seed != -1)
+            config.GenerateRandomIndices(seed, num_idx, 1ull << cir.GetNumQubits());
+        else
+            config.ReadIndices(idx_filename);
+    }
+    SequentialSimulation sim(config);
+    
+    GenericQuantumState::num_threads = num_threads;
     if (sim_type == Config::FullState) {
         FullAmpStateVector amp(cir.GetNumQubits());
         sim.Simulate(amp, cir);

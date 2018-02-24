@@ -34,8 +34,10 @@ typedef struct CountOfCategory{
     ul decomposed_CZ;
     ul rescale;
     ul conversion;
+    ul xCZ_not_applied;
     
-    CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0){}
+    CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0),
+    xCZ_not_applied(0) {}
 }Counts;
 
 #endif /* time_h */

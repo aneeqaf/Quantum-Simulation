@@ -18,8 +18,8 @@ public:
     enum Cuts : int {Vertical, Horizontal};
 
 private:
-    idx_size a_qubits_bitmask;
-    idx_size b_qubits_bitmask;
+    bitset<128> a_qubits_bitmask;
+    bitset<128> b_qubits_bitmask;
     int num_q_a;
     int num_q_b;
     Cuts cut_type;
@@ -38,16 +38,17 @@ public:
     FullAmpStateVector* state_a;
     FullAmpStateVector* state_b;
     
-    void FindCZGatesBetweenPartitions(vector<pair<int,idx_size>>& CZ_bitmasks,
-                                      const idx_size* __restrict gate_bitmasks);
+    void FindCZGatesBetweenPartitions(vector<pair<int,bitset<128>>>& CZ_bitmasks,
+                                      const bitset<128>* __restrict gate_bitmasks);
     void ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
                                         const Gate::Type CZ_D_B,
                                         const int qubit_a,
                                         const int qubit_b);
-    void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
-                               const idx_size __restrict T_bitmasks[2]);
-    void CountXCZGates(const idx_size* __restrict CZ_bitmasks);
-    void ApplyXCZGateApprox(const idx_size* __restrict CZ_bitmasks,
+    bool ApplyBlockOfDiagGates(string& cz_bits,
+                               const bitset<128>* __restrict CZ_bitmasks,
+                               const bitset<128> __restrict T_bitmasks[2]);
+    idx_size CountXCZGates(const bitset<128>* __restrict CZ_bitmasks);
+    void ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
                             const Gate::Type CZ_D_A,
                             const Gate::Type CZ_D_B);
     void ApplyNonCGate(const int gate_qubit,
@@ -64,8 +65,8 @@ public:
                                 idx_size& odd_Xi,
                                 idx_size& odd_Yi,
                                 const vector<Gate>& all_gates) {};
-    void ApplyXYRecursiveTransform(idx_size X_bitmask,
-                                   idx_size Y_bitmask,
+    void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                                   bitset<128> Y_bitmask,
                                    const int th);
     
     cmplx operator[](idx_size i) const;
@@ -79,8 +80,8 @@ public:
     idx_size GetFullStateVectorSize() const;
     int GetStateANumQ() const;
     int GetStateBNumQ() const;
-    idx_size GetStateABitmask() const;
-    idx_size GetStateBBitmask() const;
+    bitset<128> GetStateABitmask() const;
+    bitset<128> GetStateBBitmask() const;
     idx_size GetGlobalFactorPower() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
@@ -108,22 +109,22 @@ public:
     ~TensorProductStateVector();
 };
 
-idx_size Project1QBitmask(const idx_size gate_bitmask,
-                          const idx_size partition_bitmask,
+idx_size Project1QBitmask(const bitset<128> gate_bitmask,
+                          const bitset<128> partition_bitmask,
                           const int num_qubits,
                           const bool zero_least_sig,
                           const bool leading_ones = false);
 
 int ProjectQubit(const int qubit_to_project,
-                 const idx_size partition_bitmask,
+                 const bitset<128> partition_bitmask,
                  const int num_qubits);
 
-bool ProjectCZBitmask(idx_size* __restrict projected_bitmasks,
-                      const idx_size partition_bitmask,
-                      const idx_size* __restrict gate_bitmasks,
+bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
+                      const bitset<128> partition_bitmask,
+                      const bitset<128>* __restrict gate_bitmasks,
                       const int total_circuit_qubits);
 
-idx_size ScatterGlobalIndex(const idx_size i,
+bitset<128> ScatterGlobalIndex(const idx_size i,
                             const idx_size partition_bitmask,
                             const idx_size total_qubits);
 

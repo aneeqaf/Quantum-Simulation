@@ -13,14 +13,25 @@ Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
 
-idx_size GenericQuantumState::
+#ifdef Xcode
+int GenericQuantumState::num_threads = 8;
+#else
+int GenericQuantumState::num_threads = omp_get_num_procs();
+#endif
+
+GenericQuantumState::
+GenericQuantumState(int n_threads) {
+    num_threads = n_threads;
+}
+
+bitset<128> GenericQuantumState::
 FormXYGatesBitmask(idx_size& gate_i,
                   const vector<Gate>& all_gates,
                   const Gate::Type gate_type)
 {
     vector<int> cluster_qubits = FormBlockOfXYHGates(gate_i, gate_type, all_gates);
     
-    idx_size bitmask = 0;
+    bitset<128> bitmask = 0;
     
     for (idx_size i = 0; i < cluster_qubits.size(); ++i)
         bitmask |= 1ull << cluster_qubits[i];
@@ -29,8 +40,8 @@ FormXYGatesBitmask(idx_size& gate_i,
 }
 
 void GenericQuantumState::
-FormCZTGatesBitmask(idx_size* __restrict CZ_bitmasks /*total_circuit_qubits*/,
-                    idx_size __restrict T_bitmasks[2],
+FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks /*total_circuit_qubits*/,
+                    bitset<128> __restrict T_bitmasks[2],
                     idx_size& gate_i,
                     const vector<Gate>& all_gates,
                     const int total_circuit_qubits)

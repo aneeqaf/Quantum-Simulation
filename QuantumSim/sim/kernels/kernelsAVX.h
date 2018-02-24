@@ -9,7 +9,47 @@
 #ifndef kernelsAVX_h
 #define kernelsAVX_h
 
-#include "kernels.h"
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <cassert>
+#include <cstdlib>
+#include <complex>
+#include <cstring>
+#include <ctime>
+#include <functional>
+#include <immintrin.h>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <memory>
+#include <stdalign.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <valarray>
+#include <vector>
+#include <utility>
+#include <unistd.h>
+#include <thread>
+#ifndef Xcode
+#include <omp.h>
+#endif
+
+
+#include "gates.h"
+
+constexpr float kH = 0.707106781;
+
+using idx_size = size_t;
+
+constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH}, -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
+constexpr float kTGate_re[8] = {1, kH, 0, -kH, -1, -kH, 0, kH};
+constexpr float kTGate_im[8] = {0, kH, 1, kH, 0, -kH, -1, -kH};
+constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
+constexpr cmplx kCZDecomposition[4] = {{1,-1}, {0,1}, {1,1}, {1,0}};
+constexpr cmplx ki = {0,1};
+constexpr int kRT = 8 * sizeof(idx_size) + 1;
+constexpr int kNUM_BRANCHES = 8;
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};
@@ -204,6 +244,6 @@ void
 ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_qubits_amp,
                                 const idx_size* __restrict CZ_bitmasks,
-                                const idx_size* __restrict T_bitmasks);
-
+                                const idx_size* __restrict T_bitmasks,
+                                const int num_threads);
 #endif /* kernelsAVX_h */

@@ -8,54 +8,9 @@
 #ifndef kernals_h
 #define kernals_h
 
-#include <algorithm>
-#include <array>
-#include <cassert>
-#include <cstdlib>
-#include <complex>
-#include <cstring>
-#include <ctime>
-#include <functional>
-#include <immintrin.h>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <memory>
-#include <stdalign.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <valarray>
-#include <vector>
-#include <unistd.h>
-#include <utility>
-#include <thread>
-
-#include "gates.h"
 #include "kernelsAVX.h"
 
-#ifndef Xcode
-#include <omp.h>
-#endif
-
-#ifdef Xcode
-#define NUM_THREADS 4
-#else
-#define NUM_THREADS 8
-#endif
-
 using namespace std;
-
-constexpr float kH = 0.707106781;
-
-using idx_size = idx_size;
-
-constexpr cmplx kTGate[8] = {1, {kH, kH}, {0,1}, {-kH, kH}, -1, {-kH, -kH}, {0, -1}, {kH, -kH}};
-constexpr float kTGate_re[8] = {1, kH, 0, -kH, -1, -kH, 0, kH};
-constexpr float kTGate_im[8] = {0, kH, 1, kH, 0, -kH, -1, -kH};
-constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
-constexpr cmplx kCZDecomposition[4] = {{1,-1}, {0,1}, {1,1}, {1,0}};
-constexpr cmplx ki = {0,1};
-constexpr int kRT = 8 * sizeof(idx_size) + 1;
 
 __attribute__((always_inline)) inline void
 ApplyX12Gate(cmplx* __restrict amp,
@@ -231,8 +186,8 @@ ExtractIndicesForAmp(idx_size* strides,
 
 void
 FormBlockOfCZTGates(idx_size& gate_i,
-                    idx_size* __restrict CZ_bitmasks,
-                    idx_size* __restrict T_bitmasks,
+                    bitset<128>* __restrict CZ_bitmasks,
+                    bitset<128>* __restrict T_bitmasks,
                     const vector<Gate>& cluster,
                     const int num_qubits_amp);
 
@@ -262,8 +217,8 @@ void
 Apply1QXYGates(cmplx* __restrict amp,
                const int q,
                const int num_qubits,
-               const Gate::Type gate_type);
-
+               const Gate::Type gate_type,
+               const int num_threads);
 
 void
 Apply2MergedXY12Gates(Gate gate1,
@@ -272,11 +227,12 @@ Apply2MergedXY12Gates(Gate gate1,
                       const int num_qubits_amp);
 
 idx_size
-XYRecursiveTransform(cmplx* __restrict amp,
-                     idx_size X_bitmask,
-                     idx_size Y_bitmask,
-                     const int num_qubits,
-                     const int th = 14);
+XYFastTransform(cmplx* __restrict amp,
+                idx_size X_bitmask,
+                idx_size Y_bitmask,
+                const int num_qubits,
+                const int num_threads,
+                const int th = 16);
 
 
 #endif /* kernels_h */

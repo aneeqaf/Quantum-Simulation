@@ -15,16 +15,26 @@ SequentialSimulation(const Config& c): total_time(0), config(c) {}
 void SequentialSimulation::
 PopulateBenchmarkMap()
 {
-    benchmark["25_26"] = {cmplx(0.000104529,-0.000158536), cmplx(0.00011983,5.54614e-05), cmplx(0.000158796,6.78702e-05),
-        cmplx(-1.13099e-05,-7.9362e-06), cmplx(4.02591e-05, -6.56695e-05)};
-    benchmark["25_101"] = {cmplx(-0.000162581, -1.55533e-05), cmplx(-8.97293e-06, -1.42227e-05), cmplx(6.07801e-05, -4.70146e-05),
-        cmplx(4.87014e-07, -0.000124961), cmplx(0.000202284, 0.000114519)};
-    benchmark["30_26"] = {cmplx(-2.88494e-05, -3.6528e-05), cmplx(1.01401e-05, 6.81786e-06), cmplx(5.24095e-06, 4.47689e-05),
-        cmplx(-6.54596e-06, -2.83312e-05), cmplx(1.06338e-05, 3.37055e-05)};
-    benchmark["30_101"] = {cmplx(-9.25684e-06, 5.20232e-05), cmplx(-3.33498e-05, 2.11104e-05), cmplx(-4.62867e-05, -1.58411e-05),
-        cmplx(-1.64932e-05, 3.05876e-05), cmplx(-1.56987e-05, -7.06633e-06)};
+    benchmark["25_26"] = {cmplx(-1.131e-05,-7.93622e-06), cmplx(8.75183e-05,5.33763e-05), cmplx(1.07944e-05,4.87672e-05),
+        cmplx(0.000104529,-0.000158536), cmplx(5.64697e-05,-0.000154015)};
+    benchmark["25_101"] = {cmplx(4.87169e-07,-0.000124961), cmplx(-3.05764e-05,-0.000204519), cmplx(-6.19013e-05,-8.43196e-05),
+        cmplx(-0.00016258,-1.55531e-05), cmplx(-0.000111381,0.000135595)};
+    benchmark["30_26"] = {cmplx(-6.54596e-06,-2.83312e-05), cmplx(9.81011e-06,-1.3834e-05), cmplx(-1.328e-06,-5.20411e-05),
+        cmplx(-2.88494e-05,-3.6528e-05), cmplx(2.02035e-05,-1.49718e-05)};
+    benchmark["30_101"] = {cmplx(-1.64932e-05,3.05875e-05), cmplx(-2.23461e-05,-2.09741e-05), cmplx(4.19768e-06,-3.64171e-05),
+        cmplx(-9.25683e-06,5.20232e-05), cmplx(4.8687e-06,-1.32963e-05)};
+    
     benchmark["35_26"] = {cmplx(2.26241e-06, -2.0497e-06), cmplx(-2.16094e-06, -4.74918e-06), cmplx(2.07073e-06, -1.09369e-06),
         cmplx(-3.07386e-06, 2.53828e-06), cmplx(2.9415e-06, 4.65522e-06)};
+    
+//    benchmark["25_26"] = {cmplx(0.000104529,-0.000158536), cmplx(0.00011983,5.54614e-05), cmplx(0.000158796,6.78702e-05),
+//        cmplx(-1.13099e-05,-7.9362e-06), cmplx(4.02591e-05, -6.56695e-05)};
+//    benchmark["25_101"] = {cmplx(-0.000162581, -1.55533e-05), cmplx(-8.97293e-06, -1.42227e-05), cmplx(6.07801e-05, -4.70146e-05),
+//        cmplx(4.87014e-07, -0.000124961), cmplx(0.000202284, 0.000114519)};
+//    benchmark["30_26"] = {cmplx(-2.88494e-05, -3.6528e-05), cmplx(1.01401e-05, 6.81786e-06), cmplx(5.24095e-06, 4.47689e-05),
+//        cmplx(-6.54596e-06, -2.83312e-05), cmplx(1.06338e-05, 3.37055e-05)};
+//    benchmark["30_101"] = {cmplx(-9.25684e-06, 5.20232e-05), cmplx(-3.33498e-05, 2.11104e-05), cmplx(-4.62867e-05, -1.58411e-05),
+//        cmplx(-1.64932e-05, 3.05876e-05), cmplx(-1.56987e-05, -7.06633e-06)};
 }
 
 void SequentialSimulation::
@@ -65,8 +75,8 @@ Simulate(GenericQuantumState& amp,
             
             struct timeval cycle_end;
             gettimeofday(&cycle_end, NULL);
-            for (int c = 0; c < circuit.GetNumCycles(); ++c) {
-                if (i < circuit.GateIndexForCycle(c)) {
+            for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
+                if (i < (idx_size)circuit.GateIndexForCycle(c)) {
                     current_cycle = c;
                     break;
                 }
@@ -133,21 +143,25 @@ Simulate(GenericQuantumState& amp,
                  
                  gettimeofday(&cycle_start, NULL);
                  idx_size prev_i = i;
-                 idx_size T_bitmasks[2] = {0};
-                 idx_size CZ_bitmasks[total_circuit_qubits];
+                 bitset<128> T_bitmasks[2] = {0};
+                 bitset<128> CZ_bitmasks[total_circuit_qubits];
                  amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
-                 amp.ApplyBlockOfDiagGates(CZ_bitmasks, T_bitmasks);
-    
-                 amp.count_of_category.CZ_T += i - prev_i;
+                 bool terminate = amp.ApplyBlockOfDiagGates(config.cz_bits, CZ_bitmasks, T_bitmasks);
+                 
                  if (config.sim_type == Config::SimType::FullState) {
                      amp.data_per_cycles.xCZ_H.push_back(0);
                      amp.data_per_cycles.xCZ_V.push_back(0);
                  }
-                 amp.data_per_cycles.T_gates.push_back(
-                                __builtin_popcountll(T_bitmasks[0]) + __builtin_popcountll(T_bitmasks[1]));
-                 amp.data_per_cycles.CZ_gates.push_back(i - prev_i - amp.data_per_cycles.T_gates.back());
+                 amp.count_of_category.CZ_T += i - prev_i - amp.count_of_category.xCZ_not_applied;
+                 amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
+                 amp.data_per_cycles.CZ_gates.push_back(i - prev_i -
+                                                        amp.data_per_cycles.T_gates.back() -
+                                                        amp.count_of_category.xCZ_not_applied);
                  
                  i -= 1;
+                 
+                 if (terminate)
+                     break;
             }
              else {
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
@@ -167,8 +181,8 @@ Simulate(GenericQuantumState& amp,
                       i += 2;
 #endif
 #ifdef RT
-                     idx_size X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
-                     idx_size Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                     bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
+                     bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
                      amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config.th);
 #endif
                      amp.count_of_category.merged_XY1_2 += i - prev_i;
@@ -194,9 +208,30 @@ Simulate(GenericQuantumState& amp,
     total_time = (((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
              end_p.tv_usec - start_p.tv_usec) / 1.e6) - XE_time;
 
-#ifdef Print
-    amp.PrintStateVector();
-#endif
+    if (config.print_amp) {
+        string command = "mkdir -p " + config.amp_outfile;
+        system(command.c_str());
+        string amp_outfile = config.amp_outfile + "/output_" + to_string(getpid()) + ".amps";
+        string idx_outfile = config.amp_outfile + "/output_" + to_string(getpid()) + ".idx";
+        ofstream amp_out, idx_out;
+        amp_out.open(amp_outfile);
+        idx_out.open(idx_outfile);
+        
+        auto& idx_print = config.indices;
+        for (idx_size i = 0; i < idx_print.size(); ++i) {
+            amp_out << real(amp[idx_print[i]]);
+            idx_out << idx_print[i] << "\n";
+            if (imag(amp[idx_print[i]]) < 0) amp_out << imag(amp[idx_print[i]]) << "j";
+            else amp_out << "+" << imag(amp[idx_print[i]]) << "j";
+            amp_out << "\n";
+        }
+        amp_out.close();
+        idx_out.close();
+    }
+    
+//#ifdef Print
+//    amp.PrintStateVector();
+//#endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
 #endif
@@ -237,6 +272,10 @@ PrintReport(GenericQuantumState& amp,
         system("sysctl -n machdep.cpu.core_count");
         cout << "Hardware threads : "; flush(cout);
         system("sysctl -n machdep.cpu.thread_count");
+#ifdef Parallel
+        flush(cout);
+        cout << "Max threads per process : " << config.num_threads << "\n";
+#endif
         cout << "L2 cache size : "; flush(cout);
         system("sysctl -n hw.l2cachesize");
         cout << "L3 cache size : "; flush(cout);
@@ -248,10 +287,14 @@ PrintReport(GenericQuantumState& amp,
         system("egrep cores /proc/cpuinfo | head -1");
         cout << "Hardware threads : "; flush(cout);
         system("egrep cores  /proc/cpuinfo | wc -l");
+#ifdef Parallel
+        flush(cout);
+        cout << "Max threads per process : " << config.num_threads << "\n";
+#endif
         cout << "L3 " ; flush(cout);
         system("egrep cache /proc/cpuinfo | head -1");
     #endif
-        cout << "CPU supports :"
+        cout << "CPU instructions width :"
         << " popcnt:" << __builtin_cpu_supports("popcnt");
         
         if (__builtin_cpu_supports("sse4.2"))
@@ -270,7 +313,9 @@ PrintReport(GenericQuantumState& amp,
             cout << ", sse:" << __builtin_cpu_supports("sse");
         
         cout << ", avx:" << __builtin_cpu_supports("avx")
-             << ", avx2:" << __builtin_cpu_supports("avx2") << "\n\n";
+             << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
+        cout << "Using instructions : " << "AVX-2, popcnt\n\n";
+        
         cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
         <<  __GNUC_PATCHLEVEL__<< "\n";
     
@@ -326,7 +371,7 @@ PrintReport(GenericQuantumState& amp,
         cout << "Simulation xCZ gates : approx\n";
         cout << amp.log[log_count++];
     }
-    else if (config.sim_type == Config::SimType::Approx2Cuts) {
+    else if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT) {
         cout << "sum of tensor products / approx2Cuts\n";
         cout << "Simulation xCZ gates : approx\n";
         cout << amp.log[log_count++];
@@ -345,11 +390,6 @@ PrintReport(GenericQuantumState& amp,
         double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 #ifdef RT
         cout << "Recursion end-case(max) : " << config.th << " q\n";
-#ifdef Parallel
-        cout << "Number of threads : " << thread::hardware_concurrency() << "\n";
-#else
-        cout << "Number of threads : 1\n";
-#endif
         cout << "Verbosity : " << config.verbose << "\n\n";
 #endif
         double memory = amp.GetMemUsage();
@@ -385,7 +425,7 @@ PrintReport(GenericQuantumState& amp,
     
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
-        
+    
         if (benchmark.count(key)) {
             if (real(amp[3]) - real(benchmark[key][0]) < 1e-9
                 && imag(amp[3]) - imag(benchmark[key][0]) < 1e-9
@@ -414,6 +454,7 @@ PrintReport(GenericQuantumState& amp,
                     }
                     else
                         cout << " + " << imag0 << "i\n";
+                    cout << amp[3] << "\n";
                     
                     cout << "amp[1/4]\t= " << real(benchmark[key][1]);
                     if (imag(benchmark[key][1]) < 0) {
@@ -422,6 +463,7 @@ PrintReport(GenericQuantumState& amp,
                     }
                     else
                         cout << " + " << imag1 << "i\n";
+                    cout << amp[temp_amp_size/4] << "\n";
                     
                     cout << "amp[1/2]\t= " << real(benchmark[key][2]);
                     if (imag(benchmark[key][2]) < 0) {
@@ -430,6 +472,7 @@ PrintReport(GenericQuantumState& amp,
                     }
                     else
                         cout << " + " << imag2 << "i\n";
+                    cout << amp[temp_amp_size/2] << "\n";
                     
                     cout << "amp[3/4]\t= " << real(benchmark[key][3]);
                     if (imag(benchmark[key][3]) < 0) {
@@ -438,6 +481,7 @@ PrintReport(GenericQuantumState& amp,
                     }
                     else
                         cout << " + " << imag3 << "i\n";
+                     cout << amp[3 * temp_amp_size/4] << "\n";
                     
                     cout << "amp[-3] \t= "  << real(benchmark[key][4]);
                     if (imag(benchmark[key][4]) < 0) {
@@ -446,6 +490,8 @@ PrintReport(GenericQuantumState& amp,
                     }
                     else
                         cout << " + " << imag4 << "i\n";
+                    cout << amp[temp_amp_size - 3] << "\n";
+                    
                     cout << "Incorrect results: \n";
                 }
             }
@@ -547,6 +593,8 @@ PrintReport(GenericQuantumState& amp,
             << (amp.time_by_category.conversion/total_time) * 100 << "%\n";
         }
         
+        ss << "Average time per gate : " << total_time/circuit.GetTotalNumGates() << "s\n";
+        
         cout << ss.str() << "\n";
     }
     
@@ -576,10 +624,13 @@ PrintReport(GenericQuantumState& amp,
     ofstream file;
     file.open(config.misc_outfile + ".txt");
     for (idx_size i = 0; i < amp.data_per_cycles.cycles.size(); ++i) {
-        file << amp.data_per_cycles.cycles[i] << ","
-        << amp.data_per_cycles.CZ_gates[i] << ","
-        << amp.data_per_cycles.T_gates[i] << ","
-        << amp.data_per_cycles.XY_gates[i] ; //Fix when no XY gates 
+        file << amp.data_per_cycles.cycles[i];
+        if (!amp.data_per_cycles.CZ_gates.empty())
+            file << "," << amp.data_per_cycles.CZ_gates[i];
+        if (!amp.data_per_cycles.T_gates.empty())
+            file << "," << amp.data_per_cycles.T_gates[i];
+        if (!amp.data_per_cycles.XY_gates.empty())
+            file << "," << amp.data_per_cycles.XY_gates[i]; //Fix when no XY gates
         if (config.sim_type != Config::SimType::FullState)
             file << "," << amp.data_per_cycles.xCZ_H[i] << "," << amp.data_per_cycles.xCZ_V[i];
         file << "\n";
@@ -703,7 +754,7 @@ PrintReportToFile(GenericQuantumState& amp,
         file << "xCZ gates simulated : approx\n";
         file << amp.log[log_count++];
     }
-    else if (config.sim_type == Config::SimType::Approx2Cuts) {
+    else if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT) {
         file << "sum of tensor products / approx2Cuts\n";
         file << "xCZ gates simulated : approx\n";
         file << amp.log[log_count++];

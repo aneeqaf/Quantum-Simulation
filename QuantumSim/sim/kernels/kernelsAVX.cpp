@@ -97,12 +97,13 @@ void
 ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_qubits_amp,
                                 const idx_size* __restrict CZ_bitmasks,
-                                const idx_size* __restrict T_bitmasks /*2*/)
+                                const idx_size* __restrict T_bitmasks /*2*/,
+                                const int num_threads)
 {
     const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1u << 12) ? (1u << 12) : amp_size;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-    #pragma omp parallel for schedule(guided) 
+    #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
         const idx_size block_end = block_begin + block_size;
    
@@ -114,7 +115,7 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
             prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
 //            idx_size leading_0 = 64 - __builtin_clzl(prev_gc);// last_non0_bit = num_qubits_amp - trailing_0;
             idx_size gate_count = 0;
-            for (idx_size i = 0; i < num_qubits_amp; ++i) {
+            for (idx_size i = 0; i < (idx_size)num_qubits_amp; ++i) {
                 if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i]))
                     gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
             }

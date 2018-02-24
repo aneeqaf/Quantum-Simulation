@@ -43,9 +43,11 @@ public:
     static vector<string> log;
     static Counts count_of_category;
     static Times time_by_category;
+    static int num_threads;
     
-    virtual void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
-                                       const idx_size __restrict T_bitmasks[2]) = 0;
+    virtual bool ApplyBlockOfDiagGates(string& cz_bits,
+                                       const bitset<128>* __restrict CZ_bitmasks,
+                                       const bitset<128> __restrict T_bitmasks[2]) = 0;
     virtual void ApplyNonCGate(const int gate_qubit,
                                const Gate::Type gate_type,
                                const Gate& g = {}) = 0;
@@ -60,14 +62,14 @@ public:
                                         idx_size& odd_Xi,
                                         idx_size& odd_Yi,
                                         const vector<Gate>& all_gates) = 0;
-    virtual void ApplyXYRecursiveTransform(idx_size X_bitmask,
-                                           idx_size Y_bitmask,
+    virtual void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                                           bitset<128> Y_bitmask,
                                            const int th) = 0;
-    virtual idx_size FormXYGatesBitmask(idx_size& gate_i,
+    virtual bitset<128> FormXYGatesBitmask(idx_size& gate_i,
                                         const vector<Gate>& all_gates,
                                         const Gate::Type gate_type);
-    virtual void FormCZTGatesBitmask(idx_size* __restrict CZ_bitmasks,
-                                     idx_size __restrict T_bitmasks[2],
+    virtual void FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks,
+                                     bitset<128> __restrict T_bitmasks[2],
                                      idx_size& gate_i,
                                      const vector<Gate>& all_gates,
                                      const int total_circuit_qubits);
@@ -97,6 +99,7 @@ public:
                                     const int cycle_num)  = 0;
         
     GenericQuantumState(){}
+    GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };
 

@@ -20,9 +20,11 @@ private:
     idx_size num_addends;
     
 public:
-    void ApplyBlockOfDiagGates(const idx_size* __restrict CZ_bitmasks,
-                               const idx_size __restrict T_bitmasks[2]);
-    inline void ApplyXCZGatesExact(const idx_size* __restrict CZ_bitmasks);
+    bool ApplyBlockOfDiagGates(string& cz_bits,
+                               const bitset<128>* __restrict CZ_bitmasks,
+                               const bitset<128> __restrict T_bitmasks[2]);
+    inline bool ApplyXCZGatesExact(string& cz_bits,
+                                   const bitset<128>* __restrict CZ_bitmasks);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
                        const Gate& g = {});
@@ -37,8 +39,8 @@ public:
                                 idx_size& odd_Xi,
                                 idx_size& odd_Yi,
                                 const vector<Gate>& all_gates) {};
-    void ApplyXYRecursiveTransform(idx_size X_bitmask,
-                                   idx_size Y_bitmask,
+    void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                                   bitset<128> Y_bitmask,
                                    const int th);
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
@@ -48,6 +50,7 @@ public:
     double GetMaxProb() const;
     double GetAvgProb() const;
     double GetMemUsage() const;
+    Config::SimType GetSimType() const;
     idx_size GetNumAddends() const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
