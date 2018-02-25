@@ -21,7 +21,7 @@
 #include "kernels1.h"
 #include "profile.h"
 
-constexpr int sampling_factor = 10;
+constexpr int sampling_factor = 1000;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;
@@ -74,7 +74,7 @@ public:
                                      const vector<Gate>& all_gates,
                                      const int total_circuit_qubits);
     
-    virtual cmplx operator[](idx_size i) const = 0;
+    virtual cmplx operator[](bitset<128> i) const = 0;
     virtual double GetMinProb() const = 0;
     virtual double GetMaxProb() const = 0;
     virtual double GetAvgProb() const = 0;
@@ -87,6 +87,8 @@ public:
     virtual double CalculateMeanEntropy() const = 0;
     virtual double CalculateCrossEntropy(int range) const = 0;
     virtual void Normalize() = 0;
+    virtual idx_size CountZeroAmp() const = 0;
+    virtual idx_size GetNumAddends() const;
     
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;

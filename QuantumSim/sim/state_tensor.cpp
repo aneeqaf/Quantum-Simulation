@@ -46,7 +46,7 @@ Project1QBitmask(const bitset<128> gate_bitmask,
         assert(false);
 //        return gate_bitmask & partition_bitmask;
     }//TODO:FIX
-    
+
     return projected_bitmask;
 }
 
@@ -96,22 +96,19 @@ ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
 }
 
 bitset<128>
-ScatterGlobalIndex(const idx_size i,
+ScatterGlobalIndex(const bitset<128> i,
                    const bitset<128> partition_bitmask,
                    const idx_size total_qubits)
 {
     bitset<128> local_idx = 0;
     int count = 0;
-    
+
     for (idx_size j = 0; j < total_qubits; ++j) {
         bitset<128> j_bit = 0;
         j_bit[j] = 1;
-        if ((j_bit & partition_bitmask) != 0) continue;
-        
-        int first_half = __builtin_ctzl(j_bit.to_ulong());
-        int second_half = __builtin_ctzl((j_bit >> 64).to_ulong());
-        
-        if ((first_half & i) || (second_half & i)) local_idx[count++] = 1;
+        if ((j_bit & partition_bitmask) == 0) continue;
+
+        if ((j_bit & i) != 0) local_idx[count++] = 1;
         else ++count;
     }
     return local_idx;
@@ -311,7 +308,7 @@ CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
             ++new_count;
             int first_half = __builtin_ctzl(qubits_gates_across[i].second.to_ulong());
             int second_half = __builtin_ctzl((qubits_gates_across[i].second >> 64).to_ulong());
-            const int q1 = first_half ? first_half : 64 + second_half;
+            const int q1 = first_half ? first_half : second_half ? 64 + second_half : 0;
             qubits_gates_across[i].second[q1] = 0;
         }
     }
@@ -333,7 +330,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
         while (g.second != 0) {
             int first_half = __builtin_ctzl(g.second.to_ulong());
             int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
-            const int q = first_half ? first_half : 64 + second_half;
+            const int q = first_half ? first_half : second_half ? 64 + second_half : 0;
             ++count_of_category.decomposed_CZ;
             ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, g.first, modified_num_q_B - q);
             g.second[q] = 0;
@@ -433,7 +430,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 cmplx TensorProductStateVector::
-operator[](idx_size i) const
+operator[](bitset<128> i) const
 {
     const idx_size total_q = num_q_a + num_q_b;
     
@@ -491,7 +488,8 @@ idx_size TensorProductStateVector::
 GetFullStateVectorSize() const
 {
     bitset<128> temp = 0;
-    return (idx_size)(temp[num_q_a + num_q_b]);
+    temp[num_q_a + num_q_b] = 1;
+    return temp.to_ulong();
 }
 
 int TensorProductStateVector::
@@ -620,6 +618,26 @@ GetGlobalFactorPower() const
 {
     return state_a -> GetGlobalFactorPower() > state_b -> GetGlobalFactorPower() ?
     state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
+}
+
+idx_size TensorProductStateVector::
+CountZeroAmp() const
+{
+    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    idx_size zero_count = 0;
+    
+    for (idx_size i = 0; i < a_size; ++i) {
+        if ((*state_a)[i] == cmplx(0,0))
+            zero_count += b_size;
+        else {
+            for (idx_size j = 0; j < b_size; ++j) {
+                if ((*state_b)[j] == cmplx(0,0))
+                    ++zero_count;
+            }
+        }
+    }
+    
+    return zero_count;
 }
 
 void TensorProductStateVector::

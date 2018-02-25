@@ -25,7 +25,7 @@ Config(const string ifile,
        const int t,
        const int n_threads,
        const bool google) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
-misc_outfile(mfile), cz_bits(cz_b), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), google(google),
+misc_outfile(mfile), cz_path(cz_b), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), google(google),
 print_amp(p_amp), print_idx(p_idx), sim_type(sim), verbose(v)
 {
     if (t == -1)
@@ -70,7 +70,7 @@ Config(const Config& rhs)
     amp_outfile = rhs.amp_outfile;
     report_outfile = rhs.report_outfile;
     misc_outfile = rhs.misc_outfile;
-    cz_bits = rhs.cz_bits;
+    cz_path = rhs.cz_path;
     print_amp = rhs.print_amp;
     print_idx = rhs.print_idx;
     depth = rhs.depth;
@@ -92,7 +92,7 @@ operator=(const Config& rhs)
     amp_outfile = rhs.amp_outfile;
     report_outfile = rhs.report_outfile;
     misc_outfile = rhs.misc_outfile;
-    cz_bits = rhs.cz_bits;
+    cz_path = rhs.cz_path;
     print_amp = rhs.print_amp;
     print_idx = rhs.print_idx;
     depth = rhs.depth;

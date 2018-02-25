@@ -28,7 +28,7 @@ public:
     string amp_outfile;
     string report_outfile;
     string misc_outfile;
-    string cz_bits;
+    string cz_path;
     int depth;
     int th;
     int num_threads;
@@ -46,7 +46,7 @@ public:
                                const idx_size amp_size);
     
     Config() : indices({}), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
-    cz_bits(""), depth(26), th(14), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false), print_idx(false),
+    cz_path("*"), depth(26), th(14), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false), print_idx(false),
     sim_type(FullState), verbose(Default) {}
     Config(const string ifile,
            const string pfile,

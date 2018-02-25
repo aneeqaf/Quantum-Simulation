@@ -41,7 +41,11 @@ void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
+    if (config.verbose)
+        PrintSimSpecReport(amp, circuit);
+    
     PopulateBenchmarkMap();
+    
     idx_size size = circuit.GetTotalNumGates();
     int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
     double XE_time = 0;
@@ -146,7 +150,7 @@ Simulate(GenericQuantumState& amp,
                  bitset<128> T_bitmasks[2] = {0};
                  bitset<128> CZ_bitmasks[total_circuit_qubits];
                  amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
-                 bool terminate = amp.ApplyBlockOfDiagGates(config.cz_bits, CZ_bitmasks, T_bitmasks);
+                 bool terminate = amp.ApplyBlockOfDiagGates(config.cz_path, CZ_bitmasks, T_bitmasks);
                  
                  if (config.sim_type == Config::SimType::FullState) {
                      amp.data_per_cycles.xCZ_H.push_back(0);
@@ -208,6 +212,23 @@ Simulate(GenericQuantumState& amp,
     total_time = (((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
              end_p.tv_usec - start_p.tv_usec) / 1.e6) - XE_time;
 
+//#ifdef Print
+//    amp.PrintStateVector();
+//#endif
+#ifdef CosineSimilarity
+    amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
+#endif
+#ifdef PorterThomas
+    amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
+#endif
+#ifdef ReportToFile
+    if (config.verbose)
+        PrintReportToFile(amp, circuit);
+#else
+    if (config.verbose)
+        PrintSimReport(amp, circuit);
+#endif
+    
     if (config.print_amp) {
         string command = "mkdir -p " + config.amp_outfile;
         system(command.c_str());
@@ -229,31 +250,14 @@ Simulate(GenericQuantumState& amp,
         idx_out.close();
     }
     
-//#ifdef Print
-//    amp.PrintStateVector();
-//#endif
-#ifdef CosineSimilarity
-    amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
-#endif
-#ifdef PorterThomas
-    amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
-#endif
-#ifdef ReportToFile
-    if (config.verbose)
-        PrintReportToFile(amp, circuit);
-#else
-    if (config.verbose)
-        PrintReport(amp, circuit);
-#endif
     
 }
 
 void SequentialSimulation::
-PrintReport(GenericQuantumState& amp,
-            const Circuit& circuit) const
+PrintSystemReport() const
 {
     cout << "Rollright ver 1.3 - a quantum circuit simulator\n\n";
-
+    
     char hostname[20] = {};
     gethostname(hostname, 20);
     cout << "Hostname : ";
@@ -261,9 +265,8 @@ PrintReport(GenericQuantumState& amp,
         cout << h;
     }
     cout << "\n";
-    amp.Rescale();
-    amp.ApplyGlobalICounter();
-   
+    
+    
     if (config.verbose != Config::Verbose::NCCV && config.verbose != Config::Verbose::NCC) {
 #ifdef __APPLE__
         cout << "CPU model name : "; flush(cout);
@@ -280,8 +283,8 @@ PrintReport(GenericQuantumState& amp,
         system("sysctl -n hw.l2cachesize");
         cout << "L3 cache size : "; flush(cout);
         system("sysctl -n hw.l3cachesize");
-    #endif
-    #ifndef __APPLE__
+#endif
+#ifndef __APPLE__
         cout << "CPU "; flush(cout);
         system("egrep CPU /proc/cpuinfo | head -1");
         system("egrep cores /proc/cpuinfo | head -1");
@@ -293,7 +296,7 @@ PrintReport(GenericQuantumState& amp,
 #endif
         cout << "L3 " ; flush(cout);
         system("egrep cache /proc/cpuinfo | head -1");
-    #endif
+#endif
         cout << "CPU instructions width :"
         << " popcnt:" << __builtin_cpu_supports("popcnt");
         
@@ -313,12 +316,12 @@ PrintReport(GenericQuantumState& amp,
             cout << ", sse:" << __builtin_cpu_supports("sse");
         
         cout << ", avx:" << __builtin_cpu_supports("avx")
-             << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
+        << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
         cout << "Using instructions : " << "AVX-2, popcnt\n\n";
         
         cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
         <<  __GNUC_PATCHLEVEL__<< "\n";
-    
+        
         cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
         time_t t = time(0);
         struct tm * now = localtime (&t);
@@ -328,9 +331,16 @@ PrintReport(GenericQuantumState& amp,
         << (now->tm_year + 1900) << " "
         <<  now->tm_hour << ":" << now->tm_min << ":"
         << std::setw(2) << std::setfill('0') << now->tm_sec
-        <<"\n\n";
+        <<"\n";
+        cout << "Size of complex : " << sizeof(cmplx) << " B\n";
+        cout << "Verbosity : " << config.verbose << "\n\n";
     }
-    
+}
+
+void SequentialSimulation::
+PrintSimSpecReport(const GenericQuantumState& amp,
+                   const Circuit& circuit) const
+{
     if (config.google) {
         cout << "Circuit file : " + config.infile + "\n";
         cout << "Circuit type : Google\n";
@@ -344,42 +354,59 @@ PrintReport(GenericQuantumState& amp,
     cout << "Simulation type : ";
     if (config.sim_type == Config::SimType::FullState) {
         cout << "full state-vector  \n";
-        cout << "Simulation of xCZ gates : exact\n";
     }
     else if (config.sim_type == Config::SimType::LosslessH) {
-        cout << "sum of tensor products / losslessH \n";
-        cout << "Simulation xCZ gates : exact\n";
+        cout << "sum of tensor products / single cut\n";
+        cout << "Simulating xCZ gates : exactly\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::LosslessV) {
-        cout << "sum of tensor products / losslessV \n";
-        cout << "Simulation xCZ gates : exact\n";
+        cout << "sum of tensor products / single cut\n";
+        cout << "Simulating xCZ gates : exactly\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx1CutH) {
-        cout << "tensor products / approx1CutH \n";
-        cout << "Simulation xCZ gates : ignored\n";
+        cout << "tensor products / approx single cut\n";
+        cout << "Simulating xCZ gates : ignored\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx1CutV) {
-        cout << "tensor products / approx1CutV \n";
-        cout << "Simulation xCZ gates : ignored\n";
+        cout << "tensor products / approx single cut\n";
+        cout << "Simulating xCZ gates : ignored\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::Approx2011) {
         cout << "tensor products / approx2011 \n";
-        cout << "Simulation xCZ gates : approx\n";
+        cout << "Simulating xCZ gates : approx\n";
         cout << amp.log[log_count++];
     }
     else if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT) {
-        cout << "sum of tensor products / approx2Cuts\n";
-        cout << "Simulation xCZ gates : approx\n";
+        cout << "sum of tensor products / approx 2 cuts\n";
+        cout << "Simulating xCZ gates : approx\n";
         cout << amp.log[log_count++];
         cout << amp.log[log_count++];
-        amp.Normalize();
     }
     
-    cout << "Size of complex : " << sizeof(cmplx) << " B\n";
+    cout << "Recursion end-case(max) : " << config.th << " q\n";
+    
+    if (config.cz_path != "*")
+        cout << "Input CZ path : " << config.cz_path << "\n";
+}
+
+void SequentialSimulation::
+PrintSimReport(GenericQuantumState& amp,
+            const Circuit& circuit) const
+{
+    if (config.cz_path != "" && config.cz_path != "*")
+        cout << "Truncated CZ path : " << config.cz_path << "\n";
+    
+    cout << "\n";
+    
+    amp.Rescale();
+    amp.ApplyGlobalICounter();
+   
+    if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT)
+        amp.Normalize();
     
     idx_size temp_amp_size = amp.GetFullStateVectorSize();
     
@@ -388,10 +415,7 @@ PrintReport(GenericQuantumState& amp,
         ss << setprecision(3);
         double norm = amp.CalculateNormSquared();
         double avg_inacc = amp.CalculateAverageInaccuracy(norm);
-#ifdef RT
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
-        cout << "Verbosity : " << config.verbose << "\n\n";
-#endif
+
         double memory = amp.GetMemUsage();
         ss << "State representation size : ";
 
@@ -408,21 +432,31 @@ PrintReport(GenericQuantumState& amp,
             ss << memory << " B \n";
 
         ss << "Norm";
-        if (config.sim_type != Config::SimType::FullState)
+        if (amp.GetNumAddends() > 1)
             ss << "(assuming orthogonal addends)";
         
+        double min = amp.GetMinProb();
         ss << " : " << sqrt(norm) << "\n";
         ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
         ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
         ss << "Probabilities : " << amp.GetMinProb() << "(min), "
              << amp.GetMaxProb() << "(max), "
              << amp.GetAvgProb() << "(avg)\n";
-        ss << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
-        ss << "Avg inaccuracy per probability > " << avg_inacc << " ("<< (avg_inacc/amp.GetAvgProb()) * 100 << "%)\n\n";
+        
+        if (min)
+           ss << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
+        if (norm >= 0.9)
+            ss << "Avg inaccuracy per probability > " << avg_inacc << " ("<< (avg_inacc/amp.GetAvgProb()) * 100 << "%)\n";
+        
+        idx_size zero_amps = amp.CountZeroAmp();
+        if (zero_amps)
+            ss << "Stored zero amplitudes : " << (double(zero_amps)/double(temp_amp_size)) * 100 << "%\n";
+        ss << "\n";
         cout << ss.str();
     }
     
-    
+    if (config.cz_path == "*") {
+        
         string key = to_string(circuit.GetNumQubits()) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
     
@@ -498,6 +532,7 @@ PrintReport(GenericQuantumState& amp,
         }
         else
             cout << "no data available\n";
+    }
     
     if (config.verbose != Config::Verbose::NCCV)
     {

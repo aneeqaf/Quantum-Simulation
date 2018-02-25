@@ -39,7 +39,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
     else {
         terminate = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
         
-        if (sumOfTensors -> GetNumAddends() > 10 || cz_bits == "") {
+        if (sumOfTensors -> GetNumAddends() > 10) {
             clock_t begin = clock();
             
             //Add support for finding the cut type
@@ -111,7 +111,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 cmplx AdaptiveStateVector::
-operator[](idx_size i) const
+operator[](bitset<128> i) const
 {
     if (full_state)
         return (*full_state)[i];
@@ -228,6 +228,15 @@ CalculateCrossEntropy(int range) const
         return sumOfTensors -> CalculateCrossEntropy(range);
 }
 
+idx_size AdaptiveStateVector::
+GetNumAddends() const
+{
+    if (full_state)
+        return 0;
+    else
+        return sumOfTensors -> GetNumAddends();
+}
+
 void AdaptiveStateVector::
 Rescale()
 {
@@ -244,6 +253,15 @@ RescaleAndApplyGlobalICounter()
         return full_state -> RescaleAndApplyGlobalICounter();
     else
         return sumOfTensors -> RescaleAndApplyGlobalICounter();
+}
+
+idx_size AdaptiveStateVector::
+CountZeroAmp() const
+{
+    if (full_state)
+        return full_state -> CountZeroAmp();
+    else
+        return sumOfTensors -> CountZeroAmp();
 }
 
 void AdaptiveStateVector::

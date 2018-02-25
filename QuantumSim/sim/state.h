@@ -49,7 +49,7 @@ public:
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     
-    cmplx operator[](idx_size i) const;
+    cmplx operator[](bitset<128> i) const;
     const cmplx* const GetAmpVector() const;
     double GetMinProb() const;
     double GetMaxProb() const;
@@ -67,6 +67,7 @@ public:
     void Normalize();
     void IncrementGlobalFactorPower();
     void IncrementGlobalICounter();
+    idx_size CountZeroAmp() const;
     
     void Rescale();
     void ApplyGlobalICounter();

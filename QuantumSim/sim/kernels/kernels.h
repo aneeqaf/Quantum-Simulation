@@ -227,6 +227,12 @@ Apply2MergedXY12Gates(Gate gate1,
                       const int num_qubits_amp);
 
 idx_size
+ApplyHighQXYGates(cmplx* __restrict amp,
+                  idx_size& X_bitmask,
+                  idx_size& Y_bitmask,
+                  const int num_qubits);
+
+idx_size
 XYFastTransform(cmplx* __restrict amp,
                 idx_size X_bitmask,
                 idx_size Y_bitmask,

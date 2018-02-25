@@ -61,3 +61,9 @@ int FindDivisor(int num)
     }
     return div;
 }
+
+idx_size GenericQuantumState::
+GetNumAddends() const
+{
+    return 0;
+}

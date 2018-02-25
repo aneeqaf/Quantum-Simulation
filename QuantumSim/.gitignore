@@ -22,3 +22,4 @@ output/reports/
 profiling_data/
 ../omp.o
 ../openmp.cpp
+../aneeqa.pem

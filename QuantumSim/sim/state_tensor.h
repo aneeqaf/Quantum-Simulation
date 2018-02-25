@@ -69,7 +69,7 @@ public:
                                    bitset<128> Y_bitmask,
                                    const int th);
     
-    cmplx operator[](idx_size i) const;
+    cmplx operator[](bitset<128> i) const;
     cmplx GetAmpFromGlobalState(const idx_size a,
                                 const idx_size b) const;
     double GetMinProb() const;
@@ -88,6 +88,7 @@ public:
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
     void Normalize();
+    idx_size CountZeroAmp() const;
 
     void Rescale();
     void ApplyGlobalICounter();
@@ -124,9 +125,9 @@ bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
                       const bitset<128>* __restrict gate_bitmasks,
                       const int total_circuit_qubits);
 
-bitset<128> ScatterGlobalIndex(const idx_size i,
-                            const idx_size partition_bitmask,
-                            const idx_size total_qubits);
+bitset<128> ScatterGlobalIndex(const bitset<128> i,
+                               const bitset<128> partition_bitmask,
+                               const idx_size total_qubits);
 
 
 #endif /* state_tensor_h */

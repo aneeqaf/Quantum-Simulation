@@ -35,8 +35,9 @@
 #include <omp.h>
 #endif
 
-
 #include "gates.h"
+
+using namespace std;
 
 constexpr float kH = 0.707106781;
 
@@ -49,7 +50,7 @@ constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx kCZDecomposition[4] = {{1,-1}, {0,1}, {1,1}, {1,0}};
 constexpr cmplx ki = {0,1};
 constexpr int kRT = 8 * sizeof(idx_size) + 1;
-constexpr int kNUM_BRANCHES = 8;
+const int kNUM_BRANCHES = ceil(log(thread::hardware_concurrency()));
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};

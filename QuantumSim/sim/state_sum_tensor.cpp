@@ -108,10 +108,10 @@ ApplyXCZGatesExact(string& cz_bits,
         while (g.second != 0) {
             int first_half = __builtin_ctzl(g.second.to_ulong());
             int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
-            const int q = first_half ? first_half : 64 + second_half;
+            const int q = first_half ? first_half : second_half ? 64 + second_half : 0;
             ++count_of_category.decomposed_CZ;
             for (idx_size i = 0; i < num_addends; ++i) {
-                if (cz_bits == "") {
+                if (cz_bits == "*" || cz_bits == "") {
                     TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[i]);
                     tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
                                                                         g.first, modified_num_q_B - q);
@@ -128,7 +128,7 @@ ApplyXCZGatesExact(string& cz_bits,
                                                                              g.first, modified_num_q_B - q);
                 }
             }
-            if (cz_bits != "") {
+            if (cz_bits != "" && cz_bits != "*") {
                 cz_bits.pop_back();
                 if (cz_bits == "") {
                     terminate = true;
@@ -319,7 +319,7 @@ ConvertSumOfTensorsToState()
 }
 
 cmplx SumOfTensorsProductsStateVector::
-operator[](idx_size i) const
+operator[](bitset<128> i) const
 {
     cmplx val = 0;
     for (auto& t : tensor_addends)
@@ -568,6 +568,23 @@ ApplyGlobalICounter()
 {
     for (auto& t : tensor_addends)
         t -> ApplyGlobalICounter();
+}
+
+idx_size SumOfTensorsProductsStateVector::
+CountZeroAmp() const
+{
+    const idx_size total_size = 1ull << (tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ());
+    idx_size zero_count = 0;
+    
+//    for (idx_size i = 0; i < total_size; ++i) {
+//        if ((*this)[i] == cmplx(0,0))
+//            ++zero_count;
+//    }
+
+    if (num_addends == 1)
+        return tensor_addends[0] -> CountZeroAmp();
+    
+   return zero_count;
 }
 
 void SumOfTensorsProductsStateVector::

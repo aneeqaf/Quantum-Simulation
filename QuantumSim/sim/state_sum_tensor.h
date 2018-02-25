@@ -45,7 +45,7 @@ public:
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
     
-    cmplx operator[](idx_size i) const;
+    cmplx operator[](bitset<128> i) const;
     double GetMinProb() const;
     double GetMaxProb() const;
     double GetAvgProb() const;
@@ -66,6 +66,7 @@ public:
     double CalculateMeanEntropy2Cuts() const;
     double CalculateCrossEntropy2Cuts(int range) const;
     void Normalize();
+    idx_size CountZeroAmp() const;
 
     void Rescale();
     void ApplyGlobalICounter();

@@ -40,7 +40,7 @@ public:
                                    bitset<128> Y_bitmask,
                                    const int th);
     
-    cmplx operator[](idx_size i) const;
+    cmplx operator[](bitset<128> i) const;
     double GetMinProb() const;
     double GetMaxProb() const;
     double GetAvgProb() const;
@@ -53,6 +53,8 @@ public:
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
     void Normalize();
+    idx_size CountZeroAmp() const;
+    idx_size GetNumAddends() const;
 
     void Rescale();
     void ApplyGlobalICounter();

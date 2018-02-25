@@ -57,14 +57,14 @@ int main(int argc, char *argv[])
         { "vcut_sizes",    required_argument,       nullptr, 'a' },
         { "hcut_sizes",    required_argument,       nullptr, 'b' },
         { "verbose",    required_argument,       nullptr, 'v' },
-        { "cbits",    required_argument,       nullptr, 'c' },
+        { "CZ_path",    required_argument,       nullptr, 'c' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false, print_idx = false;
-    string input_filename = "", out_file = "", idx_filename = "", cz_bits = "";
+    string input_filename = "", out_file = "", idx_filename = "", cz_path = "*";
     int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 1;
+    num_threads = 8;
     Config::SimType sim_type = Config::FullState;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
@@ -87,7 +87,14 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'c': {
-                cz_bits = string(optarg);
+                cz_path = string(optarg);
+                
+                if (cz_path.find(",") != string::npos) {
+                    const int len_CZ_bit = stoi(cz_path.substr(0, cz_path.find(",")));
+                    const int CZ_path = stoi(cz_path.substr(cz_path.find(",") + 1));
+                    cz_path = bitset<64>(CZ_path).to_string();
+                    cz_path = cz_path.substr(cz_path.size() - len_CZ_bit);
+                }
                 break;
             }
             case 'd': {
@@ -179,9 +186,9 @@ int main(int argc, char *argv[])
                         throw "Cannot print more than 10000 amps";
                     print_idx = idx_arg.find_first_of("+") != string::npos;
                 }
-                else {
+                else
                     idx_filename = idx_arg;
-                }
+                
                 break;
             }
             default: {
@@ -219,7 +226,7 @@ int main(int argc, char *argv[])
     }
     
     Config config(input_filename ,"output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
-                  "output/reports/" + out_file, "output/misc/g_" + out_file, cz_bits, print_amp, print_idx, sim_type,
+                  "output/reports/" + out_file, "output/misc/g_" + out_file, cz_path, print_amp, print_idx, sim_type,
                   verbose, vcut, hcut, depth, threshold, num_threads);
     
     if (print_amp) {
@@ -229,6 +236,9 @@ int main(int argc, char *argv[])
             config.ReadIndices(idx_filename);
     }
     SequentialSimulation sim(config);
+    
+    if (config.verbose)
+        sim.PrintSystemReport();
     
     GenericQuantumState::num_threads = num_threads;
     if (sim_type == Config::FullState) {

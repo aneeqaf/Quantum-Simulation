@@ -205,17 +205,19 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           const int th)
 {
     struct timeval begin, end;
+    idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
     
-    idx_size num_Xgates = X_bitmask.count(), num_Ygates = Y_bitmask.count();
+    idx_size num_Xgates = __builtin_popcountll(X_bitmask_64),
+    num_Ygates = __builtin_popcountll(Y_bitmask_64);
     if ((num_Xgates + num_Ygates) % 2 == 1) {
         gettimeofday(&begin, NULL);
-        const int X_q = X_bitmask != 0 ? __builtin_ctzl(X_bitmask.to_ulong()) : 1000;
-        const int Y_q = Y_bitmask != 0 ? __builtin_ctzl(Y_bitmask.to_ulong()) : 1000;
+        const int X_q = X_bitmask_64 ? __builtin_ctzl(X_bitmask_64) : 1000;
+        const int Y_q = Y_bitmask_64 ? __builtin_ctzl(Y_bitmask_64) : 1000;
         
         if (!(X_q == 1000 && Y_q == 1000)) {
             if (X_q < Y_q) {
                 Apply1QXYGates(amp, X_q, num_qubits, Gate::Type::X_1_2, num_threads);
-                X_bitmask ^= 1ull << X_q;
+                X_bitmask_64 ^= 1ull << X_q;
                 global_factor_power += 2;
                 --num_Xgates;
                 gettimeofday(&end, NULL);
@@ -225,7 +227,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
             }
             else {
                 Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
-                Y_bitmask ^= 1ull << Y_q;
+                Y_bitmask_64 ^= 1ull << Y_q;
                 global_factor_power += 2;
                 --num_Ygates;
                 gettimeofday(&end, NULL);
@@ -237,8 +239,12 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     }
     
     gettimeofday(&begin, NULL);
-    if (X_bitmask != 0 || Y_bitmask != 0)
-      global_i_counter += XYFastTransform(amp, X_bitmask.to_ulong(), Y_bitmask.to_ulong(), num_qubits, num_threads, th);
+    
+    if (X_bitmask_64 || Y_bitmask_64)
+        global_i_counter += ApplyHighQXYGates(amp, X_bitmask_64, Y_bitmask_64, num_qubits);
+    
+    if (X_bitmask_64 || Y_bitmask_64)
+        global_i_counter += XYFastTransform(amp, X_bitmask_64, Y_bitmask_64, num_qubits, num_threads, th);
     
     if (num_Xgates)
         global_factor_power += num_Xgates;
@@ -251,13 +257,13 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 cmplx FullAmpStateVector::
-operator[](idx_size i) const
+operator[](bitset<128> i) const
 {
 //    cmplx a = amp[i] * cmplx(pow(ki, global_i_counter));
 //    a /= pow(2,(global_factor_power/2));
 //    if (global_factor_power % 2 == 1)
 //        a /= sqrt(2);
-    return amp[i];
+    return amp[i.to_ulong()];
 }
 
 const cmplx* const FullAmpStateVector::
@@ -471,6 +477,19 @@ ApplyGlobalICounter()
     for (idx_size i = 0; i < amp_size; ++i)
         amp[i] *= multiplier;
     global_i_counter = 0;
+}
+
+idx_size FullAmpStateVector::
+CountZeroAmp() const
+{
+    idx_size zero_count = 0;
+    
+    for (idx_size i = 0; i < amp_size; ++i) {
+        if (amp[i] == cmplx(0,0))
+            ++zero_count;
+    }
+    
+    return zero_count;
 }
 
 void FullAmpStateVector::
