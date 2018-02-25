@@ -55,7 +55,7 @@ $ make all
 
 Navigate to the working directory (QuantumSim).
 
-#### Examples runs:
+#### Example runs:
 1. Create and simulate an entire circuit of 6 qubits and 100 cycles using full state-vector simulation and with default report:
 ```shellsession
 $ ./bin/rollright_sim -g 6 100
