@@ -44,6 +44,11 @@ int main(int argc, char *argv[])
     }
 #endif
     
+    if (argc < 2) {
+        cerr << "\nUse the -h option to view the command line options necessary for the simulator to run.\n\n";
+        exit(1);
+    }
+    
     static struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "idx",    required_argument,       nullptr, 'x' },
@@ -54,15 +59,15 @@ int main(int argc, char *argv[])
         { "google_input",    required_argument,       nullptr, 'p' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
-        { "vcut_sizes",    required_argument,       nullptr, 'a' },
-        { "hcut_sizes",    required_argument,       nullptr, 'b' },
+        { "vcut",    required_argument,       nullptr, 'a' },
+        { "hcut",    required_argument,       nullptr, 'b' },
         { "verbose",    required_argument,       nullptr, 'v' },
         { "CZ_path",    required_argument,       nullptr, 'c' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false, print_idx = false;
+    bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false, print_idx = false, valid = false;
     string input_filename = "", out_file = "", idx_filename = "", cz_path = "*";
     int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8;
@@ -74,7 +79,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:a:v:b:x:f:c:p:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:t:d:s:a:v:b:x:f:c:p:h", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -104,6 +109,7 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'g': {
+                valid = true;
                 create = true;
                 if (argc < 3) {
                     cerr << "Please enter number of qubits and number of gates in circuit\n";
@@ -119,6 +125,7 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'p': {
+                valid = true;
                 googleInput = true;
                 if (argc < 2) {
                     cerr << "Please enter filename\n";
@@ -128,6 +135,7 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'i': {
+                valid = true;
                 inputfile = true;
                 if (argc < 2) {
                     cerr << "Please enter filename\n";
@@ -194,17 +202,19 @@ int main(int argc, char *argv[])
             }
             case 'h':{
                 cout
-                << "--idx, -x : int(seed),"
-                << "--FTthreshold, -f : "
-                << "--num_threads, -t : "
-                << "--depth, -d : "
-                << "--google_input, -p : "
-                << "--outfile, -o : "
-                << "--sim_type, -s : "
-                << "--vcut_sizes, -a : "
-                << "--hcut_sizes, -b : "
-                << "--verbose, -v : "
-                << "--CZ_path, -c : ";
+                << "\n--idx, -x       \t: int<seed>,int<num_indices> or int<seed>,int<num_indices>+\n"
+                << "--FTthreshold, -f \t: int<base case threshold for XYFastTransform>\n"
+                << "--num_threads, -t \t: int<max_num_threads>\n"
+                << "--depth, -d     \t: int<depth of circuit to be simulated>\n"
+                << "--google_input, -p \t: string<circuit file in Google format>\n"
+                << "--outfile, -o   \t: string<filename to print output to>\n"
+                << "--sim_type, -s  \t: int<type of sim> (Please refer to the manual)\n"
+                << "--vcut, -a      \t: int<cut_size>\n"
+                << "--hcut, -b      \t: int<cut_size>\n"
+                << "--verbose, -v   \t: int<verbosity level of report> (Please refer to the manual)\n"
+                << "--CZ_path, -c   \t: string<0s and 1s> or int<length_bitstring>,int<value_bitstring>\n\n"
+                << "Please refer to the manual for more options.\n\n";
+                return 0;
                 break;
             }
             default: {
@@ -214,6 +224,11 @@ int main(int argc, char *argv[])
             }
         } // switch
     } // while
+    
+    if (!valid) {
+        cerr << "\nInvalid command line options. Please specify either the input filename or circuit generation. Use -h for more info.\n\n";
+        exit(1);
+    }
     
     Circuit cir;
     if (inputfile || googleInput) {
@@ -227,7 +242,6 @@ int main(int argc, char *argv[])
         }
         else
             cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, depth);
-//            cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + ".qpro");
     }
     else if(create) {
         for (idx_size i = 0; i < num_qubits.size(); ++i){

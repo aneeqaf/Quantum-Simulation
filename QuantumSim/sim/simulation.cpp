@@ -369,6 +369,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     cout << "Simulation type : ";
     if (config.sim_type == Config::SimType::FullState) {
         cout << "full state-vector  \n";
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
     }
     else if (config.sim_type == Config::SimType::LosslessH) {
         cout << "sum of tensor products / single cut\n";
