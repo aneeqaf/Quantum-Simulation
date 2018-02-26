@@ -28,7 +28,7 @@ public:
     
     bool ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
-                               const bitset<128> __restrict T_bitmasks[2]);
+                               const bitset<128> T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
                        const Gate& g = {});

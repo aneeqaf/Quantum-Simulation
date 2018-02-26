@@ -26,7 +26,7 @@ AdaptiveStateVector::
 bool AdaptiveStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> __restrict T_bitmasks[2])
+                      const bitset<128> T_bitmasks[2])
 {
     bool terminate = false;
     if (full_state) {

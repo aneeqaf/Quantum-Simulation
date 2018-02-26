@@ -64,7 +64,7 @@ FormBitmask(const vector<int>& qubits)
 bool FullAmpStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> __restrict T_bitmasks[2])
+                      const bitset<128>  T_bitmasks[2])
 {
     struct timeval start, end;
     gettimeofday(&start, NULL);

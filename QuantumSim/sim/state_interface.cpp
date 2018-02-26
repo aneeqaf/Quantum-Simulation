@@ -41,7 +41,7 @@ FormXYGatesBitmask(idx_size& gate_i,
 
 void GenericQuantumState::
 FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks /*total_circuit_qubits*/,
-                    bitset<128> __restrict T_bitmasks[2],
+                    bitset<128> T_bitmasks[2],
                     idx_size& gate_i,
                     const vector<Gate>& all_gates,
                     const int total_circuit_qubits)

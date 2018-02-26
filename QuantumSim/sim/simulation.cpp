@@ -23,9 +23,10 @@ PopulateBenchmarkMap()
         cmplx(-2.88494e-05,-3.6528e-05), cmplx(2.02035e-05,-1.49718e-05)};
     benchmark["30_101"] = {cmplx(-1.64932e-05,3.05875e-05), cmplx(-2.23461e-05,-2.09741e-05), cmplx(4.19768e-06,-3.64171e-05),
         cmplx(-9.25683e-06,5.20232e-05), cmplx(4.8687e-06,-1.32963e-05)};
-    
-    benchmark["35_26"] = {cmplx(2.26241e-06, -2.0497e-06), cmplx(-2.16094e-06, -4.74918e-06), cmplx(2.07073e-06, -1.09369e-06),
-        cmplx(-3.07386e-06, 2.53828e-06), cmplx(2.9415e-06, 4.65522e-06)};
+    benchmark["32_26"] = {cmplx(1.26873e-05,1.5801e-05), cmplx(-1.3945e-05,5.97119e-06), cmplx(-4.64556e-06,7.54662e-06),
+        cmplx(-4.70546e-06,-3.98253e-06), cmplx(2.23744e-05,2.45329e-06)};
+    benchmark["35_26"] = {cmplx(-3.07386e-06,2.53827e-06), cmplx(-6.51143e-06,-2.31236e-06), cmplx(-1.1414e-06,-7.2411e-06),
+        cmplx(2.26241e-06,-2.0497e-06), cmplx(4.57272e-06,-8.47909e-07)};
     
 //    benchmark["25_26"] = {cmplx(0.000104529,-0.000158536), cmplx(0.00011983,5.54614e-05), cmplx(0.000158796,6.78702e-05),
 //        cmplx(-1.13099e-05,-7.9362e-06), cmplx(4.02591e-05, -6.56695e-05)};
@@ -59,9 +60,11 @@ Simulate(GenericQuantumState& amp,
     
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     
+    bool terminate = false;
     struct timeval start_p, end_p, cycle_start, xe_t_b, xe_t_e;
     gettimeofday(&start_p, NULL);
-    for (idx_size i = 0; i < size; ++i) {
+    idx_size i = 0;
+    for (; i < size; ++i) {
         
         if (amp.GetGlobalFactorPower() > 100) {
             struct timeval r_begin, r_end;
@@ -150,7 +153,7 @@ Simulate(GenericQuantumState& amp,
                  bitset<128> T_bitmasks[2] = {0};
                  bitset<128> CZ_bitmasks[total_circuit_qubits];
                  amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
-                 bool terminate = amp.ApplyBlockOfDiagGates(config.cz_path, CZ_bitmasks, T_bitmasks);
+                 terminate = amp.ApplyBlockOfDiagGates(config.cz_path, CZ_bitmasks, T_bitmasks);
                  
                  if (config.sim_type == Config::SimType::FullState) {
                      amp.data_per_cycles.xCZ_H.push_back(0);
@@ -162,10 +165,17 @@ Simulate(GenericQuantumState& amp,
                                                         amp.data_per_cycles.T_gates.back() -
                                                         amp.count_of_category.xCZ_not_applied);
                  
-                 i -= 1;
-                 
-                 if (terminate)
+                 if (terminate) {
+                     cout << "Simulated " + to_string(i) + " gates, including "
+                     + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. ";
+                     
+                     if (circuit.GetTotalNumGates() != i)
+                         cout << "CZpath exhausted early.\n";
+                     else
+                         cout << "No xCZ gates left.\n";
                      break;
+                 }
+                i -= 1;
             }
              else {
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
@@ -212,6 +222,10 @@ Simulate(GenericQuantumState& amp,
     total_time = (((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
              end_p.tv_usec - start_p.tv_usec) / 1.e6) - XE_time;
 
+    if (!terminate && config.cz_path == "") {
+        cout << "Simulated " + to_string(i) + " gates, including "
+        + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. No xCZ gates left.\n";
+    }
 //#ifdef Print
 //    amp.PrintStateVector();
 //#endif
@@ -256,10 +270,11 @@ Simulate(GenericQuantumState& amp,
 void SequentialSimulation::
 PrintSystemReport() const
 {
-    cout << "Rollright ver 1.3 - a quantum circuit simulator\n\n";
+    cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
+    cout << "Rollright ver 1.4 - a quantum circuit simulator\n\n";
     
-    char hostname[20] = {};
-    gethostname(hostname, 20);
+    char hostname[30] = {};
+    gethostname(hostname, 30);
     cout << "Hostname : ";
     for(auto h : hostname) {
         cout << h;
@@ -357,37 +372,43 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     }
     else if (config.sim_type == Config::SimType::LosslessH) {
         cout << "sum of tensor products / single cut\n";
-        cout << "Simulating xCZ gates : exactly\n";
         cout << amp.log[log_count++];
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "Simulating xCZ gates : exactly\n";
+        
     }
     else if (config.sim_type == Config::SimType::LosslessV) {
         cout << "sum of tensor products / single cut\n";
-        cout << "Simulating xCZ gates : exactly\n";
         cout << amp.log[log_count++];
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "Simulating xCZ gates : exactly\n";
     }
     else if (config.sim_type == Config::SimType::Approx1CutH) {
         cout << "tensor products / approx single cut\n";
-        cout << "Simulating xCZ gates : ignored\n";
         cout << amp.log[log_count++];
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "Simulating xCZ gates : ignored\n";
     }
     else if (config.sim_type == Config::SimType::Approx1CutV) {
         cout << "tensor products / approx single cut\n";
-        cout << "Simulating xCZ gates : ignored\n";
         cout << amp.log[log_count++];
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "Simulating xCZ gates : ignored\n";
     }
     else if (config.sim_type == Config::SimType::Approx2011) {
         cout << "tensor products / approx2011 \n";
-        cout << "Simulating xCZ gates : approx\n";
         cout << amp.log[log_count++];
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "Simulating xCZ gates : approx\n";
     }
     else if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT) {
         cout << "sum of tensor products / approx 2 cuts\n";
+        cout << amp.log[log_count++];
+        cout << amp.log[log_count++];
+        cout << "Recursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : approx\n";
-        cout << amp.log[log_count++];
-        cout << amp.log[log_count++];
+       
     }
-    
-    cout << "Recursion end-case(max) : " << config.th << " q\n";
     
     if (config.cz_path != "*")
         cout << "Input CZ path : " << config.cz_path << "\n";
@@ -437,8 +458,10 @@ PrintSimReport(GenericQuantumState& amp,
         
         double min = amp.GetMinProb();
         ss << " : " << sqrt(norm) << "\n";
-        ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
-        ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
+        if (sqrt(norm) > 0.9) {
+            ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
+            ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
+        }
         ss << "Probabilities : " << amp.GetMinProb() << "(min), "
              << amp.GetMaxProb() << "(max), "
              << amp.GetAvgProb() << "(avg)\n";

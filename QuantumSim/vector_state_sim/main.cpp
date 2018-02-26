@@ -51,13 +51,14 @@ int main(int argc, char *argv[])
         { "num_threads",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
         { "google_spec",    required_argument,       nullptr, 'g' },
-        { "google_input",    required_argument,       nullptr, 'h' },
+        { "google_input",    required_argument,       nullptr, 'p' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
         { "vcut_sizes",    required_argument,       nullptr, 'a' },
         { "hcut_sizes",    required_argument,       nullptr, 'b' },
         { "verbose",    required_argument,       nullptr, 'v' },
         { "CZ_path",    required_argument,       nullptr, 'c' },
+        { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:a:v:b:x:f:c:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:h:t:d:s:a:v:b:x:f:c:p:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -117,7 +118,7 @@ int main(int argc, char *argv[])
                 }
                 break;
             }
-            case 'h': {
+            case 'p': {
                 googleInput = true;
                 if (argc < 2) {
                     cerr << "Please enter filename\n";
@@ -189,6 +190,21 @@ int main(int argc, char *argv[])
                 else
                     idx_filename = idx_arg;
                 
+                break;
+            }
+            case 'h':{
+                cout
+                << "--idx, -x : int(seed),"
+                << "--FTthreshold, -f : "
+                << "--num_threads, -t : "
+                << "--depth, -d : "
+                << "--google_input, -p : "
+                << "--outfile, -o : "
+                << "--sim_type, -s : "
+                << "--vcut_sizes, -a : "
+                << "--hcut_sizes, -b : "
+                << "--verbose, -v : "
+                << "--CZ_path, -c : ";
                 break;
             }
             default: {

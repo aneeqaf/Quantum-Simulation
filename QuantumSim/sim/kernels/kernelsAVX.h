@@ -50,9 +50,10 @@ constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx kCZDecomposition[4] = {{1,-1}, {0,1}, {1,1}, {1,0}};
 constexpr cmplx ki = {0,1};
 constexpr int kRT = 8 * sizeof(idx_size) + 1;
-const int kNUM_BRANCHES = ceil(log(thread::hardware_concurrency()));
+const unsigned kNUM_BRANCHES = ceil(log(thread::hardware_concurrency()));
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
+constexpr __m256 kzeros = {0, 0, 0, 0, 0, 0, 0, 0};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};
 constexpr __m256 kneg2 = {-0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f};
 
@@ -63,6 +64,10 @@ ApplyX12GateAVX(cmplx* __restrict amp,
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    
+    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255)
+        return;
     
     __m256 a0_p = _mm256_permute_ps(a0, 0b10110001);
     __m256 a1_p = _mm256_permute_ps(a1, 0b10110001);
@@ -88,6 +93,10 @@ ApplyY12GateAVX(cmplx* __restrict amp,
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    
+    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255)
+        return;
     
     __m256 a1_neg = _mm256_xor_ps(a1, kneg2);
     __m256 a0_p = _mm256_permute_ps(a0, 0b10110001);
@@ -116,6 +125,12 @@ ApplyXX12GateAVX(cmplx* __restrict amp,
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+    
+    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+        return;
     
     const __m256 t0 = _mm256_add_ps(a0, a3);
     const __m256 t1 = _mm256_add_ps(a1, a2);
@@ -147,6 +162,12 @@ ApplyYY12GateAVX(cmplx* __restrict amp,
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
     
+    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+        return;
+    
     const __m256 t0 = _mm256_add_ps(a0, a3);
     const __m256 t1 = _mm256_sub_ps(a0, a3);
     const __m256 t2 = _mm256_add_ps(a1, a2);
@@ -172,6 +193,12 @@ ApplyXY12GateAVX(cmplx* __restrict amp,
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+    
+    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+        return;
     
     const __m256 t0 = _mm256_sub_ps(a0, a1);
     const __m256 t1 = _mm256_sub_ps(a2, a3);
@@ -209,6 +236,12 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+    
+    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+        return;
     
     __m256 ia0 = _mm256_permute_ps(a0, 0b10110001);
     ia0 = _mm256_xor_ps(ia0, kneg1);

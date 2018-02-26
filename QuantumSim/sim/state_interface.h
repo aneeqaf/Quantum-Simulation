@@ -47,7 +47,7 @@ public:
     
     virtual bool ApplyBlockOfDiagGates(string& cz_bits,
                                        const bitset<128>* __restrict CZ_bitmasks,
-                                       const bitset<128> __restrict T_bitmasks[2]) = 0;
+                                       const bitset<128> T_bitmasks[2]) = 0;
     virtual void ApplyNonCGate(const int gate_qubit,
                                const Gate::Type gate_type,
                                const Gate& g = {}) = 0;
@@ -69,7 +69,7 @@ public:
                                         const vector<Gate>& all_gates,
                                         const Gate::Type gate_type);
     virtual void FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks,
-                                     bitset<128> __restrict T_bitmasks[2],
+                                     bitset<128> T_bitmasks[2],
                                      idx_size& gate_i,
                                      const vector<Gate>& all_gates,
                                      const int total_circuit_qubits);

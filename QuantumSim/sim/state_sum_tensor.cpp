@@ -72,7 +72,7 @@ SumOfTensorsProductsStateVector::
 bool SumOfTensorsProductsStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> __restrict T_bitmasks[2])
+                      const bitset<128> T_bitmasks[2])
 {
     bool terminate = false;
     for (auto& t : tensor_addends)
@@ -105,6 +105,10 @@ ApplyXCZGatesExact(string& cz_bits,
     bool terminate = false;
     
     for (auto& g : qubits_gates_across) {
+        if (cz_bits == "") {
+            terminate = true;
+            break;
+        }
         while (g.second != 0) {
             int first_half = __builtin_ctzl(g.second.to_ulong());
             int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
@@ -128,13 +132,8 @@ ApplyXCZGatesExact(string& cz_bits,
                                                                              g.first, modified_num_q_B - q);
                 }
             }
-            if (cz_bits != "" && cz_bits != "*") {
+            if (cz_bits != "" && cz_bits != "*")
                 cz_bits.pop_back();
-                if (cz_bits == "") {
-                    terminate = true;
-                    break;
-                }
-            }
             
             g.second[q] = 0;
             num_addends = tensor_addends.size();
@@ -573,8 +572,8 @@ ApplyGlobalICounter()
 idx_size SumOfTensorsProductsStateVector::
 CountZeroAmp() const
 {
-    const idx_size total_size = 1ull << (tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ());
-    idx_size zero_count = 0;
+    // const idx_size total_size = 1ull << (tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ());
+    // idx_size zero_count = 0;
     
 //    for (idx_size i = 0; i < total_size; ++i) {
 //        if ((*this)[i] == cmplx(0,0))
@@ -584,7 +583,7 @@ CountZeroAmp() const
     if (num_addends == 1)
         return tensor_addends[0] -> CountZeroAmp();
     
-   return zero_count;
+   return 0;
 }
 
 void SumOfTensorsProductsStateVector::

@@ -22,7 +22,7 @@ private:
 public:
     bool ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
-                               const bitset<128> __restrict T_bitmasks[2]);
+                               const bitset<128> T_bitmasks[2]);
     inline bool ApplyXCZGatesExact(string& cz_bits,
                                    const bitset<128>* __restrict CZ_bitmasks);
     void ApplyNonCGate(const int gate_qubit,

@@ -244,7 +244,7 @@ ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
 bool TensorProductStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> __restrict T_bitmasks[2])
+                      const bitset<128> T_bitmasks[2])
 {
     clock_t begin = clock();
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
