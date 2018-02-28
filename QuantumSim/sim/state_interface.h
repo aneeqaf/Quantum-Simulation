@@ -21,7 +21,7 @@
 #include "kernels1.h"
 #include "profile.h"
 
-constexpr int sampling_factor = 1000;
+constexpr int sampling_factor = 10;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;

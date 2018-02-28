@@ -204,6 +204,31 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const int th)
 {
+//    idx_size zeroing = 0x00000000FFFFFFF0;
+    
+//    {
+//        for (int i = 0; i < 8; ++i) {
+//            if (X_bitmask[i] == 1) {
+//                for (int j = 8; j < num_qubits; ++j) {
+//                    if (X_bitmask[j] == 0) {
+//                        X_bitmask[j] = 1;
+//                        break;
+//                    }
+//                }
+//            }
+//        }
+//        for (int i = 0; i < 8; ++i) {
+//            if (Y_bitmask[i] == 1) {
+//                for (int j = 8; j < num_qubits; ++j) {
+//                    if (Y_bitmask[j] == 0) {
+//                        Y_bitmask[j] = 1;
+//                        break;
+//                    }
+//                }
+//            }
+//        }
+//    }
+    
     struct timeval begin, end;
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
     
@@ -240,12 +265,12 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     
     gettimeofday(&begin, NULL);
     
-    if (X_bitmask_64 || Y_bitmask_64)
-        global_i_counter += ApplyHighQXYGates(amp, X_bitmask_64, Y_bitmask_64, num_qubits);
-    
+//    if (X_bitmask_64 || Y_bitmask_64)
+//        global_i_counter += ApplyHighQXYGates(amp, X_bitmask_64, Y_bitmask_64, num_qubits);
+
     if (X_bitmask_64 || Y_bitmask_64)
         global_i_counter += XYFastTransform(amp, X_bitmask_64, Y_bitmask_64, num_qubits, num_threads, th);
-    
+
     if (num_Xgates)
         global_factor_power += num_Xgates;
     if (num_Ygates)

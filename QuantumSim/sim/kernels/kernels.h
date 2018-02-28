@@ -227,6 +227,14 @@ Apply2MergedXY12Gates(Gate gate1,
                       const int num_qubits_amp);
 
 idx_size
+XYFastTransformIterative(cmplx* __restrict amp,
+                         idx_size X_bitmask,
+                         idx_size Y_bitmask,
+                         const int num_qubits,
+                         const int num_threads,
+                         const int th);
+
+idx_size
 ApplyHighQXYGates(cmplx* __restrict amp,
                   idx_size& X_bitmask,
                   idx_size& Y_bitmask,
@@ -239,6 +247,5 @@ XYFastTransform(cmplx* __restrict amp,
                 const int num_qubits,
                 const int num_threads,
                 const int th = 16);
-
 
 #endif /* kernels_h */

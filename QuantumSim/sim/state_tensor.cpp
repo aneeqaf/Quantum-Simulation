@@ -274,12 +274,14 @@ ApplyBlockOfDiagGates(string& cz_bits,
     if (applyCZ_b || T_bitmasks_b[0] != 0)
         state_b -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_b, T_bitmasks_b);
     
-    if (sim_type == Config::SimType::Approx2011)
+    if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
     else if (sim_type == Config::SimType::Approx1_101) //compute norm and divide by the norm
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D1, Gate::Type::CZ_D2);
     else if (sim_type == Config::SimType::Approx1110)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
+    else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
     else if (sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV)) {
         idx_size count = CountXCZGates(CZ_bitmasks);
         data_per_cycles.memory.push_back(GetMemUsage());
@@ -339,7 +341,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     clock_t end = clock();
     time_by_category.decomposed_CZ +=  double(end - begin) / CLOCKS_PER_SEC;
     
-    if (sim_type != Config::SimType::Approx2011) {
+    if (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT) {
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
         if (cut_type == Cuts::Horizontal) {
@@ -703,6 +705,7 @@ PrintProbabilities(const string& out_file,
 
     srand(6);
     idx_size off = 0;
+    
     for (idx_size i = 0; i + off < amp_size; i += off) {
         float prob = (norm((*this)[i])/norm_f) * amp_size;
         

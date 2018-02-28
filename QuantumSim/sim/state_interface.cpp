@@ -34,7 +34,7 @@ FormXYGatesBitmask(idx_size& gate_i,
     bitset<128> bitmask = 0;
     
     for (idx_size i = 0; i < cluster_qubits.size(); ++i)
-        bitmask |= 1ull << cluster_qubits[i];
+        bitmask[cluster_qubits[i]] = 1;
     
     return bitmask;
 }

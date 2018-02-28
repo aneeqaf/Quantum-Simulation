@@ -19,7 +19,7 @@ using idx_size = size_t;
 class Config {
 public:
     enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, ApproxOWT, FullState,
-        Approx2011, Approx1_101, Approx1110, Approx2011OWT};
+        Approx2011, Approx1_101, Approx1110, Approx2011OWT, Approx_i11i, Approx_i11iOWT};
     enum Verbose : int {None, NCCV, NCC, Default, Cycles};
     
     vector<idx_size> indices;

@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
         FullAmpStateVector amp(cir.GetNumQubits());
         sim.Simulate(amp, cir);
     }
-    else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011
+    else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011 || sim_type == Config::Approx_i11i
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       TensorProductStateVector::Cuts::Horizontal, hcut, vcut, sim_type);
@@ -284,6 +284,10 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       TensorProductStateVector::Cuts::Vertical, hcut, vcut, sim_type);
+        sim.Simulate(amp, cir);
+    }
+    else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT) {
+        SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), sim_type, hcut, vcut);
         sim.Simulate(amp, cir);
     }
     else {

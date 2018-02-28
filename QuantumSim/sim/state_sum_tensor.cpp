@@ -15,6 +15,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                 const int vcut): num_addends(1)
 {
     sim_type = type;
+    
     if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
@@ -27,17 +28,17 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               hcut,
                                                               vcut,
                                                               sim_type));
-    else if (sim_type == Config::SimType::Approx2011OWT) {
+    else if (sim_type == Config::SimType::Approx2011OWT || sim_type == Config::SimType::Approx_i11iOWT) {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Horizontal,
                                                               hcut,
                                                               vcut,
-                                                              Config::SimType::Approx2011));
+                                                              sim_type));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               TensorProductStateVector::Cuts::Vertical,
                                                               hcut,
                                                               vcut,
-                                                              Config::SimType::Approx2011));
+                                                              sim_type));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
         ++num_addends;
@@ -80,9 +81,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
     
     if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV)
         terminate = ApplyXCZGatesExact(cz_bits, CZ_bitmasks);
-    else if (sim_type == Config::SimType::ApproxOWT){
-        tensor_addends[0] -> CountXCZGates(CZ_bitmasks);
-        tensor_addends[1] -> CountXCZGates(CZ_bitmasks);
+    else if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
+             sim_type == Config::SimType::Approx2011OWT ){
+        data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
+        data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
     }
     
     data_per_cycles.memory.push_back(GetMemUsage());
@@ -595,7 +597,8 @@ PrintStateVector(const string& outfile,
     
     RescaleAndApplyGlobalICounter();
     
-    if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx2011OWT) {
+    if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx2011OWT ||
+        sim_type == Config::SimType::Approx_i11iOWT) {
         srand(6);
         const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
         
@@ -651,7 +654,8 @@ PrintProbabilities(const string& out_file,
     RescaleAndApplyGlobalICounter();
     double norm_f = sqrt(CalculateNormSquared());
     
-    if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx2011OWT) {
+    if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx2011OWT ||
+        sim_type == Config::SimType::Approx_i11iOWT) {
         srand(6);
         const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
         

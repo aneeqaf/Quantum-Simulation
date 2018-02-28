@@ -50,7 +50,7 @@ constexpr cmplx kSqrtCZGate[4] = {1, {0,1}, -1, {0,-1}};
 constexpr cmplx kCZDecomposition[4] = {{1,-1}, {0,1}, {1,1}, {1,0}};
 constexpr cmplx ki = {0,1};
 constexpr int kRT = 8 * sizeof(idx_size) + 1;
-const unsigned kNUM_BRANCHES = ceil(log(thread::hardware_concurrency()));
+const unsigned kNUM_BRANCHES = thread::hardware_concurrency();//ceil(log(thread::hardware_concurrency()));
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kzeros = {0, 0, 0, 0, 0, 0, 0, 0};
