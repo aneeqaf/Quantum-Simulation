@@ -76,8 +76,6 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128> T_bitmasks[2])
 {
     bool terminate = false;
-    for (auto& t : tensor_addends)
-        t -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
     
     if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV)
         terminate = ApplyXCZGatesExact(cz_bits, CZ_bitmasks);
@@ -86,6 +84,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
     }
+    
+    for (auto& t : tensor_addends)
+        t -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
     
     data_per_cycles.memory.push_back(GetMemUsage());
     data_per_cycles.addends.push_back(GetNumAddends());
@@ -99,7 +100,10 @@ ApplyXCZGatesExact(string& cz_bits,
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
     //of tensor product.
-    clock_t begin = clock();
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+//    clock_t start = clock();
+    
     vector<pair<int,bitset<128>>> qubits_gates_across;
     tensor_addends[0] -> FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
     const int modified_num_q_B = tensor_addends[0] -> GetStateBNumQ() - 1;
@@ -126,12 +130,22 @@ ApplyXCZGatesExact(string& cz_bits,
                     tensor_addends.push_back(new_t);
                 }
                 else {
-                    if (cz_bits[cz_bits.size() - 1] == '0')
-                        tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                    if (cz_bits[cz_bits.size() - 1] == '0') {
+                        if (cz_bits.size() % 2 == 0)
+                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
                                                                             g.first, modified_num_q_B - q);
-                    else
-                        tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                        else
+                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D2, Gate::Type::CZ_D1,
+                                                                                g.first, modified_num_q_B - q);
+                    }
+                    else {
+                        if (cz_bits.size() % 2 == 0)
+                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
                                                                              g.first, modified_num_q_B - q);
+                        else
+                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D4, Gate::Type::CZ_D3,
+                                                                                g.first, modified_num_q_B - q);
+                    }
                 }
             }
             if (cz_bits != "" && cz_bits != "*")
@@ -143,9 +157,12 @@ ApplyXCZGatesExact(string& cz_bits,
         if (terminate)
             break;
     }
-    clock_t end = clock();
-    time_by_category.decomposed_CZ +=  double(end - begin) / CLOCKS_PER_SEC;
+    gettimeofday(&end, NULL);
+    time_by_category.decomposed_CZ += ((end.tv_sec  - start.tv_sec) * 1000000u +
+                              end.tv_usec - start.tv_usec) / 1.e6;
     
+//    clock_t end = clock();
+//    time_by_category.decomposed_CZ += double(end - start)/CLOCKS_PER_SEC;
     if (sim_type == Config::SimType::LosslessH) {
         data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
         data_per_cycles.xCZ_V.push_back(0);
@@ -155,7 +172,7 @@ ApplyXCZGatesExact(string& cz_bits,
         data_per_cycles.xCZ_H.push_back(0);
     }
     count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
-    - count_of_category.decomposed_CZ - prev_CZ_count;
+    - (count_of_category.decomposed_CZ - prev_CZ_count);
     return terminate;
 }
 

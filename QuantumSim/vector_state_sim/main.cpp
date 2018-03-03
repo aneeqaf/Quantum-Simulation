@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
                 if (cz_path.find(",") != string::npos) {
                     const int len_CZ_bit = stoi(cz_path.substr(0, cz_path.find(",")));
                     const int CZ_path = stoi(cz_path.substr(cz_path.find(",") + 1));
-                    cz_path = bitset<64>(CZ_path).to_string();
+                    cz_path = bitset<1000>(CZ_path).to_string();
                     cz_path = cz_path.substr(cz_path.size() - len_CZ_bit);
                 }
                 break;

@@ -146,15 +146,18 @@ void FullAmpStateVector::
 ApplyMergedXYGate(const Gate& gate1,
                   const Gate& gate2)
 {
-    clock_t begin = clock();
+    struct timeval begin, end;
+    gettimeofday(&begin, NULL);
+    
     Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits);
     
     global_factor_power += 2;
     
     if (gate1.ids.back() == Gate::Type::Y_1_2 && gate2.ids.back() == Gate::Type::Y_1_2)
         ++global_i_counter;
-    clock_t end = clock();
-    time_by_category.merged_XY1_2 +=  double(end - begin) / CLOCKS_PER_SEC;
+    gettimeofday(&end, NULL);
+    time_by_category.merged_XY1_2 +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                                       end.tv_usec - begin.tv_usec) / 1.e6;
 }
 
 void FullAmpStateVector::

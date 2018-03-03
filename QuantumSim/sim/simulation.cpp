@@ -243,22 +243,27 @@ Simulate(GenericQuantumState& amp,
     if (config.print_amp) {
         string command = "mkdir -p " + config.amp_outfile;
         system(command.c_str());
-        string amp_outfile = config.amp_outfile + "/output_" + to_string(getpid()) + ".amps";
-        string idx_outfile = config.amp_outfile + "/output_" + to_string(getpid()) + ".idx";
+        auto time = to_string(clock());
+        string amp_outfile = config.amp_outfile + "/output_" + to_string(getpid()) + time + ".amps";
+        string idx_outfile = config.amp_outfile + "/output_" + to_string(getpid()) + time + ".idx";
         ofstream amp_out, idx_out;
         amp_out.open(amp_outfile);
-        idx_out.open(idx_outfile);
+        
+        if (config.print_idx)
+            idx_out.open(idx_outfile);
         
         auto& idx_print = config.indices;
         for (idx_size i = 0; i < idx_print.size(); ++i) {
             amp_out << real(amp[idx_print[i]]);
-            idx_out << idx_print[i] << "\n";
+            if (config.print_idx)
+                idx_out << idx_print[i] << "\n";
             if (imag(amp[idx_print[i]]) < 0) amp_out << imag(amp[idx_print[i]]) << "j";
             else amp_out << "+" << imag(amp[idx_print[i]]) << "j";
             amp_out << "\n";
         }
         amp_out.close();
-        idx_out.close();
+        if (config.print_idx)
+            idx_out.close();
     }
     
     
@@ -268,7 +273,7 @@ void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 1.4 - a quantum circuit simulator\n\n";
+    cout << "Rollright ver 1.5 - a quantum circuit simulator\n\n";
     
     char hostname[30] = {};
     gethostname(hostname, 30);
@@ -351,7 +356,7 @@ PrintSystemReport() const
 
 void SequentialSimulation::
 PrintSimSpecReport(const GenericQuantumState& amp,
-                   const Circuit& circuit) const
+                   const Circuit& circuit)
 {
     if (config.google) {
         cout << "Circuit file : " + config.infile + "\n";
@@ -430,8 +435,14 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         
     }
     
-    if (config.cz_path != "*")
-        cout << "Input CZ path : " << config.cz_path << "\n";
+    if (config.cz_path != "*") {
+        cout << "Input CZ path : ";
+        if (config.cz_path == "")
+            cout << "None\n";
+        else
+            cout << config.cz_path << "\n";
+        config.verbose = Config::Verbose::NCC;
+    }
 }
 
 void SequentialSimulation::
@@ -446,7 +457,8 @@ PrintSimReport(GenericQuantumState& amp,
     amp.Rescale();
     amp.ApplyGlobalICounter();
    
-    if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT)
+    if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT
+        || config.sim_type == Config::SimType::Approx_i11iOWT)
         amp.Normalize();
     
     idx_size temp_amp_size = amp.GetFullStateVectorSize();
@@ -475,25 +487,27 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "Norm";
         if (amp.GetNumAddends() > 1)
             ss << "(assuming orthogonal addends)";
-        
-        double min = amp.GetMinProb();
         ss << " : " << sqrt(norm) << "\n";
-        if (sqrt(norm) > 0.9) {
-            ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
-            ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
+        
+        if (config.verbose >= Config::Verbose::Default) {
+            double min = amp.GetMinProb();
+            if (sqrt(norm) > 0.9) {
+                ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
+                ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
+            }
+            ss << "Probabilities : " << amp.GetMinProb() << "(min), "
+                 << amp.GetMaxProb() << "(max), "
+                 << amp.GetAvgProb() << "(avg)\n";
+            
+            if (min)
+               ss << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
+            if (norm >= 0.9)
+                ss << "Avg inaccuracy per probability > " << avg_inacc << " ("<< (avg_inacc/amp.GetAvgProb()) * 100 << "%)\n";
+            
+            idx_size zero_amps = amp.CountZeroAmp();
+            if (zero_amps)
+                ss << "Stored zero amplitudes : " << (double(zero_amps)/double(temp_amp_size)) * 100 << "%\n";
         }
-        ss << "Probabilities : " << amp.GetMinProb() << "(min), "
-             << amp.GetMaxProb() << "(max), "
-             << amp.GetAvgProb() << "(avg)\n";
-        
-        if (min)
-           ss << "Log_2 (max / min) = " << log2(real(amp.GetMaxProb())/real(amp.GetMinProb())) << "\n" ;
-        if (norm >= 0.9)
-            ss << "Avg inaccuracy per probability > " << avg_inacc << " ("<< (avg_inacc/amp.GetAvgProb()) * 100 << "%)\n";
-        
-        idx_size zero_amps = amp.CountZeroAmp();
-        if (zero_amps)
-            ss << "Stored zero amplitudes : " << (double(zero_amps)/double(temp_amp_size)) * 100 << "%\n";
         ss << "\n";
         cout << ss.str();
     }
@@ -525,44 +539,34 @@ PrintSimReport(GenericQuantumState& amp,
                     imag4 = to_string(imag(benchmark[key][4]));
                     
                     cout << "amp[3]  \t= "  << real(benchmark[key][0]) ;
-                    if (imag(benchmark[key][0]) < 0) {
-                        imag0[0] = ' ';
-                        cout << " - " << imag0 << "i\n";
-                    }
+                    if (imag(benchmark[key][0]) < 0)
+                        cout << imag(benchmark[key][0]) << "j\n";
                     else
-                        cout << " + " << imag0 << "i\n";
+                        cout << "+" << imag(benchmark[key][0]) << "j\n";
                     
                     cout << "amp[1/4]\t= " << real(benchmark[key][1]);
-                    if (imag(benchmark[key][1]) < 0) {
-                        imag1[0] = ' ';
-                        cout << " - " << imag1 << "i\n";
-                    }
+                    if (imag(benchmark[key][1]) < 0)
+                        cout << imag(benchmark[key][1]) << "j\n";
                     else
-                        cout << " + " << imag1 << "i\n";
+                        cout << "+" << imag(benchmark[key][1]) << "j\n";
                     
                     cout << "amp[1/2]\t= " << real(benchmark[key][2]);
-                    if (imag(benchmark[key][2]) < 0) {
-                        imag2[0] = ' ';
-                        cout << " - " << imag2 << "i\n";
-                    }
+                    if (imag(benchmark[key][2]) < 0)
+                        cout << imag(benchmark[key][2]) << "j\n";
                     else
-                        cout << " + " << imag2 << "i\n";
+                        cout << "+" << imag(benchmark[key][2]) << "j\n";
                     
                     cout << "amp[3/4]\t= " << real(benchmark[key][3]);
-                    if (imag(benchmark[key][3]) < 0) {
-                        imag3[0] = ' ';
-                        cout << " - " << imag3 << "i\n";
-                    }
+                    if (imag(benchmark[key][3]) < 0)
+                        cout << imag(benchmark[key][3]) << "j\n";
                     else
-                        cout << " + " << imag3 << "i\n";
+                        cout << "+" << imag(benchmark[key][3]) << "j\n";
                     
                     cout << "amp[-3] \t= "  << real(benchmark[key][4]);
-                    if (imag(benchmark[key][4]) < 0) {
-                        imag4[0] = ' ';
-                        cout << " - " << imag4 << "i\n";
-                    }
+                    if (imag(benchmark[key][4]) < 0)
+                        cout << imag(benchmark[key][4]) << "j\n";
                     else
-                        cout << " + " << imag4 << "i\n";
+                        cout << "+" << imag(benchmark[key][4]) << "j\n";
                     
                     cout << "Incorrect results: \n";
                 }
@@ -579,40 +583,35 @@ PrintSimReport(GenericQuantumState& amp,
         imag4 = to_string(imag(amp[temp_amp_size - 3]));
         
         cout << "amp[3]  \t= " << real(amp[3]);
-        if (imag(amp[3]) < 0) {
-            imag0[0] = ' ';
-            cout << " - " << imag0 << "i\n";
-        }
+        if (imag(amp[3]) < 0)
+            cout << imag(amp[3]) << "j\n";
         else
-            cout << " + " << imag0 << "i\n";
+            cout << "+" << imag(amp[3]) << "j\n";
+        
         cout << "amp[1/4]\t= " << real(amp[temp_amp_size/4]);
-        if (imag(amp[temp_amp_size/4]) < 0) {
-            imag1[0] = ' ';
-            cout << " - " << imag1 << "i\n";
-        }
+        if (imag(amp[temp_amp_size/4]) < 0)
+            cout << imag(amp[temp_amp_size/4]) << "j\n";
         else
-            cout << " + " << imag1 << "i\n";
+            cout << "+" << imag(amp[temp_amp_size/4]) << "j\n";
+        
         cout << "amp[1/2]\t= " << real(amp[temp_amp_size/2]);
-        if (imag(amp[temp_amp_size/2]) < 0) {
-            imag2[0] = ' ';
-            cout << " - " << imag2 << "i\n";
-        }
+        if (imag(amp[temp_amp_size/2]) < 0)
+            cout << imag(amp[temp_amp_size/2]) << "j\n";
         else
-            cout << " + " << imag2 << "i\n";
+            cout << "+" << imag(amp[temp_amp_size/2]) << "j\n";
+        
         cout << "amp[3/4]\t= " << real(amp[3 * temp_amp_size/4]);
-        if (imag(amp[3 * temp_amp_size/4]) < 0) {
-            imag3[0] = ' ';
-            cout << " - " << imag3 << "i\n";
-        }
+        if (imag(amp[3 * temp_amp_size/4]) < 0)
+            cout << imag(amp[3 * temp_amp_size/4]) << "j\n";
         else
-            cout << " + " << imag3 << "i\n";
+            cout << "+" << imag(amp[3 * temp_amp_size/4]) << "j\n";
+        
         cout << "amp[-3] \t= " << real(amp[temp_amp_size - 3]);
-        if (imag(amp[temp_amp_size - 3]) < 0) {
-            imag4[0] = ' ';
-            cout << " - " << imag4 << "i\n\n";
-        }
+        if (imag(amp[temp_amp_size - 3]) < 0)
+            cout << imag(amp[temp_amp_size - 3]) << "j\n";
         else
-            cout << " + " << imag4 << "i\n\n";
+            cout << "+" << imag(amp[temp_amp_size - 3]) << "j\n";
+        cout << "\n";
     }
 
     {
@@ -621,27 +620,27 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "Runtime (" << total_time << " s total) by category \n";
         
         string H_s = "     H (" + to_string(amp.count_of_category.H) +  ")";
-        ss << H_s << setw(28 - H_s.size()) << right << ": " << amp.time_by_category.H
+        ss << H_s << setw(30 - H_s.size()) << right << ": " << amp.time_by_category.H
         << " s \t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T) {
             string CZ_T_s = "     CZ & T (" +
             to_string(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ) + ")" ;
-            ss << CZ_T_s << setw(28 - CZ_T_s.size()) << right << ": "
+            ss << CZ_T_s << setw(30 - CZ_T_s.size()) << right << ": "
             << amp.time_by_category.CZ_T << " s \t= "
             << (amp.time_by_category.CZ_T/total_time) * 100 << "%\n";
         }
         
         if(amp.count_of_category.decomposed_CZ) {
-            string CZ_s = "     Decomposed CZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
-            ss << CZ_s << setw(28 - CZ_s.size()) << right << ": "
+            string CZ_s = "     xCZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
+            ss << CZ_s << setw(30 - CZ_s.size()) << right << ": "
             << amp.time_by_category.decomposed_CZ << " s \t= " << (amp.time_by_category.decomposed_CZ/total_time) * 100 << "%\n";
         }
         
         if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
             string XY_s = "     Single X (" + to_string(amp.count_of_category.X1_2)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2) + ")";
-            ss << XY_s << setw(28 - XY_s.size()) << right << ": "
+            ss << XY_s << setw(30 - XY_s.size()) << right << ": "
             << amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2 << " s \t= "
             << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100 << "%\n";
         }
@@ -649,24 +648,24 @@ PrintSimReport(GenericQuantumState& amp,
         if (amp.count_of_category.merged_XY1_2) {
             string X_Y_s = "     Merged X & Y ("
             + to_string(amp.count_of_category.merged_XY1_2 - amp.count_of_category.Y1_2 - amp.count_of_category.X1_2) + ")";
-            ss << X_Y_s << setw(28 - X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
+            ss << X_Y_s << setw(30 - X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
             << " s \t= " << (amp.time_by_category.merged_XY1_2/total_time) * 100 << "%\n";
         }
         
         if (amp.count_of_category.rescale) {
             string RP_s = "     Rescaling passes (" + to_string(amp.count_of_category.rescale) + ")";
-            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": " << amp.time_by_category.rescale
+            ss <<  RP_s << setw(30 - RP_s.size()) << right << ": " << amp.time_by_category.rescale
             << " s \t= " << (amp.time_by_category.rescale/total_time) * 100 << "%\n";
         }
         
         if (amp.time_by_category.conversion) {
             string RP_s = "     Conversion ";
-            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": "
+            ss <<  RP_s << setw(30 - RP_s.size()) << right << ": "
             << amp.time_by_category.conversion << " s \t= "
             << (amp.time_by_category.conversion/total_time) * 100 << "%\n";
         }
         
-        ss << "Average time per gate : " << total_time/circuit.GetTotalNumGates() << "s\n";
+        ss << "Average time per gate : " << total_time/circuit.GetTotalNumGates() << " s\n";
         
         cout << ss.str() << "\n";
     }
@@ -1014,7 +1013,7 @@ PrintReportToFile(GenericQuantumState& amp,
         }
         
         if(amp.count_of_category.decomposed_CZ) {
-            string CZ_s = "     Decomposed CZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
+            string CZ_s = "     xCZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
             ss << CZ_s << setw(28 - CZ_s.size()) << right << ": "
             << amp.time_by_category.decomposed_CZ << " s \t= " << (amp.time_by_category.decomposed_CZ/total_time) * 100 << "%\n";
         }

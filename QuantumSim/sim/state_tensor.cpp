@@ -246,7 +246,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
-    clock_t begin = clock();
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
     total_circuit_qubits = num_q_a + num_q_b;
     bitset<128> CZ_bitmasks_a[num_q_a];
@@ -266,13 +268,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
         T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
     }
-    clock_t end = clock();
-    time_by_category.CZ_T +=  double(end - begin) / CLOCKS_PER_SEC;
-    
-    if (applyCZ_a || T_bitmasks_a[0] != 0)
-        state_a -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_a, T_bitmasks_a);
-    if (applyCZ_b || T_bitmasks_b[0] != 0)
-        state_b -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_b, T_bitmasks_b);
+    gettimeofday(&end, NULL);
+    time_by_category.CZ_T += ((end.tv_sec  - start.tv_sec) * 1000000u +
+                              end.tv_usec - start.tv_usec) / 1.e6;
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
@@ -295,6 +293,13 @@ ApplyBlockOfDiagGates(string& cz_bits,
             data_per_cycles.xCZ_H.push_back(0);
         }
     }
+    
+
+    if (applyCZ_a || T_bitmasks_a[0] != 0)
+        state_a -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_a, T_bitmasks_a);
+    if (applyCZ_b || T_bitmasks_b[0] != 0)
+        state_b -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_b, T_bitmasks_b);
+   
     return false;
 }
 
@@ -322,7 +327,9 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
                    const Gate::Type CZ_D_A,
                    const Gate::Type CZ_D_B)
 {
-    clock_t begin = clock();
+    struct timeval begin, end;
+    gettimeofday(&begin, NULL);
+    
     vector<pair<int,bitset<128>>> qubits_gates_across;
     FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
     
@@ -338,8 +345,10 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
             g.second[q] = 0;
         }
     }
-    clock_t end = clock();
-    time_by_category.decomposed_CZ +=  double(end - begin) / CLOCKS_PER_SEC;
+    
+    gettimeofday(&end, NULL);
+    time_by_category.decomposed_CZ +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                            end.tv_usec - begin.tv_usec) / 1.e6;
     
     if (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT) {
         data_per_cycles.memory.push_back(GetMemUsage());

@@ -34,7 +34,7 @@ private:
 public:
     void PrintSystemReport() const;
     void PrintSimSpecReport(const GenericQuantumState& amp,
-                            const Circuit& circuit) const;
+                            const Circuit& circuit);
     void PrintSimReport(GenericQuantumState& amp,
                      const Circuit& circuit) const;
     void PrintReportToFile(GenericQuantumState& amp,

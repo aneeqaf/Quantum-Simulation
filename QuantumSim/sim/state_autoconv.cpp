@@ -40,7 +40,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
         terminate = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
-            clock_t begin = clock();
+            struct timeval begin, end;
+            gettimeofday(&begin, NULL);
             
             //Add support for finding the cut type
             if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
@@ -48,8 +49,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
                 full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
             else
                 full_state = sumOfTensors -> ConvertSumOfTensorsToState();
-            clock_t end = clock();
-            time_by_category.conversion += double(end - begin) / CLOCKS_PER_SEC;
+           
+            gettimeofday(&end, NULL);
+            time_by_category.conversion +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
+                                                end.tv_usec - begin.tv_usec) / 1.e6;
             
             delete sumOfTensors;
             sumOfTensors = nullptr;
