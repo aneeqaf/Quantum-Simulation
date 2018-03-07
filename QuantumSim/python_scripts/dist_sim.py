@@ -11,126 +11,74 @@ import datetime
 import dist_util
 import errno
 import psutil
+from multiprocessing import cpu_count
 import numpy as np
 
 @click.command()
 @click.argument("num_cz", nargs=1)
 @click.argument("num_idx", nargs=1)
+@click.option("--dfs_len", nargs=1, required=False, default=0)
 @click.option("--command", nargs=1, required=True)
 @click.option("--seed", nargs=1, required=False, default=-1)
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--p_idx", nargs=1, required=False, default=-1)
 @click.option("--num_procs", nargs=1, required=False, default=1)
 @click.option("--num_threads", nargs=1, required=False, default=8)
-def main(num_cz, num_idx, command, seed, idx_file, p_idx, num_procs, num_threads):
+def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, num_threads):
 
+	if num_procs * num_threads > cpu_count():
+		print("Requested too many threads. There are " + str(cpu_count()) + " hardware threads.")
+		exit()
 	# Do trial run to choose better cut
 	d_idx = [pos for pos, char in enumerate(command) if char in "-d"][-1]
-	cir_dir = re.findall(r'\binst\w+', command)[0] + "_" +\
-	 command[d_idx + 2 :]
-	if os.path.isdir(os.path.join("output", "amp_vectors", cir_dir)):
-		shutil.rmtree(os.path.join("output", "amp_vectors", cir_dir), ignore_errors=True)
+	file_name = re.findall(r'\binst\w+', command)
+	cir_name = "test"
 
-	commandH = dist_util.BuildDistCommand(command, 0, num_threads, cir_dir) \
-	+ dist_util.AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx) + " --CZ_path "
-	
-	commandV = dist_util.BuildDistCommand(command, 1, num_threads, cir_dir) \
-	+ dist_util.AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx) + " --CZ_path "
+	if len(file_name):
+		cir_name = re.findall(r'\binst\w+', command)[0] + "_" + command[d_idx + 2 :]
+	cir_dir = os.path.join("output", "amp_vectors", cir_name)
+	if os.path.isdir(os.path.join("output", "amp_vectors", cir_name)):
+		shutil.rmtree(os.path.join("output", "amp_vectors", cir_name), ignore_errors=True)
+	else:
+		os.makedirs(cir_dir)
+
+	commandH = dist_util.BuildDistCommand(command, 0, num_threads, cir_name) 
+	commandV = dist_util.BuildDistCommand(command, 1, num_threads, cir_name) 
 		
-	num_czh, num_czv, H_time, V_time, H_mem, V_mem = dist_util.PerformTrialRun(commandH, commandV, num_cz)
+	num_czh, num_czv, dfs_lenH, dfs_lenV, H_time, V_time, H_mem, V_mem = \
+	dist_util.PerformTrialRun(commandH, commandV, num_cz, dfs_len)
 	
 	num_cz = num_czh if (num_czv >= num_czh) else num_czv
 	t_time = H_time if (num_czv >= num_czh) else V_time
 	cut = "horizontal-cut" if (num_czv >= num_czh) else "vertical-cut"
 	command = commandH if (num_czv >= num_czh) else commandV
 	mem = H_mem if (num_czv >= num_czh) else V_mem
+	dfs_len = dfs_lenH if (num_czv >= num_czh) else dfs_lenV
 
 	dist_util.EvalMemAndRuntime(t_time, num_cz, mem, num_procs)
 
 	cz_bits_strings = []
 	for bit_comb in range((1 << int(num_cz))):
-		cz_bits_strings.append(str(num_cz) + "," + str(bit_comb))
-
-	# Generating scripts for each parallel run
-	print("\033[1m" + "Generating scripts for execution" + "\033[0m\n")
-	script_dir = os.path.join("bin", cir_dir)
-	if not os.path.isdir(script_dir):
-		try:
-			os.makedirs(script_dir)
-		except OSError as e:
-			if e.errno != errno.EEXIST:
-				raise
+		if dfs_len:
+			cz_bits_strings.append(str(num_cz) + "," + str(bit_comb) + "," + str(dfs_len) + " ")
 		else:
-			shutil.rmtree(script_dir)
-			try:
-				os.makedirs(script_dir)
-			except OSError as e:
-				if e.errno != errno.EEXIST:
-					raise
-	
-	proc_per_script = int(len(cz_bits_strings)/num_procs);
-	for i in range(int(num_procs - 1)):
-		with open(os.path.join(script_dir, "script_" + str(i) + ".sh"), "w") as script:
-			script.write("#!/bin/bash\nset -e\n")
-			start_idx = i * proc_per_script
-			for j in range(start_idx, start_idx + proc_per_script):
-				script.write(command + cz_bits_strings[j] + "\n")
+			cz_bits_strings.append(str(num_cz) + "," + str(bit_comb) + " ")
 
-	with open(os.path.join(script_dir, "script_" + str(num_procs - 1) + ".sh"), "w") as script:
-			script.write("#!/bin/bash\nset -e\n")
-			start_idx = (num_procs - 1) * proc_per_script
-			for j in range(start_idx, len(cz_bits_strings)):
-				script.write(command + cz_bits_strings[j] + "\n")
+	command += dist_util.AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx) + " --CZ_path "
 
-	os.system("chmod +x " + script_dir + "/*")
-
-	est_time = str(round(float(t_time) * (1 << int(num_cz)), 3)/int(num_procs))
-	print ("\033[1m" + "Launching " +  str(len(cz_bits_strings)) + " " + cut + " simulations with " +\
-		str(num_procs) + " parallel processes and with upto " + str(num_threads) + \
-		" threads each, that are estimated to take " + est_time + \
-		" s in a distrubuted run.\nThe peak memory usage is expected to be " + \
-		 str(mem * num_procs) + " B\nThe CZ path length is " + str(num_cz) + "\033[0m")
-
-	# Create the log directory if it doesn't already exist
-	log_dir = os.path.join("output", "log")
-	if not os.path.isdir(log_dir):
-		try:
-			os.makedirs("output/log")
-		except OSError as e:
-			if e.errno != errno.EEXIST:
-				raise
-
-	if os.path.isdir(log_dir):
-		log_dir = os.path.join(log_dir, cir_dir)
-		if not os.path.isdir(log_dir):
-			try:
-				os.makedirs(log_dir)
-			except OSError as e:
-				if e.errno != errno.EEXIST:
-					raise
-		else:
-			shutil.rmtree(log_dir)
-			try:
-				os.makedirs(log_dir)
-			except OSError as e:
-				if e.errno != errno.EEXIST:
-					raise
-
-	# Launch the scripts and print the logs generated by the processes in each script into a file 
-	# in the log directory
-	for p in range(num_procs):
-		print("/usr/bin/time ./" + os.path.join(script_dir, "script_" + str(p) + ".sh") +\
-		  " > " + os.path.join(log_dir, "script_" + str(p))+ " 2>&1 &")
-		os.system("/usr/bin/time ./" + os.path.join(script_dir, "script_" + str(p) + ".sh") + \
-		  " > " + os.path.join(log_dir, "script_" + str(p)) + " 2>&1 &")
+	dist_util.LaunchDisParallelSim(num_cz, num_procs, dfs_len, cir_name, cz_bits_strings, \
+		command, t_time, num_threads, mem, cut)
 
 	# Sleep 5 * time taken in trial run. Check if the logs are changing in size. Once the logs
 	# stop changing, verify they completed without errors, then launch reporting script.
+	proc_per_script = int(len(cz_bits_strings)/num_procs) if len(cz_bits_strings) > 1 else 1
+	num_procs = 1 if len(cz_bits_strings) == 1 else num_procs
+	log_dir = os.path.join("output", "log", cir_name)
 	changing = True
 	logs_prev_mem = np.zeros(num_procs)
 	log_files = []
 	for i in range(num_procs):
-		log_files.append(os.path.join(log_dir, "script_" + str(i)))
+		log_files.append(os.path.join(log_dir, "log_script_" + str(i) + ".txt"))
 
 	os.system("chmod +x python_scripts/add_amps.py")
 	while changing:
@@ -140,7 +88,7 @@ def main(num_cz, num_idx, command, seed, idx_file, p_idx, num_procs, num_threads
 			if os.stat(lf).st_size > logs_prev_mem[i]:
 				any_log_changed = True
 				logs_prev_mem[i] = os.stat(lf).st_size
-				os.system("./python_scripts/add_amps.py " + cir_dir + " " + num_idx)
+				os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
 
 		if not any_log_changed:
 			changing = False
@@ -162,9 +110,10 @@ def main(num_cz, num_idx, command, seed, idx_file, p_idx, num_procs, num_threads
 			print ("The simulations in script_" + str(num_procs - 1) + " did not complete")
 			exit()
 
+	est_time = str(round(float(t_time) * (1 << int(num_cz)), 3)/int(num_procs))
 	os.system("chmod +x python_scripts/dist_sim_report_gen.py")
-	os.system("./python_scripts/dist_sim_report_gen.py " + cir_dir + " " + est_time)
-	os.system("./python_scripts/add_amps.py " + cir_dir + " " + num_idx)
+	os.system("./python_scripts/dist_sim_report_gen.py " + cir_name + " " + est_time)
+	# os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
 
 if __name__ == "__main__":
     main()		

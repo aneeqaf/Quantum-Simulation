@@ -20,8 +20,10 @@ typedef struct TimesByCategory{
     double decomposed_CZ;
     double rescale;
     double conversion;
+    double copying;
     
-    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0){}
+    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0),
+    copying(0){}
 }Times;
 
 
@@ -35,9 +37,9 @@ typedef struct CountOfCategory{
     ul rescale;
     ul conversion;
     ul xCZ_not_applied;
+    ul copying;
     
-    CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0),
-    xCZ_not_applied(0) {}
+    CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0) {}
 }Counts;
 
 #endif /* time_h */

@@ -20,8 +20,9 @@
 
 #include "kernels1.h"
 #include "profile.h"
+#include "config.h"
 
-constexpr int sampling_factor = 10;
+constexpr int sampling_factor = 1;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;
@@ -37,15 +38,17 @@ typedef struct DataPerCycle {
     addends({}), memory({}){}
 } Data;
 
-class GenericQuantumState {
+class GenericQuantumState {    
 public:
     static Data data_per_cycles;
     static vector<string> log;
     static Counts count_of_category;
     static Times time_by_category;
     static int num_threads;
+    static Config::SimMode sim_mode;
+    vector<cmplx> amps_of_interest;
     
-    virtual bool ApplyBlockOfDiagGates(string& cz_bits,
+    virtual int ApplyBlockOfDiagGates(string& cz_bits,
                                        const bitset<128>* __restrict CZ_bitmasks,
                                        const bitset<128> T_bitmasks[2]) = 0;
     virtual void ApplyNonCGate(const int gate_qubit,
@@ -100,12 +103,39 @@ public:
     virtual void PrintProbabilities(const string& out_file,
                                     const int cycle_num)  = 0;
         
-    GenericQuantumState(){}
+    GenericQuantumState(): amps_of_interest({}) {}
     GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };
 
 int FindDivisor(int num);
+void HorizontalCut(bitset<128>& a_qubits_bitmask,
+                   bitset<128>& b_qubits_bitmask,
+                   int& num_qubits_a,
+                   int& num_qubits_b,
+                   const int total_qubits,
+                   const int cut = 0);
+void VerticalCut(bitset<128>& a_qubits_bitmask,
+                 bitset<128>& b_qubits_bitmask,
+                 int& num_qubits_a,
+                 int& num_qubits_b,
+                 const int total_qubits,
+                 const int cut = 0);
+idx_size Project1QBitmask(const bitset<128> gate_bitmask,
+                          const bitset<128> partition_bitmask,
+                          const int num_qubits,
+                          const bool zero_least_sig,
+                          const bool leading_ones = false);
+int ProjectQubit(const int qubit_to_project,
+                 const bitset<128> partition_bitmask,
+                 const int num_qubits);
+bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
+                      const bitset<128> partition_bitmask,
+                      const bitset<128>* __restrict gate_bitmasks,
+                      const int total_circuit_qubits);
+bitset<128> ScatterGlobalIndex(const bitset<128> i,
+                               const bitset<128> partition_bitmask,
+                               const idx_size total_qubits);
 
 
 #endif /* state_interface_h */

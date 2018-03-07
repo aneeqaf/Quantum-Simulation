@@ -13,7 +13,7 @@ def main(cir_file, num_idx):
 	outdir = os.path.join("output", "amp_vectors", cir_file)
 	files = os.listdir(outdir)
 
-	amps = np.zeros(int(num_idx), dtype=complex)
+	amps = np.zeros(int(num_idx)+ 5, dtype=complex)
 
 	for filename in files:
 		if filename.endswith(".amps"):

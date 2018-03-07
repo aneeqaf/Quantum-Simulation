@@ -17,31 +17,61 @@ AdaptiveStateVector(const int qubits,
 }
 
 AdaptiveStateVector::
+AdaptiveStateVector(const AdaptiveStateVector& rhs)
+{
+    if (rhs.full_state) {
+        full_state = new FullAmpStateVector(*(rhs.full_state));
+        sumOfTensors = nullptr;
+    }
+    else {
+        full_state = nullptr;
+        sumOfTensors = new SumOfTensorsProductsStateVector(*(rhs.sumOfTensors));
+    }
+    
+    total_q = rhs.total_q;
+}
+
+AdaptiveStateVector& AdaptiveStateVector::
+operator=(const AdaptiveStateVector& rhs)
+{
+    AdaptiveStateVector temp(rhs);
+    if (rhs.full_state)
+        swap(full_state, temp.full_state);
+    else
+        swap(sumOfTensors, temp.sumOfTensors);
+    
+    total_q = rhs.total_q;
+    return *this;
+}
+
+AdaptiveStateVector::
 ~AdaptiveStateVector()
 {
     delete full_state;
     delete sumOfTensors;
 }
 
-bool AdaptiveStateVector::
+int AdaptiveStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
-    bool terminate = false;
+    int last_xCZ_idx = -1;
     if (full_state) {
-        data_per_cycles.xCZ_H.push_back(0);
-        data_per_cycles.xCZ_V.push_back(0);
-        data_per_cycles.addends.push_back(0);
-        data_per_cycles.memory.push_back(GetMemUsage());
+        if (sim_mode != Config::SimMode::Phase2) {
+            data_per_cycles.xCZ_H.push_back(0);
+            data_per_cycles.xCZ_V.push_back(0);
+            data_per_cycles.addends.push_back(0);
+            data_per_cycles.memory.push_back(GetMemUsage());
+        }
         full_state -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
     }
     else {
-        terminate = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
+        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
-            struct timeval begin, end;
-            gettimeofday(&begin, NULL);
+            struct timespec start, end;
+            clock_gettime(CLOCK_MONOTONIC, &start);
             
             //Add support for finding the cut type
             if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
@@ -50,15 +80,14 @@ ApplyBlockOfDiagGates(string& cz_bits,
             else
                 full_state = sumOfTensors -> ConvertSumOfTensorsToState();
            
-            gettimeofday(&end, NULL);
-            time_by_category.conversion +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                                                end.tv_usec - begin.tv_usec) / 1.e6;
+            clock_gettime(CLOCK_MONOTONIC, &end);
+            time_by_category.conversion += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
             
             delete sumOfTensors;
             sumOfTensors = nullptr;
         }
     }
-    return terminate;
+    return last_xCZ_idx;
 }
 
 void AdaptiveStateVector::

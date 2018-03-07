@@ -8,111 +8,6 @@
 
 #include "state_tensor.h"
 
-idx_size
-Project1QBitmask(const bitset<128> gate_bitmask,
-                 const bitset<128> partition_bitmask,
-                 const int num_qubits,
-                 const bool zero_least_sig,
-                 const bool leading_ones)
-{
-    const int modified_q = num_qubits - 1;
-    idx_size projected_bitmask = 0, c = 0;
-    if (!leading_ones) {
-        if (!zero_least_sig) {
-            for (int i = modified_q; i >= 0; --i) {
-                bitset<128> temp = 0;
-                temp[modified_q - i] = 1;
-                if ((temp & partition_bitmask) != 0) {
-                    if ((temp & gate_bitmask) != 0)
-                        projected_bitmask |= 1ull << c;
-                    ++c;
-                }
-            }
-        }
-        else {
-            for (int i = 0; i < num_qubits; ++i) {
-                bitset<128> temp = 0, temp1 = 0;
-                temp[modified_q - i] = 1;
-                temp1[i] = 1;
-                if ((temp & partition_bitmask) != 0) {
-                    if ((temp1 & gate_bitmask) != 0)
-                        projected_bitmask |= 1ull << c;
-                    ++c;
-                }
-            }
-        }
-    }
-    else {
-        assert(false);
-//        return gate_bitmask & partition_bitmask;
-    }//TODO:FIX
-
-    return projected_bitmask;
-}
-
-int
-ProjectQubit(const int qubit_to_project,
-             const bitset<128> partition_bitmask,
-             const int num_qubits)
-{
-    const int modified_q = num_qubits - 1;
-    int c = 0;
-    for (int i = 0; i < num_qubits; ++i) {
-        bitset<128> temp = 0;
-        temp[modified_q - i] = 1;
-        if ((temp & partition_bitmask) != 0) {
-            if (i == qubit_to_project)
-                return c;
-            ++c;
-        }
-    }
-    assert(false);
-    return -1;
-}
-
-bool
-ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
-                 const bitset<128> partition_bitmask,
-                 const bitset<128>* __restrict gate_bitmasks,
-                 const int total_circuit_qubits)
-{
-    const int modified_q = total_circuit_qubits - 1;
-    idx_size c = 0;
-    bool bitmask_0 = true;
-    for (int i = modified_q; i >= 0; --i) {
-        bitset<128> temp = 0;
-        temp[modified_q - i] = 1;
-        if ((temp & partition_bitmask) != 0) {
-            if ((gate_bitmasks[modified_q - i] & partition_bitmask) != 0) {
-                projected_bitmasks[c] = Project1QBitmask(gate_bitmasks[modified_q - i]
-                                                         & partition_bitmask, partition_bitmask, total_circuit_qubits,
-                                                         false);
-                bitmask_0 = false;
-            }
-            ++c;
-        }
-    }
-    return !bitmask_0;
-}
-
-bitset<128>
-ScatterGlobalIndex(const bitset<128> i,
-                   const bitset<128> partition_bitmask,
-                   const idx_size total_qubits)
-{
-    bitset<128> local_idx = 0;
-    int count = 0;
-
-    for (idx_size j = 0; j < total_qubits; ++j) {
-        bitset<128> j_bit = 0;
-        j_bit[j] = 1;
-        if ((j_bit & partition_bitmask) == 0) continue;
-
-        if ((j_bit & i) != 0) local_idx[count++] = 1;
-        else ++count;
-    }
-    return local_idx;
-}
 
 TensorProductStateVector::
 TensorProductStateVector(const int qubits,
@@ -126,9 +21,9 @@ a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0), sim_type(sim)
     cut_type = cut;
 
     if (cut == Cuts::Horizontal)
-        HorizontalCut(num_q_a, num_q_b, qubits, hcut);
+        HorizontalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, qubits, hcut);
     else
-        VerticalCut(num_q_a, num_q_b, qubits, vcut);
+        VerticalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, qubits, vcut);
     
     
     state_a = new FullAmpStateVector(num_q_a);
@@ -168,45 +63,6 @@ TensorProductStateVector::
 }
 
 void TensorProductStateVector::
-HorizontalCut(int& num_qubits_a,
-              int& num_qubits_b,
-              const int total_qubits,
-              const int cut)
-{
-    num_qubits_a = !cut ? ceil(total_qubits/2) : cut;
-    const int modified_q = total_qubits - 1;
-    
-    for (int i = 0; i < num_qubits_a; ++i)
-        a_qubits_bitmask [modified_q - i] = 1;
-    
-    for (int i = num_qubits_a; i < total_qubits; ++i) {
-        b_qubits_bitmask [modified_q - i] = 1;
-        ++num_qubits_b;
-    }
-}
-
-void TensorProductStateVector::
-VerticalCut(int& num_qubits_a,
-            int& num_qubits_b,
-            const int total_qubits,
-            const int cut)
-{
-    const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
-    modified_q = total_qubits - 1, v_cut = !cut ? ceil(x_axis_sz/2) : cut;
-    
-    for (int i = 0; i < y_axis_sz; ++i) {
-        for (int j = 0; j < v_cut; ++j) {
-            a_qubits_bitmask [modified_q - ((i * x_axis_sz) + j)] = 1;
-            ++num_qubits_a;
-        }
-        for (int j = v_cut; j < x_axis_sz; ++j) {
-            b_qubits_bitmask [modified_q - ((i * x_axis_sz) + j)] = 1;
-            ++num_qubits_b;
-        }
-    }
-}
-
-void TensorProductStateVector::
 FindCZGatesBetweenPartitions(vector<pair<int,bitset<128>>>& CZ_bitmasks,
                              const bitset<128>* __restrict gate_bitmasks)
 {
@@ -241,13 +97,13 @@ ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
 }
 
 
-bool TensorProductStateVector::
+int TensorProductStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
     total_circuit_qubits = num_q_a + num_q_b;
@@ -268,9 +124,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
         T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
     }
-    gettimeofday(&end, NULL);
-    time_by_category.CZ_T += ((end.tv_sec  - start.tv_sec) * 1000000u +
-                              end.tv_usec - start.tv_usec) / 1.e6;
+    
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.CZ_T += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
@@ -280,7 +136,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
     else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
-    else if (sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV)) {
+    else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
+             && sim_mode != Config::SimMode::Phase2){
         idx_size count = CountXCZGates(CZ_bitmasks);
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
@@ -294,13 +151,12 @@ ApplyBlockOfDiagGates(string& cz_bits,
         }
     }
     
-
     if (applyCZ_a || T_bitmasks_a[0] != 0)
         state_a -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_a, T_bitmasks_a);
     if (applyCZ_b || T_bitmasks_b[0] != 0)
         state_b -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_b, T_bitmasks_b);
    
-    return false;
+    return -1;
 }
 
 idx_size TensorProductStateVector::
@@ -327,8 +183,8 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
                    const Gate::Type CZ_D_A,
                    const Gate::Type CZ_D_B)
 {
-    struct timeval begin, end;
-    gettimeofday(&begin, NULL);
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     
     vector<pair<int,bitset<128>>> qubits_gates_across;
     FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
@@ -340,17 +196,18 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
             int first_half = __builtin_ctzl(g.second.to_ulong());
             int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
             const int q = first_half ? first_half : second_half ? 64 + second_half : 0;
-            ++count_of_category.decomposed_CZ;
+            if (sim_mode != Config::SimMode::Phase2)
+                ++count_of_category.decomposed_CZ;
             ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, g.first, modified_num_q_B - q);
             g.second[q] = 0;
         }
     }
     
-    gettimeofday(&end, NULL);
-    time_by_category.decomposed_CZ +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                            end.tv_usec - begin.tv_usec) / 1.e6;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
     
-    if (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT) {
+    if (sim_mode != Config::SimMode::Phase2 &&
+        (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
         if (cut_type == Cuts::Horizontal) {
@@ -457,6 +314,7 @@ operator[](bitset<128> i) const
         return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
     }
 }
+
 
 cmplx TensorProductStateVector::
 GetAmpFromGlobalState(const idx_size a,

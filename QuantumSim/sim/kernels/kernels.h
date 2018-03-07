@@ -17,7 +17,10 @@ ApplyX12Gate(cmplx* __restrict amp,
               const idx_size* indices)
 {
     cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
-   
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))
+        return;
+    
     amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
     amp[indices[1]] = (temp_amp[0]*X12[1][0]) + (temp_amp[1]*X12[1][1]);
 }
@@ -28,6 +31,9 @@ ApplyY12Gate(cmplx* __restrict amp,
 {
     cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
     
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))
+        return;
+    
     amp[indices[0]] = (temp_amp[0]*Y12[0][0]) + (temp_amp[1]*Y12[0][1]);
     amp[indices[1]] = (temp_amp[0]*Y12[1][0]) + (temp_amp[1]*Y12[1][1]);
 }
@@ -37,6 +43,11 @@ ApplyXX12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
+        && amp[indices[2]] == cmplx(0,0) && amp[indices[3]] == cmplx(0,0))
+        return;
+    
     const auto t0 = a[0] + a[3];
     const auto t1 = a[1] + a[2];
     const auto t2 = ki * (a[0] - a[3]);
@@ -53,6 +64,11 @@ ApplyYY12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
+        && amp[indices[2]] == cmplx(0,0) && amp[indices[3]] == cmplx(0,0))
+        return;
+    
     const auto t0 = a[0] + a[3];
     const auto t1 = a[0] - a[3];
     const auto t2 = a[1] + a[2];
@@ -69,6 +85,11 @@ ApplyXY12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
+        && amp[indices[2]] == cmplx(0,0) && amp[indices[3]] == cmplx(0,0))
+        return;
+    
     const auto t0 = a[0] - a[1];
     const auto t1 = a[2] - a[3];
     const auto t2 = a[0] + a[1];
@@ -85,6 +106,11 @@ ApplyYX12Gate(cmplx* __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
+        && amp[indices[2]] == cmplx(0,0) && amp[indices[3]] == cmplx(0,0))
+        return;
+    
     const auto t0 = (ki * a[0]) + a[1];
     const auto t1 = a[0] + (ki * a[1]);
     const auto t2 = (ki * a[2]) + a[3];

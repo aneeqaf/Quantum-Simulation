@@ -20,10 +20,10 @@ private:
     idx_size num_addends;
     
 public:
-    bool ApplyBlockOfDiagGates(string& cz_bits,
+    int ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128> T_bitmasks[2]);
-    inline bool ApplyXCZGatesExact(string& cz_bits,
+    inline int ApplyXCZGatesExact(string& cz_bits,
                                    const bitset<128>* __restrict CZ_bitmasks);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
@@ -82,8 +82,8 @@ public:
                                     const Config::SimType type,
                                     const int hcut = 0,
                                     const int vcut = 0);
-    SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs) = delete;
-    SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs) = delete;
+    SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs);
+    SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs);
     ~SumOfTensorsProductsStateVector();
 };
 

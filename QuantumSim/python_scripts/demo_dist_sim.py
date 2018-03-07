@@ -15,13 +15,14 @@ import dist_util
 @click.command()
 @click.argument("num_cz", nargs=1)
 @click.argument("num_idx", nargs=1)
+@click.option("--dfs_len", nargs=1, required=False, default=0)
 @click.option("--command", nargs=1, required=True)
 @click.option("--print_all", nargs=1, required=False, default=-1)
 @click.option("--seed", nargs=1, required=False, default=-1)
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--p_idx", nargs=1, required=False, default=-1)
 @click.option("--num_threads", nargs=1, required=False, default=8)
-def main(num_cz, num_idx, command, print_all, seed, idx_file, p_idx, num_threads):
+def main(num_cz, num_idx, dfs_len, command, print_all, seed, idx_file, p_idx, num_threads):
 	"""
 	This script illustrates how to configure simulator parameters for 
 	distributed simulation, launch multiple simulator runs, and then collect results. 
@@ -54,15 +55,14 @@ def main(num_cz, num_idx, command, print_all, seed, idx_file, p_idx, num_threads
 
 	tempH_dir = "test_H" + str(os.getpid()) + str(datetime.datetime.now().time())
 	outdirH = "output/amp_vectors/" + tempH_dir
-	commandH = dist_util.BuildDistCommand(command, 0, num_threads, tempH_dir) \
-	+ dist_util.AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx) + " --CZ_path "
+	commandH = dist_util.BuildDistCommand(command, 0, num_threads, tempH_dir)
 	
 	tempV_dir = "test_V" + str(os.getpid()) + str(datetime.datetime.now().time())
 	outdirV = "output/amp_vectors/" + tempV_dir;
-	commandV = dist_util.BuildDistCommand(command, 1, num_threads, tempV_dir) \
-	+ dist_util.AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx) + " --CZ_path "
+	commandV = dist_util.BuildDistCommand(command, 1, num_threads, tempV_dir)
 		
-	num_czh, num_czv, H_time, V_time, H_mem, V_mem = dist_util.PerformTrialRun(commandH, commandV, num_cz)
+	num_czh, num_czv, dfs_lenH, dfs_lenV, H_time, V_time, H_mem, V_mem \
+	= dist_util.PerformTrialRun(commandH, commandV, num_cz, dfs_len)
 	shutil.rmtree(outdirH)
 	shutil.rmtree(outdirV)
 
@@ -72,12 +72,21 @@ def main(num_cz, num_idx, command, print_all, seed, idx_file, p_idx, num_threads
 	# Form the commands to be executed
 	cz_bits_stringsH = []
 	for bit_comb in range((1 << int(num_czh))):
-		cz_bits_stringsH.append(str(num_czh) + "," + str(bit_comb))
+		if dfs_len:
+			cz_bits_stringsH.append(str(num_czh) + "," + str(bit_comb) + "," + str(dfs_len))
+		else:
+			cz_bits_stringsH.append(str(num_czh) + "," + str(bit_comb))
 
 	cz_bits_stringsV = []
 	for bit_comb in range((1 << int(num_czv))):
-		cz_bits_stringsV.append(str(num_czv) + "," + str(bit_comb))
+		if dfs_len:
+			cz_bits_stringsV.append(str(num_czv) + "," + str(bit_comb) + "," + str(dfs_len))
+		else:
+			cz_bits_stringsV.append(str(num_czv) + "," + str(bit_comb))
 
+	commandH +=  dist_util.AddPrintOptToCommand(seed, commandH, idx_file, p_idx, num_idx) + " --CZ_path "
+	commandV +=  dist_util.AddPrintOptToCommand(seed, commandV, idx_file, p_idx, num_idx) + " --CZ_path "
+	
 	# Horizontal simulation launch
 	print ("\033[1m" + "Launching " + str(len(cz_bits_stringsH)) + " horizontal-cut simulations with upto " + str(num_threads) + \
 		" threads each, that are estimated to take " \
@@ -86,7 +95,7 @@ def main(num_cz, num_idx, command, print_all, seed, idx_file, p_idx, num_threads
 
 	for cz_bits_str in cz_bits_stringsH:
 		print(commandH + cz_bits_str)
-		os.system(commandH + cz_bits_str )
+		os.system(commandH + cz_bits_str)
 
 	res_ampsH = np.zeros(int(num_idx))
 

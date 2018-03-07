@@ -42,7 +42,7 @@ FirstGroupOf8GatesHelper(float* __restrict t_amp,
     const __m256 temp_amp1 = _mm256_load_ps (&t_amp[2 * gray_codes[7]]);
     
     if (_mm256_movemask_ps(_mm256_cmp_ps(temp_amp0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(temp_amp0, kzeros, _CMP_EQ_OQ))  == 255)
+        && _mm256_movemask_ps(_mm256_cmp_ps(temp_amp1, kzeros, _CMP_EQ_OQ))  == 255)
         return;
     
     __m256 re_amps = _mm256_shuffle_ps (temp_amp0, temp_amp1, 0b10001000);
@@ -76,7 +76,7 @@ SecondGroupOf8GatesHelper(float* __restrict t_amp,
     const __m256 temp_amp1 = _mm256_load_ps (&t_amp[2 * gray_codes[0]]);
     
     if (_mm256_movemask_ps(_mm256_cmp_ps(temp_amp0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(temp_amp0, kzeros, _CMP_EQ_OQ))  == 255)
+        && _mm256_movemask_ps(_mm256_cmp_ps(temp_amp1, kzeros, _CMP_EQ_OQ))  == 255)
         return;
     
     //The order of real and imag amps is 2 floats from 1st group of 4, 2 floats from 2nd group of 4, and so on.

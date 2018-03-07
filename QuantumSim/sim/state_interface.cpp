@@ -12,7 +12,7 @@ Times GenericQuantumState::time_by_category({});
 Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
-
+Config::SimMode GenericQuantumState::sim_mode = Config::SimMode::Phase1;
 #ifdef Xcode
 int GenericQuantumState::num_threads = 8;
 #else
@@ -20,7 +20,7 @@ int GenericQuantumState::num_threads = omp_get_num_procs();
 #endif
 
 GenericQuantumState::
-GenericQuantumState(int n_threads) {
+GenericQuantumState(int n_threads): amps_of_interest({}) {
     num_threads = n_threads;
 }
 
@@ -52,6 +52,12 @@ FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks /*total_circuit_qubits*/
     FormBlockOfCZTGates(gate_i, CZ_bitmasks, T_bitmasks, all_gates, total_circuit_qubits);    
 }
 
+idx_size GenericQuantumState::
+GetNumAddends() const
+{
+    return 0;
+}
+
 int FindDivisor(int num)
 {
     int div = 0;
@@ -62,8 +68,153 @@ int FindDivisor(int num)
     return div;
 }
 
-idx_size GenericQuantumState::
-GetNumAddends() const
+idx_size
+Project1QBitmask(const bitset<128> gate_bitmask,
+                 const bitset<128> partition_bitmask,
+                 const int num_qubits,
+                 const bool zero_least_sig,
+                 const bool leading_ones)
 {
-    return 0;
+    const int modified_q = num_qubits - 1;
+    idx_size projected_bitmask = 0, c = 0;
+    if (!leading_ones) {
+        if (!zero_least_sig) {
+            for (int i = modified_q; i >= 0; --i) {
+                bitset<128> temp = 0;
+                temp[modified_q - i] = 1;
+                if ((temp & partition_bitmask) != 0) {
+                    if ((temp & gate_bitmask) != 0)
+                        projected_bitmask |= 1ull << c;
+                    ++c;
+                }
+            }
+        }
+        else {
+            for (int i = 0; i < num_qubits; ++i) {
+                bitset<128> temp = 0, temp1 = 0;
+                temp[modified_q - i] = 1;
+                temp1[i] = 1;
+                if ((temp & partition_bitmask) != 0) {
+                    if ((temp1 & gate_bitmask) != 0)
+                        projected_bitmask |= 1ull << c;
+                    ++c;
+                }
+            }
+        }
+    }
+    else {
+        assert(false);
+        //        return gate_bitmask & partition_bitmask;
+    }//TODO:FIX
+    
+    return projected_bitmask;
 }
+
+int
+ProjectQubit(const int qubit_to_project,
+             const bitset<128> partition_bitmask,
+             const int num_qubits)
+{
+    const int modified_q = num_qubits - 1;
+    int c = 0;
+    for (int i = 0; i < num_qubits; ++i) {
+        bitset<128> temp = 0;
+        temp[modified_q - i] = 1;
+        if ((temp & partition_bitmask) != 0) {
+            if (i == qubit_to_project)
+                return c;
+            ++c;
+        }
+    }
+    assert(false);
+    return -1;
+}
+
+bool
+ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
+                 const bitset<128> partition_bitmask,
+                 const bitset<128>* __restrict gate_bitmasks,
+                 const int total_circuit_qubits)
+{
+    const int modified_q = total_circuit_qubits - 1;
+    idx_size c = 0;
+    bool bitmask_0 = true;
+    for (int i = modified_q; i >= 0; --i) {
+        bitset<128> temp = 0;
+        temp[modified_q - i] = 1;
+        if ((temp & partition_bitmask) != 0) {
+            if ((gate_bitmasks[modified_q - i] & partition_bitmask) != 0) {
+                projected_bitmasks[c] = Project1QBitmask(gate_bitmasks[modified_q - i]
+                                                         & partition_bitmask, partition_bitmask, total_circuit_qubits,
+                                                         false);
+                bitmask_0 = false;
+            }
+            ++c;
+        }
+    }
+    return !bitmask_0;
+}
+
+bitset<128>
+ScatterGlobalIndex(const bitset<128> i,
+                   const bitset<128> partition_bitmask,
+                   const idx_size total_qubits)
+{
+    bitset<128> local_idx = 0;
+    int count = 0;
+    
+    for (idx_size j = 0; j < total_qubits; ++j) {
+        bitset<128> j_bit = 0;
+        j_bit[j] = 1;
+        if ((j_bit & partition_bitmask) == 0) continue;
+        
+        if ((j_bit & i) != 0) local_idx[count++] = 1;
+        else ++count;
+    }
+    return local_idx;
+}
+
+void
+HorizontalCut(bitset<128>& a_qubits_bitmask,
+              bitset<128>& b_qubits_bitmask,
+              int& num_qubits_a,
+              int& num_qubits_b,
+              const int total_qubits,
+              const int cut)
+{
+    num_qubits_a = !cut ? ceil(total_qubits/2) : cut;
+    const int modified_q = total_qubits - 1;
+    
+    for (int i = 0; i < num_qubits_a; ++i)
+        a_qubits_bitmask [modified_q - i] = 1;
+    
+    for (int i = num_qubits_a; i < total_qubits; ++i) {
+        b_qubits_bitmask [modified_q - i] = 1;
+        ++num_qubits_b;
+    }
+}
+
+void
+VerticalCut(bitset<128>& a_qubits_bitmask,
+            bitset<128>& b_qubits_bitmask,
+            int& num_qubits_a,
+            int& num_qubits_b,
+            const int total_qubits,
+            const int cut)
+{
+    const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
+    modified_q = total_qubits - 1, v_cut = !cut ? ceil(x_axis_sz/2) : cut;
+    
+    for (int i = 0; i < y_axis_sz; ++i) {
+        for (int j = 0; j < v_cut; ++j) {
+            a_qubits_bitmask [modified_q - ((i * x_axis_sz) + j)] = 1;
+            ++num_qubits_a;
+        }
+        for (int j = v_cut; j < x_axis_sz; ++j) {
+            b_qubits_bitmask [modified_q - ((i * x_axis_sz) + j)] = 1;
+            ++num_qubits_b;
+        }
+    }
+}
+
+

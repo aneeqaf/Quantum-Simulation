@@ -8,6 +8,8 @@
 #ifndef state_h
 #define state_h
 
+#include <immintrin.h>
+
 #include "state_interface.h"
 
 using namespace std;
@@ -26,7 +28,7 @@ private:
     
 public:
     
-    bool ApplyBlockOfDiagGates(string& cz_bits,
+    int ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128> T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,

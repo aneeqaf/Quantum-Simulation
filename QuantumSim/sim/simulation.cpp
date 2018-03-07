@@ -10,7 +10,7 @@
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
-SequentialSimulation(const Config& c): total_time(0), config(c) {}
+SequentialSimulation(const Config& c): total_time(0), dfs_time(0), cz_path_time(0), XE_time(0), config(c) {}
 
 void SequentialSimulation::
 PopulateBenchmarkMap()
@@ -44,188 +44,340 @@ void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
+    struct timespec start_p, end_p;
+    
     if (config.verbose)
         PrintSimSpecReport(amp, circuit);
     
     PopulateBenchmarkMap();
-    
-    idx_size size = circuit.GetTotalNumGates();
-    int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
-    double XE_time = 0;
-    
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
             circuit.GroupAlternateCycles();
         circuit.GroupSimilarGates();
     }
-    auto gates = circuit.GetGates();
+    
+    if (config.sim_type != Config::SimType::FullState) {
+        bitset<128> a_qubits_bitmask = 0, b_qubits_bitmask = 0;
+        int num_q_a = 0, num_q_b = 0;
+        if (config.sim_type == Config::SimType::LosslessH || config.sim_type == Config::SimType::Approx1CutH)
+            HorizontalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, circuit.GetNumQubits(), config.hcut);
+        else
+            VerticalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, circuit.GetNumQubits(), config.vcut);
+        circuit.MovexCZGates(a_qubits_bitmask, b_qubits_bitmask);
+    }
     
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     
+    clock_gettime(CLOCK_MONOTONIC, &start_p);
+    if (config.cz_path == "-" && config.dfs_length != -1)
+        Phase2Simulation(amp, circuit, 0);
+    else
+        Phase1Simulation(amp, circuit);
+    clock_gettime(CLOCK_MONOTONIC, &end_p);
+    total_time += (end_p.tv_sec - start_p.tv_sec) + ((end_p.tv_nsec - start_p.tv_nsec)/1.0e9)- XE_time;
+    
+    ReportingAfterSim(amp, circuit);
+}
+
+bool SequentialSimulation::
+SimulationLoop(GenericQuantumState &amp,
+               Circuit &circuit,
+               const idx_size gate_i)
+{
+    idx_size size = circuit.GetTotalNumGates();
+    int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
+    auto gates = circuit.GetGates();
     bool terminate = false;
-    struct timeval start_p, end_p, cycle_start, xe_t_b, xe_t_e;
-    gettimeofday(&start_p, NULL);
-    idx_size i = 0;
+    
+    struct timespec cycle_start, xe_t_b, xe_t_e;
+    idx_size i = gate_i;
     for (; i < size; ++i) {
         
         if (amp.GetGlobalFactorPower() > 100) {
-            struct timeval r_begin, r_end;
-            gettimeofday(&r_begin, NULL);
-            ++amp.count_of_category.rescale;
+            struct timespec r_start, r_end;
+            clock_gettime(CLOCK_MONOTONIC, &r_start);
+
+            if (config.curr_mode != Config::SimMode::Phase2)
+                ++amp.count_of_category.rescale;
             amp.Rescale();
-            gettimeofday(&r_end, NULL);
-            amp.time_by_category.rescale +=  ((r_end.tv_sec  - r_begin.tv_sec) * 1000000u +
-                                              r_end.tv_usec - r_begin.tv_usec) / 1.e6;
+            
+            clock_gettime(CLOCK_MONOTONIC, &r_end);
+            amp.time_by_category.rescale += (r_end.tv_sec - r_start.tv_sec) + ((r_end.tv_nsec - r_start.tv_nsec)/1.0e9);
         }
         
+        curr_gate = i;
         Gate& current_gate = circuit.GetGateFromIndex(i);
         if(current_gate.ids.front() == Gate::Type::Control ||
            current_gate.ids.back() == Gate::Type::T) {
-            
-            struct timeval cycle_end;
-            gettimeofday(&cycle_end, NULL);
+
+            struct timespec cycle_end;
+            clock_gettime(CLOCK_MONOTONIC, &cycle_end);
             for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
                 if (i < (idx_size)circuit.GateIndexForCycle(c)) {
                     current_cycle = c;
                     break;
                 }
             }
-            amp.data_per_cycles.cycles.push_back(current_cycle);
-#ifdef CosineSimilarityDoubled
-            gettimeofday(&xe_t_b, NULL);
-            amp.PrintProbabilities(config.prob_outfile, current_cycle);
-            gettimeofday(&xe_t_e, NULL);
-            XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
-                        xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+            if (config.curr_mode != Config::SimMode::Phase2)
+                amp.data_per_cycles.cycles.push_back(current_cycle);
             
+            if (config.curr_mode != Config::SimMode::Phase2) {
+#ifdef CosineSimilarityDoubled
+                gettimeofday(&xe_t_b, NULL);
+                amp.PrintProbabilities(config.prob_outfile, current_cycle);
+                gettimeofday(&xe_t_e, NULL);
+                XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                            xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+                
 #endif
 #ifdef XEDoubled
-            gettimeofday(&xe_t_b, NULL);
-            amp.PrintProbabilities(config.prob_outfile, current_cycle);
-            gettimeofday(&xe_t_e, NULL);
-            XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
-                        xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
-            
+                gettimeofday(&xe_t_b, NULL);
+                amp.PrintProbabilities(config.prob_outfile, current_cycle);
+                gettimeofday(&xe_t_e, NULL);
+                XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                            xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+                
 #endif
 #ifdef FidelityDoubled
-            gettimeofday(&xe_t_b, NULL);
-            amp.PrintStateVector(config.amp_outfile, current_cycle);
-            gettimeofday(&xe_t_e, NULL);
-            XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
-                        xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
-            
+                gettimeofday(&xe_t_b, NULL);
+                amp.PrintStateVector(config.amp_outfile, current_cycle);
+                gettimeofday(&xe_t_e, NULL);
+                XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
+                            xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
+                
 #endif
-
-             if (current_gate.ids.back() == Gate::Type::T ||
-                current_gate.ids.back() == Gate::Type::Z) {
-                 
-                 double cross_entropy = 0;
-
-                 if (config.verbose == 4) {
-                     gettimeofday(&xe_t_b, NULL);
-                     cross_entropy = amp.CalculateCrossEntropy(10);
-                     gettimeofday(&xe_t_e, NULL);
-                     XE_time += ((xe_t_e.tv_sec  - xe_t_b.tv_sec) * 1000000u +
-                                 xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
-                 
-                     log <<  setprecision(3) ;
-                     log << current_cycle << "\t"
-                     << ((cycle_end.tv_sec  - cycle_start.tv_sec) * 1000000u +
-                        cycle_end.tv_usec - cycle_start.tv_usec) / 1.e6 << " s    \t";
-                     double memory = amp.GetMemUsage();
-                     if (memory >= 1e9) {
-                         log << memory / 1e9 << " GB";
-                     }
-                     else if (memory >= 1e6) {
-                         log << memory / 1e6 << " MB";
-                     }
-                     else if (memory >= 1e3) {
-                         log << memory / 1e3 << " KB";
-                     }
-                     else
-                         log << memory << " B";
-                     
-                     if (cross_entropy)
-                         log << "\t\t" << cross_entropy ;
-                     log << "\n";
-                 }
-                 
-                 gettimeofday(&cycle_start, NULL);
-                 idx_size prev_i = i;
-                 bitset<128> T_bitmasks[2] = {0};
-                 bitset<128> CZ_bitmasks[total_circuit_qubits];
-                 amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
-                 terminate = amp.ApplyBlockOfDiagGates(config.cz_path, CZ_bitmasks, T_bitmasks);
-                 
-                 if (config.sim_type == Config::SimType::FullState) {
-                     amp.data_per_cycles.xCZ_H.push_back(0);
-                     amp.data_per_cycles.xCZ_V.push_back(0);
-                 }
-                 amp.count_of_category.CZ_T += i - prev_i - amp.count_of_category.xCZ_not_applied;
-                 amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
-                 amp.data_per_cycles.CZ_gates.push_back(i - prev_i -
-                                                        amp.data_per_cycles.T_gates.back() -
-                                                        amp.count_of_category.xCZ_not_applied);
-                 
-                 if (terminate) {
-                     cout << "Simulated " + to_string(i) + " gates, including "
-                     + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. ";
-                     
-                     if (circuit.GetTotalNumGates() != i)
-                         cout << "CZpath exhausted early.\n";
-                     else
-                         cout << "No xCZ gates left.\n";
-                     break;
-                 }
-                i -= 1;
             }
-             else {
+            if (current_gate.ids.back() == Gate::Type::T ||
+                current_gate.ids.back() == Gate::Type::Z) {
+                
+                struct timespec CZ_start, CZ_end;
+                clock_gettime(CLOCK_MONOTONIC, &CZ_start);
+                double cross_entropy = 0;
+                
+                if (config.verbose == 4 && config.curr_mode == Config::SimMode::Phase1) {
+                    clock_gettime(CLOCK_MONOTONIC, &xe_t_b);
+                    cross_entropy = amp.CalculateCrossEntropy(10);
+                    clock_gettime(CLOCK_MONOTONIC, &xe_t_e);
+                    XE_time += (xe_t_e.tv_sec - xe_t_b.tv_sec) + ((xe_t_e.tv_nsec - xe_t_b.tv_nsec)/1.0e9);
+                    
+                    log <<  setprecision(3) ;
+                    log << current_cycle << "\t"
+                    <<  (cycle_end.tv_sec - cycle_start.tv_sec) + ((cycle_end.tv_nsec - cycle_start.tv_nsec)/1.0e9)
+                    << " s    \t";
+                    double memory = amp.GetMemUsage();
+                    if (memory >= (1 << 30)) {
+                        log << memory / (1 << 30) << " GiB";
+                    }
+                    else if (memory >= (1 << 20)) {
+                        log << memory / (1 << 20) << " MiB";
+                    }
+                    else if (memory >= (1 << 10)) {
+                        log << memory / (1 << 10) << " KiB";
+                    }
+                    else
+                        log << memory << " B";
+                    
+                    if (cross_entropy)
+                        log << "\t\t" << cross_entropy ;
+                    log << "\n";
+                }
+                
+                clock_gettime(CLOCK_MONOTONIC, &cycle_start);
+                idx_size prev_i = i;
+                bitset<128> T_bitmasks[2] = {0};
+                bitset<128> CZ_bitmasks[total_circuit_qubits];
+                amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
+                int last_xCZ_idx = amp.ApplyBlockOfDiagGates(config.cz_path, CZ_bitmasks, T_bitmasks);
+                terminate = last_xCZ_idx != -1 ? true : false;
+                
+                if (config.curr_mode != Config::SimMode::Phase2) {
+                    if (config.sim_type == Config::SimType::FullState) {
+                        amp.data_per_cycles.xCZ_H.push_back(0);
+                        amp.data_per_cycles.xCZ_V.push_back(0);
+                    }
+                    
+                    if (!terminate) {
+                        amp.count_of_category.CZ_T += i - prev_i - amp.count_of_category.xCZ_not_applied;
+                        amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
+                        amp.data_per_cycles.CZ_gates.push_back(i - prev_i -
+                                                               amp.data_per_cycles.T_gates.back() -
+                                                               amp.count_of_category.xCZ_not_applied);
+                    }
+                    else if (last_xCZ_idx) {
+                        amp.count_of_category.CZ_T += last_xCZ_idx;
+                        amp.data_per_cycles.CZ_gates.push_back(last_xCZ_idx); //not accurate
+                    }
+                }
+                
+                if (terminate) {
+                    curr_gate = prev_i + last_xCZ_idx;
+                    return terminate;
+                }
+                
+                i -= 1;
+                
+                clock_gettime(CLOCK_MONOTONIC, &CZ_end);
+                CZ_T_top_time += (CZ_end.tv_sec - CZ_start.tv_sec) + ((CZ_end.tv_nsec - CZ_start.tv_nsec)/1.0e9);
+        }
+            else {
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
                                current_gate, (Gate::Type)current_gate.ids.back());
-             }
+            }
         }
         else {
-             if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
-                 (current_gate.ids.back() == Gate::Type::X_1_2 ||
-                  current_gate.ids.back() == Gate::Type::Y_1_2) &&
-                 (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
-                  circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-                     idx_size prev_i = i;
-
-                     bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
-                     bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
-                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config.th);
-
-                     amp.count_of_category.merged_XY1_2 += i - prev_i;
-                     amp.data_per_cycles.XY_gates.push_back(i - prev_i);
-                     --i;
-             }
+            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
+                (current_gate.ids.back() == Gate::Type::X_1_2 ||
+                 current_gate.ids.back() == Gate::Type::Y_1_2) &&
+                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
+                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
+                    struct timespec XY_start, XY_end;
+                    clock_gettime(CLOCK_MONOTONIC, &XY_start);
+                    
+                    idx_size prev_i = i;
+                    
+                    bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
+                    bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                    amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config.th);
+                    
+                    if (config.curr_mode != Config::SimMode::Phase2) {
+                        amp.count_of_category.merged_XY1_2 += i - prev_i;
+                        amp.data_per_cycles.XY_gates.push_back(i - prev_i);
+                    }
+                    --i;
+                    clock_gettime(CLOCK_MONOTONIC, &XY_end);
+                    X_Y_top_time += (XY_end.tv_sec - XY_start.tv_sec) + ((XY_end.tv_nsec - XY_start.tv_nsec)/1.0e9);
+                }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
-                gettimeofday(&cycle_start, NULL);
+                clock_gettime(CLOCK_MONOTONIC, &cycle_start);
                 amp.ApplyHGateOnAllAmps();
-                amp.count_of_category.H = circuit.GetNumQubits();
+                if (config.curr_mode != Config::SimMode::Phase2)
+                    amp.count_of_category.H = circuit.GetNumQubits();
                 i += total_circuit_qubits - 1;
             }
             else {
+                assert(false);
                 amp.ApplyNonCGate(current_gate.qubits[0],
                                   (Gate::Type)current_gate.ids.back(),  current_gate);
-                amp.data_per_cycles.XY_gates.push_back(1);
+                
+                if (config.curr_mode != Config::SimMode::Phase2)
+                    amp.data_per_cycles.XY_gates.push_back(1);
                 //TODO: Need to be able to count different types of non-control gates.
             }
         }
     }
-    gettimeofday(&end_p, NULL);
     
-    total_time = (((end_p.tv_sec  - start_p.tv_sec) * 1000000u +
-             end_p.tv_usec - start_p.tv_usec) / 1.e6) - XE_time;
+    curr_gate = circuit.GetTotalNumGates();
+    return terminate;
+}
 
-    if (!terminate && config.cz_path == "") {
-        cout << "Simulated " + to_string(i) + " gates, including "
+void SequentialSimulation::
+Phase1Simulation(GenericQuantumState& amp,
+                 Circuit& circuit)
+{
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    bool terminate = SimulationLoop(amp, circuit);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    
+    if (terminate && config.dfs_length == -1 && config.cz_path == "" && config.cz_path != "-") {
+        cout << "Simulated " + to_string(curr_gate) + " gates, including "
+        + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates ";
+        
+        if (circuit.GetTotalNumGates() != curr_gate) {
+            int current_cycle = 0;
+            for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
+                if (curr_gate < (idx_size)circuit.GateIndexForCycle(c)) {
+                    current_cycle = c;
+                    break;
+                }
+            }
+            cout << "CZpath exhausted early. Simulated " << current_cycle << " out of " << config.depth << " cycles\n";
+        }
+        else {
+            cout << "No xCZ gates left\n";
+            cout << "Truncated CZ path : " << config.cz_path << "\n";
+        }
+    }
+    else if (terminate)
+        Phase2Simulation(amp, circuit, curr_gate);
+    else if (!terminate && config.cz_path == "") {
+        cout << "Simulated " + to_string(curr_gate) + " gates, including "
         + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. No xCZ gates left.\n";
     }
-#ifdef Print
-    amp.PrintStateVector();
-#endif
+    else if (!terminate && config.cz_path != "-") {
+        cout << "No xCZ gates to simulate\n";
+        cout << "Truncated CZ path : " << config.cz_path << "\n";
+    }
+    
+    cz_path_time += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+}
+
+void SequentialSimulation::
+Phase2Simulation(GenericQuantumState& amp,
+                 Circuit& circuit,
+                 const idx_size gate_i)
+{
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    
+    bool terminate = false;
+    amp.RescaleAndApplyGlobalICounter();
+    for(auto idx : config.indices)
+        amp.amps_of_interest.push_back(0);
+    
+    idx_size num_CZ_paths = 1ull << config.dfs_length;
+    for (idx_size i = 0; i < num_CZ_paths; ++i) {
+        curr_gate = gate_i;
+        config.cz_path = bitset<1000>(i).to_string();
+        config.cz_path = config.cz_path.substr(config.cz_path.size() - config.dfs_length);
+        
+        struct timespec copy_s, copy_e;
+        clock_gettime(CLOCK_MONOTONIC, &copy_s);
+        GenericQuantumState* temp_amp = new SumOfTensorsProductsStateVector((SumOfTensorsProductsStateVector&)amp);
+        clock_gettime(CLOCK_MONOTONIC, &copy_e);
+        amp.time_by_category.copying += (copy_e.tv_sec - copy_s.tv_sec) + ((copy_e.tv_nsec - copy_s.tv_nsec)/1.0e9);
+        ++amp.count_of_category.copying;
+        
+        terminate = SimulationLoop(*temp_amp, circuit, gate_i);
+        temp_amp -> RescaleAndApplyGlobalICounter();
+        
+        for(idx_size idx = 0; idx < config.indices.size(); ++idx) 
+            amp.amps_of_interest[idx] += (*temp_amp)[config.indices[idx]];
+        
+        config.curr_mode = Config::SimMode::Phase2;
+        amp.sim_mode = Config::SimMode::Phase2;
+        delete temp_amp;
+    }
+    
+    cout << "Phase 2 CZ path length : " << config.dfs_length << "\n";
+    if (!config.cz_path.size()) {
+        if (circuit.GetTotalNumGates() != curr_gate) {
+            int current_cycle = 0;
+            for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
+                if (curr_gate < (idx_size)circuit.GateIndexForCycle(c)) {
+                    current_cycle = c;
+                    break;
+                }
+            }
+            cout << "DFS path exhausted early";
+        }
+        else
+            cout << "No xCZ gates left\n";
+    }
+    else
+        cout << "Truncated DFS length : " << config.cz_path.size() << "\n";
+    
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    dfs_time += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9); 
+}
+
+void SequentialSimulation::
+ReportingAfterSim(GenericQuantumState& amp,
+                  Circuit& circuit)
+{
+//#ifdef Print
+//    amp.PrintStateVector();
+//#endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
 #endif
@@ -253,7 +405,7 @@ Simulate(GenericQuantumState& amp,
             idx_out.open(idx_outfile);
         
         auto& idx_print = config.indices;
-        for (idx_size i = 0; i < idx_print.size(); ++i) {
+        for (idx_size i = 5; i < idx_print.size(); ++i) {
             amp_out << real(amp[idx_print[i]]);
             if (config.print_idx)
                 idx_out << idx_print[i] << "\n";
@@ -265,23 +417,18 @@ Simulate(GenericQuantumState& amp,
         if (config.print_idx)
             idx_out.close();
     }
-    
-    
 }
 
 void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 1.5 - a quantum circuit simulator\n\n";
+    cout << "Rollright ver 1.6 - a quantum circuit simulator\n";
+    cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
     char hostname[30] = {};
     gethostname(hostname, 30);
-    cout << "Hostname : ";
-    for(auto h : hostname) {
-        cout << h;
-    }
-    cout << "\n";
+    cout << "Hostname : " << string(hostname) << "\n";
     
     
     if (config.verbose != Config::Verbose::NCCV && config.verbose != Config::Verbose::NCC) {
@@ -435,12 +582,12 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         
     }
     
-    if (config.cz_path != "*") {
-        cout << "Input CZ path : ";
+    if (config.cz_path != "-") {
+        cout << "Phase 1 CZ path : ";
         if (config.cz_path == "")
             cout << "None\n";
         else
-            cout << config.cz_path << "\n";
+            cout << config.cz_path << " (" << config.cz_path.size() << ")\n";
         config.verbose = Config::Verbose::NCC;
     }
 }
@@ -449,14 +596,9 @@ void SequentialSimulation::
 PrintSimReport(GenericQuantumState& amp,
             const Circuit& circuit) const
 {
-    if (config.cz_path != "" && config.cz_path != "*")
-        cout << "Truncated CZ path : " << config.cz_path << "\n";
-    
+    amp.RescaleAndApplyGlobalICounter();
     cout << "\n";
     
-    amp.Rescale();
-    amp.ApplyGlobalICounter();
-   
     if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT
         || config.sim_type == Config::SimType::Approx_i11iOWT)
         amp.Normalize();
@@ -472,24 +614,24 @@ PrintSimReport(GenericQuantumState& amp,
         double memory = amp.GetMemUsage();
         ss << "State representation size : ";
 
-        if (memory >= 1e9) {
-            ss << memory / 1e9 << " GB \n";
+        if (memory >= (1 << 30)) {
+            ss << memory / (1 << 30) << " GiB \n";
         }
-        else if (memory >= 1e6) {
-            ss << memory / 1e6 << " MB \n";
+        else if (memory >= (1 << 20)) {
+            ss << memory / (1 << 20) << " MiB \n";
         }
-        else if (memory >= 1e3) {
-            ss << memory / 1e3 << " KB \n";
+        else if (memory >= (1 << 10)) {
+            ss << memory / (1 << 10) << " KiB \n";
         }
         else
             ss << memory << " B \n";
-
-        ss << "Norm";
-        if (amp.GetNumAddends() > 1)
-            ss << "(assuming orthogonal addends)";
-        ss << " : " << sqrt(norm) << "\n";
         
         if (config.verbose >= Config::Verbose::Default) {
+            ss << "Norm";
+            if (amp.GetNumAddends() > 1)
+                ss << "(assuming orthogonal addends)";
+            ss << " : " << sqrt(norm) << "\n";
+            
             double min = amp.GetMinProb();
             if (sqrt(norm) > 0.9) {
                 ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
@@ -512,7 +654,7 @@ PrintSimReport(GenericQuantumState& amp,
         cout << ss.str();
     }
     
-    if (config.cz_path == "*") {
+    if (config.cz_path == "-") {
         
         string key = config.infile + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
@@ -578,40 +720,75 @@ PrintSimReport(GenericQuantumState& amp,
     
     if (config.verbose != Config::Verbose::NCCV)
     {
-        string imag0 = to_string(imag(amp[3])), imag1 = to_string(imag(amp[temp_amp_size/4])),
-        imag2 = to_string(imag(amp[temp_amp_size/2])), imag3 = to_string(imag(amp[3 * temp_amp_size/4])),
-        imag4 = to_string(imag(amp[temp_amp_size - 3]));
-        
-        cout << "amp[3]  \t= " << real(amp[3]);
-        if (imag(amp[3]) < 0)
-            cout << imag(amp[3]) << "j\n";
-        else
-            cout << "+" << imag(amp[3]) << "j\n";
-        
-        cout << "amp[1/4]\t= " << real(amp[temp_amp_size/4]);
-        if (imag(amp[temp_amp_size/4]) < 0)
-            cout << imag(amp[temp_amp_size/4]) << "j\n";
-        else
-            cout << "+" << imag(amp[temp_amp_size/4]) << "j\n";
-        
-        cout << "amp[1/2]\t= " << real(amp[temp_amp_size/2]);
-        if (imag(amp[temp_amp_size/2]) < 0)
-            cout << imag(amp[temp_amp_size/2]) << "j\n";
-        else
-            cout << "+" << imag(amp[temp_amp_size/2]) << "j\n";
-        
-        cout << "amp[3/4]\t= " << real(amp[3 * temp_amp_size/4]);
-        if (imag(amp[3 * temp_amp_size/4]) < 0)
-            cout << imag(amp[3 * temp_amp_size/4]) << "j\n";
-        else
-            cout << "+" << imag(amp[3 * temp_amp_size/4]) << "j\n";
-        
-        cout << "amp[-3] \t= " << real(amp[temp_amp_size - 3]);
-        if (imag(amp[temp_amp_size - 3]) < 0)
-            cout << imag(amp[temp_amp_size - 3]) << "j\n";
-        else
-            cout << "+" << imag(amp[temp_amp_size - 3]) << "j\n";
-        cout << "\n";
+        if (!amp.amps_of_interest.empty()) {
+            auto amp3 = amp.amps_of_interest[0];
+            cout << "amp[3]  \t= " << real(amp3);
+            if (imag(amp3) < 0)
+                cout << imag(amp3) << "j\n";
+            else
+                cout << "+" << imag(amp3) << "j\n";
+            
+            auto amp14 = amp.amps_of_interest[1];
+            cout << "amp[1/4]\t= " << real(amp14);
+            if (imag(amp14) < 0)
+                cout << imag(amp14) << "j\n";
+            else
+                cout << "+" << imag(amp14) << "j\n";
+            
+            auto amp12 = amp.amps_of_interest[2];
+            cout << "amp[1/2]\t= " << real(amp12);
+            if (imag(amp12) < 0)
+                cout << imag(amp12) << "j\n";
+            else
+                cout << "+" << imag(amp12) << "j\n";
+            
+            auto amp34 = amp.amps_of_interest[3];
+            cout << "amp[3/4]\t= " << real(amp34);
+            if (imag(amp34) < 0)
+                cout << imag(amp34) << "j\n";
+            else
+                cout << "+" << imag(amp34) << "j\n";
+            
+            auto amp_3 = amp.amps_of_interest[4];
+            cout << "amp[-3] \t= " << real(amp_3);
+            if (imag(amp_3) < 0)
+                cout << imag(amp_3) << "j\n";
+            else
+                cout << "+" << imag(amp_3) << "j\n";
+            cout << "\n";
+        }
+        else {
+            cout << "amp[3]  \t= " << real(amp[3]);
+            if (imag(amp[3]) < 0)
+                cout << imag(amp[3]) << "j\n";
+            else
+                cout << "+" << imag(amp[3]) << "j\n";
+            
+            cout << "amp[1/4]\t= " << real(amp[temp_amp_size/4]);
+            if (imag(amp[temp_amp_size/4]) < 0)
+                cout << imag(amp[temp_amp_size/4]) << "j\n";
+            else
+                cout << "+" << imag(amp[temp_amp_size/4]) << "j\n";
+            
+            cout << "amp[1/2]\t= " << real(amp[temp_amp_size/2]);
+            if (imag(amp[temp_amp_size/2]) < 0)
+                cout << imag(amp[temp_amp_size/2]) << "j\n";
+            else
+                cout << "+" << imag(amp[temp_amp_size/2]) << "j\n";
+            
+            cout << "amp[3/4]\t= " << real(amp[3 * temp_amp_size/4]);
+            if (imag(amp[3 * temp_amp_size/4]) < 0)
+                cout << imag(amp[3 * temp_amp_size/4]) << "j\n";
+            else
+                cout << "+" << imag(amp[3 * temp_amp_size/4]) << "j\n";
+            
+            cout << "amp[-3] \t= " << real(amp[temp_amp_size - 3]);
+            if (imag(amp[temp_amp_size - 3]) < 0)
+                cout << imag(amp[temp_amp_size - 3]) << "j\n";
+            else
+                cout << "+" << imag(amp[temp_amp_size - 3]) << "j\n";
+            cout << "\n";
+        }
     }
 
     {
@@ -619,54 +796,76 @@ PrintSimReport(GenericQuantumState& amp,
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "     H (" + to_string(amp.count_of_category.H) +  ")";
+        string H_s = "\tH (" + to_string(amp.count_of_category.H) +  ")";
         ss << H_s << setw(30 - H_s.size()) << right << ": " << amp.time_by_category.H
-        << " s \t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
+        << " s\t\t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
-        if(amp.count_of_category.CZ_T) {
-            string CZ_T_s = "     CZ & T (" +
+        if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ) {
+            string CZ_T_s = "\tCZ & T (" +
             to_string(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ) + ")" ;
             ss << CZ_T_s << setw(30 - CZ_T_s.size()) << right << ": "
-            << amp.time_by_category.CZ_T << " s \t= "
+            << amp.time_by_category.CZ_T << " s\t\t= "
             << (amp.time_by_category.CZ_T/total_time) * 100 << "%\n";
         }
         
         if(amp.count_of_category.decomposed_CZ) {
-            string CZ_s = "     xCZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
+            string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ) + ")" ;
             ss << CZ_s << setw(30 - CZ_s.size()) << right << ": "
-            << amp.time_by_category.decomposed_CZ << " s \t= " << (amp.time_by_category.decomposed_CZ/total_time) * 100 << "%\n";
+            << amp.time_by_category.decomposed_CZ << " s\t\t= " << (amp.time_by_category.decomposed_CZ/total_time) * 100 << "%\n";
         }
-        
         if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
-            string XY_s = "     Single X (" + to_string(amp.count_of_category.X1_2)
+            string XY_s = "\tSingle X (" + to_string(amp.count_of_category.X1_2)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2) + ")";
             ss << XY_s << setw(30 - XY_s.size()) << right << ": "
-            << amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2 << " s \t= "
+            << amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2 << " s\t\t= "
             << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100 << "%\n";
         }
         
-        if (amp.count_of_category.merged_XY1_2) {
-            string X_Y_s = "     Merged X & Y ("
+        if (amp.count_of_category.merged_XY1_2 - amp.count_of_category.Y1_2 - amp.count_of_category.X1_2) {
+            string X_Y_s = "\tMerged X & Y ("
             + to_string(amp.count_of_category.merged_XY1_2 - amp.count_of_category.Y1_2 - amp.count_of_category.X1_2) + ")";
             ss << X_Y_s << setw(30 - X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
-            << " s \t= " << (amp.time_by_category.merged_XY1_2/total_time) * 100 << "%\n";
+            << " s\t\t= " << (amp.time_by_category.merged_XY1_2/total_time) * 100 << "%\n";
         }
-        
         if (amp.count_of_category.rescale) {
-            string RP_s = "     Rescaling passes (" + to_string(amp.count_of_category.rescale) + ")";
+            string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale) + ")";
             ss <<  RP_s << setw(30 - RP_s.size()) << right << ": " << amp.time_by_category.rescale
-            << " s \t= " << (amp.time_by_category.rescale/total_time) * 100 << "%\n";
+            << " s\t\t= " << (amp.time_by_category.rescale/total_time) * 100 << "%\n";
         }
         
         if (amp.time_by_category.conversion) {
-            string RP_s = "     Conversion ";
+            string RP_s = "\tConversion ";
             ss <<  RP_s << setw(30 - RP_s.size()) << right << ": "
-            << amp.time_by_category.conversion << " s \t= "
+            << amp.time_by_category.conversion << " s\t\t= "
             << (amp.time_by_category.conversion/total_time) * 100 << "%\n";
         }
         
+        if (amp.time_by_category.copying) {
+            string RP_s = "\tCopying (" + to_string(amp.count_of_category.copying) + ")";
+            ss <<  RP_s << setw(30 - RP_s.size()) << right << ": "
+            << amp.time_by_category.copying << " s\t\t= "
+            << (amp.time_by_category.copying/total_time) * 100 << "%\n";
+        }
+        
+        double sum_percen = ((amp.time_by_category.H/total_time) * 100) + ((amp.time_by_category.CZ_T/total_time) * 100)
+        + ((amp.time_by_category.decomposed_CZ/total_time) * 100)
+        + (((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100)
+        + ((amp.time_by_category.merged_XY1_2/total_time) * 100) + ((amp.time_by_category.rescale/total_time) * 100)
+        + ((amp.time_by_category.conversion/total_time) * 100) + ((amp.time_by_category.copying/total_time) * 100);
+        
+        ss << "\t\t\t\t\t\t\t  -----\n";
+        ss << "\tTotal \t\t\t\t\t\t  " << sum_percen << "%\n";
+        
         ss << "Average time per gate : " << total_time/circuit.GetTotalNumGates() << " s\n";
         
+        if (config.cz_path != "-") {
+            ss << "Phase 1 runtime (CZ_path) : " << cz_path_time << " s = "
+             << (cz_path_time/total_time) * 100 << "%\n";
+        }
+        if (config.dfs_length != -1) {
+            ss << "Phase 2 runtime (DFS) : " << dfs_time << " s = "
+            << (dfs_time/total_time) * 100 << "%\n";
+        }
         cout << ss.str() << "\n";
     }
     
@@ -677,14 +876,14 @@ PrintSimReport(GenericQuantumState& amp,
             cout << amp.data_per_cycles.cycles[c] << "\t "
             << amp.data_per_cycles.xCZ_H[c] << "," << amp.data_per_cycles.xCZ_V[c] << "\t "
             << amp.data_per_cycles.addends[c] << "\t  " ;
-            if (amp.data_per_cycles.memory[c] >= 1e9) {
-                cout << amp.data_per_cycles.memory[c] / 1e9 << " GB \n";
+            if (amp.data_per_cycles.memory[c] >= (1 << 30)) {
+                cout << amp.data_per_cycles.memory[c] / (1 << 30) << " GiB \n";
             }
-            else if (amp.data_per_cycles.memory[c] >= 1e6) {
-                cout << amp.data_per_cycles.memory[c] / 1e6 << " MB \n";
+            else if (amp.data_per_cycles.memory[c] >= (1 << 20)) {
+                cout << amp.data_per_cycles.memory[c] / (1 << 20) << " MiB \n";
             }
-            else if (amp.data_per_cycles.memory[c] >= 1e3) {
-                cout << amp.data_per_cycles.memory[c] / 1e3 << " KB \n";
+            else if (amp.data_per_cycles.memory[c] >= (1 << 10)) {
+                cout << amp.data_per_cycles.memory[c] / (1 << 10) << " KiB \n";
             }
             else
                 cout << amp.data_per_cycles.memory[c] << " B \n";
@@ -693,21 +892,21 @@ PrintSimReport(GenericQuantumState& amp,
     
     cout << "\n¯\\_(ツ)_/¯ \n\n";
     
-    ofstream file;
-    file.open(config.misc_outfile + ".txt");
-    for (idx_size i = 0; i < amp.data_per_cycles.cycles.size(); ++i) {
-        file << amp.data_per_cycles.cycles[i];
-        if (!amp.data_per_cycles.CZ_gates.empty())
-            file << "," << amp.data_per_cycles.CZ_gates[i];
-        if (!amp.data_per_cycles.T_gates.empty())
-            file << "," << amp.data_per_cycles.T_gates[i];
-        if (!amp.data_per_cycles.XY_gates.empty())
-            file << "," << amp.data_per_cycles.XY_gates[i]; //Fix when no XY gates
-        if (config.sim_type != Config::SimType::FullState)
-            file << "," << amp.data_per_cycles.xCZ_H[i] << "," << amp.data_per_cycles.xCZ_V[i];
-        file << "\n";
-    }
-    file.close();
+//    ofstream file;
+//    file.open(config.misc_outfile + ".txt");
+//    for (idx_size i = 0; i < amp.data_per_cycles.cycles.size(); ++i) {
+//        file << amp.data_per_cycles.cycles[i];
+//        if (!amp.data_per_cycles.CZ_gates.empty())
+//            file << "," << amp.data_per_cycles.CZ_gates[i];
+//        if (!amp.data_per_cycles.T_gates.empty())
+//            file << "," << amp.data_per_cycles.T_gates[i];
+//        if (!amp.data_per_cycles.XY_gates.empty())
+//            file << "," << amp.data_per_cycles.XY_gates[i]; //Fix when no XY gates
+//        if (config.sim_type != Config::SimType::FullState)
+//            file << "," << amp.data_per_cycles.xCZ_H[i] << "," << amp.data_per_cycles.xCZ_V[i];
+//        file << "\n";
+//    }
+//    file.close();
 }
 
 void SequentialSimulation::
@@ -854,14 +1053,14 @@ PrintReportToFile(GenericQuantumState& amp,
         double memory = amp.GetMemUsage();
         ss << "State representation size : ";
         
-        if (memory >= 1e9) {
-            ss << memory / 1e9 << " GB \n";
+        if (memory >= (1 << 30)) {
+            ss << memory / (1 << 30) << " GiB \n";
         }
-        else if (memory >= 1e6) {
-            ss << memory / 1e6 << " MB \n";
+        else if (memory >= (1 << 20)) {
+            ss << memory / (1 << 20) << " MiB \n";
         }
-        else if (memory >= 1e3) {
-            ss << memory / 1e3 << " KB \n";
+        else if (memory >= (1 << 10)) {
+            ss << memory / (1 << 10) << " KiB \n";
         }
         else
             ss << memory << " B \n";
@@ -1046,6 +1245,13 @@ PrintReportToFile(GenericQuantumState& amp,
             << (amp.time_by_category.conversion/total_time) * 100 << "%\n";
         }
         
+        if (amp.time_by_category.copying) {
+            string RP_s = "     Copying ";
+            ss <<  RP_s << setw(28 - RP_s.size()) << right << ": "
+            << amp.time_by_category.copying << " s \t= "
+            << (amp.time_by_category.copying/total_time) * 100 << "%\n";
+        }
+        
         file << ss.str() << "\n";
     }
     
@@ -1056,14 +1262,14 @@ PrintReportToFile(GenericQuantumState& amp,
             file << amp.data_per_cycles.cycles[c] << "\t "
             << amp.data_per_cycles.xCZ_H[c] << "," << amp.data_per_cycles.xCZ_V[c] << "\t "
             << amp.data_per_cycles.addends[c] << "\t  " ;
-            if (amp.data_per_cycles.memory[c] >= 1e9) {
-                file << amp.data_per_cycles.memory[c] / 1e9 << " GB \n";
+            if (amp.data_per_cycles.memory[c] >= (1 << 30)) {
+                file << amp.data_per_cycles.memory[c] / (1 << 30) << " GiB \n";
             }
-            else if (amp.data_per_cycles.memory[c] >= 1e6) {
-                file << amp.data_per_cycles.memory[c] / 1e6 << " MB \n";
+            else if (amp.data_per_cycles.memory[c] >= (1 << 20)) {
+                file << amp.data_per_cycles.memory[c] / (1 << 20) << " MiB \n";
             }
-            else if (amp.data_per_cycles.memory[c] >= 1e3) {
-                file << amp.data_per_cycles.memory[c] / 1e3 << " KB \n";
+            else if (amp.data_per_cycles.memory[c] >= (1 << 10)) {
+                file << amp.data_per_cycles.memory[c] / (1 << 10) << " KiB \n";
             }
             else
                 file << amp.data_per_cycles.memory[c] << " B \n";

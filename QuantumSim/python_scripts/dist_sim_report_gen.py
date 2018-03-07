@@ -21,19 +21,31 @@ def main(cir_file, est_time):
 	qubits = 0
 	print_line = True
 	categories = {'H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0,\
-	'Merged X & Y':0, 'Rescaling passes':0 }
+	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0}
 	num_threads = 0
+	dfs = False
 	#Copy the initial content of seq run onto the report
-	with open(os.path.join(log_dir, "script_0"), "r") as first_file:
+	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
 		for line in first_file:
 			if "Qubits" in line:
 				qubits = int(line.split(":")[1].split()[0].replace(' ',''))
 			if "Max threads per process" in line:
 				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
-			if "Input CZ path" not in line and print_line:
-				print(line,  end='')
-			elif print_line:
+
+			if "Phase 1 CZ path" in line:
+				cz_path_t = line.split(":")[1].split()
+				if cz_path_t[1] == "None":
+					cz_path = cz_path_t[1].replace('(','').replace(')','')
+				else:
+					cz_path = 0
+				cz_path_len = int(cz_path)
+				print("Phase 1 CZ path length : " + str(cz_path_len))
 				print_line = False
+			elif "Phase 2 CZ path length" in line:
+				dfs = True
+				print(line, end='')
+			elif "State representation size" not in line and print_line:
+				print(line,  end='')
 			elif "State representation size" in line:
 				mem_line = line
 				mem_usage = line.split(":")[1].replace('\n', '')
@@ -52,24 +64,29 @@ def main(cir_file, est_time):
 				categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
 			elif "Rescaling passes" in line:
 				categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
+			elif "Copying" in line:
+				categories['Copying'] = int(line.split()[1].replace("(","").replace(")",""))
+			
 			elif "¯\_(ツ)_/¯ " in line:
 				break
 
-	num_CZ_paths = 1 << categories['xCZ']
+	num_CZ_paths = 1 << cz_path_len
 	avg_time_per_category = {'H':0.0, 'CZ & T':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
-		 'Merged X & Y':0.0, 'Rescaling passes':0.0}
+		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0}
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
 	avg_time_per_process = 0.0
 	avg_user_time = 0.0
-	num_procs = 0	
+	num_batches = 0	
 	peak_mem = 0.0
 	avg_cpu_percent = 0.0
 	avg_elapsed_time = 0.0
 	max_elapsed_time = 0.0
 	scripts = os.listdir(log_dir)
+	avg_dfs_time = 0.0
+	avg_cz_time = 0.0
 
 	for script_log in scripts:
-		num_procs += 1
+		num_batches += 1
 		with open(os.path.join(log_dir, script_log), "r") as sl:
 			for line in sl:
 				if "amp[3]" in line:
@@ -102,6 +119,14 @@ def main(cir_file, est_time):
 					avg_time_per_category['Merged X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 				elif "Rescaling passes" in line:
 					avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+				elif "Copying" in line:
+					avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+				elif "Phase 1 runtime" in line:
+					temp_str = line.split(":")[1].split()[0]
+					avg_cz_time += float(temp_str)
+				elif "Phase 2 runtime" in line:
+					temp_str = line.split(":")[1].split()[0]
+					avg_dfs_time += float(temp_str)
 				elif "elapsed" in line:
 					elapsed_time = line.split()[2].split(':')
 					e_t = 0.0
@@ -117,7 +142,6 @@ def main(cir_file, est_time):
 
 					user_time = line.split()[0]
 					avg_user_time += float(re.sub('[a-zA-Z_]', '', user_time))
-					
 					avg_cpu_percent += float(line.split()[3].split('%')[0])
 				elif "real" in line:
 					avg_user_time += float(line.split()[2])
@@ -127,15 +151,25 @@ def main(cir_file, est_time):
 						max_elapsed_time = e_t
 					
 	print("\nDistributed simulation : " + str(num_CZ_paths) + " processes (" + \
-		str(num_threads) + " threads each) in " + str(num_procs) + " batches")
+		str(num_threads) + " threads each) in " + str(num_batches) + " batches")
 	print("\t" + mem_line, end='')
-	print("\tPeak memory : " + str(round(mem_val * num_procs,3)) + " " + unit)
-	print("\tEstimated time : " + str(round(float(est_time), 3)) + " s")
-	print("\tBatch time :\n\t\tUser : " + str(round((avg_user_time/num_procs), 3)) \
-		+ " s (avg)\n\t\tElapsed : " + str(round((avg_elapsed_time/num_procs),3)) + " s (avg), " +\
+
+	if dfs:
+		mem_val *= 2
+	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit)
+	print("\tPredicted time : " + str(round(float(est_time) + 0.4 * float(est_time), 3)) + " +- "\
+	 + str(round(0.3 * float(est_time), 3)) + " s")
+	print("\tBatch time :\n\t\tUser : " + str(round((avg_user_time/num_batches), 3)) \
+		+ " s (avg)\n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
 		str(round(max_elapsed_time, 3))+ " s (max)")
 	if avg_cpu_percent:
-		print("\t\tCPU utilization : " + str(round(avg_cpu_percent/num_procs, 3)) + "% (avg)")
+		print("\t\tCPU utilization : " + str(round(avg_cpu_percent/num_batches, 3)) + "% (avg)")
+	if avg_cz_time:
+		print("\t\tAvg phase 1 time : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
+			str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
+	if avg_dfs_time:
+		print("\t\tAvg phase 2 time : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
+			str(round(((avg_dfs_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
 
 	print("\namp[3]  \t= {:.8f}".format(amp['3']))
 	print("amp[1/4]\t= {:.8f}".format(amp['1/4']))
@@ -144,10 +178,13 @@ def main(cir_file, est_time):
 	print("amp[-3] \t= {:.8f}".format(amp['-3']) + "\n")
 
 	avg_time_per_process /= num_CZ_paths
+	avg_dfs_time /= num_CZ_paths
+	avg_cz_time /= num_CZ_paths
+	
 	for key, val in avg_time_per_category.items():
 		avg_time_per_category[key] = val/num_CZ_paths
 
-	print("Avg runtime per process (" + str(round(avg_time_per_process, 6)) + " s total) by category ")
+	print("Avg runtime (" + str(round(avg_time_per_process, 6)) + " s total) per process by category ")
 	if avg_time_per_category['H']:
 		print("\tH ("+ str(categories['H']) + ")\t\t\t: " \
 			+ str(round(avg_time_per_category['H'], 6)) + " s  \t= " +\
@@ -181,9 +218,30 @@ def main(cir_file, est_time):
 		 + str(round(avg_time_per_category['Rescaling passes'], 6)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Rescaling passes'])/avg_time_per_process)*100, 3)) + "%")
 
+	if avg_time_per_category['Copying']:
+		print("\tCopying (" + str(categories['Copying']) + ")\t\t: "\
+		 + str(round(avg_time_per_category['Copying'], 6)) + " s  \t= " +\
+		str(round(((avg_time_per_category['Copying'])/avg_time_per_process)*100, 3)) + "%")
+
 	sum_time = sum(avg_time_per_category.values())/num_CZ_paths
 
-	print("Average time per gate per process : " + str(round(sum_time, 6)) + " s")
+	sum_percen = 0
+	for cat, time in avg_time_per_category.items():
+		sum_percen += (time/avg_time_per_process) * 100
+	
+	print("\t\t\t\t\t\t----------")
+	print("\tTotal \t\t\t\t\t  " + str(round(sum_percen, 3)) + "%\n")
+	if sum_percen > 100 :
+		print("Percentages don't add upto 100%")
+
+	print("Avg time per gate per process : " + str(round(sum_time, 6)) + " s")	
+	if avg_cz_time:
+		print("Avg phase 1 time per process : " + str(round(avg_cz_time, 6)) + " s = " +\
+			str(round((avg_cz_time/avg_time_per_process) * 100, 3)) + "%")
+	if avg_dfs_time:
+		print("Avg phase 2 time per process : " + str(round(avg_dfs_time, 6)) + " s = " +\
+			str(round((avg_dfs_time/avg_time_per_process) * 100, 3)) + "%")
+
 	print("\n¯\_(ツ)_/¯ \n")
 
 if __name__ == "__main__":

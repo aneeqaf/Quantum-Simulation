@@ -35,8 +35,17 @@ FullAmpStateVector(const FullAmpStateVector& rhs)
 {
     amp_size = rhs.amp_size;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
-    for (idx_size i = 0; i < rhs.GetSize(); ++i)
-        amp[i] = rhs.amp[i];
+    idx_size size = 2 * rhs.GetSize();
+    
+    float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    #pragma omp parallel for num_threads(4)
+    for (idx_size i = 0; i < size; i+=8) {
+        const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
+        _mm256_store_ps(&t_amp[i], temp_amp);
+    }
+
     global_factor_power = rhs.global_factor_power;
     global_i_counter = rhs.global_i_counter;
     min_prob = rhs.min_prob;
@@ -61,13 +70,13 @@ FormBitmask(const vector<int>& qubits)
     return qubits_bitmask;
 }
 
-bool FullAmpStateVector::
+int FullAmpStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128>  T_bitmasks[2])
 {
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
@@ -83,12 +92,11 @@ ApplyBlockOfDiagGates(string& cz_bits,
     }
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
-    gettimeofday(&end, NULL);
     
-    time_by_category.CZ_T += ((end.tv_sec  - start.tv_sec) * 1000000u +
-             end.tv_usec - start.tv_usec) / 1.e6;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.CZ_T += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
     
-    return false;
+    return -1;
 }
 
 void FullAmpStateVector::
@@ -114,8 +122,9 @@ ApplyCZDecompositions(const int gate_qubit,
 void FullAmpStateVector::
 ApplyHGateOnAllAmps()
 {
-    struct timeval begin, end;
-    gettimeofday(&begin, NULL);
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
     
@@ -128,9 +137,8 @@ ApplyHGateOnAllAmps()
     
     global_factor_power += num_qubits;
     
-    gettimeofday(&end, NULL);
-    time_by_category.H +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                            end.tv_usec - begin.tv_usec) / 1.e6;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.H +=  (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
 }
 
 void FullAmpStateVector::
@@ -146,18 +154,17 @@ void FullAmpStateVector::
 ApplyMergedXYGate(const Gate& gate1,
                   const Gate& gate2)
 {
-    struct timeval begin, end;
-    gettimeofday(&begin, NULL);
-    
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits);
     
     global_factor_power += 2;
     
     if (gate1.ids.back() == Gate::Type::Y_1_2 && gate2.ids.back() == Gate::Type::Y_1_2)
         ++global_i_counter;
-    gettimeofday(&end, NULL);
-    time_by_category.merged_XY1_2 +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                                       end.tv_usec - begin.tv_usec) / 1.e6;
+    
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.merged_XY1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
 }
 
 void FullAmpStateVector::
@@ -232,15 +239,19 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 //        }
 //    }
     
-    struct timeval begin, end;
+    struct timespec start, end;
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
     
     idx_size num_Xgates = __builtin_popcountll(X_bitmask_64),
     num_Ygates = __builtin_popcountll(Y_bitmask_64);
     if ((num_Xgates + num_Ygates) % 2 == 1) {
-        gettimeofday(&begin, NULL);
+        clock_gettime(CLOCK_MONOTONIC, &start);
+        
         const int X_q = X_bitmask_64 ? __builtin_ctzl(X_bitmask_64) : 1000;
         const int Y_q = Y_bitmask_64 ? __builtin_ctzl(Y_bitmask_64) : 1000;
+//
+//        const int X_q = X_bitmask_64 ? 63 - __builtin_clzl(X_bitmask_64) : 1000;
+//        const int Y_q = Y_bitmask_64 ? 63 - __builtin_clzl(Y_bitmask_64): 1000;
         
         if (!(X_q == 1000 && Y_q == 1000)) {
             if (X_q < Y_q) {
@@ -248,25 +259,25 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                 X_bitmask_64 ^= 1ull << X_q;
                 global_factor_power += 2;
                 --num_Xgates;
-                gettimeofday(&end, NULL);
-                time_by_category.X1_2 += ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                                          end.tv_usec - begin.tv_usec) / 1.e6;
-                ++count_of_category.X1_2;
+                clock_gettime(CLOCK_MONOTONIC, &end);
+                time_by_category.X1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+                if (sim_mode != Config::SimMode::Phase2)
+                    ++count_of_category.X1_2;
             }
             else {
                 Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
                 Y_bitmask_64 ^= 1ull << Y_q;
                 global_factor_power += 2;
                 --num_Ygates;
-                gettimeofday(&end, NULL);
-                time_by_category.Y1_2 += ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                                          end.tv_usec - begin.tv_usec) / 1.e6;
-                 ++count_of_category.Y1_2;
+                clock_gettime(CLOCK_MONOTONIC, &end);
+                time_by_category.Y1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+                if (sim_mode != Config::SimMode::Phase2)
+                    ++count_of_category.Y1_2;
             }
         }
     }
     
-    gettimeofday(&begin, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &start);
     
 //    if (X_bitmask_64 || Y_bitmask_64)
 //        global_i_counter += ApplyHighQXYGates(amp, X_bitmask_64, Y_bitmask_64, num_qubits);
@@ -279,15 +290,14 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     if (num_Ygates)
         global_factor_power += num_Ygates;
     
-    gettimeofday(&end, NULL);
-    time_by_category.merged_XY1_2 +=  ((end.tv_sec  - begin.tv_sec) * 1000000u +
-                                       end.tv_usec - begin.tv_usec) / 1.e6;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.merged_XY1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
 }
 
 cmplx FullAmpStateVector::
 operator[](bitset<128> i) const
 {
-//    cmplx a = amp[i] * cmplx(pow(ki, global_i_counter));
+//    cmplx a = amp[i.to_ulong()] * cmplx(pow(ki, global_i_counter));
 //    a /= pow(2,(global_factor_power/2));
 //    if (global_factor_power % 2 == 1)
 //        a /= sqrt(2);

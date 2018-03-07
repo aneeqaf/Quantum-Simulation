@@ -134,6 +134,51 @@ GroupSimilarGates()
 }
 
 void Circuit::
+MovexCZGates(bitset<128>& a_qubits_bitmask,
+             bitset<128>& b_qubits_bitmask)
+{
+    const int modified_q = qubits - 1;
+    
+    for (idx_size i = qubits; i < gates.size(); ++i) {
+         if (gates[i].ids.back() == Gate::Type::Z) {
+             idx_size count_xCZ = 0;
+             idx_size j = i;
+             for (; j < gates.size() && gates[j].ids.back() == Gate::Type::Z; ++j) {
+                 bitset<128> a_bm = 0, b_bm = 0;
+                 a_bm[modified_q - gates[j].qubits.front()] = 1;
+                 b_bm[modified_q - gates[j].qubits.back()] = 1;
+                 if ((a_bm & a_qubits_bitmask) != 0) {
+                     if ((b_bm & a_qubits_bitmask) == 0)
+                         swap(gates[i + count_xCZ++], gates[j]);
+                 }
+                 else if ((b_bm & a_qubits_bitmask) != 0) {
+                     if ((a_bm & a_qubits_bitmask) == 0)
+                         swap(gates[i + count_xCZ++], gates[j]);
+                 }
+                 else if ((b_bm & b_qubits_bitmask) != 0) {
+                     if ((a_bm & b_qubits_bitmask) == 0)
+                         swap(gates[i + count_xCZ++], gates[j]);
+                 }
+                 else if ((a_bm & b_qubits_bitmask) != 0) {
+                     if ((b_bm & b_qubits_bitmask) == 0)
+                         swap(gates[i + count_xCZ++], gates[j]);
+                 }
+             }
+             sort(gates.begin() + i, gates.begin() + i + count_xCZ,
+                  [](Gate& g1, Gate& g2){ return g1.qubits.front() < g2.qubits.front();});
+             sort(gates.begin() + i, gates.begin() + i + count_xCZ,
+                  [](Gate& g1, Gate& g2) {
+                        if (g1.qubits.front() == g2.qubits.front())
+                            return g1.qubits.back() > g2.qubits.back();
+                        else
+                            return false;
+                  });
+             i = j;
+         }
+    }
+}
+
+void Circuit::
 PrintGates() const
 {
     for (auto& g : gates) {
@@ -395,7 +440,7 @@ CreateQuiddProScript(const string& out_file)
             file << "op = ";
             for (int n = 0; n < op_count; ++n) {
                 if (n != 0) {
-                    file << "*";
+                    file << "-";
                 }
                 file << "op" + to_string(n);
             }
@@ -622,8 +667,9 @@ ReadGoogleCircuitFile(const string& input_file,
             ids.insert(gates[gates.size() - 1].ids.begin(),
                                        Gate::Type::Control);
             gates[gates.size() - 1].num_controls = 1;
-            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
             gates[gates.size() - 1].qubits.push_back(qubits - 1 - q2);
+            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
+
         }
         
         if (gate_type != "cz") {

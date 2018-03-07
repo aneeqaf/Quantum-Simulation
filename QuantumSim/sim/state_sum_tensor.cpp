@@ -1,4 +1,4 @@
-//
+
 //  state_sum_tensor.cpp
 //  vector_state_sim
 //
@@ -61,6 +61,26 @@ SumOfTensorsProductsStateVector(const int qubits,
 }
 
 SumOfTensorsProductsStateVector::
+SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs)
+{
+    sim_type = rhs.sim_type;
+    num_addends = rhs.num_addends;
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends.push_back(new TensorProductStateVector(*rhs.tensor_addends[i]));
+}
+
+SumOfTensorsProductsStateVector& SumOfTensorsProductsStateVector::
+operator=(const SumOfTensorsProductsStateVector& rhs)
+{
+    SumOfTensorsProductsStateVector temp(rhs);
+    swap(tensor_addends, temp.tensor_addends);
+    sim_type = rhs.sim_type;
+    num_addends = rhs.num_addends;
+    return *this;
+}
+
+SumOfTensorsProductsStateVector::
 ~SumOfTensorsProductsStateVector()
 {
     for (auto& t : tensor_addends) {
@@ -70,58 +90,63 @@ SumOfTensorsProductsStateVector::
 }
 
 //TODO
-bool SumOfTensorsProductsStateVector::
+int SumOfTensorsProductsStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
-    bool terminate = false;
+    int last_xCZ_idx = -1;
     
     if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV)
-        terminate = ApplyXCZGatesExact(cz_bits, CZ_bitmasks);
-    else if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
-             sim_type == Config::SimType::Approx2011OWT ){
+        last_xCZ_idx = ApplyXCZGatesExact(cz_bits, CZ_bitmasks);
+    else if (sim_mode != Config::SimMode::Phase2 &&
+             (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
+             sim_type == Config::SimType::Approx2011OWT)){
         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
     }
     
-    for (auto& t : tensor_addends)
-        t -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
+    if (last_xCZ_idx == -1) {
+        for (auto& t : tensor_addends)
+            t -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
+    }
+    if (sim_mode != Config::SimMode::Phase2) {
+        data_per_cycles.memory.push_back(GetMemUsage());
+        data_per_cycles.addends.push_back(GetNumAddends());
+    }
     
-    data_per_cycles.memory.push_back(GetMemUsage());
-    data_per_cycles.addends.push_back(GetNumAddends());
-    
-    return terminate;
+    return last_xCZ_idx;
 }
 
-inline bool SumOfTensorsProductsStateVector::
+inline int SumOfTensorsProductsStateVector::
 ApplyXCZGatesExact(string& cz_bits,
                    const bitset<128>* __restrict CZ_bitmasks)
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
     //of tensor product.
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-//    clock_t start = clock();
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
     
     vector<pair<int,bitset<128>>> qubits_gates_across;
     tensor_addends[0] -> FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
     const int modified_num_q_B = tensor_addends[0] -> GetStateBNumQ() - 1;
     const ul prev_CZ_count = count_of_category.decomposed_CZ;
+    int last_xCZ_idx = 0;
     bool terminate = false;
     
     for (auto& g : qubits_gates_across) {
-        if (cz_bits == "") {
-            terminate = true;
-            break;
-        }
         while (g.second != 0) {
+            if (cz_bits == "") {
+                terminate = true;
+                break;
+            }
             int first_half = __builtin_ctzl(g.second.to_ulong());
             int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
-            const int q = first_half ? first_half : second_half ? 64 + second_half : 0;
-            ++count_of_category.decomposed_CZ;
+            int q = first_half ? first_half : second_half ? 64 + second_half : 0;
+            if (sim_mode != Config::SimMode::Phase2 && (cz_bits != "" || cz_bits == "-" ))
+                ++count_of_category.decomposed_CZ;
             for (idx_size i = 0; i < num_addends; ++i) {
-                if (cz_bits == "*" || cz_bits == "") {
+                if (cz_bits == "-" ) {
                     TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[i]);
                     tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
                                                                         g.first, modified_num_q_B - q);
@@ -129,7 +154,8 @@ ApplyXCZGatesExact(string& cz_bits,
                                                             g.first, modified_num_q_B - q);
                     tensor_addends.push_back(new_t);
                 }
-                else {
+                else if (cz_bits != "") {
+                    ++last_xCZ_idx;
                     if (cz_bits[cz_bits.size() - 1] == '0') {
                         if (cz_bits.size() % 2 == 0)
                             tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
@@ -147,8 +173,10 @@ ApplyXCZGatesExact(string& cz_bits,
                                                                                 g.first, modified_num_q_B - q);
                     }
                 }
+                else
+                    break;
             }
-            if (cz_bits != "" && cz_bits != "*")
+            if (cz_bits != "" && cz_bits != "-")
                 cz_bits.pop_back();
             
             g.second[q] = 0;
@@ -157,23 +185,26 @@ ApplyXCZGatesExact(string& cz_bits,
         if (terminate)
             break;
     }
-    gettimeofday(&end, NULL);
-    time_by_category.decomposed_CZ += ((end.tv_sec  - start.tv_sec) * 1000000u +
-                              end.tv_usec - start.tv_usec) / 1.e6;
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
     
-//    clock_t end = clock();
-//    time_by_category.decomposed_CZ += double(end - start)/CLOCKS_PER_SEC;
-    if (sim_type == Config::SimType::LosslessH) {
-        data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-        data_per_cycles.xCZ_V.push_back(0);
+    if (last_xCZ_idx && sim_mode != Config::SimMode::Phase2) {
+        if (sim_type == Config::SimType::LosslessH) {
+            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_V.push_back(0);
+        }
+        else if (sim_type == Config::SimType::LosslessV) {
+            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_H.push_back(0);
+        }
+        if (cz_bits == "-")
+            count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
+            - (count_of_category.decomposed_CZ - prev_CZ_count);
     }
-    else if (sim_type == Config::SimType::LosslessV) {
-        data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-        data_per_cycles.xCZ_H.push_back(0);
-    }
-    count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
-    - (count_of_category.decomposed_CZ - prev_CZ_count);
-    return terminate;
+    if (terminate)
+        return last_xCZ_idx;
+    else
+        return  -1;
 }
 
 void SumOfTensorsProductsStateVector::
@@ -220,10 +251,12 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     for (auto& t : tensor_addends)
         t -> ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
     
-    if (count_of_category.X1_2 - prev_X_count)
-        count_of_category.X1_2 = count_of_category.X1_2 - (count_of_category.X1_2 - prev_X_count - 1);
-    if (count_of_category.Y1_2 - prev_Y_count)
-        count_of_category.Y1_2 = count_of_category.Y1_2 - (count_of_category.Y1_2 - prev_Y_count - 1);
+    if (sim_mode != Config::SimMode::Phase2) {
+        if (count_of_category.X1_2 - prev_X_count)
+            count_of_category.X1_2 = count_of_category.X1_2 - (count_of_category.X1_2 - prev_X_count - 1);
+        if (count_of_category.Y1_2 - prev_Y_count)
+            count_of_category.Y1_2 = count_of_category.Y1_2 - (count_of_category.Y1_2 - prev_Y_count - 1);
+    }
 }
 
 FullAmpStateVector* SumOfTensorsProductsStateVector::

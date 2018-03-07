@@ -19,7 +19,7 @@ private:
     int total_q;
      
 public:
-    bool ApplyBlockOfDiagGates(string& cz_bits,
+    int ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128>  T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,
@@ -70,8 +70,8 @@ public:
                         const Config::SimType type,
                         const int hcut = 0,
                         const int vcut = 0);
-    AdaptiveStateVector(const AdaptiveStateVector& rhs) = delete;
-    AdaptiveStateVector& operator=(const AdaptiveStateVector& rhs) = delete;
+    AdaptiveStateVector(const AdaptiveStateVector& rhs);
+    AdaptiveStateVector& operator=(const AdaptiveStateVector& rhs);
     ~AdaptiveStateVector();
 };
 

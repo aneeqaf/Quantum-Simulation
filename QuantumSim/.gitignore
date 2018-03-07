@@ -19,9 +19,11 @@ output/amp_vectors/
 output/probabilities/
 output/qpro_scripts/
 output/reports/
+output/log/
 profiling_data/
 ../omp.o
 ../openmp.cpp
 ../aneeqa.pem
 output/log/
 bin/inst*
+*.txt

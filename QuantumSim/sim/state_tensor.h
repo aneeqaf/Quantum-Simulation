@@ -24,15 +24,6 @@ private:
     int num_q_b;
     Cuts cut_type;
     Config::SimType sim_type;
-    
-    void HorizontalCut(int& num_qubits_a,
-                       int& num_qubits_b,
-                       const int total_qubits,
-                       const int cut = 0);
-    void VerticalCut(int& num_qubits_a,
-                     int& num_qubits_b,
-                     const int total_qubits,
-                     const int cut = 0);
 
 public:
     FullAmpStateVector* state_a;
@@ -44,7 +35,7 @@ public:
                                         const Gate::Type CZ_D_B,
                                         const int qubit_a,
                                         const int qubit_b);
-    bool ApplyBlockOfDiagGates(string& cz_bits,
+    int ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128>  T_bitmasks[2]);
     idx_size CountXCZGates(const bitset<128>* __restrict CZ_bitmasks);
@@ -110,24 +101,6 @@ public:
     ~TensorProductStateVector();
 };
 
-idx_size Project1QBitmask(const bitset<128> gate_bitmask,
-                          const bitset<128> partition_bitmask,
-                          const int num_qubits,
-                          const bool zero_least_sig,
-                          const bool leading_ones = false);
-
-int ProjectQubit(const int qubit_to_project,
-                 const bitset<128> partition_bitmask,
-                 const int num_qubits);
-
-bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
-                      const bitset<128> partition_bitmask,
-                      const bitset<128>* __restrict gate_bitmasks,
-                      const int total_circuit_qubits);
-
-bitset<128> ScatterGlobalIndex(const bitset<128> i,
-                               const bitset<128> partition_bitmask,
-                               const idx_size total_qubits);
 
 
 #endif /* state_tensor_h */

@@ -174,20 +174,12 @@ ApplyCZDecomposition(cmplx* __restrict amp,
         multiplier1 = cmplx(1, 0);
     else if (gate_type == Gate::Type::CZ_D7)
         multiplier1 = cmplx(0, 1);
-//    else if (gate_type == Gate::Type::CZ_D6)
-//        multiplier1 = cmplx(2, 0);
-//    else if (gate_type == Gate::Type::CZ_D7)
-//        multiplier1 = cmplx(-0.5, 0);
-    
+
     if (gate_type == Gate::Type::CZ_D5)
         multiplier2 = 2;
     else if (gate_type == Gate::Type::CZ_D6)
         multiplier2 = cmplx(0, -1);
-//    else if (gate_type == Gate::Type::CZ_D6)
-//        multiplier2 = cmplx(2, 0);
-//    else if (gate_type == Gate::Type::CZ_D7)
-//        multiplier2 = cmplx(0.5, 0);
-    
+
     if (gate_type == Gate::Type::CZ_D2)
         q = 0;
     

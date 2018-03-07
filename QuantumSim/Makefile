@@ -1,10 +1,10 @@
-CC := g++
+CC := g++-7
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := vector_state_sim
 TARGETDIR := bin
 OUTPUT := output/amp_vectors output/probabilities output/qpro_scripts output/reports
-INPUT := input/random_circuits_aneeqa
+INPUT := input/random_circuits_rollright
 TARGET := bin/rr
 LIBS = -lm -lstdc++
 INC = -I libs -I sim -I sim/kernels
