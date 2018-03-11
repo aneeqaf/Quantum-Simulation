@@ -23,6 +23,7 @@ def main(cir_file, est_time):
 	categories = {'H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0,\
 	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0}
 	num_threads = 0
+	cz_path_len = 0
 	dfs = False
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
@@ -33,9 +34,9 @@ def main(cir_file, est_time):
 				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 
 			if "Phase 1 CZ path" in line:
-				cz_path_t = line.split(":")[1].split()
-				if cz_path_t[1] == "None":
-					cz_path = cz_path_t[1].replace('(','').replace(')','')
+				cz_path_t = line.split(":")
+				if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
+					cz_path = cz_path_t[1].split()[1].replace('(','').replace(')','')
 				else:
 					cz_path = 0
 				cz_path_len = int(cz_path)
@@ -51,6 +52,7 @@ def main(cir_file, est_time):
 				mem_usage = line.split(":")[1].replace('\n', '')
 				mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
 				unit = mem_usage.split(" ")[2].replace(' ','')
+				print_line = False
 			elif "H (" in line:
 				categories['H'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "CZ & T" in line:
@@ -81,6 +83,7 @@ def main(cir_file, est_time):
 	avg_cpu_percent = 0.0
 	avg_elapsed_time = 0.0
 	max_elapsed_time = 0.0
+	avg_CPU_uti_per_p = 0.0
 	scripts = os.listdir(log_dir)
 	avg_dfs_time = 0.0
 	avg_cz_time = 0.0
@@ -127,6 +130,9 @@ def main(cir_file, est_time):
 				elif "Phase 2 runtime" in line:
 					temp_str = line.split(":")[1].split()[0]
 					avg_dfs_time += float(temp_str)
+				elif "CPU utilization" in line:
+					temp_str = line.split(":")[1].split()[0]
+					avg_CPU_uti_per_p += float(temp_str)
 				elif "elapsed" in line:
 					elapsed_time = line.split()[2].split(':')
 					e_t = 0.0
@@ -241,6 +247,9 @@ def main(cir_file, est_time):
 	if avg_dfs_time:
 		print("Avg phase 2 time per process : " + str(round(avg_dfs_time, 6)) + " s = " +\
 			str(round((avg_dfs_time/avg_time_per_process) * 100, 3)) + "%")
+	if avg_CPU_uti_per_p:
+		print("Avg CPU utilization per process : " + \
+			str(round(avg_CPU_uti_per_p/num_CZ_paths, 6)) + " % ")
 
 	print("\n¯\_(ツ)_/¯ \n")
 

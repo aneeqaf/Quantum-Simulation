@@ -27,3 +27,4 @@ profiling_data/
 output/log/
 bin/inst*
 *.txt
+python_scripts/__pycache__/

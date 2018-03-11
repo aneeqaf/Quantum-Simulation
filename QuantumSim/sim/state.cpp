@@ -120,6 +120,13 @@ ApplyCZDecompositions(const int gate_qubit,
 }
 
 void FullAmpStateVector::
+ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
+{
+    /*0 : Z; 1 : 01; 2 : 10 */
+    ApplyxCZGateAVX(amp, num_qubits, xCZ_bitmasks);
+}
+
+void FullAmpStateVector::
 ApplyHGateOnAllAmps()
 {
     struct timespec start, end;
@@ -214,31 +221,6 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const int th)
 {
-//    idx_size zeroing = 0x00000000FFFFFFF0;
-    
-//    {
-//        for (int i = 0; i < 8; ++i) {
-//            if (X_bitmask[i] == 1) {
-//                for (int j = 8; j < num_qubits; ++j) {
-//                    if (X_bitmask[j] == 0) {
-//                        X_bitmask[j] = 1;
-//                        break;
-//                    }
-//                }
-//            }
-//        }
-//        for (int i = 0; i < 8; ++i) {
-//            if (Y_bitmask[i] == 1) {
-//                for (int j = 8; j < num_qubits; ++j) {
-//                    if (Y_bitmask[j] == 0) {
-//                        Y_bitmask[j] = 1;
-//                        break;
-//                    }
-//                }
-//            }
-//        }
-//    }
-    
     struct timespec start, end;
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
     
@@ -275,7 +257,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                     ++count_of_category.Y1_2;
             }
         }
-    }
+    } 
     
     clock_gettime(CLOCK_MONOTONIC, &start);
     

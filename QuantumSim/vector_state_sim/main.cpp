@@ -99,20 +99,24 @@ int main(int argc, char *argv[])
                     const int len_CZ_bit = stoi(cz_path.substr(0, cz_path.find(",")));
                     
                     int CZ_path = 0;
-                    if (cz_path.find_first_of(",") != cz_path.find_last_of(",")) {
-                        CZ_path = stoi(cz_path.substr(cz_path.find_first_of(",") + 1, cz_path.find_last_of(",")));
-                        dfs_length = stoi(cz_path.substr(cz_path.find_last_of(",") + 1));
+                    if (len_CZ_bit) {
+                        if (cz_path.find_first_of(",") != cz_path.find_last_of(",")) {
+                            CZ_path = stoi(cz_path.substr(cz_path.find_first_of(",") + 1, cz_path.find_last_of(",")));
+                            dfs_length = stoi(cz_path.substr(cz_path.find_last_of(",") + 1));
+                        }
+                        else
+                            CZ_path = stoi(cz_path.substr(cz_path.find_first_of(",") + 1));
+                        
+                        cz_path = bitset<1000>(CZ_path).to_string();
+                        cz_path = cz_path.substr(cz_path.size() - len_CZ_bit);
                     }
-                    else
-                        CZ_path = stoi(cz_path.substr(cz_path.find_first_of(",") + 1));
-                    
-                    cz_path = bitset<1000>(CZ_path).to_string();
-                    cz_path = cz_path.substr(cz_path.size() - len_CZ_bit);
+                    else cz_path = "-";
                 }
                 else if (cz_path.find("*") != string::npos){
                     cz_path = cz_path.substr(0, cz_path.find("*"));
                     dfs_length = (int)(cz_path.find_last_of("*") - cz_path.find_first_of("*"));
                 }
+                
                 break;
             }
             case 'd': {
@@ -198,7 +202,7 @@ int main(int argc, char *argv[])
                 }
                 string idx_arg = string(optarg);
                 print_amp = true;
-                if (idx_arg.find(".") == string::npos) {
+                if (idx_arg.find(",") != string::npos) {
                     string seed_str = idx_arg.substr(0, idx_arg.find_first_of(","));
                     string num_idx_str = idx_arg.substr(idx_arg.find_first_of(",") + 1, idx_arg.find_first_of("+"));
                     seed = stoi(seed_str);

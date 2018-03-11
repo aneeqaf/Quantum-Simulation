@@ -24,11 +24,21 @@ import numpy as np
 @click.option("--p_idx", nargs=1, required=False, default=-1)
 @click.option("--num_procs", nargs=1, required=False, default=1)
 @click.option("--num_threads", nargs=1, required=False, default=8)
-def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, num_threads):
+@click.option("--print_all", nargs=1, required=False, default=-1)
+def main(num_cz, dfs_len, num_idx, command, seed,\
+ idx_file, p_idx, num_procs, num_threads, print_all):
 
 	if num_procs * num_threads > cpu_count():
 		print("Requested too many threads. There are " + str(cpu_count()) + " hardware threads.")
 		exit()
+
+	# If the entire state vector needs to be printed, specify this command.
+	# The value is the number of qubits in the circuit
+	if int(print_all) != -1:
+		with open(idx_file, "w") as f:
+			for q in range(1 << int(print_all)):
+				f.write(str(q) + "\n")
+
 	# Do trial run to choose better cut
 	d_idx = [pos for pos, char in enumerate(command) if char in "-d"][-1]
 	file_name = re.findall(r'\binst\w+', command)
@@ -37,8 +47,9 @@ def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, nu
 	if len(file_name):
 		cir_name = re.findall(r'\binst\w+', command)[0] + "_" + command[d_idx + 2 :]
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
-	if os.path.isdir(os.path.join("output", "amp_vectors", cir_name)):
-		shutil.rmtree(os.path.join("output", "amp_vectors", cir_name), ignore_errors=True)
+	
+	if os.path.isdir(cir_dir):
+		shutil.rmtree(cir_dir, ignore_errors=True)
 	else:
 		os.makedirs(cir_dir)
 
@@ -48,12 +59,12 @@ def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, nu
 	num_czh, num_czv, dfs_lenH, dfs_lenV, H_time, V_time, H_mem, V_mem = \
 	dist_util.PerformTrialRun(commandH, commandV, num_cz, dfs_len)
 	
-	num_cz = num_czh if (num_czv >= num_czh) else num_czv
-	t_time = H_time if (num_czv >= num_czh) else V_time
-	cut = "horizontal-cut" if (num_czv >= num_czh) else "vertical-cut"
-	command = commandH if (num_czv >= num_czh) else commandV
-	mem = H_mem if (num_czv >= num_czh) else V_mem
-	dfs_len = dfs_lenH if (num_czv >= num_czh) else dfs_lenV
+	num_cz = num_czh #if (num_czv >= num_czh) else num_czv
+	t_time = H_time #if (num_czv >= num_czh) else V_time
+	cut = "horizontal-cut"# if (num_czv >= num_czh) else "vertical-cut"
+	command = commandH #if (num_czv >= num_czh) else commandV
+	mem = H_mem #if (num_czv >= num_czh) else V_mem
+	dfs_len = dfs_lenH #if (num_czv >= num_czh) else dfs_lenV
 
 	dist_util.EvalMemAndRuntime(t_time, num_cz, mem, num_procs)
 
@@ -65,6 +76,7 @@ def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, nu
 			cz_bits_strings.append(str(num_cz) + "," + str(bit_comb) + " ")
 
 	command += dist_util.AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx) + " --CZ_path "
+	num_procs = 1 if len(cz_bits_strings) == 1 else num_procs
 
 	dist_util.LaunchDisParallelSim(num_cz, num_procs, dfs_len, cir_name, cz_bits_strings, \
 		command, t_time, num_threads, mem, cut)
@@ -72,7 +84,6 @@ def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, nu
 	# Sleep 5 * time taken in trial run. Check if the logs are changing in size. Once the logs
 	# stop changing, verify they completed without errors, then launch reporting script.
 	proc_per_script = int(len(cz_bits_strings)/num_procs) if len(cz_bits_strings) > 1 else 1
-	num_procs = 1 if len(cz_bits_strings) == 1 else num_procs
 	log_dir = os.path.join("output", "log", cir_name)
 	changing = True
 	logs_prev_mem = np.zeros(num_procs)
@@ -88,7 +99,7 @@ def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, nu
 			if os.stat(lf).st_size > logs_prev_mem[i]:
 				any_log_changed = True
 				logs_prev_mem[i] = os.stat(lf).st_size
-				os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
+				# os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
 
 		if not any_log_changed:
 			changing = False
@@ -113,7 +124,7 @@ def main(num_cz, dfs_len, num_idx, command, seed, idx_file, p_idx, num_procs, nu
 	est_time = str(round(float(t_time) * (1 << int(num_cz)), 3)/int(num_procs))
 	os.system("chmod +x python_scripts/dist_sim_report_gen.py")
 	os.system("./python_scripts/dist_sim_report_gen.py " + cir_name + " " + est_time)
-	# os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
+	os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
 
 if __name__ == "__main__":
     main()		

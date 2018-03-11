@@ -50,6 +50,7 @@ public:
                                    const int th);
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
+    void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);
     
     cmplx operator[](bitset<128> i) const;
     const cmplx* const GetAmpVector() const;

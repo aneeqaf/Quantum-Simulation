@@ -8,6 +8,7 @@
 #ifndef simulation_h
 #define simulation_h
 
+#include <chrono>
 #include <ctime>
 #include <sstream>
 #include <stdio.h>
@@ -26,6 +27,7 @@ private:
     static unordered_map<string, array<cmplx, 5>> benchmark;
     ostringstream log;
     double total_time, dfs_time, cz_path_time, XE_time, CZ_T_top_time, X_Y_top_time;
+    chrono::duration<double> wallclock;
     idx_size curr_gate;
     Config config;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)

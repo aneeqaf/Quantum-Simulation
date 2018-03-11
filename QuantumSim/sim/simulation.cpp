@@ -10,7 +10,8 @@
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
-SequentialSimulation(const Config& c): total_time(0), dfs_time(0), cz_path_time(0), XE_time(0), config(c) {}
+SequentialSimulation(const Config& c): total_time(0), dfs_time(0), cz_path_time(0), XE_time(0), config(c),
+wallclock({}){}
 
 void SequentialSimulation::
 PopulateBenchmarkMap()
@@ -45,6 +46,7 @@ Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
     struct timespec start_p, end_p;
+    auto start = chrono::system_clock::now();
     
     if (config.verbose)
         PrintSimSpecReport(amp, circuit);
@@ -69,12 +71,12 @@ Simulate(GenericQuantumState& amp,
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     
     clock_gettime(CLOCK_MONOTONIC, &start_p);
-    if (config.cz_path == "-" && config.dfs_length != -1)
-        Phase2Simulation(amp, circuit, 0);
-    else
-        Phase1Simulation(amp, circuit);
+    Phase1Simulation(amp, circuit);
     clock_gettime(CLOCK_MONOTONIC, &end_p);
     total_time += (end_p.tv_sec - start_p.tv_sec) + ((end_p.tv_nsec - start_p.tv_nsec)/1.0e9)- XE_time;
+    auto end = chrono::system_clock::now();
+
+    wallclock = end - start;
     
     ReportingAfterSim(amp, circuit);
 }
@@ -255,7 +257,6 @@ SimulationLoop(GenericQuantumState &amp,
                 i += total_circuit_qubits - 1;
             }
             else {
-                assert(false);
                 amp.ApplyNonCGate(current_gate.qubits[0],
                                   (Gate::Type)current_gate.ids.back(),  current_gate);
                 
@@ -304,10 +305,8 @@ Phase1Simulation(GenericQuantumState& amp,
         cout << "Simulated " + to_string(curr_gate) + " gates, including "
         + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. No xCZ gates left.\n";
     }
-    else if (!terminate && config.cz_path != "-") {
-        cout << "No xCZ gates to simulate\n";
+    else if (!terminate && config.cz_path != "-")
         cout << "Truncated CZ path : " << config.cz_path << "\n";
-    }
     
     cz_path_time += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
 }
@@ -320,9 +319,9 @@ Phase2Simulation(GenericQuantumState& amp,
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     
-    bool terminate = false;
+//    bool terminate = false;
     amp.RescaleAndApplyGlobalICounter();
-    for(auto idx : config.indices)
+    for(idx_size i= 0; i < config.indices.size(); ++i)
         amp.amps_of_interest.push_back(0);
     
     idx_size num_CZ_paths = 1ull << config.dfs_length;
@@ -338,7 +337,7 @@ Phase2Simulation(GenericQuantumState& amp,
         amp.time_by_category.copying += (copy_e.tv_sec - copy_s.tv_sec) + ((copy_e.tv_nsec - copy_s.tv_nsec)/1.0e9);
         ++amp.count_of_category.copying;
         
-        terminate = SimulationLoop(*temp_amp, circuit, gate_i);
+        SimulationLoop(*temp_amp, circuit, gate_i);
         temp_amp -> RescaleAndApplyGlobalICounter();
         
         for(idx_size idx = 0; idx < config.indices.size(); ++idx) 
@@ -351,16 +350,8 @@ Phase2Simulation(GenericQuantumState& amp,
     
     cout << "Phase 2 CZ path length : " << config.dfs_length << "\n";
     if (!config.cz_path.size()) {
-        if (circuit.GetTotalNumGates() != curr_gate) {
-            int current_cycle = 0;
-            for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
-                if (curr_gate < (idx_size)circuit.GateIndexForCycle(c)) {
-                    current_cycle = c;
-                    break;
-                }
-            }
+        if (circuit.GetTotalNumGates() != curr_gate)
             cout << "DFS path exhausted early";
-        }
         else
             cout << "No xCZ gates left\n";
     }
@@ -375,9 +366,9 @@ void SequentialSimulation::
 ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
-//#ifdef Print
-//    amp.PrintStateVector();
-//#endif
+#ifdef Print
+    amp.PrintStateVector();
+#endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
 #endif
@@ -408,7 +399,7 @@ ReportingAfterSim(GenericQuantumState& amp,
         for (idx_size i = 5; i < idx_print.size(); ++i) {
             amp_out << real(amp[idx_print[i]]);
             if (config.print_idx)
-                idx_out << idx_print[i] << "\n";
+                idx_out << idx_print[i].to_ullong() << "\n";
             if (imag(amp[idx_print[i]]) < 0) amp_out << imag(amp[idx_print[i]]) << "j";
             else amp_out << "+" << imag(amp[idx_print[i]]) << "j";
             amp_out << "\n";
@@ -853,8 +844,8 @@ PrintSimReport(GenericQuantumState& amp,
         + ((amp.time_by_category.merged_XY1_2/total_time) * 100) + ((amp.time_by_category.rescale/total_time) * 100)
         + ((amp.time_by_category.conversion/total_time) * 100) + ((amp.time_by_category.copying/total_time) * 100);
         
-        ss << "\t\t\t\t\t\t\t  -----\n";
-        ss << "\tTotal \t\t\t\t\t\t  " << sum_percen << "%\n";
+        ss << "\t\t\t\t\t\t\t  ----\n";
+        ss << "\tTotal \t\t\t\t\t\t   " << sum_percen << "%\n";
         
         ss << "Average time per gate : " << total_time/circuit.GetTotalNumGates() << " s\n";
         
@@ -866,6 +857,7 @@ PrintSimReport(GenericQuantumState& amp,
             ss << "Phase 2 runtime (DFS) : " << dfs_time << " s = "
             << (dfs_time/total_time) * 100 << "%\n";
         }
+        ss << "CPU utlization : " << total_time/wallclock.count() *  100 << "\n";
         cout << ss.str() << "\n";
     }
     

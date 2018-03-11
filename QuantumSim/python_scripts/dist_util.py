@@ -16,7 +16,7 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 	elif idx_file != "":
 		print_opt += " --idx " + idx_file
 	else:
-		print_opt += " --idx " + 7 + "," + str(num_idx)
+		print_opt += " --idx " + str(7) + "," + str(num_idx)
 		# if int(p_idx) != -1:
 		# 	print_opt += "+"
 
@@ -65,7 +65,7 @@ def TrialRunEval(report_file, num_CZ, start_time, end_time, dfs_len = 0):
 			print ("\033[1m" + "Simulation runtime too short for distributed execution" + "\033[0m")
 			exit()
 		elif float(rep_time) > 3600.0: 
-			print ("\033[1m" + "Simulation runtime too int for distributed execution" + "\033[0m")
+			print ("\033[1m" + "Simulation runtime too long for distributed execution" + "\033[0m")
 			exit()
 
 		if int(num_CZ) - len(cz_path_trunc) < int(num_CZ):

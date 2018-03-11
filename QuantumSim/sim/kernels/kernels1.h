@@ -41,6 +41,107 @@ Apply4Y12Gate(cmplx* __restrict amp,
 //    ApplyYY12Gate( amp, {indices[12], indices[13], indices[14], indices[15]});
 }
 
+__attribute__((always_inline)) inline void
+ApplyZGateAVX(cmplx* __restrict amp,
+              const int num_qubits_amp,
+              const idx_size gate_bitmask)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    idx_size amp_size = 2 * (1ull << num_qubits_amp);
+    idx_size a = 0;
+    for (idx_size i = 0; i < amp_size; i+=8) {
+        __m256 temp_amp = _mm256_load_ps (&t_amp[i]);
+        
+        if (_mm256_movemask_ps(_mm256_cmp_ps(temp_amp, kzeros, _CMP_EQ_OQ)) == 255)
+            return;
+        
+        float neg[4] = {1};
+        for (int j = 0; j < 4; ++j) {
+            if ((1ull << (a + j)) & gate_bitmask)
+                neg[i] = -1;
+        }
+        
+        const __m256 neg_amp = {neg[0], neg[0], neg[1], neg[1], neg[2], neg[2], neg[3], neg[3]};
+        temp_amp = _mm256_mul_ps(temp_amp, neg_amp);
+        _mm256_store_ps(&t_amp[i], temp_amp);
+        a += 4;
+    }
+}
+
+__attribute__((always_inline)) inline void
+ApplyProjection01AVX(cmplx* __restrict amp,
+                     const int num_qubits_amp,
+                     const idx_size gate_bitmask)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    idx_size amp_size = 2 * (1ull << num_qubits_amp);
+    idx_size a = 0;
+    for (idx_size i = 0; i < amp_size; i+=8) {
+        __m256 temp_amp = _mm256_load_ps (&t_amp[i]);
+        
+        if (_mm256_movemask_ps(_mm256_cmp_ps(temp_amp, kzeros, _CMP_EQ_OQ)) == 255)
+            return;
+        
+        //Calculate which amps to zero
+        float zero[4] = {1};
+        bool all_zeros = true;
+        for (int j = 0; j < 4; ++j) {
+            if (!((1ull << (a + j)) & gate_bitmask))
+                zero[i] = 0;
+            else
+                all_zeros = false;
+        }
+        if (all_zeros)
+            _mm256_store_ps(&t_amp[i], kzeros);
+        else {
+            const __m256 zero_amp = {zero[0], zero[0], zero[1], zero[1], zero[2], zero[2], zero[3], zero[3]};
+            __m256 temp_amp = _mm256_load_ps (&t_amp[i]);
+            temp_amp = _mm256_mul_ps(temp_amp, zero_amp);
+            _mm256_store_ps(&t_amp[i], temp_amp);
+        }
+        a += 4;
+    }
+}
+
+__attribute__((always_inline)) inline void
+ApplyProjection10AVX(cmplx* __restrict amp,
+                     const int num_qubits_amp,
+                     const idx_size gate_bitmask)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    idx_size amp_size = 2 * (1ull << num_qubits_amp);
+    idx_size a = 0;
+    for (idx_size i = 0; i < amp_size; i+=8) {
+        __m256 temp_amp = _mm256_load_ps (&t_amp[i]);
+        
+        if (_mm256_movemask_ps(_mm256_cmp_ps(temp_amp, kzeros, _CMP_EQ_OQ)) == 255)
+            return;
+        
+        //Calculate which amps to zero
+        float zero[4] = {1};
+        bool all_zeros = true;
+        for (int j = 0; j < 4; ++j) {
+            if ((1ull << (a + j)) & gate_bitmask)
+                zero[i] = 0;
+            else
+                all_zeros = false;
+        }
+        if (all_zeros)
+            _mm256_store_ps(&t_amp[i], kzeros);
+        else {
+            const __m256 zero_amp = {zero[0], zero[0], zero[1], zero[1], zero[2], zero[2], zero[3], zero[3]};
+            __m256 temp_amp = _mm256_load_ps (&t_amp[i]);
+            temp_amp = _mm256_mul_ps(temp_amp, zero_amp);
+            _mm256_store_ps(&t_amp[i], temp_amp);
+        }
+        a += 4;
+    }
+}
+
+
 inline valarray<idx_size>
 FindStrides (const vector<int>& gate_qubits,
              const int num_q) {

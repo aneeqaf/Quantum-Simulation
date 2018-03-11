@@ -29,12 +29,16 @@ public:
     FullAmpStateVector* state_a;
     FullAmpStateVector* state_b;
     
-    void FindCZGatesBetweenPartitions(vector<pair<int,bitset<128>>>& CZ_bitmasks,
+    int FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
                                       const bitset<128>* gate_bitmasks);
     void ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
                                         const Gate::Type CZ_D_B,
                                         const int qubit_a,
                                         const int qubit_b);
+    void ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
+                                        bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
+                                        bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
+                                        bitset<128>* __restrict xCZ_bitmasks_path1_D4D3);
     int ApplyBlockOfDiagGates(string& cz_bits,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128>  T_bitmasks[2]);

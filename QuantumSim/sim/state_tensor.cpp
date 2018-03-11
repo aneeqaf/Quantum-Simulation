@@ -62,28 +62,31 @@ TensorProductStateVector::
     delete state_b;
 }
 
-void TensorProductStateVector::
-FindCZGatesBetweenPartitions(vector<pair<int,bitset<128>>>& CZ_bitmasks,
+int TensorProductStateVector::
+FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
                              const bitset<128>* __restrict gate_bitmasks)
 {
     const int qubits_a = state_a -> GetNumQubits();
     const int modified_q = qubits_a + state_b -> GetNumQubits() - 1;
-    pair<int,bitset<128>> temp;
+    int count = 0;
+    bitset<128> temp;
     int c = 0;
     for (int i = 0; c <  qubits_a; ++i) {
         bitset<128> temp1 = 0;
         temp1[modified_q - i] = 1;
         if ((temp1 & a_qubits_bitmask) != 0) {
             if ((gate_bitmasks[modified_q - i] & a_qubits_bitmask) != gate_bitmasks[modified_q - i]) {
-                temp.second = Project1QBitmask(gate_bitmasks[modified_q - i],
-                                               b_qubits_bitmask, modified_q + 1,
-                                               false);
-                temp.first = c;
-                CZ_bitmasks.push_back(temp);
+                temp = Project1QBitmask(gate_bitmasks[modified_q - i],
+                                        b_qubits_bitmask, modified_q + 1,
+                                        false);
+                xCZ_bitmasks[c++] = temp;
+                ++count;
             }
-            ++c;
+            else
+                xCZ_bitmasks[c++] = 0;
         }
     }
+    return count;
 }
 
 void TensorProductStateVector::
@@ -93,9 +96,36 @@ ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
                                const int qubit_b)
 {
     state_a -> ApplyCZDecompositions(qubit_a, CZ_D_A);
+//    cout << "state A:\n";
+//    state_a -> PrintStateVector();
     state_b -> ApplyCZDecompositions(qubit_b, CZ_D_B);
+//    cout << "state B:\n";
+//    state_b -> PrintStateVector();
 }
 
+void TensorProductStateVector::
+ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
+                               bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
+                               bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
+                               bitset<128>* __restrict xCZ_bitmasks_path1_D4D3)
+{
+    idx_size state_A_gate_bm[3] = {0};
+    idx_size state_B_gate_bm[3] = {0};
+    for (int i = 0; i < num_q_a; ++i) {
+        state_A_gate_bm[0] |= xCZ_bitmasks_path0_D1D2[i].count() % 2 ? (1ull << (num_q_a - 1 - i)) : 0;
+        state_A_gate_bm[1] |= xCZ_bitmasks_path0_D2D1[i].count() ? (1ull << (num_q_a - 1 - i)) : 0;
+        state_A_gate_bm[2] |= xCZ_bitmasks_path1_D4D3[i].count() ? (1ull << (num_q_a - 1 - i)) : 0;
+    }
+    
+    for (int i = 0; i < num_q_a; ++i) {
+        state_B_gate_bm[1] |= xCZ_bitmasks_path0_D1D2[i].to_ulong();
+        state_B_gate_bm[0] ^= xCZ_bitmasks_path0_D2D1[i].to_ulong();
+        state_B_gate_bm[2] |= xCZ_bitmasks_path1_D3D4[i].to_ulong();
+    }
+    
+    state_a -> ApplyCZDecompositionDist(state_A_gate_bm);
+    state_b -> ApplyCZDecompositionDist(state_B_gate_bm);
+}
 
 int TensorProductStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
@@ -155,24 +185,27 @@ ApplyBlockOfDiagGates(string& cz_bits,
         state_a -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_a, T_bitmasks_a);
     if (applyCZ_b || T_bitmasks_b[0] != 0)
         state_b -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_b, T_bitmasks_b);
-   
+
     return -1;
 }
 
 idx_size TensorProductStateVector::
 CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
 {
-    vector<pair<int,bitset<128>>> qubits_gates_across;
-    FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
+    bitset<128> xCZ_bitmask[num_q_a];
+    for (int i = 0; i < num_q_a; ++i)
+        xCZ_bitmask[i] = 0;
+    
+    FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks);
     
     idx_size new_count = 0;
-    for (idx_size i = 0; i < qubits_gates_across.size(); ++i) {
-        while (qubits_gates_across[i].second != 0) {
+    for (int i = 0; i < num_q_a; ++i) {
+        while (xCZ_bitmask[i] != 0) {
             ++new_count;
-            int first_half = __builtin_ctzl(qubits_gates_across[i].second.to_ulong());
-            int second_half = __builtin_ctzl((qubits_gates_across[i].second >> 64).to_ulong());
-            const int q1 = first_half ? first_half : second_half ? 64 + second_half : 0;
-            qubits_gates_across[i].second[q1] = 0;
+            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
+            const int q1 = first_half ? first_half : second_half ? 63 + second_half : 0;
+            xCZ_bitmask[i][q1] = 0;
         }
     }
     return new_count;
@@ -186,20 +219,22 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     
-    vector<pair<int,bitset<128>>> qubits_gates_across;
-    FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
+    bitset<128> xCZ_bitmask[num_q_a];
+    for (int i = 0; i < num_q_a; ++i)
+        xCZ_bitmask[i] = 0;
+    FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks);
     
     const int modified_num_q_B = num_q_a + num_q_b - 1;
     const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
-    for (auto& g : qubits_gates_across) {
-        while (g.second != 0) {
-            int first_half = __builtin_ctzl(g.second.to_ulong());
-            int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
-            const int q = first_half ? first_half : second_half ? 64 + second_half : 0;
+    for (int i = 0; i < num_q_a; ++i) {
+        while (xCZ_bitmask[i] != 0) {
+            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
+            const int q = first_half ? first_half : second_half ? 63 + second_half : 0;
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
-            ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, g.first, modified_num_q_B - q);
-            g.second[q] = 0;
+            ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, (int)i, modified_num_q_B - q);
+            xCZ_bitmask[i][q] = 0;
         }
     }
     

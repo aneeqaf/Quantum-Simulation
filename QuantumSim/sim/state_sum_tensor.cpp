@@ -97,8 +97,13 @@ ApplyBlockOfDiagGates(string& cz_bits,
 {
     int last_xCZ_idx = -1;
     
-    if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV)
-        last_xCZ_idx = ApplyXCZGatesExact(cz_bits, CZ_bitmasks);
+    if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV) {
+        if (cz_bits != "-")
+            last_xCZ_idx = ApplyXCZGatesForDist(cz_bits, CZ_bitmasks);
+        else
+            last_xCZ_idx = ApplyXCZGatesExact(CZ_bitmasks);
+//        last_xCZ_idx = ApplyXCZGatesExactTemp(cz_bits, CZ_bitmasks);
+    }
     else if (sim_mode != Config::SimMode::Phase2 &&
              (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
              sim_type == Config::SimType::Approx2011OWT)){
@@ -119,72 +124,91 @@ ApplyBlockOfDiagGates(string& cz_bits,
 }
 
 inline int SumOfTensorsProductsStateVector::
-ApplyXCZGatesExact(string& cz_bits,
-                   const bitset<128>* __restrict CZ_bitmasks)
+ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
     //of tensor product.
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
     
-    vector<pair<int,bitset<128>>> qubits_gates_across;
-    tensor_addends[0] -> FindCZGatesBetweenPartitions(qubits_gates_across, CZ_bitmasks);
+    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    bitset<128> xCZ_bitmask[num_q_a];
+    for (idx_size i = 0; i < num_q_a; ++i)
+        xCZ_bitmask[i] = 0;
+    
+    if (!(tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks)))
+        return -1;
+    
     const int modified_num_q_B = tensor_addends[0] -> GetStateBNumQ() - 1;
     const ul prev_CZ_count = count_of_category.decomposed_CZ;
-    int last_xCZ_idx = 0;
-    bool terminate = false;
     
-    for (auto& g : qubits_gates_across) {
-        while (g.second != 0) {
-            if (cz_bits == "") {
-                terminate = true;
-                break;
-            }
-            int first_half = __builtin_ctzl(g.second.to_ulong());
-            int second_half = __builtin_ctzl((g.second >> 64).to_ulong());
-            int q = first_half ? first_half : second_half ? 64 + second_half : 0;
-            if (sim_mode != Config::SimMode::Phase2 && (cz_bits != "" || cz_bits == "-" ))
+    for (idx_size i = 0; i < num_q_a; ++i) {
+        while (xCZ_bitmask[i] != 0) {
+            int first_half = __builtin_ctzl(xCZ_bitmask[i] .to_ulong());
+            int second_half = __builtin_ctzl((xCZ_bitmask[i]  >> 63).to_ulong());
+            int q = first_half ? first_half : second_half ? 63 + second_half : 0;
+            if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
-            for (idx_size i = 0; i < num_addends; ++i) {
-                if (cz_bits == "-" ) {
-                    TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[i]);
-                    tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
-                                                                        g.first, modified_num_q_B - q);
-                    new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
-                                                            g.first, modified_num_q_B - q);
-                    tensor_addends.push_back(new_t);
-                }
-                else if (cz_bits != "") {
-                    ++last_xCZ_idx;
-                    if (cz_bits[cz_bits.size() - 1] == '0') {
-                        if (cz_bits.size() % 2 == 0)
-                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
-                                                                            g.first, modified_num_q_B - q);
-                        else
-                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D2, Gate::Type::CZ_D1,
-                                                                                g.first, modified_num_q_B - q);
-                    }
-                    else {
-                        if (cz_bits.size() % 2 == 0)
-                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
-                                                                             g.first, modified_num_q_B - q);
-                        else
-                            tensor_addends[i] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D4, Gate::Type::CZ_D3,
-                                                                                g.first, modified_num_q_B - q);
-                    }
-                }
-                else
-                    break;
+            for (idx_size n = 0; n < num_addends; ++n) {
+                TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[n]);
+                tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                                                                    (int)i, modified_num_q_B - q);
+                new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                                                        (int)i, modified_num_q_B - q);
+                tensor_addends.push_back(new_t);
             }
-            if (cz_bits != "" && cz_bits != "-")
-                cz_bits.pop_back();
             
-            g.second[q] = 0;
+            xCZ_bitmask[i][q] = 0;
             num_addends = tensor_addends.size();
         }
-        if (terminate)
-            break;
     }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    
+    if (sim_mode != Config::SimMode::Phase2) {
+        if (sim_type == Config::SimType::LosslessH) {
+            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_V.push_back(0);
+        }
+        else if (sim_type == Config::SimType::LosslessV) {
+            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_H.push_back(0);
+        }
+        count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
+            - (count_of_category.decomposed_CZ - prev_CZ_count);
+    }
+    
+    return  -1;
+}
+
+inline int SumOfTensorsProductsStateVector::
+ApplyXCZGatesForDist(string& cz_bits,
+                     const bitset<128>* __restrict CZ_bitmasks)
+{
+    //int represents qubit in block A and idx_size represents bitmask of qubits in block B
+    //of tensor product.
+    bool terminate = false;
+    
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    
+    const ul prev_CZ_count = count_of_category.decomposed_CZ;
+    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    bitset<128> xCZ_bitmasks_path0_D1D2[num_q_a], xCZ_bitmasks_path1_D3D4[num_q_a],
+    xCZ_bitmasks_path0_D2D1[num_q_a], xCZ_bitmasks_path1_D4D3[num_q_a];
+    for (idx_size i = 0; i < num_q_a; ++i) {
+        xCZ_bitmasks_path0_D1D2[i] = 0;
+        xCZ_bitmasks_path1_D3D4[i] = 0;
+        xCZ_bitmasks_path0_D2D1[i] = 0;
+        xCZ_bitmasks_path1_D4D3[i] = 0;
+    }
+    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, cz_bits, xCZ_bitmasks_path0_D1D2,
+                                                 xCZ_bitmasks_path0_D2D1, xCZ_bitmasks_path1_D3D4,
+                                                 xCZ_bitmasks_path1_D4D3, CZ_bitmasks);
+    if (last_xCZ_idx != -1)
+        tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
+                                                        xCZ_bitmasks_path1_D3D4, xCZ_bitmasks_path1_D4D3);
+      
     clock_gettime(CLOCK_MONOTONIC, &end);
     time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
     
@@ -197,14 +221,63 @@ ApplyXCZGatesExact(string& cz_bits,
             data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_H.push_back(0);
         }
-        if (cz_bits == "-")
-            count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
-            - (count_of_category.decomposed_CZ - prev_CZ_count);
     }
     if (terminate)
         return last_xCZ_idx;
     else
         return  -1;
+}
+
+int SumOfTensorsProductsStateVector::
+FormGatesBitmaskXCZ(bool& terminate,
+                    string& cz_bits,
+                    bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
+                    bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
+                    bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
+                    bitset<128>* __restrict xCZ_bitmasks_path1_D4D3,
+                    const bitset<128>* __restrict CZ_bitmasks)
+{
+    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    bitset<128> xCZ_bitmask[num_q_a];
+    for (idx_size i = 0; i < num_q_a; ++i)
+        xCZ_bitmask[i] = 0;
+    if (!(tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks)))
+        return -1;
+    int last_xCZ_idx = 0;
+
+    for (idx_size i = 0; i < num_q_a; ++i) {
+        while (xCZ_bitmask[i] != 0) {
+            
+            if (cz_bits == "") {
+                terminate = true;
+                break;
+            }
+            
+            ++last_xCZ_idx;
+            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
+            int q = first_half ? first_half : second_half ? 63 + second_half : 0;
+//            int q = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            if (sim_mode != Config::SimMode::Phase2)
+                ++count_of_category.decomposed_CZ;
+            
+            if (cz_bits[cz_bits.size() - 1] == '0') {
+                if (cz_bits.size() % 2 == 0)
+                    xCZ_bitmasks_path0_D1D2[i][q] = 1;
+                else
+                    xCZ_bitmasks_path0_D2D1[i][q] = 1;
+            }
+            else {
+                if (cz_bits.size() % 2 == 0)
+                    xCZ_bitmasks_path1_D3D4[i][q] = 1;
+                else
+                    xCZ_bitmasks_path1_D4D3[i][q] = 1;
+            }
+            cz_bits.pop_back();
+            xCZ_bitmask[i][q] = 0;
+        }
+    }
+    return last_xCZ_idx;
 }
 
 void SumOfTensorsProductsStateVector::
@@ -330,6 +403,100 @@ ConvertSumOfTensorsToStateAVX()
     return full_state;
 }
 
+inline int SumOfTensorsProductsStateVector::
+ApplyXCZGatesExactTemp(string& cz_bits,
+                       const bitset<128>* __restrict CZ_bitmasks)
+{
+    //int represents qubit in block A and idx_size represents bitmask of qubits in block B
+    //of tensor product.
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    
+    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    bitset<128> xCZ_bitmask[num_q_a];
+    for (idx_size i = 0; i < num_q_a; ++i)
+        xCZ_bitmask[i] = 0;
+    tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks);
+    const int modified_num_q_B = tensor_addends[0] -> GetStateBNumQ() - 1;
+    const ul prev_CZ_count = count_of_category.decomposed_CZ;
+    int last_xCZ_idx = 0;
+    bool terminate = false;
+    
+    for (idx_size i = 0; i < num_q_a; ++i) {
+        while (xCZ_bitmask[i] != 0) {
+            if (cz_bits == "") {
+                terminate = true;
+                break;
+            }
+            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 64).to_ulong());
+            int q = first_half ? first_half : second_half ? 64 + second_half : 0;
+            if (sim_mode != Config::SimMode::Phase2 && (cz_bits != "" || cz_bits == "-" ))
+                ++count_of_category.decomposed_CZ;
+            for (idx_size n = 0; n < num_addends; ++n) {
+                if (cz_bits == "-" ) {
+                    TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[n]);
+                    tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                                                                        i, modified_num_q_B - q);
+                    new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                                                            i, modified_num_q_B - q);
+                    tensor_addends.push_back(new_t);
+                }
+                else if (cz_bits != "") {
+                    ++last_xCZ_idx;
+                    if (cz_bits[cz_bits.size() - 1] == '0') {
+                        if (cz_bits.size() % 2 == 0)
+                            tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                                                                                i, modified_num_q_B - q);
+                        else
+                            tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D2, Gate::Type::CZ_D1,
+                                                                                i, modified_num_q_B - q);
+                    }
+                    else {
+                        if (cz_bits.size() % 2 == 0)
+                            tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                                                                                i, modified_num_q_B - q);
+                        else
+                            tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D4, Gate::Type::CZ_D3,
+                                                                                i, modified_num_q_B - q);
+                    }
+                }
+                else
+                    break;
+            }
+            if (cz_bits != "" && cz_bits != "-")
+                cz_bits.pop_back();
+            
+            xCZ_bitmask[i][q] = 0;
+            num_addends = tensor_addends.size();
+        }
+        if (terminate)
+            break;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    
+    if (last_xCZ_idx && sim_mode != Config::SimMode::Phase2) {
+        if (sim_type == Config::SimType::LosslessH) {
+            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_V.push_back(0);
+        }
+        else if (sim_type == Config::SimType::LosslessV) {
+            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+            data_per_cycles.xCZ_H.push_back(0);
+        }
+        if (cz_bits == "-")
+            count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
+            - (count_of_category.decomposed_CZ - prev_CZ_count);
+    }
+    if (terminate)
+        return last_xCZ_idx;
+    else
+        return  -1;
+}
+
+
+
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToState()
 {
@@ -340,10 +507,10 @@ ConvertSumOfTensorsToState()
     const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A, B_size = 1ull << num_q_B;
     const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
     
-    cmplx* amp;
-    posix_memalign((void**)&amp, 64, sizeof(cmplx) * size);
-    memset(amp, 0, size * sizeof(amp));
-    
+    cmplx amp[size];
+    for (idx_size i = 0; i < size; ++i)
+        amp[i] = 0;
+  
     if (sim_type == Config::SimType::LosslessV) {
         for (idx_size i = 0; i < size; ++i) {
             for (idx_size n = 0; n < num_addends; ++n)

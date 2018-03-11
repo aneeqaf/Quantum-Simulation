@@ -54,8 +54,23 @@ const unsigned kNUM_BRANCHES = thread::hardware_concurrency();//ceil(log(thread:
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kzeros = {0, 0, 0, 0, 0, 0, 0, 0};
+constexpr __m128 kzeros128 = {0, 0, 0, 0};
+constexpr __m256 kzeros1 = {0, 0, ~0, ~0, 0, 0, ~0, ~0};
+constexpr __m256 kzeros2 = {~0, ~0, 0, 0, ~0, ~0, 0, 0};
+constexpr __m256 kzeros3 = {0, 0, 0, 0, ~0, ~0, ~0, ~0};
+constexpr __m256 kzeros4 = {~0, ~0, ~0, ~0, 0, 0, 0, 0};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};
 constexpr __m256 kneg2 = {-0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f};
+constexpr __m128 kneg128 = {-0.0f, -0.0f, -0.0f, -0.0f};
+
+constexpr __m256 kzero01[4] = {{~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0}, {0, 0, ~0, ~0, 0, 0, ~0, ~0},
+                              {0, 0, 0, 0, ~0, ~0, ~0, ~0}, {0, 0, 0, 0, 0, 0, ~0, ~0}};
+constexpr __m256 kzero10[4] = {{~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0}, {~0, ~0, 0, 0, ~0, ~0, 0, 0},
+                              {~0, ~0, ~0, ~0, 0, 0, 0, 0}, {~0, ~0, 0, 0, 0, 0, 0, 0}};
+constexpr __m256 knegZ[4] = {{0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
+                            {0, 0, 0, 0, -0.0f, -0.0f, -0.0f, -0.0f},
+                            {0, 0, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f}};
+
 
 __attribute__((always_inline)) inline void
 ApplyX12GateAVX(cmplx* __restrict amp,
@@ -266,6 +281,47 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
     _mm256_store_ps(&t_amp[2*indices[1]], a1);
     _mm256_store_ps(&t_amp[2*indices[2]], a2);
     _mm256_store_ps(&t_amp[2*indices[3]], a3);
+}
+
+__attribute__((always_inline)) inline void
+ApplyxCZGateAVX(cmplx* __restrict amp,
+                const int num_qubits_amp,
+                const idx_size* __restrict gate_bitmask)
+{
+    /*0 : Z; 1 : 01; 2 : 10 */
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    const __m256 mm256_neg = knegZ[gate_bitmask[0] & 3];
+    const __m256  mm256_01 = kzero01[gate_bitmask[1] & 3];
+    const __m256  mm256_10 = kzero10[gate_bitmask[2] & 3];
+    const idx_size amp_size = 2 * (1ull << num_qubits_amp);
+    
+//    cout << "Z last two bits : " << (gate_bitmask[0] & 3)  << endl;
+//    cout << "01 last two bits : " << (gate_bitmask[1] & 3) << endl;
+//    cout << "10 last two bits : " << (gate_bitmask[2] & 3) << endl;
+//
+//    cout << "Z bm : " << (gate_bitmask[0])  << endl;
+//    cout << "01 bm : " << (gate_bitmask[1]) << endl;
+//    cout << "10 bm : " << (gate_bitmask[2]) << endl;
+    
+    for (idx_size amp_idx = 0, i = 0; i < amp_size; i+=8,  amp_idx += 4) {
+        if (((~amp_idx - 3) & gate_bitmask[1]) || (amp_idx & gate_bitmask[2])) {
+            _mm256_store_ps(&t_amp[i], kzeros);
+            continue;
+        }
+       
+        __m256 temp_amp = _mm256_load_ps(&t_amp[i]);
+        if (_mm256_movemask_ps(_mm256_cmp_ps(temp_amp, kzeros, _CMP_EQ_OQ)) == 255)
+            continue;
+        
+        temp_amp = _mm256_and_ps(temp_amp, mm256_01);
+        temp_amp = _mm256_and_ps(temp_amp, mm256_10);
+        temp_amp = _mm256_xor_ps(temp_amp, mm256_neg);
+        
+        if (__builtin_parityll(amp_idx & gate_bitmask[0]))
+            temp_amp = _mm256_xor_ps(temp_amp, kneg2);
+
+        _mm256_store_ps(&t_amp[i], temp_amp);
+    }
 }
 
 void

@@ -13,6 +13,7 @@ Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
 Config::SimMode GenericQuantumState::sim_mode = Config::SimMode::Phase1;
+
 #ifdef Xcode
 int GenericQuantumState::num_threads = 8;
 #else
