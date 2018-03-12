@@ -8,7 +8,8 @@ import re
 @click.command()
 @click.argument("cir_file", nargs=1)
 @click.argument("est_time", nargs=1)
-def main(cir_file, est_time):
+@click.option("--truncated", nargs=1, required=False, default=0)
+def main(cir_file, est_time, truncated):
 	log_dir = os.path.join("output", "log", cir_file)
 
 	if not os.path.isdir(log_dir):
@@ -72,7 +73,7 @@ def main(cir_file, est_time):
 			elif "¯\_(ツ)_/¯ " in line:
 				break
 
-	num_CZ_paths = 1 << cz_path_len
+	num_CZ_paths = 1 << cz_path_len if truncated == 0 else truncated
 	avg_time_per_category = {'H':0.0, 'CZ & T':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
 		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0}
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
@@ -250,6 +251,10 @@ def main(cir_file, est_time):
 	if avg_CPU_uti_per_p:
 		print("Avg CPU utilization per process : " + \
 			str(round(avg_CPU_uti_per_p/num_CZ_paths, 6)) + " % ")
+
+	if truncated != 0:
+		print("\033[1m\nThe estimated time for the complete run is " \
+			+ str(round((avg_elapsed_time/truncated) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
 
 	print("\n¯\_(ツ)_/¯ \n")
 

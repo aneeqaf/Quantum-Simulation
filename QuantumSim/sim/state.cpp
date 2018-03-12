@@ -40,7 +40,7 @@ FullAmpStateVector(const FullAmpStateVector& rhs)
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-    #pragma omp parallel for num_threads(4)
+    #pragma omp parallel for num_threads(num_threads)
     for (idx_size i = 0; i < size; i+=8) {
         const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
         _mm256_store_ps(&t_amp[i], temp_amp);
@@ -123,7 +123,7 @@ void FullAmpStateVector::
 ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 {
     /*0 : Z; 1 : 01; 2 : 10 */
-    ApplyxCZGateAVX(amp, num_qubits, xCZ_bitmasks);
+    ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks);
 }
 
 void FullAmpStateVector::

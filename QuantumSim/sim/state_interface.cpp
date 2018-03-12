@@ -183,13 +183,24 @@ HorizontalCut(bitset<128>& a_qubits_bitmask,
               const int total_qubits,
               const int cut)
 {
-    num_qubits_a = !cut ? ceil(total_qubits/2) : cut;
-    const int modified_q = total_qubits - 1;
+//    num_qubits_a = !cut ? ceil(total_qubits/2) : cut;
+//    const int modified_q = total_qubits - 1;
+//
+//    for (int i = 0; i < num_qubits_a; ++i)
+//        a_qubits_bitmask [modified_q - i] = 1;
+//
+//    for (int i = num_qubits_a; i < total_qubits; ++i) {
+//        b_qubits_bitmask [modified_q - i] = 1;
+//        ++num_qubits_b;
+//    }
+    const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
+    modified_q = total_qubits - 1;
+    num_qubits_a = cut ? cut : ceil(y_axis_sz/2)  * x_axis_sz;
     
     for (int i = 0; i < num_qubits_a; ++i)
         a_qubits_bitmask [modified_q - i] = 1;
-    
-    for (int i = num_qubits_a; i < total_qubits; ++i) {
+        
+    for (int i = num_qubits_a ; i < total_qubits; ++i) {
         b_qubits_bitmask [modified_q - i] = 1;
         ++num_qubits_b;
     }

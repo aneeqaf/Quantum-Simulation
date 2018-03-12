@@ -1,34 +1,4 @@
 #!/bin/bash
 set -e
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,0 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,1 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,2 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,3 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,4 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,5 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,6 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,7 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,8 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,9 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,10 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,11 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,12 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,13 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,14 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,15 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,16 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,17 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,18 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,19 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,20 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,21 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,22 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,23 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,24 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,25 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,26 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,27 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,28 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,29 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,30 
-./bin/rr -i test10.txt --num_threads 4 --sim_type 0 --outfile test --idx test10.txt --CZ_path 5,31 
+./bin/rr -p test --num_threads 4 --sim_type 0 --outfile test --idx 7,5 --CZ_path 2,0 
+./bin/rr -p test --num_threads 4 --sim_type 0 --outfile test --idx 7,5 --CZ_path 2,1 

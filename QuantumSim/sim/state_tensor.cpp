@@ -124,7 +124,11 @@ ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
     }
     
     state_a -> ApplyCZDecompositionDist(state_A_gate_bm);
+//    cout << "state A:\n";
+//    state_a -> PrintStateVector();
     state_b -> ApplyCZDecompositionDist(state_B_gate_bm);
+//    cout << "state B:\n";
+//    state_b -> PrintStateVector();
 }
 
 int TensorProductStateVector::

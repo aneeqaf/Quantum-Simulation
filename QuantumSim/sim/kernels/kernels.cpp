@@ -211,7 +211,7 @@ Apply1QXYGates(cmplx* __restrict amp,
     //AVX functions handles 4 amps at a time.
     void (*gate_func)(cmplx* __restrict, const idx_size*) ;
     if (gate_type == Gate::Type::X_1_2) {
-        if (q < num_qubits - 1) {
+        if (q < num_qubits - 2) {
             gate_func = ApplyX12GateAVX;
             add = 4;
         }
@@ -219,7 +219,7 @@ Apply1QXYGates(cmplx* __restrict amp,
             gate_func = ApplyX12Gate;
     }
     else {
-        if (q < num_qubits - 1) {
+        if (q < num_qubits - 2) {
             gate_func = ApplyY12GateAVX;
             add = 4;
         }

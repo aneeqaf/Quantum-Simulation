@@ -54,22 +54,21 @@ const unsigned kNUM_BRANCHES = thread::hardware_concurrency();//ceil(log(thread:
 
 constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kzeros = {0, 0, 0, 0, 0, 0, 0, 0};
-constexpr __m128 kzeros128 = {0, 0, 0, 0};
-constexpr __m256 kzeros1 = {0, 0, ~0, ~0, 0, 0, ~0, ~0};
-constexpr __m256 kzeros2 = {~0, ~0, 0, 0, ~0, ~0, 0, 0};
-constexpr __m256 kzeros3 = {0, 0, 0, 0, ~0, ~0, ~0, ~0};
-constexpr __m256 kzeros4 = {~0, ~0, ~0, ~0, 0, 0, 0, 0};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};
 constexpr __m256 kneg2 = {-0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f};
 constexpr __m128 kneg128 = {-0.0f, -0.0f, -0.0f, -0.0f};
 
-constexpr __m256 kzero01[4] = {{~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0}, {0, 0, ~0, ~0, 0, 0, ~0, ~0},
-                              {0, 0, 0, 0, ~0, ~0, ~0, ~0}, {0, 0, 0, 0, 0, 0, ~0, ~0}};
-constexpr __m256 kzero10[4] = {{~0, ~0, ~0, ~0, ~0, ~0, ~0, ~0}, {~0, ~0, 0, 0, ~0, ~0, 0, 0},
-                              {~0, ~0, ~0, ~0, 0, 0, 0, 0}, {~0, ~0, 0, 0, 0, 0, 0, 0}};
-constexpr __m256 knegZ[4] = {{0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
-                            {0, 0, 0, 0, -0.0f, -0.0f, -0.0f, -0.0f},
-                            {0, 0, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f}};
+const __m256 kfAll1s = (__m256)_mm256_set1_epi64x(-1);
+const float kAllOnes = static_cast<float>(((__m128)_mm_set1_epi64x(-1))[0]);
+
+//NaN has all bits set to one in a float.
+const __m256 kzero01[4] = {{kfAll1s}, {0, 0, kAllOnes, kAllOnes, 0, 0, kAllOnes,kAllOnes},
+                            {0, 0, 0, 0, kAllOnes, kAllOnes, kAllOnes, kAllOnes}, {0, 0, 0, 0, 0, 0, kAllOnes, kAllOnes}};
+const __m256 kzero10[4] = {{kfAll1s}, {kAllOnes, kAllOnes, 0, 0, kAllOnes, kAllOnes, 0, 0},
+                            {kAllOnes, kAllOnes, kAllOnes, kAllOnes, 0, 0, 0, 0}, {kAllOnes, kAllOnes, 0, 0, 0, 0, 0, 0}};
+const __m256 knegZ[4] = {{0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
+                        {0, 0, 0, 0, -0.0f, -0.0f, -0.0f, -0.0f},
+                        {0, 0, -0.0f, -0.0f, -0.0f, -0.0f, 0, 0}};
 
 
 __attribute__((always_inline)) inline void
@@ -285,16 +284,18 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyxCZGateAVX(cmplx* __restrict amp,
+                int num_threads,
                 const int num_qubits_amp,
                 const idx_size* __restrict gate_bitmask)
 {
     /*0 : Z; 1 : 01; 2 : 10 */
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
     const __m256 mm256_neg = knegZ[gate_bitmask[0] & 3];
     const __m256  mm256_01 = kzero01[gate_bitmask[1] & 3];
     const __m256  mm256_10 = kzero10[gate_bitmask[2] & 3];
     const idx_size amp_size = 2 * (1ull << num_qubits_amp);
-    
+//    
 //    cout << "Z last two bits : " << (gate_bitmask[0] & 3)  << endl;
 //    cout << "01 last two bits : " << (gate_bitmask[1] & 3) << endl;
 //    cout << "10 last two bits : " << (gate_bitmask[2] & 3) << endl;
@@ -303,7 +304,9 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
 //    cout << "01 bm : " << (gate_bitmask[1]) << endl;
 //    cout << "10 bm : " << (gate_bitmask[2]) << endl;
     
-    for (idx_size amp_idx = 0, i = 0; i < amp_size; i+=8,  amp_idx += 4) {
+    #pragma omp parallel for schedule(guided) num_threads(num_threads)
+    for (idx_size i = 0; i < amp_size; i+=8) {
+        idx_size amp_idx = i/2;
         if (((~amp_idx - 3) & gate_bitmask[1]) || (amp_idx & gate_bitmask[2])) {
             _mm256_store_ps(&t_amp[i], kzeros);
             continue;
