@@ -494,6 +494,13 @@ CalculateCrossEntropy(int range) const
 }
 
 void TensorProductStateVector::
+ResetAmpVector()
+{
+    state_a -> ResetAmpVector();
+    state_b -> ResetAmpVector();
+}
+
+void TensorProductStateVector::
 Normalize()
 {
     state_a -> Normalize();

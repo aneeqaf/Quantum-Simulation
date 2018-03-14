@@ -16,7 +16,7 @@ def main(cir_file, num_idx):
 	amps = np.zeros(int(num_idx), dtype=complex)
 
 	for filename in files:
-		if filename.endswith(".amps"):
+		if filename.endswith("_ascii.amps"):
 			full_filename = os.path.join(outdir, filename)
 			with open(full_filename, "r") as f:
 				lines = f.readlines()

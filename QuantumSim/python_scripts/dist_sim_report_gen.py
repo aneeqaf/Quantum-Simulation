@@ -34,15 +34,21 @@ def main(cir_file, est_time, truncated):
 			if "Max threads per process" in line:
 				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 
-			if "Phase 1 CZ path" in line:
-				cz_path_t = line.split(":")
-				if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
-					cz_path = cz_path_t[1].split()[1].replace('(','').replace(')','')
+			if "Phase 1 CZ path" in line and "range" not in line:
+				cz_path_t = line.split(":")[1]
+				# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
+				cz_path = cz_path_t.split("+")
+				if len(cz_path) > 1:
+					print("Phase 1 CZ path length (ranges):" + cz_path_t.replace("\n", ""))
 				else:
-					cz_path = 0
-				cz_path_len = int(cz_path)
-				print("Phase 1 CZ path length : " + str(cz_path_len))
+					print("Phase 1 CZ path length :" + cz_path_t.replace("\n", ""))
+
+				cz_path_len = int(cz_path[0].replace(' ',''))
 				print_line = False
+
+				# else:
+				# 	cz_path = 0
+				
 			elif "Phase 2 CZ path length" in line:
 				dfs = True
 				print(line, end='')

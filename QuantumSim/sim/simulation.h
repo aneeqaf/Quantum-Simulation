@@ -10,8 +10,12 @@
 
 #include <chrono>
 #include <ctime>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include <sstream>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unordered_map>
 
 #include "circuit.h"
@@ -27,7 +31,6 @@ private:
     static unordered_map<string, array<cmplx, 5>> benchmark;
     ostringstream log;
     double total_time, dfs_time, cz_path_time, XE_time, CZ_T_top_time, X_Y_top_time;
-    chrono::duration<double> wallclock;
     idx_size curr_gate;
     Config config;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
@@ -40,7 +43,7 @@ public:
     void PrintSimSpecReport(const GenericQuantumState& amp,
                             const Circuit& circuit);
     void PrintSimReport(GenericQuantumState& amp,
-                     const Circuit& circuit) const;
+                        const Circuit& circuit) const;
     void PrintReportToFile(GenericQuantumState& amp,
                            const Circuit& circuit) const;
     
@@ -50,13 +53,16 @@ public:
                           Circuit& circuit,
                           const idx_size gate_i);
     void Phase1Simulation(GenericQuantumState& amp,
-                          Circuit& circuit);
+                          Circuit& circuit,
+                          string& cz_path);
     bool SimulationLoop(GenericQuantumState& amp,
                         Circuit& circuit,
+                        string& cz_path,
                         const idx_size gate_i = 0);
-    
     void ReportingAfterSim(GenericQuantumState& amp,
                            Circuit& circuit);
+    void WriteMmapToASCIIFile() const;
+    void WriteAmpToASCIIFile(const GenericQuantumState& amp) const;
     
     SequentialSimulation(const Config& c);
     SequentialSimulation(const SequentialSimulation& rhs) = delete;

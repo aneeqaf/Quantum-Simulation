@@ -67,10 +67,12 @@ int main(int argc, char *argv[])
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false, print_idx = false, valid = false;
-    string input_filename = "", out_file = "", idx_filename = "", cz_path = "-";
+    bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false,
+    print_idx = false, valid = false, ascii = false;
+    string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 8, dfs_length = -1;
+    num_threads = 8, dfs_length = -1, cz_len = 0, czp_app_len = 0;
+    idx_size cz_path = 0;
     Config::SimType sim_type = Config::FullState;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
@@ -93,28 +95,27 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'c': {
-                cz_path = string(optarg);
+                string cz_path_temp = string(optarg);
                 
-                if (cz_path.find(",") != string::npos) {
-                    const int len_CZ_bit = stoi(cz_path.substr(0, cz_path.find(",")));
+                if (cz_path_temp.find(",") != string::npos) {
+                    cz_len = stoi(cz_path_temp.substr(0, cz_path_temp.find(",")));
                     
-                    int CZ_path = 0;
-                    if (len_CZ_bit) {
-                        if (cz_path.find_first_of(",") != cz_path.find_last_of(",")) {
-                            CZ_path = stoi(cz_path.substr(cz_path.find_first_of(",") + 1, cz_path.find_last_of(",")));
-                            dfs_length = stoi(cz_path.substr(cz_path.find_last_of(",") + 1));
-                        }
-                        else
-                            CZ_path = stoi(cz_path.substr(cz_path.find_first_of(",") + 1));
-                        
-                        cz_path = bitset<1000>(CZ_path).to_string();
-                        cz_path = cz_path.substr(cz_path.size() - len_CZ_bit);
+                    if (cz_len) {
+                        idx_size pos1 = cz_path_temp.find(",");
+                        idx_size pos2 = cz_path_temp.find(",", pos1 + 1);
+                        idx_size pos3 = cz_path_temp.find(",", pos2 + 1);
+                        cz_path = stoul(cz_path_temp.substr(pos1 + 1, pos2 - pos1));
+                        czp_app_len = stoi(cz_path_temp.substr(pos2 + 1, pos3 - pos2));
+                        auto count_commas = count(cz_path_temp.begin(), cz_path_temp.end(), ',');
+                        if (count_commas == 3)
+                            dfs_length = stoi(cz_path_temp.substr(cz_path_temp.find_last_of(",") + 1));
                     }
-                    else cz_path = "-";
                 }
-                else if (cz_path.find("*") != string::npos){
-                    cz_path = cz_path.substr(0, cz_path.find("*"));
-                    dfs_length = (int)(cz_path.find_last_of("*") - cz_path.find_first_of("*"));
+                else {
+                    cz_path = (int)bitset<128>(cz_path_temp).to_ulong();
+                    czp_app_len = 0;
+                    if (cz_path_temp.find("*") != string::npos)
+                        dfs_length = (int)(cz_path_temp.find_last_of("*") - cz_path_temp.find_first_of("*"));
                 }
                 
                 break;
@@ -167,6 +168,12 @@ int main(int argc, char *argv[])
                     exit(1);
                 }
                 out_file = string(optarg);
+                auto count_a = count(out_file.begin(), out_file.end(), ',');
+                if (count_a)
+                    ascii = true;
+                idx_size p = out_file.find(",");
+                if (p != string::npos)
+                    out_file = out_file.substr(0, p);
                 break;
             }
             case 's': {
@@ -273,7 +280,7 @@ int main(int argc, char *argv[])
     
     Config config(1ull << cir.GetNumQubits(), input_filename ,"output/probabilities/" + out_file,
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc/g_" + out_file,
-                  cz_path, dfs_length, print_amp, print_idx, sim_type, verbose, vcut, hcut, depth,
+                  cz_path, czp_app_len, cz_len, dfs_length, ascii, print_amp, print_idx, sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads);
     
     if (print_amp) {
@@ -303,7 +310,7 @@ int main(int argc, char *argv[])
                                       TensorProductStateVector::Cuts::Vertical, hcut, vcut, sim_type);
         sim.Simulate(amp, cir);
     }
-    else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_path != "-") {
+    else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), sim_type, hcut, vcut);
         sim.Simulate(amp, cir);
     }

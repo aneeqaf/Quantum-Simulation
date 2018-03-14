@@ -55,6 +55,7 @@ public:
     void Normalize();
     idx_size CountZeroAmp() const;
     idx_size GetNumAddends() const;
+    void ResetAmpVector();
 
     void Rescale();
     void ApplyGlobalICounter();

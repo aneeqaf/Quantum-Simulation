@@ -84,6 +84,7 @@ public:
     double CalculateCrossEntropy(int range) const;
     void Normalize();
     idx_size CountZeroAmp() const;
+    void ResetAmpVector();
 
     void Rescale();
     void ApplyGlobalICounter();

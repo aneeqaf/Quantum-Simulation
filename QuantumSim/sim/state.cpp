@@ -392,6 +392,12 @@ CalculateCrossEntropy(int range) const
 }
 
 void FullAmpStateVector::
+ResetAmpVector()
+{
+    memset(amp, 0, amp_size * sizeof(amp));
+}
+
+void FullAmpStateVector::
 Normalize()
 {
     double norm = sqrt(CalculateNormSquared());
@@ -472,7 +478,7 @@ RescaleAndApplyGlobalICounter()
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
     global_factor_power = 0;
-    
+
     const auto i_multiplier = cmplx(pow(ki, global_i_counter));
     global_i_counter = 0;
     
@@ -482,7 +488,11 @@ RescaleAndApplyGlobalICounter()
 //    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
 //    const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
 //        rescaling_factor, rescaling_factor , rescaling_factor, rescaling_factor};
+//
+//    #pragma omp parallel for num_threads(num_threads)
 //    for (idx_size i = 0; i < amp_size; i += 4) {
+//        amp[i] *= i_multiplier; amp[i + 1] *= i_multiplier; amp[i + 2] *= i_multiplier;
+//        amp[i + 3] *= i_multiplier;
 //        __m256 t = _mm256_load_ps(t_amp + (2 * i));
 //        t = _mm256_mul_ps(t, rescaling);
 //        _mm256_store_ps(t_amp + (2 * i), t);

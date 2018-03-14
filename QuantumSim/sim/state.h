@@ -71,6 +71,7 @@ public:
     void IncrementGlobalFactorPower();
     void IncrementGlobalICounter();
     idx_size CountZeroAmp() const;
+    void ResetAmpVector();
     
     void Rescale();
     void ApplyGlobalICounter();

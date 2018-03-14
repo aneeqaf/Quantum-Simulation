@@ -329,9 +329,11 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     
     if (sim_mode != Config::SimMode::Phase2) {
         if (count_of_category.X1_2 - prev_X_count)
-            count_of_category.X1_2 = count_of_category.X1_2 - (count_of_category.X1_2 - prev_X_count - 1);
+            count_of_category.X1_2 -= (num_addends - 1) * (count_of_category.X1_2 - prev_X_count)
+            /(num_addends);
         if (count_of_category.Y1_2 - prev_Y_count)
-            count_of_category.Y1_2 = count_of_category.Y1_2 - (count_of_category.Y1_2 - prev_Y_count - 1);
+            count_of_category.Y1_2 -= (num_addends - 1) * (count_of_category.Y1_2 - prev_Y_count)
+            /(num_addends);
     }
 }
 
@@ -768,6 +770,13 @@ Normalize()
 {
     for (auto& t : tensor_addends)
         t -> Normalize();
+}
+
+void SumOfTensorsProductsStateVector::
+ResetAmpVector()
+{
+    for (auto& t : tensor_addends)
+        t -> ResetAmpVector();
 }
 
 void SumOfTensorsProductsStateVector::

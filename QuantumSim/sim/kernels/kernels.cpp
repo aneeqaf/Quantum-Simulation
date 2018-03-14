@@ -325,7 +325,7 @@ UpdateXYBitmask(idx_size& X_bitmask,
     
     int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
     int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
-    idx_size first_q, second_q;
+    int first_q, second_q;
     int gate_type = 0;
     
     if (Xunused_qubits < Yunused_qubits) {

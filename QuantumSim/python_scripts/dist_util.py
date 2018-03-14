@@ -23,16 +23,17 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 
 	return print_opt
 
-def BuildDistCommand(command, sim_type, num_threads, outfile):
-	return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type) \
-	+ " --outfile " + outfile  
+def BuildDistCommand(command, sim_type, num_threads):
+	return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type)
+	
 
-def TrialRunEval(report_file, num_CZ, start_time, end_time, dfs_len = 0):
+def TrialRunEval(report_file, num_CZ, start_time, end_time, app_cz_len = 0, dfs_len = 0):
 	rep_time = "" #re.compile(r'(?<=Runtime)\w+')
-	cz_path_trunc = "" #re.compile(r'Truncated CZ path\w+')
+	cz_path_trunc = 0 #re.compile(r'Truncated CZ path\w+')
 	dfs_trunc = 0
 	mem_val = 0.0
 	short_path = False
+	total_cz_len = int(num_CZ) + int(app_cz_len)
 	with open(report_file, "r") as file:
 		for line in file:
 			if "Runtime" in line:
@@ -70,8 +71,9 @@ def TrialRunEval(report_file, num_CZ, start_time, end_time, dfs_len = 0):
 			print ("\033[1m" + "Simulation runtime too long for distributed execution" + "\033[0m")
 			exit()
 
-		if int(num_CZ) - len(cz_path_trunc) < int(num_CZ):
-			num_CZ = int(num_CZ) - len(cz_path_trunc)
+		if int(total_cz_len) - int(cz_path_trunc) < int(total_cz_len):
+			app_cz_len = int((int(total_cz_len) - int(cz_path_trunc))/3)
+			num_CZ = (int(total_cz_len) - int(cz_path_trunc)) - app_cz_len
 			print("\033[1m" + "The input CZ path was truncated to length " + str(num_CZ) + "." + "\033[0m\n")
 
 		if int(dfs_len) - dfs_trunc < int(dfs_len):
@@ -82,10 +84,10 @@ def TrialRunEval(report_file, num_CZ, start_time, end_time, dfs_len = 0):
 		# 	print("\033[1m" + "Simulation runtime unreliable" + "\033[0m")
 		# 	exit()
 
-		return int(num_CZ), mem_val, short_path, dfs_len
+		return int(num_CZ), mem_val, short_path, dfs_len, int(app_cz_len)
 
 
-def PerformTrialRun(commandH, commandV, num_cz, dfs_len = 0):
+def PerformTrialRun(commandH, commandV, num_cz, app_cz_len = 0, dfs_len = 0):
 	dirpath = tempfile.mkdtemp()
 
 	# Horizontal trial run
@@ -95,11 +97,15 @@ def PerformTrialRun(commandH, commandV, num_cz, dfs_len = 0):
 
 	tempH_file = os.path.join(dirpath, "H_phase1_rep.txt")
 
-	cz_p = random.randint(0, 1 << int(num_cz))
+	cz_p = ""
+	for i in range(int(num_cz)):
+		cz_p += str(i % 2);
+
 	if dfs_len:
-		commandH += " --CZ_path " + str(num_cz) + "," + str(cz_p) + "," + str(dfs_len) + " > " + str(tempH_file)
+		commandH += " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + "," + str(app_cz_len) \
+		+ "," + str(dfs_len) + " > " + str(tempH_file)
 	else:
-		commandH += " --CZ_path " + str(num_cz) + "," + str(cz_p) + " > " + str(tempH_file)
+		commandH += " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + "," + str(app_cz_len) + " > " + str(tempH_file)
 
 	print(commandH)
 	os.system(commandH)
@@ -109,7 +115,8 @@ def PerformTrialRun(commandH, commandV, num_cz, dfs_len = 0):
 
 	# Horizontal trial run evaluation
 	print("\033[1m" + "Horizontal trial run took " + str (end_timeH - start_timeH) +  " s \033[0m")
-	num_czh, H_mem, short_pathH, dfs_lenH = TrialRunEval(tempH_file, num_cz, start_timeH, end_timeH, dfs_len)
+	num_czh, H_mem, short_pathH, dfs_lenH, app_cz_lenH = TrialRunEval(tempH_file, num_cz, \
+		start_timeH, end_timeH, app_cz_len, dfs_len)
 
 	# Vertical trial run
 	print ("\033[1m" + "Performing a trial simulation run with a vertical cut and length " + str(num_cz) + " CZ path " + "\033[0m")
@@ -118,11 +125,10 @@ def PerformTrialRun(commandH, commandV, num_cz, dfs_len = 0):
 
 	tempV_file = os.path.join(dirpath, "V_phase1_rep.txt")
 
-	cz_p = random.randint(0, 1 << int(num_cz))
 	if dfs_len:
-		commandV += " --CZ_path " + str(num_cz) + "," + str(cz_p) + "," + str(dfs_len) + " > " + str(tempV_file)
+		commandV += " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + "," + str(app_cz_len) + "," + str(dfs_len) + " > " + str(tempV_file)
 	else:
-		commandV += " --CZ_path " + str(num_cz) + "," + str(cz_p) + " > " + str(tempV_file)
+		commandV += " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + "," + str(app_cz_len) +  " > " + str(tempV_file)
 
 	print(commandV)
 	os.system(commandV)
@@ -132,10 +138,12 @@ def PerformTrialRun(commandH, commandV, num_cz, dfs_len = 0):
 
 	# Vertical trial run evaluation
 	print("\033[1m" + "Vertical trial run took " + str (end_timeV - start_timeV) + " s \033[0m")
-	num_czv, V_mem, short_pathV, dfs_lenV = TrialRunEval(tempV_file, num_cz, start_timeV, end_timeV, dfs_len)
+	num_czv, V_mem, short_pathV, dfs_lenV, app_cz_lenV = TrialRunEval(tempV_file, num_cz, \
+		start_timeV, end_timeV, app_cz_len, dfs_len)
 
 
-	return num_czh, num_czv, dfs_lenH, dfs_lenV, (end_timeH - start_timeH), (end_timeV - start_timeV), H_mem, V_mem,
+	return num_czh, num_czv, dfs_lenH, dfs_lenV, (end_timeH - start_timeH), \
+	(end_timeV - start_timeV), H_mem, V_mem, app_cz_lenH, app_cz_lenV
 
 def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulation"):
 
@@ -152,7 +160,7 @@ def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulati
 		exit()
 
 def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings, \
-	command, t_time, num_threads, mem, cut, truncated = 0):
+	command, t_time, num_threads, mem, cut, app_cz_len = 0, truncated = 0):
 
 	# Generating scripts for each parallel run
 	print("\033[1m" + "Generating scripts for execution" + "\033[0m\n")
@@ -172,7 +180,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 					raise
 	
 	num_procs = len(cz_bits_strings) if truncated == 0 else truncated
-	proc_per_script = int(num_procs/num_batches);
+	proc_per_script = int(num_procs/ num_batches);
 	proc_c = 0
 	if proc_per_script:
 		for i in range(int(num_batches - 1)):
@@ -181,14 +189,22 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				script.write("#!/bin/bash\nset -e\n")
 				start_idx = i * proc_per_script
 				for j in range(start_idx, start_idx + proc_per_script):
-					script.write(command + cz_bits_strings[j] + "\n")
+					if j < (start_idx + proc_per_script - 1):
+						script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+					else:
+						script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + ",a\n")
 	else:
 		proc_per_script = 1
 	with open(os.path.join(script_dir, "script_" + str(proc_c) + ".sh"), "w") as script:
 			script.write("#!/bin/bash\nset -e\n")
 			start_idx = proc_c * proc_per_script
+			proc_c += 1
 			for j in range(start_idx, num_procs):
-				script.write(command + cz_bits_strings[j] + "\n")
+				if j < (num_procs - 1):
+					script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+				else:
+					script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + ",a\n")
+
 
 	os.system("chmod +x " + script_dir + "/*")
 

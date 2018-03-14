@@ -93,6 +93,7 @@ public:
     virtual idx_size CountZeroAmp() const = 0;
     virtual idx_size GetNumAddends() const;
     
+    virtual void ResetAmpVector() = 0;
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
     virtual void RescaleAndApplyGlobalICounter() = 0;

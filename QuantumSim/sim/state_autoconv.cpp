@@ -243,6 +243,15 @@ CalculateMeanEntropy() const
 }
 
 void AdaptiveStateVector::
+ResetAmpVector()
+{
+    if (full_state)
+        return full_state -> ResetAmpVector();
+    else
+        return sumOfTensors -> ResetAmpVector();
+}
+
+void AdaptiveStateVector::
 Normalize()
 {
     if (full_state)
