@@ -512,7 +512,7 @@ ConvertSumOfTensorsToState()
     const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A, B_size = 1ull << num_q_B;
     const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
     
-    cmplx amp[size];
+    cmplx* amp = new cmplx[size];
     for (idx_size i = 0; i < size; ++i)
         amp[i] = 0;
   
@@ -538,6 +538,7 @@ ConvertSumOfTensorsToState()
         }
     }
     FullAmpStateVector* full_state = new FullAmpStateVector(amp, size);
+    delete [] amp;
     return full_state;
 }
 
