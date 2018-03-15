@@ -30,7 +30,6 @@ using cmplx = complex<float>;
 
 class MMapContent {
     cmplx* map_ptr;
-    idx_size num_amps;
     idx_size size;
     int fd;
     string filename;
@@ -38,10 +37,10 @@ class MMapContent {
 public:
     void InitializeMemMap(const string filename,
                           idx_size size);
-    cmplx& operator[](idx_size i);
+    cmplx* operator[](idx_size i);
     void WriteToDisk();
     
-    MMapContent(): map_ptr(nullptr), num_amps(0), size(0), fd(0), filename("") {};
+    MMapContent(): map_ptr(nullptr), size(0), fd(0), filename("") {};
     MMapContent(const string filename,
                 const idx_size size,
                 bool initialize = false);
@@ -87,7 +86,7 @@ public:
                                const idx_size amp_size);
     
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
-    cz_path(0), czp_append_len(0), cz_num_bits(0), dfs_length(-1), depth(26), th(14), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
+    cz_path(0), czp_append_len(0), cz_num_bits(0), dfs_length(0), depth(26), th(14), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
     Config(const idx_size amp_size,
            const string ifile,
            const string pfile,

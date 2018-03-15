@@ -92,6 +92,7 @@ SumOfTensorsProductsStateVector::
 //TODO
 int SumOfTensorsProductsStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
+                      idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
@@ -99,7 +100,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
     
     if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV) {
         if (cz_bits != "-")
-            last_xCZ_idx = ApplyXCZGatesForDist(cz_bits, CZ_bitmasks);
+            last_xCZ_idx = ApplyXCZGatesForDist(cz_bits, prefix_size, CZ_bitmasks);
         else
             last_xCZ_idx = ApplyXCZGatesExact(CZ_bitmasks);
 //        last_xCZ_idx = ApplyXCZGatesExactTemp(cz_bits, CZ_bitmasks);
@@ -113,7 +114,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
     
     if (last_xCZ_idx == -1) {
         for (auto& t : tensor_addends)
-            t -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
+            t -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks);
     }
     if (sim_mode != Config::SimMode::Phase2) {
         data_per_cycles.memory.push_back(GetMemUsage());
@@ -183,6 +184,7 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
 
 inline int SumOfTensorsProductsStateVector::
 ApplyXCZGatesForDist(string& cz_bits,
+                     idx_size prefix_size,
                      const bitset<128>* __restrict CZ_bitmasks)
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
@@ -202,7 +204,7 @@ ApplyXCZGatesForDist(string& cz_bits,
         xCZ_bitmasks_path0_D2D1[i] = 0;
         xCZ_bitmasks_path1_D4D3[i] = 0;
     }
-    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, cz_bits, xCZ_bitmasks_path0_D1D2,
+    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, cz_bits, prefix_size, xCZ_bitmasks_path0_D1D2,
                                                  xCZ_bitmasks_path0_D2D1, xCZ_bitmasks_path1_D3D4,
                                                  xCZ_bitmasks_path1_D4D3, CZ_bitmasks);
     if (last_xCZ_idx != -1)
@@ -231,6 +233,7 @@ ApplyXCZGatesForDist(string& cz_bits,
 int SumOfTensorsProductsStateVector::
 FormGatesBitmaskXCZ(bool& terminate,
                     string& cz_bits,
+                    idx_size prefix_size,
                     bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
                     bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
                     bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
@@ -245,6 +248,7 @@ FormGatesBitmaskXCZ(bool& terminate,
         return -1;
     int last_xCZ_idx = 0;
 
+//    cout << "start\n";
     for (idx_size i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             
@@ -260,20 +264,30 @@ FormGatesBitmaskXCZ(bool& terminate,
 //            int q = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
-            
-            if (cz_bits[cz_bits.size() - 1] == '0') {
-                if (cz_bits.size() % 2 == 0)
+//            cout << cz_bits << " : " << q << " : ";
+            if (cz_bits[0] == '0') {
+                if ((cz_bits.size() + prefix_size) % 2 == 0) {
+//                    cout << "D1D2\n";
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
-                else
+                }
+                else {
+//                    cout << "D2D1\n";
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
+                }
             }
             else {
-                if (cz_bits.size() % 2 == 0)
+                if ((cz_bits.size() + prefix_size) % 2 == 0) {
+//                    cout << "D3D4\n";
                     xCZ_bitmasks_path1_D3D4[i][q] = 1;
-                else
+                }
+                else {
+//                    cout << "D4D3\n";
                     xCZ_bitmasks_path1_D4D3[i][q] = 1;
+                }
             }
-            cz_bits.pop_back();
+            
+            cz_bits.erase(0, 1);
+//            cz_bits.pop_back();
             xCZ_bitmask[i][q] = 0;
         }
         if (terminate)

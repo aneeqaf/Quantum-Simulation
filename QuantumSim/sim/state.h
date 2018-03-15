@@ -29,6 +29,7 @@ private:
 public:
     
     int ApplyBlockOfDiagGates(string& cz_bits,
+                              idx_size prefix_size,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128> T_bitmasks[2]);
     void ApplyNonCGate(const int gate_qubit,

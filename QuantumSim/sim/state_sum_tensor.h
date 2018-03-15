@@ -21,13 +21,16 @@ private:
     
 public:
     int ApplyBlockOfDiagGates(string& cz_bits,
+                              idx_size prefix_size,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128> T_bitmasks[2]);
     inline int ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks);
     inline int ApplyXCZGatesForDist(string& cz_bits,
+                                    idx_size prefix_size,
                                     const bitset<128>* __restrict CZ_bitmasks);
     int FormGatesBitmaskXCZ(bool& terminate,
                             string& cz_bits,
+                            idx_size prefix_size,
                             bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
                             bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
                             bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,

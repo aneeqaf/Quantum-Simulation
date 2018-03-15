@@ -58,6 +58,7 @@ public:
     bool SimulationLoop(GenericQuantumState& amp,
                         Circuit& circuit,
                         string& cz_path,
+                        idx_size prefix_size = 0,
                         const idx_size gate_i = 0);
     void ReportingAfterSim(GenericQuantumState& amp,
                            Circuit& circuit);

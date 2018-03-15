@@ -40,7 +40,8 @@ def main(cir_file, est_time, truncated):
 				cz_path = cz_path_t.split("+")
 				if len(cz_path) > 1:
 					print("Phase 1 CZ path length (ranges):" + cz_path_t.replace("\n", ""))
-				else:
+				else: 
+					cz_path = cz_path[0].replace(" ", "").replace("\n", "").split("(")[1].replace(")", "")
 					print("Phase 1 CZ path length :" + cz_path_t.replace("\n", ""))
 
 				cz_path_len = int(cz_path[0].replace(' ',''))

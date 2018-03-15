@@ -195,6 +195,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 						script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + ",a\n")
 	else:
 		proc_per_script = 1
+
 	with open(os.path.join(script_dir, "script_" + str(proc_c) + ".sh"), "w") as script:
 			script.write("#!/bin/bash\nset -e\n")
 			start_idx = proc_c * proc_per_script
@@ -220,7 +221,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	log_dir = os.path.join("output", "log")
 	if not os.path.isdir(log_dir):
 		try:
-			os.makedirs("output/log")
+			os.makedirs(log_dir)
 		except OSError as e:
 			if e.errno != errno.EEXIST:
 				raise
@@ -234,7 +235,8 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				if e.errno != errno.EEXIST:
 					raise
 		else:
-			shutil.rmtree(log_dir)
+			print(log_dir)
+			shutil.rmtree(log_dir, ignore_errors=True)
 			try:
 				os.makedirs(log_dir)
 			except OSError as e:

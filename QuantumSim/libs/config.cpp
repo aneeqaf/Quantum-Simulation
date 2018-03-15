@@ -13,7 +13,7 @@
 MMapContent::
 MMapContent(string file_n,
             idx_size size,
-            bool initialize): map_ptr(nullptr), num_amps(size/sizeof(cmplx)), size(size), filename(file_n)
+            bool initialize): map_ptr(nullptr), size(size), filename(file_n)
 {
     if (initialize)
         InitializeMemMap(filename, size);
@@ -22,7 +22,6 @@ MMapContent(string file_n,
 MMapContent::
 MMapContent(const MMapContent& rhs)
 {
-    num_amps = rhs.num_amps;
     size = rhs.size;
     fd = rhs.fd;
     filename = rhs.filename;
@@ -34,7 +33,6 @@ operator=(const MMapContent& rhs)
 {
     MMapContent temp(rhs);
     swap(map_ptr, temp.map_ptr);
-    swap(num_amps, temp.num_amps);
     swap(size, temp.size);
     swap(fd, temp.fd);
     return *this;
@@ -97,16 +95,17 @@ InitializeMemMap(const string file_n,
             perror("Error writing last byte of the file");
             exit(EXIT_FAILURE);
         }
-        for (idx_size i = 0; i < num_amps; ++i)
+        for (idx_size i = 0; i < size; ++i)
             map_ptr[i] = 0;
     }
 }
 
-cmplx& MMapContent::
+cmplx* MMapContent::
 operator[](idx_size i)
 {
-    return map_ptr[i];
+    return &map_ptr[i];
 }
+
 
 void MMapContent::
 WriteToDisk()
@@ -138,11 +137,13 @@ Config(const idx_size amp_size,
        const int d,
        const int t,
        const int n_threads,
-       const bool google) : mmap_obj(nullptr), infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
+       const bool google) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
 misc_outfile(mfile), cz_path(cz_p), czp_append_len(cz_append_l), cz_num_bits(cz_len), dfs_length(dfs), depth(d),
 th(t), num_threads(n_threads), vcut(vc), hcut(hc),
 google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), sim_type(sim), verbose(v), curr_mode(Phase1)
 {
+    if (!print_amp)
+        mmap_obj = new MMapContent();
     if (t == -1)
         th = 16;
     indices.push_back(3);
@@ -175,7 +176,7 @@ ReadIndices(const string& idx_infile)
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".amps",
-                               (indices.size() - 5));
+                               (indices.size()));
 }
 
 void Config::
@@ -203,7 +204,7 @@ GenerateRandomIndices(const int seed,
     }
 
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/"))  + ".amps",
-                               num_idx);
+                               num_idx + 5);
 }
 
 Config::
@@ -231,6 +232,7 @@ Config(const Config& rhs)
     verbose = rhs.verbose;
     curr_mode = rhs.curr_mode;
     if (print_amp) mmap_obj = new MMapContent(*rhs.mmap_obj);
+    else mmap_obj = new MMapContent();
     ascii = rhs.ascii;
 }
 
@@ -262,6 +264,7 @@ operator=(const Config& rhs)
     mmap_obj = rhs.mmap_obj;
     ascii = rhs.ascii;
     if (print_amp) swap(mmap_obj, temp.mmap_obj);
+    else mmap_obj = new MMapContent();
     return *this;
 }
 

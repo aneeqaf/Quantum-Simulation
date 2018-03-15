@@ -22,7 +22,7 @@ def main(cir_file, num_idx):
 				lines = f.readlines()
 				temp = np.loadtxt(lines, dtype=complex)
 
-			os.remove(full_filename)
+			# os.remove(full_filename)
 			for i, amp in enumerate(temp):
 				amps[i] += amp;
 

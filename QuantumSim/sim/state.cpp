@@ -72,6 +72,7 @@ FormBitmask(const vector<int>& qubits)
 
 int FullAmpStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
+                      idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128>  T_bitmasks[2])
 {
@@ -395,6 +396,8 @@ void FullAmpStateVector::
 ResetAmpVector()
 {
     memset(amp, 0, amp_size * sizeof(amp));
+    global_factor_power = 0;
+    global_i_counter = 0;
 }
 
 void FullAmpStateVector::

@@ -123,16 +123,17 @@ ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
         state_B_gate_bm[2] |= xCZ_bitmasks_path1_D3D4[i].to_ulong();
     }
     
+//     cout << "state A before : " << state_A_gate_bm[1] << " : " << (*this)[1073741821] << endl;
     state_a -> ApplyCZDecompositionDist(state_A_gate_bm);
-//    cout << "state A:\n";
-//    state_a -> PrintStateVector();
+//        cout << "state A after : " << state_A_gate_bm[1] << " : " << (*this)[1073741821] << endl;
+//    cout << "state B before : " << state_B_gate_bm[0] << " : " << (*this)[1073741821] << endl;
     state_b -> ApplyCZDecompositionDist(state_B_gate_bm);
-//    cout << "state B:\n";
-//    state_b -> PrintStateVector();
+//        cout << "state B after : " << state_B_gate_bm[0] << " : " << (*this)[1073741821] << endl;
 }
 
 int TensorProductStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
+                      idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
@@ -186,9 +187,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
     }
     
     if (applyCZ_a || T_bitmasks_a[0] != 0)
-        state_a -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_a, T_bitmasks_a);
+        state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a);
     if (applyCZ_b || T_bitmasks_b[0] != 0)
-        state_b -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks_b, T_bitmasks_b);
+        state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
 
     return -1;
 }

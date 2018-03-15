@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     print_idx = false, valid = false, ascii = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 8, dfs_length = -1, cz_len = 0, czp_app_len = 0;
+    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0;
     idx_size cz_path = 0;
     Config::SimType sim_type = Config::FullState;
     Config::Verbose verbose = Config::Default;

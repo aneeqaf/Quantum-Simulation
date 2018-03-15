@@ -44,7 +44,7 @@ def main(num_cz, dfs_len, num_idx, command, seed,\
 	# Do trial run to choose better cut
 	d_idx = [pos for pos, char in enumerate(command) if char in "-d"][-1]
 	file_name = re.findall(r'\binst\w+', command)
-	cir_name = "test"
+	cir_name = "test10.txt_0_"
 
 	if len(file_name):
 		cir_name = re.findall(r'\binst\w+', command)[0] + "_" \
@@ -86,7 +86,8 @@ def main(num_cz, dfs_len, num_idx, command, seed,\
 
 	cir_name += str(num_cz + app_czpath) + "_" + str(num_threads)
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
-	
+	print(cir_name)
+
 	if os.path.isdir(cir_dir):
 		shutil.rmtree(cir_dir, ignore_errors=True)
 	

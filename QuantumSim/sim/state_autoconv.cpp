@@ -53,6 +53,7 @@ AdaptiveStateVector::
 
 int AdaptiveStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
+                      idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
@@ -64,10 +65,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
             data_per_cycles.addends.push_back(0);
             data_per_cycles.memory.push_back(GetMemUsage());
         }
-        full_state -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
+        full_state -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks);
     }
     else {
-        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, CZ_bitmasks, T_bitmasks);
+        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
             struct timespec start, end;

@@ -40,6 +40,7 @@ public:
                                         bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                                         bitset<128>* __restrict xCZ_bitmasks_path1_D4D3);
     int ApplyBlockOfDiagGates(string& cz_bits,
+                              idx_size prefix_size,
                                const bitset<128>* __restrict CZ_bitmasks,
                                const bitset<128>  T_bitmasks[2]);
     idx_size CountXCZGates(const bitset<128>* __restrict CZ_bitmasks);
