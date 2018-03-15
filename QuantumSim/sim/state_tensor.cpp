@@ -137,8 +137,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
     
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
     total_circuit_qubits = num_q_a + num_q_b;
@@ -159,9 +159,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
         T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
         T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
     }
-    
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.CZ_T += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+
+    time_by_category.CZ_T += time.GetElapsedTime();
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
@@ -221,8 +220,8 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
                    const Gate::Type CZ_D_A,
                    const Gate::Type CZ_D_B)
 {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
     
     bitset<128> xCZ_bitmask[num_q_a];
     for (int i = 0; i < num_q_a; ++i)
@@ -243,8 +242,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
         }
     }
     
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (sim_mode != Config::SimMode::Phase2 &&
         (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {

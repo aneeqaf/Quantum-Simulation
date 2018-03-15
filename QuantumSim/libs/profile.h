@@ -6,8 +6,8 @@
 //  Copyright © 2018 Aneeqa Fatima. All rights reserved.
 //
 
-#ifndef time_h
-#define time_h
+#ifndef profile_h
+#define profile_h
 
 using ul = unsigned long;
 
@@ -42,4 +42,27 @@ typedef struct CountOfCategory{
     CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0) {}
 }Counts;
 
-#endif /* time_h */
+class Time {
+public:
+    struct timespec start, end;
+    
+    Time():start({}), end({}) {}
+    
+    inline void StartTime()
+    {
+        clock_gettime(CLOCK_MONOTONIC, &start);
+    }
+    
+    inline void EndTime()
+    {
+        clock_gettime(CLOCK_MONOTONIC, &end);
+    }
+    
+    inline double GetElapsedTime()
+    {
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        return (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    }
+};
+
+#endif /* profile_h */

@@ -381,12 +381,10 @@ ApplyMergedXYFT(cmplx* __restrict amp,
             Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyXY12Gate, 1);
     }
     else if (gate_type == 2) {
-        static int count = 0; ++count;
         if (AVX)
             Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyYY12GateAVX, 4);
         else
             Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyYY12Gate, 1);
-        cout << "YY : " << count << endl;
     }
     else if (gate_type == 3) {
         if (AVX)

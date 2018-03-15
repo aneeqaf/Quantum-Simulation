@@ -71,18 +71,18 @@ ApplyBlockOfDiagGates(string& cz_bits,
         last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
-            struct timespec start, end;
-            clock_gettime(CLOCK_MONOTONIC, &start);
+            Time time;
+            time.StartTime();
             
             //Add support for finding the cut type
+
             if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
                 && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
                 full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
             else
                 full_state = sumOfTensors -> ConvertSumOfTensorsToState();
            
-            clock_gettime(CLOCK_MONOTONIC, &end);
-            time_by_category.conversion += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+            time_by_category.conversion += time.GetElapsedTime();
             
             delete sumOfTensors;
             sumOfTensors = nullptr;

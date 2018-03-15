@@ -129,8 +129,8 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
     //of tensor product.
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
     
     const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
     bitset<128> xCZ_bitmask[num_q_a];
@@ -163,8 +163,8 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
             num_addends = tensor_addends.size();
         }
     }
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+
+    time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (sim_mode != Config::SimMode::Phase2) {
         if (sim_type == Config::SimType::LosslessH) {
@@ -191,8 +191,8 @@ ApplyXCZGatesForDist(string& cz_bits,
     //of tensor product.
     bool terminate = false;
     
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
     
     const ul prev_CZ_count = count_of_category.decomposed_CZ;
     const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
@@ -211,8 +211,7 @@ ApplyXCZGatesForDist(string& cz_bits,
         tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
                                                         xCZ_bitmasks_path1_D3D4, xCZ_bitmasks_path1_D4D3);
       
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (last_xCZ_idx && sim_mode != Config::SimMode::Phase2) {
         if (sim_type == Config::SimType::LosslessH) {
@@ -248,7 +247,6 @@ FormGatesBitmaskXCZ(bool& terminate,
         return -1;
     int last_xCZ_idx = 0;
 
-//    cout << "start\n";
     for (idx_size i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             
@@ -261,33 +259,24 @@ FormGatesBitmaskXCZ(bool& terminate,
             int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
             int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
             int q = first_half ? first_half : second_half ? 63 + second_half : 0;
-//            int q = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
-//            cout << cz_bits << " : " << q << " : ";
             if (cz_bits[0] == '0') {
-                if ((cz_bits.size() + prefix_size) % 2 == 0) {
-//                    cout << "D1D2\n";
+                if ((cz_bits.size() + prefix_size) % 2 == 0)
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
-                }
-                else {
-//                    cout << "D2D1\n";
+                
+                else
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
-                }
             }
             else {
-                if ((cz_bits.size() + prefix_size) % 2 == 0) {
-//                    cout << "D3D4\n";
+                if ((cz_bits.size() + prefix_size) % 2 == 0)
                     xCZ_bitmasks_path1_D3D4[i][q] = 1;
-                }
-                else {
-//                    cout << "D4D3\n";
+                else
                     xCZ_bitmasks_path1_D4D3[i][q] = 1;
-                }
             }
             
             cz_bits.erase(0, 1);
-//            cz_bits.pop_back();
             xCZ_bitmask[i][q] = 0;
         }
         if (terminate)
@@ -428,8 +417,8 @@ ApplyXCZGatesExactTemp(string& cz_bits,
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
     //of tensor product.
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
     
     const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
     bitset<128> xCZ_bitmask[num_q_a];
@@ -492,8 +481,7 @@ ApplyXCZGatesExactTemp(string& cz_bits,
         if (terminate)
             break;
     }
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.decomposed_CZ += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.decomposed_CZ += time.GetElapsedTime(); 
     
     if (last_xCZ_idx && sim_mode != Config::SimMode::Phase2) {
         if (sim_type == Config::SimType::LosslessH) {
@@ -519,8 +507,7 @@ ApplyXCZGatesExactTemp(string& cz_bits,
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToState()
 {
-    Rescale();
-    ApplyGlobalICounter();
+    RescaleAndApplyGlobalICounter();
     const int num_q_B = tensor_addends[0] -> GetStateBNumQ(), num_q_A = tensor_addends[0] -> GetStateANumQ(),
     total_q = num_q_A  + num_q_B;
     const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A, B_size = 1ull << num_q_B;

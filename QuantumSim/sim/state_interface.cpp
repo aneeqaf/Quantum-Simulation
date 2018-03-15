@@ -145,8 +145,8 @@ ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
         temp[modified_q - i] = 1;
         if ((temp & partition_bitmask) != 0) {
             if ((gate_bitmasks[modified_q - i] & partition_bitmask) != 0) {
-                projected_bitmasks[c] = Project1QBitmask(gate_bitmasks[modified_q - i]
-                                                         & partition_bitmask, partition_bitmask, total_circuit_qubits,
+                projected_bitmasks[c] = Project1QBitmask(gate_bitmasks[modified_q - i] & partition_bitmask,
+                                                         partition_bitmask, total_circuit_qubits,
                                                          false);
                 bitmask_0 = false;
             }

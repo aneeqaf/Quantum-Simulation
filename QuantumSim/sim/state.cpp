@@ -76,8 +76,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128>  T_bitmasks[2])
 {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
     
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
@@ -94,8 +94,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
     
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.CZ_T += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.CZ_T += time.GetElapsedTime();
     
     return -1;
 }
@@ -130,9 +129,9 @@ ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 void FullAmpStateVector::
 ApplyHGateOnAllAmps()
 {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
+    Time time;
+    time.StartTime();
+    
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
     
@@ -145,8 +144,7 @@ ApplyHGateOnAllAmps()
     
     global_factor_power += num_qubits;
     
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.H +=  (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.H += time.GetElapsedTime();
 }
 
 void FullAmpStateVector::
@@ -162,8 +160,9 @@ void FullAmpStateVector::
 ApplyMergedXYGate(const Gate& gate1,
                   const Gate& gate2)
 {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    Time time;
+    time.StartTime();
+    
     Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits);
     
     global_factor_power += 2;
@@ -171,9 +170,9 @@ ApplyMergedXYGate(const Gate& gate1,
     if (gate1.ids.back() == Gate::Type::Y_1_2 && gate2.ids.back() == Gate::Type::Y_1_2)
         ++global_i_counter;
     
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.merged_XY1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.merged_XY1_2 += time.GetElapsedTime();
 }
+
 
 void FullAmpStateVector::
 ApplyClusterOfXYHGates(idx_size& gate_i,
@@ -222,17 +221,17 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const int th)
 {
-    struct timespec start, end;
+    Time time;
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
     
     idx_size num_Xgates = __builtin_popcountll(X_bitmask_64),
     num_Ygates = __builtin_popcountll(Y_bitmask_64);
     if ((num_Xgates + num_Ygates) % 2 == 1) {
-        clock_gettime(CLOCK_MONOTONIC, &start);
+        time.StartTime();
         
         const int X_q = X_bitmask_64 ? __builtin_ctzl(X_bitmask_64) : 1000;
         const int Y_q = Y_bitmask_64 ? __builtin_ctzl(Y_bitmask_64) : 1000;
-//
+
 //        const int X_q = X_bitmask_64 ? 63 - __builtin_clzl(X_bitmask_64) : 1000;
 //        const int Y_q = Y_bitmask_64 ? 63 - __builtin_clzl(Y_bitmask_64): 1000;
         
@@ -242,8 +241,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                 X_bitmask_64 ^= 1ull << X_q;
                 global_factor_power += 2;
                 --num_Xgates;
-                clock_gettime(CLOCK_MONOTONIC, &end);
-                time_by_category.X1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+                time_by_category.X1_2 += time.GetElapsedTime();
                 if (sim_mode != Config::SimMode::Phase2)
                     ++count_of_category.X1_2;
             }
@@ -252,15 +250,14 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                 Y_bitmask_64 ^= 1ull << Y_q;
                 global_factor_power += 2;
                 --num_Ygates;
-                clock_gettime(CLOCK_MONOTONIC, &end);
-                time_by_category.Y1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+                time_by_category.Y1_2 += time.GetElapsedTime();
                 if (sim_mode != Config::SimMode::Phase2)
                     ++count_of_category.Y1_2;
             }
         }
     } 
     
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    time.StartTime();
     
 //    if (X_bitmask_64 || Y_bitmask_64)
 //        global_i_counter += ApplyHighQXYGates(amp, X_bitmask_64, Y_bitmask_64, num_qubits);
@@ -273,18 +270,18 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     if (num_Ygates)
         global_factor_power += num_Ygates;
     
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    time_by_category.merged_XY1_2 += (end.tv_sec - start.tv_sec) + ((end.tv_nsec - start.tv_nsec)/1.0e9);
+    time_by_category.merged_XY1_2 += time.GetElapsedTime();
 }
 
 cmplx FullAmpStateVector::
 operator[](bitset<128> i) const
 {
-//    cmplx a = amp[i.to_ulong()] * cmplx(pow(ki, global_i_counter));
-//    a /= pow(2,(global_factor_power/2));
-//    if (global_factor_power % 2 == 1)
-//        a /= sqrt(2);
-    return amp[i.to_ulong()];
+    const float rescaling_factor = (global_factor_power % 2) ? 1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0))
+    : 1.0/pow(2,(global_factor_power/2));
+    cmplx a = amp[i.to_ulong()] * cmplx(pow(ki, global_i_counter));
+    a *= rescaling_factor;
+    
+    return a;
 }
 
 const cmplx* const FullAmpStateVector::

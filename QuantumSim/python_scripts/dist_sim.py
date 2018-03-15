@@ -66,6 +66,14 @@ def main(num_cz, dfs_len, num_idx, command, seed,\
 
 	total_czv = num_czv + app_cz_lenV
 	total_czh = num_czh + app_cz_lenH
+
+	# num_cz = num_czv
+	# app_czpath =  app_cz_lenV
+	# t_time =  V_time
+	# cut = "vertical-cut"
+	# command =  commandV
+	# mem =  V_mem
+	# dfs_len = dfs_lenV
 	
 	if total_czv == total_czh:
 		num_cz = num_czh if (float(H_time) <= float(V_time)) else num_czv

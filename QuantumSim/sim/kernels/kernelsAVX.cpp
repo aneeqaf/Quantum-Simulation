@@ -23,14 +23,18 @@ GetTGatesCount(idx_size* gate_counts /*8*/,
     //Number of T gates to be applied on an amp
     //If no T gate is being applied and amplitude has to be negated, then '-1' is wrapped in.
     for (int i = 0; i < 8; ++i) {
-        gate_counts[i] = __builtin_popcountll(gray_codes[i] & T_bitmasks[0]) + __builtin_popcountll(gray_codes[i] & T_bitmasks[1]);
+        gate_counts[i] = __builtin_popcountll(gray_codes[i] & T_bitmasks[0])
+        + __builtin_popcountll(gray_codes[i] & T_bitmasks[1]);
         if (__builtin_parityl(CZ_bitmasks[bit_idx[i]] & gray_codes[i]) == 1)
             negate_Z = !negate_Z;
         if (negate_Z)
             gate_counts[i] += 4;
         gate_counts[i] %= 8;
     }
-    
+//    cout << "T gate counts : ";
+//    for (int i = 0; i < 8; ++i)
+//        cout << bit_idx[i] << " " << gray_codes[i] << " " << gate_counts[i] << " , ";
+//    cout << endl;
 }
 
 __attribute__((always_inline)) inline void
