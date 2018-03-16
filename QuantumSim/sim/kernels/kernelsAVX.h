@@ -145,7 +145,7 @@ ApplyXX12GateAVX(cmplx* __restrict amp,
         && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
         && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
         return;
-    
+
     const __m256 t0 = _mm256_add_ps(a0, a3);
     const __m256 t1 = _mm256_add_ps(a1, a2);
     __m256 t2 = _mm256_sub_ps(a0, a3);
@@ -181,7 +181,7 @@ ApplyYY12GateAVX(cmplx* __restrict amp,
         && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
         && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
         return;
-    
+
     const __m256 t0 = _mm256_add_ps(a0, a3);
     const __m256 t1 = _mm256_sub_ps(a0, a3);
     const __m256 t2 = _mm256_add_ps(a1, a2);
@@ -339,4 +339,5 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const idx_size* __restrict CZ_bitmasks,
                                 const idx_size* __restrict T_bitmasks,
                                 const int num_threads);
+
 #endif /* kernelsAVX_h */

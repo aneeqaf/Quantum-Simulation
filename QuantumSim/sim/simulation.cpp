@@ -1047,7 +1047,5 @@ void SequentialSimulation::
 PrintReportToFile(GenericQuantumState& amp,
                   const Circuit& circuit) const
 {
-    
 }
-
 

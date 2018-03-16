@@ -71,5 +71,4 @@ public:
     SequentialSimulation& operator=(const SequentialSimulation& rhs) = delete;
 };
 
-
 #endif /* simulation_h */

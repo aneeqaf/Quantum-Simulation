@@ -141,7 +141,6 @@ ApplyProjection10AVX(cmplx* __restrict amp,
     }
 }
 
-
 inline valarray<idx_size>
 FindStrides (const vector<int>& gate_qubits,
              const int num_q) {

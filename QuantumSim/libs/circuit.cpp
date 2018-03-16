@@ -453,9 +453,9 @@ CreateQuiddProScript(const string& out_file)
         if(op_count > 1) {
             file << "op = ";
             for (int n = 0; n < op_count; ++n) {
-                if (n != 0) {
+                if (n != 0)
                     file << "-";
-                }
+                
                 file << "op" + to_string(n);
             }
             file << ";\n";
@@ -683,7 +683,6 @@ ReadGoogleCircuitFile(const string& input_file,
             gates[gates.size() - 1].num_controls = 1;
             gates[gates.size() - 1].qubits.push_back(qubits - 1 - q2);
             gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
-
         }
         
         if (gate_type != "cz") {

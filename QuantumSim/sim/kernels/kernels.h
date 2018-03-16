@@ -68,7 +68,7 @@ ApplyYY12Gate(cmplx* __restrict amp,
     if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
         && amp[indices[2]] == cmplx(0,0) && amp[indices[3]] == cmplx(0,0))
         return;
-    
+
     const auto t0 = a[0] + a[3];
     const auto t1 = a[0] - a[3];
     const auto t2 = a[1] + a[2];

@@ -2,6 +2,7 @@ CC := g++-7
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
 SRCDIR := vector_state_sim
+<<<<<<< HEAD
 TARGETDIR := bin
 OUTPUT := output/amp_vectors output/probabilities output/qpro_scripts output/reports
 INPUT := input/random_circuits_rollright
@@ -56,6 +57,5 @@ clean:
 # Benchmark
 bm: $(OBJECTS) $(BM) $(KERNELHEADERS)
 	$(CC) $(CFLAGS) $(BM) $(OBJECTS) $(INC) $(LIBS) benchmark/main.cpp -o bin/bm
-
 
 # export LD_LIBRARY_PATH=/usr/local/gcc7/lib64

@@ -25,7 +25,7 @@ GetTGatesCount(idx_size* gate_counts /*8*/,
     for (int i = 0; i < 8; ++i) {
         gate_counts[i] = __builtin_popcountll(gray_codes[i] & T_bitmasks[0])
         + __builtin_popcountll(gray_codes[i] & T_bitmasks[1]);
-        if (__builtin_parityl(CZ_bitmasks[bit_idx[i]] & gray_codes[i]) == 1)
+       if (__builtin_parityl(CZ_bitmasks[bit_idx[i]] & gray_codes[i]) == 1)
             negate_Z = !negate_Z;
         if (negate_Z)
             gate_counts[i] += 4;
@@ -191,5 +191,4 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
         FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
         prev_gc = gc_second[7];
     }
-    
 }

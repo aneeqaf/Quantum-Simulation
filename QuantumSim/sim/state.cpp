@@ -45,7 +45,6 @@ FullAmpStateVector(const FullAmpStateVector& rhs)
         const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
         _mm256_store_ps(&t_amp[i], temp_amp);
     }
-
     global_factor_power = rhs.global_factor_power;
     global_i_counter = rhs.global_i_counter;
     min_prob = rhs.min_prob;

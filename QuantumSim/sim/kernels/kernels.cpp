@@ -274,7 +274,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
     while(iter_count < num_iters) {
         if ((idx & gate_bitmask) == 0) {
             iter_count += add;
-            
+          
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             

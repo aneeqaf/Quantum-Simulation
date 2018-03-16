@@ -8,7 +8,6 @@
 
 #include "kernels1.h"
 
-
 void
 ApplyNonControl1QGates(cmplx* __restrict amp,
                        const int q,

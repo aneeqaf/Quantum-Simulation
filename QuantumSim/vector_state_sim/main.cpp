@@ -117,7 +117,6 @@ int main(int argc, char *argv[])
                     if (cz_path_temp.find("*") != string::npos)
                         dfs_length = (int)(cz_path_temp.find_last_of("*") - cz_path_temp.find_first_of("*"));
                 }
-                
                 break;
             }
             case 'd': {
