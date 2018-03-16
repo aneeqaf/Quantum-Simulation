@@ -8,8 +8,8 @@ import re
 @click.command()
 @click.argument("cir_file", nargs=1)
 @click.argument("est_time", nargs=1)
-@click.option("--truncated", nargs=1, required=False, default=0)
-def main(cir_file, est_time, truncated):
+@click.option("--max_procs", nargs=1, required=False, default=0)
+def main(cir_file, est_time, max_procs):
 	log_dir = os.path.join("output", "log", cir_file)
 
 	if not os.path.isdir(log_dir):
@@ -25,6 +25,8 @@ def main(cir_file, est_time, truncated):
 	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0}
 	num_threads = 0
 	cz_path_len = 0
+	cz_path_ranges = 0
+	dfs_bits = 0
 	dfs = False
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
@@ -34,25 +36,18 @@ def main(cir_file, est_time, truncated):
 			if "Max threads per process" in line:
 				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 
-			if "Phase 1 CZ path" in line and "range" not in line:
+			if "xCZ path breakdown" in line:
+				print(line, end="")
 				cz_path_t = line.split(":")[1]
 				# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
 				cz_path = cz_path_t.split("+")
-				if len(cz_path) > 1:
-					print("Phase 1 CZ path length (ranges):" + cz_path_t.replace("\n", ""))
-				else: 
-					cz_path = cz_path[0].replace(" ", "").replace("\n", "").split("(")[1].replace(")", "")
-					print("Phase 1 CZ path length :" + cz_path_t.replace("\n", ""))
-
-				cz_path_len = int(cz_path[0].replace(' ',''))
+				if len(cz_path) >= 1:
+					cz_path_len = int(re.sub('[^0-9]', '', cz_path[0]))
 				print_line = False
 
-				# else:
-				# 	cz_path = 0
-				
-			elif "Phase 2 CZ path length" in line:
-				dfs = True
-				print(line, end='')
+				if len(cz_path) == 3 :
+					dfs = True
+
 			elif "State representation size" not in line and print_line:
 				print(line,  end='')
 			elif "State representation size" in line:
@@ -80,7 +75,7 @@ def main(cir_file, est_time, truncated):
 			elif "¯\_(ツ)_/¯ " in line:
 				break
 
-	num_CZ_paths = 1 << cz_path_len if truncated == 0 else truncated
+	num_CZ_paths = 1 << cz_path_len if max_procs == 0 else max_procs
 	avg_time_per_category = {'H':0.0, 'CZ & T':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
 		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0}
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
@@ -95,6 +90,9 @@ def main(cir_file, est_time, truncated):
 	scripts = os.listdir(log_dir)
 	avg_dfs_time = 0.0
 	avg_cz_time = 0.0
+	avg_residents = 0.0
+	avg_major_pagefaults = 0.0
+	avg_minor_pagefaults = 0.0
 
 	for script_log in scripts:
 		num_batches += 1
@@ -132,10 +130,10 @@ def main(cir_file, est_time, truncated):
 					avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 				elif "Copying" in line:
 					avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "Phase 1 runtime" in line:
+				elif "Phase 1 " in line:
 					temp_str = line.split(":")[1].split()[0]
 					avg_cz_time += float(temp_str)
-				elif "Phase 2 runtime" in line:
+				elif "Phase 2 " in line:
 					temp_str = line.split(":")[1].split()[0]
 					avg_dfs_time += float(temp_str)
 				elif "CPU utilization" in line:
@@ -157,6 +155,11 @@ def main(cir_file, est_time, truncated):
 					user_time = line.split()[0]
 					avg_user_time += float(re.sub('[a-zA-Z_]', '', user_time))
 					avg_cpu_percent += float(line.split()[3].split('%')[0])
+					avg_residents += float(re.sub('[^0-9]', '', line.split()[-1])) * 1000
+				elif "pagefaults" in line:
+					pf_str = line.split()[1].split('+')
+					avg_major_pagefaults += float(re.sub('[^0-9]', '', line.split()[1].split('+')[0]))
+					avg_minor_pagefaults += float(re.sub('[^0-9]', '', line.split()[1].split('+')[1]))
 				elif "real" in line:
 					avg_user_time += float(line.split()[2])
 					e_t = float(line.split()[0])
@@ -164,27 +167,45 @@ def main(cir_file, est_time, truncated):
 					if max_elapsed_time < e_t:
 						max_elapsed_time = e_t
 					
-	print("\nDistributed simulation : " + str(num_CZ_paths) + " processes (" + \
-		str(num_threads) + " threads each) in " + str(num_batches) + " batches")
+	print("\nDistributed simulation " , end="")
+	if max_procs and max_procs < (1 << cz_path_len):
+		print ("(truncated) ", end="")
+	print(": ", end="")
+
+	print("\n\t" + str(num_CZ_paths) + " processes (" + \
+		str(num_threads) + " threads each) in " + str(num_batches) + " batch(es)")
 	print("\t" + mem_line, end='')
 
 	if dfs:
 		mem_val *= 2
 	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit)
-	print("\tPredicted time : " + str(round(float(est_time) + 0.4 * float(est_time), 3)) + " +- "\
-	 + str(round(0.3 * float(est_time), 3)) + " s")
-	print("\tBatch time :\n\t\tUser : " + str(round((avg_user_time/num_batches), 3)) \
-		+ " s (avg)\n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
+	print("\tPredicted time : " + str(round(float(est_time), 3)) \
+		+ " +- " + str(round(float(est_time) * 0.3, 3)) + " s")
+	print("\tBatch stats :\n\t\tAvg user time : " + str(round((avg_user_time/num_batches), 3)) \
+		+ " s \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
 		str(round(max_elapsed_time, 3))+ " s (max)")
 	if avg_cpu_percent:
-		print("\t\tCPU utilization : " + str(round(avg_cpu_percent/num_batches, 3)) + "% (avg)")
+		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_batches, 3)) + "% ")
 	if avg_cz_time:
-		print("\t\tAvg phase 1 time : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
+		print("\t\tAvg simulation runtime breakdown : \n\t\t\tPhase 1 : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
 			str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
 	if avg_dfs_time:
-		print("\t\tAvg phase 2 time : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
+		print("\t\t\tPhase 2 : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
 			str(round(((avg_dfs_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
-
+	if avg_residents:
+		print("\t\tAvg resident size : ", end="")
+		if avg_residents/num_batches >= pow(2, 30):
+			print (str(round(avg_residents/(pow(2, 30) * num_batches), 3)) + " GiB")
+		elif avg_residents/num_batches >= pow(2, 20):
+			print (str(round(avg_residents/(pow(2, 20) * num_batches), 3)) + " MiB")
+		elif avg_residents/num_batches >= pow(2, 10):
+			print (str(round(avg_residents/(pow(2, 10) * num_batches), 3)) + " KiB")
+		else:
+			print (str(round(avg_residents/(num_batches), 3)) + " B")
+	if avg_major_pagefaults or avg_minor_pagefaults:
+		print("\t\tAvg page faults : " + str(round(avg_major_pagefaults/num_batches, 3)) + " (major), " \
+			+ str(round(avg_minor_pagefaults/num_batches, 3)) + " (minor)")
+	
 	print("\namp[3]  \t= {:.8f}".format(amp['3']))
 	print("amp[1/4]\t= {:.8f}".format(amp['1/4']))
 	print("amp[1/2]\t= {:.8f}".format(amp['1/2']))
@@ -245,23 +266,22 @@ def main(cir_file, est_time, truncated):
 	
 	print("\t\t\t\t\t\t----------")
 	print("\tTotal \t\t\t\t\t  " + str(round(sum_percen, 3)) + "%\n")
-	if sum_percen > 100 :
-		print("Percentages don't add upto 100%")
-
+	
 	print("Avg time per gate per process : " + str(round(sum_time, 6)) + " s")	
 	if avg_cz_time:
-		print("Avg phase 1 time per process : " + str(round(avg_cz_time, 6)) + " s = " +\
-			str(round((avg_cz_time/avg_time_per_process) * 100, 3)) + "%")
+		print("Simulation per process runtime breakdown : ")
+		print ("\tPhase 1 : " + str(round(avg_cz_time, 6)) + " s = " +\
+		str(round((avg_cz_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_dfs_time:
-		print("Avg phase 2 time per process : " + str(round(avg_dfs_time, 6)) + " s = " +\
+		print("\tPhase 2 : " + str(round(avg_dfs_time, 6)) + " s = " +\
 			str(round((avg_dfs_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_CPU_uti_per_p:
 		print("Avg CPU utilization per process : " + \
 			str(round(avg_CPU_uti_per_p/num_CZ_paths, 6)) + " % ")
 
-	if truncated != 0:
+	if max_procs != 0:
 		print("\033[1m\nThe estimated time for the complete run is " \
-			+ str(round((avg_elapsed_time/truncated) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
+			+ str(round((avg_elapsed_time/max_procs) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
 
 	print("\n¯\_(ツ)_/¯ \n")
 

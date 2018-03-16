@@ -56,7 +56,7 @@ FullAmpStateVector(const FullAmpStateVector& rhs)
 FullAmpStateVector::
 ~FullAmpStateVector()
 {
-    delete [] amp;
+    free(amp);
     amp = nullptr;
 }
 
@@ -392,7 +392,13 @@ CalculateCrossEntropy(int range) const
 void FullAmpStateVector::
 ResetAmpVector()
 {
-    memset(amp, 0, amp_size * sizeof(amp));
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    idx_size size = 2 * amp_size;
+    #pragma omp parallel for num_threads(num_threads)
+    for (idx_size i = 0; i < size; i+=8)
+        _mm256_store_ps(&t_amp[i], kzeros);
+    
     global_factor_power = 0;
     global_i_counter = 0;
 }

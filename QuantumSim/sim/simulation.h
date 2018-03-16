@@ -41,7 +41,8 @@ private:
 public:
     void PrintSystemReport() const;
     void PrintSimSpecReport(const GenericQuantumState& amp,
-                            const Circuit& circuit);
+                            const Circuit& circuit,
+                            const int xCZ_gates);
     void PrintSimReport(GenericQuantumState& amp,
                         const Circuit& circuit) const;
     void PrintReportToFile(GenericQuantumState& amp,

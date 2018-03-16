@@ -133,35 +133,45 @@ GroupSimilarGates()
 #endif
 }
 
-void Circuit::
+int Circuit::
 MovexCZGates(bitset<128>& a_qubits_bitmask,
              bitset<128>& b_qubits_bitmask)
 {
     const int modified_q = qubits - 1;
+    int total_xCZ_count = 0, count_CZ = 0;
     
     for (idx_size i = qubits; i < gates.size(); ++i) {
          if (gates[i].ids.back() == Gate::Type::Z) {
              idx_size count_xCZ = 0;
              idx_size j = i;
              for (; j < gates.size() && gates[j].ids.back() == Gate::Type::Z; ++j) {
+                 ++count_CZ;
                  bitset<128> a_bm = 0, b_bm = 0;
                  a_bm[modified_q - gates[j].qubits.front()] = 1;
                  b_bm[modified_q - gates[j].qubits.back()] = 1;
                  if ((a_bm & a_qubits_bitmask) != 0) {
-                     if ((b_bm & a_qubits_bitmask) == 0)
+                     if ((b_bm & a_qubits_bitmask) == 0) {
+//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
+                     }
                  }
                  else if ((b_bm & a_qubits_bitmask) != 0) {
-                     if ((a_bm & a_qubits_bitmask) == 0)
+                     if ((a_bm & a_qubits_bitmask) == 0) {
+//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
+                     }
                  }
                  else if ((b_bm & b_qubits_bitmask) != 0) {
-                     if ((a_bm & b_qubits_bitmask) == 0)
+                     if ((a_bm & b_qubits_bitmask) == 0) {
+//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
+                     }
                  }
                  else if ((a_bm & b_qubits_bitmask) != 0) {
-                     if ((b_bm & b_qubits_bitmask) == 0)
+                     if ((b_bm & b_qubits_bitmask) == 0) {
+//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
+                     }
                  }
              }
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,
@@ -174,8 +184,12 @@ MovexCZGates(bitset<128>& a_qubits_bitmask,
                             return false;
                   });
              i = j;
+             total_xCZ_count += count_xCZ;
          }
     }
+//    cout << "The circuit has " << total_xCZ_count << " xCZ gates\n";
+//    cout << "The circuit has " << count_CZ << " CZ gates\n";
+    return total_xCZ_count;
 }
 
 void Circuit::

@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
     
-#ifndef Xcode
+#ifdef Parallel
     num_threads = omp_get_num_procs();
 #endif
     
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
                     exit(1);
                 }
                 out_file = string(optarg);
-                auto count_a = count(out_file.begin(), out_file.end(), ',');
+                auto count_a = count(out_file.begin(), out_file.end(), '@');
                 if (count_a)
                     ascii = true;
                 idx_size p = out_file.find(",");
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
             case 't': {
                 string threads = string(optarg);
                 num_threads = stoi(threads);
-#ifndef Xcode
+#ifdef Parallel
                 if (num_threads > omp_get_max_threads()) {
                     cerr << "Number of threads specified greater than max number of threads\n";
                     exit(1);

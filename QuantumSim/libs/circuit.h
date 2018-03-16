@@ -38,7 +38,7 @@ public:
     
     void GroupAlternateCycles();
     void GroupSimilarGates();
-    void MovexCZGates(bitset<128>& a_qubits_bitmask,
+    int MovexCZGates(bitset<128>& a_qubits_bitmask,
                       bitset<128>& b_qubits_bitmask);
     void ReadGoogleCircuitFile(const string& input_file,
                                const int depth);

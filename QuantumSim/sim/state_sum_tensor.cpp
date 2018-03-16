@@ -209,7 +209,7 @@ ApplyXCZGatesForDist(string& cz_bits,
                                                  xCZ_bitmasks_path1_D4D3, CZ_bitmasks);
     if (last_xCZ_idx != -1)
         tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
-                                                        xCZ_bitmasks_path1_D3D4, xCZ_bitmasks_path1_D4D3);
+                                                            xCZ_bitmasks_path1_D3D4, xCZ_bitmasks_path1_D4D3);
       
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
@@ -263,17 +263,25 @@ FormGatesBitmaskXCZ(bool& terminate,
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
             if (cz_bits[0] == '0') {
-                if ((cz_bits.size() + prefix_size) % 2 == 0)
+                if ((cz_bits.size() + prefix_size) % 2 == 0) {
+//                    cout << "D1D2\n";
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
+                }
                 
-                else
+                else {
+//                    cout << "D2D1\n";
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
+                }
             }
             else {
-                if ((cz_bits.size() + prefix_size) % 2 == 0)
+                if ((cz_bits.size() + prefix_size) % 2 == 0) {
+//                    cout << "D3D4\n";
                     xCZ_bitmasks_path1_D3D4[i][q] = 1;
-                else
+                }
+                else {
+//                    cout << "D4D3\n";
                     xCZ_bitmasks_path1_D4D3[i][q] = 1;
+                }
             }
             
             cz_bits.erase(0, 1);

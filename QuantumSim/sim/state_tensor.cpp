@@ -31,13 +31,13 @@ a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0), sim_type(sim)
     
     if (!count_h && cut == Cuts::Horizontal) {
         string data = "";
-        data += "Cut : horizontal " + to_string(num_q_a) + " + " + to_string(num_q_b) + "\n";
+        data += "Cut : horizontal " + to_string(num_q_a) + "q + " + to_string(num_q_b) + "q";
         log.push_back(data);
         ++count_h;
     }
     if (!count_v && cut == Cuts::Vertical) {
         string data = "";
-        data += "Cut : vertical " + to_string(num_q_a) + " + " + to_string(num_q_b) + "\n";
+        data += "Cut : vertical " + to_string(num_q_a) + "q + " + to_string(num_q_b) + "q";
         log.push_back(data);
         ++count_v;
     }
@@ -53,6 +53,7 @@ TensorProductStateVector(const TensorProductStateVector& rhs)
     cut_type = rhs.cut_type;
     num_q_a = rhs.num_q_a;
     num_q_b = rhs.num_q_b;
+    sim_type = rhs.sim_type;
 }
 
 TensorProductStateVector::

@@ -14,10 +14,10 @@ vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
 Config::SimMode GenericQuantumState::sim_mode = Config::SimMode::Phase1;
 
-#ifdef Xcode
-int GenericQuantumState::num_threads = 8;
-#else
+#ifdef Parallel
 int GenericQuantumState::num_threads = omp_get_num_procs();
+#else
+int GenericQuantumState::num_threads = 8;
 #endif
 
 GenericQuantumState::
@@ -195,7 +195,7 @@ HorizontalCut(bitset<128>& a_qubits_bitmask,
 //    }
     const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
     modified_q = total_qubits - 1;
-    num_qubits_a = cut ? cut : ceil(y_axis_sz/2)  * x_axis_sz;
+    num_qubits_a = cut ? cut : ceil(x_axis_sz/2)  * y_axis_sz;
     
     for (int i = 0; i < num_qubits_a; ++i)
         a_qubits_bitmask [modified_q - i] = 1;
@@ -215,15 +215,15 @@ VerticalCut(bitset<128>& a_qubits_bitmask,
             const int cut)
 {
     const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
-    modified_q = total_qubits - 1, v_cut = !cut ? ceil(x_axis_sz/2) : cut;
+    modified_q = total_qubits - 1, v_cut = !cut ? ceil(y_axis_sz/2) : cut;
     
-    for (int i = 0; i < y_axis_sz; ++i) {
+    for (int i = 0; i < x_axis_sz; ++i) {
         for (int j = 0; j < v_cut; ++j) {
-            a_qubits_bitmask [modified_q - ((i * x_axis_sz) + j)] = 1;
+            a_qubits_bitmask [modified_q - ((i * y_axis_sz) + j)] = 1;
             ++num_qubits_a;
         }
-        for (int j = v_cut; j < x_axis_sz; ++j) {
-            b_qubits_bitmask [modified_q - ((i * x_axis_sz) + j)] = 1;
+        for (int j = v_cut; j < y_axis_sz; ++j) {
+            b_qubits_bitmask [modified_q - ((i * y_axis_sz) + j)] = 1;
             ++num_qubits_b;
         }
     }

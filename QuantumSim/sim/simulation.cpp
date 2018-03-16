@@ -44,9 +44,6 @@ void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
-    if (config.verbose)
-        PrintSimSpecReport(amp, circuit);
-    
     PopulateBenchmarkMap();
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -54,6 +51,7 @@ Simulate(GenericQuantumState& amp,
         circuit.GroupSimilarGates();
     }
     
+    int xCZ_gate_count = 0;
     if (config.sim_type != Config::SimType::FullState) {
         bitset<128> a_qubits_bitmask = 0, b_qubits_bitmask = 0;
         int num_q_a = 0, num_q_b = 0;
@@ -61,8 +59,12 @@ Simulate(GenericQuantumState& amp,
             HorizontalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, circuit.GetNumQubits(), config.hcut);
         else
             VerticalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, circuit.GetNumQubits(), config.vcut);
-        circuit.MovexCZGates(a_qubits_bitmask, b_qubits_bitmask);
+        
+        xCZ_gate_count = circuit.MovexCZGates(a_qubits_bitmask, b_qubits_bitmask);
     }
+    
+    if (config.verbose)
+        PrintSimSpecReport(amp, circuit, xCZ_gate_count);
     
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     
@@ -328,7 +330,7 @@ Phase1Simulation(GenericQuantumState& amp,
                         break;
                     }
                 }
-                cout << "CZpath exhausted early. Simulated " << current_cycle << " out of " << config.depth << " cycles\n";
+                cout << "CZpath exhausted early.\n";// Simulated " << current_cycle << " out of " << config.depth << " cycles\n";
             }
             else {
                 cout << "No xCZ gates left\n";
@@ -375,8 +377,8 @@ Phase2Simulation(GenericQuantumState& amp,
         amp.time_by_category.copying += copy_time.GetElapsedTime();
         ++amp.count_of_category.copying;
         
-        SimulationLoop(temp_amp, circuit, cz_path, config.cz_num_bits, gate_i);
-        
+        SimulationLoop(temp_amp, circuit, cz_path, 0, gate_i);
+                
         auto& idx = config.indices;
         for(idx_size i = 0; i < idx.size(); ++i)
             amp.amps_of_interest[i] += temp_amp[idx[i]];
@@ -390,7 +392,6 @@ Phase2Simulation(GenericQuantumState& amp,
     config.curr_mode = Config::SimMode::Phase1;
     amp.sim_mode = Config::SimMode::Phase1;
     if (exec == 1) {
-        cout << "Phase 2 CZ path length : " << config.dfs_length << "\n";
         if (!cz_path.size()) {
             if (circuit.GetTotalNumGates() != curr_gate)
                 cout << "DFS path exhausted early";
@@ -572,12 +573,16 @@ PrintSystemReport() const
         system("egrep cores /proc/cpuinfo | head -1");
         cout << "Hardware threads : "; flush(cout);
         system("egrep cores  /proc/cpuinfo | wc -l");
-#ifdef Parallel
-        flush(cout);
+        #ifdef Parallel
         cout << "Max threads per process : " << config.num_threads << "\n";
-#endif
+        flush(cout);
+        #endif
+        system("grep \"MemTotal\" /proc/meminfo");
         cout << "L3 " ; flush(cout);
         system("egrep cache /proc/cpuinfo | head -1");
+        system("grep \"Hugepagesize:\" /proc/meminfo");
+        system("grep \"HugePages_Total\" /proc/meminfo");
+        system("grep \"HugePages_Free\" /proc/meminfo");
 #endif
         cout << "CPU instructions width :"
         << " popcnt:" << __builtin_cpu_supports("popcnt");
@@ -621,7 +626,8 @@ PrintSystemReport() const
 
 void SequentialSimulation::
 PrintSimSpecReport(const GenericQuantumState& amp,
-                   const Circuit& circuit)
+                   const Circuit& circuit,
+                   const int xCZ_gates)
 {
     if (config.google) {
         cout << "Circuit file : " + config.infile + "\n";
@@ -640,14 +646,14 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     }
     else if (config.sim_type == Config::SimType::LosslessH) {
         cout << "sum of tensor products / single cut\n";
-        cout << amp.log[log_count++];
+        cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ)\n";
         cout << "Recursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : exactly\n";
         
     }
     else if (config.sim_type == Config::SimType::LosslessV) {
         cout << "sum of tensor products / single cut\n";
-        cout << amp.log[log_count++];
+        cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ)\n";
         cout << "Recursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : exactly\n";
     }
@@ -701,14 +707,18 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     }
     
     if (config.cz_num_bits) {
+        cout << "xCZ path breakdown : " << config.cz_num_bits << "p" ;
+        if (config.czp_append_len)
+            cout << " + " << config.czp_append_len << "r";
+        if (config.dfs_length)
+            cout << " + " << config.dfs_length << "b";
+        cout << "\n";
         if (config.czp_append_len) {
-            cout << "Phase 1 CZ path : " << config.cz_num_bits ;
-            cout << " + " << config.czp_append_len;
-            cout << "\nPhase 1 CZ path range : ";
+            cout << "xCZ paths: ";
             
-            const int total_bits = config.cz_num_bits + config.czp_append_len;
-            const idx_size czb_v = config.cz_path << config.czp_append_len;
-            const idx_size cze_v = czb_v + (1ull << config.czp_append_len) - 1;
+            const int total_bits = config.cz_num_bits + config.czp_append_len + config.dfs_length;
+            const idx_size czb_v = config.cz_path << (config.czp_append_len + config.dfs_length);
+            const idx_size cze_v = czb_v + (1ull << (config.czp_append_len + config.dfs_length)) - 1;
             const string czb = bitset<128>(czb_v).to_string();
             const string cze = bitset<128>(cze_v).to_string();
             cout << "[" << czb.substr(czb.size() - total_bits) << " (" << czb_v << "), "
@@ -716,9 +726,10 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         }
         else {
             const string czp = bitset<128>(config.cz_path).to_string();
-            cout << "Phase 1 CZ path : " << czp.substr(czp.size() - config.cz_num_bits)
+            cout << "CZ path : " << czp.substr(czp.size() - config.cz_num_bits)
             << " (" << config.cz_num_bits << ")";
         }
+        
         cout << "\n";
         config.verbose = Config::Verbose::NCC;
     }
@@ -934,7 +945,7 @@ PrintSimReport(GenericQuantumState& amp,
         
         string H_s = "\tH (" + to_string(amp.count_of_category.H/factor) +  ")";
         ss << H_s << setw(30 - H_s.size()) << right << ": " << amp.time_by_category.H
-        << " s\t\t= " << (amp.time_by_category.H/(factor)) * 100 << "%\n";
+        << " s\t\t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ) {
             string CZ_T_s = "\tCZ & T (" +
@@ -995,14 +1006,14 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "\t\t\t\t\t\t\t  ----\n";
         ss << "\tTotal \t\t\t\t\t\t   " << sum_percen << "%\n";
         
-        ss << "Average time per gate : " << total_time/circuit.GetTotalNumGates() << " s\n";
+        ss << "\nAverage time per gate : " << total_time/(factor * circuit.GetTotalNumGates()) << " s\n";
         
         if (config.cz_num_bits) {
-            ss << "Phase 1 runtime (CZ_path) : " << phase1_time << " s = "
+            ss << "Simulation runtime breakdown : \n\tPhase 1 : " << phase1_time << " s = "
              << (phase1_time/(total_time)) * 100 << "%\n";
         }
         if (config.dfs_length != 0) {
-            ss << "Phase 2 runtime (DFS) : " << dfs_time << " s = "
+            ss << "\tPhase 2 : " << dfs_time << " s = "
             << (dfs_time/(total_time)) * 100 << "%\n";
         }
         cout << ss.str() << "\n";
@@ -1029,23 +1040,7 @@ PrintSimReport(GenericQuantumState& amp,
         }
     }
     
-    cout << "\n¯\\_(ツ)_/¯ \n\n";
-    
-//    ofstream file;
-//    file.open(config.misc_outfile + ".txt");
-//    for (idx_size i = 0; i < amp.data_per_cycles.cycles.size(); ++i) {
-//        file << amp.data_per_cycles.cycles[i];
-//        if (!amp.data_per_cycles.CZ_gates.empty())
-//            file << "," << amp.data_per_cycles.CZ_gates[i];
-//        if (!amp.data_per_cycles.T_gates.empty())
-//            file << "," << amp.data_per_cycles.T_gates[i];
-//        if (!amp.data_per_cycles.XY_gates.empty())
-//            file << "," << amp.data_per_cycles.XY_gates[i]; //Fix when no XY gates
-//        if (config.sim_type != Config::SimType::FullState)
-//            file << "," << amp.data_per_cycles.xCZ_H[i] << "," << amp.data_per_cycles.xCZ_V[i];
-//        file << "\n";
-//    }
-//    file.close();
+    cout << "¯\\_(ツ)_/¯ \n\n";
 }
 
 void SequentialSimulation::
