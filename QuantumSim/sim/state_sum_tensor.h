@@ -55,9 +55,7 @@ public:
                                    const int th);
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
-    int ApplyXCZGatesExactTemp(string& cz_bits,
-                           const bitset<128>* __restrict CZ_bitmasks);
-    
+   
     cmplx operator[](bitset<128> i) const;
     double GetMinProb() const;
     double GetMaxProb() const;

@@ -98,6 +98,7 @@ def main(cir_file, est_time, max_procs):
 	avg_residents = 0.0
 	avg_major_pagefaults = 0.0
 	avg_minor_pagefaults = 0.0
+	avg_time_per_gate = 0.0
 
 	for script_log in scripts:
 		if script_log.endswith(".txt"):
@@ -137,12 +138,12 @@ def main(cir_file, est_time, max_procs):
 						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Copying" in line:
 						avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					elif "Phase 1 " in line:
-						temp_str = line.split(":")[1].split()[0]
-						avg_cz_time += float(temp_str)
-					elif "Phase 2 " in line:
-						temp_str = line.split(":")[1].split()[0]
-						avg_dfs_time += float(temp_str)
+					elif "Prefix " in line:
+						avg_cz_time += float(line.split(":")[1].split()[0])
+					elif "Branches " in line:
+						avg_dfs_time += float(line.split(":")[1].split()[0])
+					elif "Average time per gate" in line:
+						avg_time_per_gate += float(line.split(":")[1].split()[0])
 					elif "elapsed" in line:
 						elapsed_time = line.split()[2].split(':')
 						e_t = 0.0
@@ -192,10 +193,10 @@ def main(cir_file, est_time, max_procs):
 	if avg_cpu_percent:
 		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_CZ_paths, 3)) + "% ")
 	if avg_cz_time:
-		print("\t\tAvg simulation runtime breakdown : \n\t\t\tPhase 1 : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
+		print("\t\tAvg simulation runtime breakdown : \n\t\t\tPrefix : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
 			str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
 	if avg_dfs_time:
-		print("\t\t\tPhase 2 : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
+		print("\t\t\tBranches : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
 			str(round(((avg_dfs_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
 	if avg_residents:
 		print("\t\tAvg resident size : ", end="")
@@ -272,15 +273,13 @@ def main(cir_file, est_time, max_procs):
 	print("\t\t\t\t\t\t----------")
 	print("\tTotal \t\t\t\t\t  " + str(round(sum_percen, 3)) + "%\n")
 	
-	sum_time -= (avg_time_per_category['Copying'] + avg_time_per_category['Rescaling passes'])
-	sum_time /= num_CZ_paths + (1 << cz_path_ranges) + (1 << dfs_bits)
-	print("Avg time per gate : " + str(round(sum_time, 6)) + " s")	
+	print("Avg time per gate : " + str(round(avg_time_per_gate/num_CZ_paths, 6)) + " s")	
 	if avg_cz_time:
 		print("Simulation per process runtime breakdown : ")
-		print ("\tPhase 1 : " + str(round(avg_cz_time, 3)) + " s = " +\
+		print ("\tPrefix : " + str(round(avg_cz_time, 3)) + " s = " +\
 		str(round((avg_cz_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_dfs_time:
-		print("\tPhase 2 : " + str(round(avg_dfs_time, 3)) + " s = " +\
+		print("\tBranches : " + str(round(avg_dfs_time, 3)) + " s = " +\
 			str(round((avg_dfs_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_CPU_uti_per_p:
 		print("Avg CPU utilization per process : " + \

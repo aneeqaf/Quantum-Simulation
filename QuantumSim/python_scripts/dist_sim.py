@@ -34,7 +34,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 
 	max_threads = cpu_count()
 	binary = "./bin/rr "
-	command = binary + "-p " + circuit + " -f " + str(ft_threshold)
+	command = binary + "-i " + circuit 
 
 	if depth:
 		command += " -d " + str(depth)

@@ -139,10 +139,7 @@ MovexCZGates(bitset<128>& a_qubits_bitmask,
 {
     const int modified_q = qubits - 1;
     int total_xCZ_count = 0, count_CZ = 0;
-    
-    cout << a_qubits_bitmask.to_string().substr(128-32) << endl;
-    cout << b_qubits_bitmask.to_string().substr(128-32) << endl;
-
+  
     for (idx_size i = qubits; i < gates.size(); ++i) {
          if (gates[i].ids.back() == Gate::Type::Z) {
              idx_size count_xCZ = 0;

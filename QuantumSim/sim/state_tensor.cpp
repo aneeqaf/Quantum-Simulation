@@ -134,13 +134,14 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2])
 {
-    Time time;
-    time.StartTime();
     
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
     total_circuit_qubits = num_q_a + num_q_b;
     
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
+        Time time;
+        time.StartTime();
+        
         bitset<128> CZ_bitmasks_a[num_q_a];
         bitset<128> T_bitmasks_a[2] = {0};
         
@@ -151,13 +152,15 @@ ApplyBlockOfDiagGates(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
         
-        if (applyCZ_a || T_bitmasks_a[0] != 0)
-            state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a);
-        
         time_by_category.CZ_T += time.GetElapsedTime();
         
+        if (applyCZ_a || T_bitmasks_a[0] != 0)
+            state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
+        Time time;
+        time.StartTime();
+        
         bitset<128> CZ_bitmasks_b[num_q_b];
         bitset<128> T_bitmasks_b[2] = {0};
         
@@ -168,10 +171,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
         
+        time_by_category.CZ_T += time.GetElapsedTime();
+
         if (applyCZ_b || T_bitmasks_b[0] != 0)
             state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
-        
-        time_by_category.CZ_T += time.GetElapsedTime();
         
     }
     

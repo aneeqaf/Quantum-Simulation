@@ -21,7 +21,8 @@
 
 using namespace std;
 
-string ReadMultipleArgs(char* optarg) {
+string ReadMultipleArgs(char* optarg)
+{
     string opt = "";
     int i = 0;
     for (; optarg[i] != '-' && optarg[i] != '_'; ++i) {
@@ -32,6 +33,33 @@ string ReadMultipleArgs(char* optarg) {
     }
     return opt;
 }
+
+bool CheckIfGoogleFile(string filename)
+{
+    auto does_file_exist = [](const string& fileName)
+    {
+        ifstream infile(fileName.c_str());
+        return (bool)infile.good();
+    };
+    
+    if (does_file_exist("input/random_circuits_google/" + filename))
+        return true;
+    return false;
+}
+
+bool CheckIfRollRightFile(string filename)
+{
+    auto does_file_exist = [](const string& fileName)
+    {
+        ifstream infile(fileName.c_str());
+        return (bool)infile.good();
+    };
+    
+    if (does_file_exist("input/random_circuits_rollright/" + filename))
+        return true;
+    return false;
+}
+
 
 int main(int argc, char *argv[])
 {    
@@ -52,11 +80,10 @@ int main(int argc, char *argv[])
     static struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "idx",    required_argument,       nullptr, 'x' },
-        { "FTthreshold",    required_argument,       nullptr, 'f' },
+        { "low_value_q",    required_argument,       nullptr, 'l' },
         { "num_threads",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
         { "google_spec",    required_argument,       nullptr, 'g' },
-        { "google_input",    required_argument,       nullptr, 'p' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
         { "vcut",    required_argument,       nullptr, 'a' },
@@ -67,13 +94,13 @@ int main(int argc, char *argv[])
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false,
+    bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 15, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0;
     idx_size cz_path = 0;
-    Config::SimType sim_type = Config::FullState;
+    int sim_type = -1;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
     
@@ -81,7 +108,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "i:o:g:t:d:s:a:v:b:x:f:c:p:h", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:o:g:t:d:s:a:v:b:x:f:c:h", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -154,19 +181,8 @@ int main(int argc, char *argv[])
                 }
                 break;
             }
-            case 'p': {
-                valid = true;
-                googleInput = true;
-                if (argc < 2) {
-                    cerr << "Please enter filename\n";
-                    exit(1);
-                }
-                input_filename = string(optarg);
-                break;
-            }
             case 'i': {
                 valid = true;
-                inputfile = true;
                 if (argc < 2) {
                     cerr << "Please enter filename\n";
                     exit(1);
@@ -176,7 +192,7 @@ int main(int argc, char *argv[])
             }
             case 'o': {
                 to_write = true;
-                if (create == false && inputfile == false && googleInput == false) {
+                if (!valid) {
                     cerr << "Please specify what circuit to create first\n";
                     exit(1);
                 }
@@ -239,10 +255,10 @@ int main(int argc, char *argv[])
             case 'h':{
                 cout
                 << "\n--idx, -x       \t: int<seed>,int<num_indices> or int<seed>,int<num_indices>+\n"
-                << "--FTthreshold, -f \t: int<base case threshold for XYFastTransform>\n"
+                << "--low_value_qubits, -l \t: int<base case threshold for XYFastTransform>\n"
                 << "--num_threads, -t \t: int<max_num_threads>\n"
                 << "--depth, -d     \t: int<depth of circuit to be simulated>\n"
-                << "--google_input, -p \t: string<circuit file in Google format>\n"
+                << "--inputfile, -i \t: string<circuit file>\n"
                 << "--outfile, -o   \t: string<filename to print output to>\n"
                 << "--sim_type, -s  \t: int<type of sim> (Please refer to the manual)\n"
                 << "--vcut, -a      \t: int<cut_size>\n"
@@ -266,12 +282,22 @@ int main(int argc, char *argv[])
         exit(1);
     }
     
+    if (input_filename != "") {
+        googleInput = CheckIfGoogleFile(input_filename);
+        if (!googleInput)
+            rollrightInput = CheckIfRollRightFile(input_filename);
+        if (!googleInput && !rollrightInput) {
+            cerr << "Input file not found\n";
+            exit(1);
+        }
+    }
+    
     Circuit cir;
-    if (inputfile || googleInput) {
+    if (rollrightInput || googleInput) {
         cmplx* amp_v = nullptr;
         idx_size size = 0;
         //write a function for printing google files.
-        if (inputfile) {
+        if (rollrightInput) {
             cir.ReadCustomInputFiles("input/random_circuits_rollright/" + input_filename, amp_v, size);
             delete [] amp_v;
             amp_v = nullptr;
@@ -284,16 +310,21 @@ int main(int argc, char *argv[])
             cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
             
             if(to_write && num_qubits[0] <= 20) {
-                cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file + to_string(i) + ".txt",
-                                              cir.GetNumQubits());
+                cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file +
+                                              to_string(i) + ".txt", cir.GetNumQubits());
                 cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro");
             }
         }
     }
     
+    if (sim_type == -1) {
+        if (cir.GetNumQubits() >= 32) sim_type = 5;
+        else sim_type = 0;
+    }
+    
     Config config(1ull << cir.GetNumQubits(), input_filename ,"output/probabilities/" + out_file,
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc/g_" + out_file,
-                  cz_path, czp_app_len, cz_len, dfs_length, ascii, print_amp, print_idx, sim_type, verbose, vcut, hcut, depth,
+                  cz_path, czp_app_len, cz_len, dfs_length, ascii, print_amp, print_idx, (Config::SimType) sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads);
     
     if (print_amp) {
@@ -315,16 +346,18 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011 || sim_type == Config::Approx_i11i
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Horizontal, hcut, vcut, sim_type);
+                                      TensorProductStateVector::Cuts::Horizontal, hcut, vcut,
+                                      (Config::SimType)sim_type);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Vertical, hcut, vcut, sim_type);
+                                      TensorProductStateVector::Cuts::Vertical, hcut, vcut,
+                                      (Config::SimType)sim_type);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
-        SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), sim_type, hcut, vcut);
+        SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type, hcut, vcut);
         sim.Simulate(amp, cir);
     }
     else {
