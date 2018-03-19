@@ -42,7 +42,12 @@ def main(cir_file, est_time, max_procs):
 				# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
 				cz_path = cz_path_t.split("+")
 				if len(cz_path) >= 1:
-					cz_path_len = int(re.sub('[^0-9]', '', cz_path[0]))
+					cz_path_len = int(re.sub('[^0-9]', '', cz_path[0])) 
+				if len(cz_path) > 1:
+					if "r" in cz_path[1]:
+						cz_path_ranges = int(re.sub('[^0-9]', '', cz_path[1]))
+				if len(cz_path) > 2: 
+					dfs_bits = int(re.sub('[^0-9]', '', cz_path[2]))
 				print_line = False
 
 				if len(cz_path) == 3 :
@@ -95,77 +100,77 @@ def main(cir_file, est_time, max_procs):
 	avg_minor_pagefaults = 0.0
 
 	for script_log in scripts:
-		num_batches += 1
-		with open(os.path.join(log_dir, script_log), "r") as sl:
-			for line in sl:
-				if "amp[3]" in line:
-					amp['3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-				elif "amp[1/4]" in line:
-					amp['1/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-				elif "amp[1/2]" in line:
-					amp['1/2'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-				elif "amp[3/4]" in line:
-					amp['3/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-				elif "amp[-3]" in line:
-					amp['-3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-				elif "Runtime" in line:
-					time_r = re.findall("\d+\.\d+", line)
-					if len(time_r):
-						avg_time_per_process += float(time_r[0])
-					else:
-						time_r = re.findall("\d+", line)
-						avg_time_per_process += float(time_r[0])
-				elif "H (" in line:
-					avg_time_per_category['H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "CZ & T" in line:
-					avg_time_per_category['CZ & T'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "xCZ (" in line:
-					avg_time_per_category['xCZ'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "Single X" in line:
-					avg_time_per_category['Single X'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					avg_time_per_category['Single Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "Merged X & Y" in line:
-					avg_time_per_category['Merged X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "Rescaling passes" in line:
-					avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "Copying" in line:
-					avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-				elif "Phase 1 " in line:
-					temp_str = line.split(":")[1].split()[0]
-					avg_cz_time += float(temp_str)
-				elif "Phase 2 " in line:
-					temp_str = line.split(":")[1].split()[0]
-					avg_dfs_time += float(temp_str)
-				elif "CPU utilization" in line:
-					temp_str = line.split(":")[1].split()[0]
-					avg_CPU_uti_per_p += float(temp_str)
-				elif "elapsed" in line:
-					elapsed_time = line.split()[2].split(':')
-					e_t = 0.0
-					if len(elapsed_time) == 2:
-						e_t = float(elapsed_time[0]) * 60 \
-						+ float(re.sub('[a-zA-Z_]', '', elapsed_time[1]))
-					elif len(elapsed_time) == 3:
-						e_t = (float(elapsed_time[0]) * 60 * 60) + (float(elapsed_time[1]) * 60) \
-						+ float(re.sub('[a-zA-Z_]', '', elapsed_time[1]))
-					avg_elapsed_time += e_t
-					if max_elapsed_time < e_t:
-						max_elapsed_time = e_t
-
-					user_time = line.split()[0]
-					avg_user_time += float(re.sub('[a-zA-Z_]', '', user_time))
-					avg_cpu_percent += float(line.split()[3].split('%')[0])
-					avg_residents += float(re.sub('[^0-9]', '', line.split()[-1])) * 1000
-				elif "pagefaults" in line:
-					pf_str = line.split()[1].split('+')
-					avg_major_pagefaults += float(re.sub('[^0-9]', '', line.split()[1].split('+')[0]))
-					avg_minor_pagefaults += float(re.sub('[^0-9]', '', line.split()[1].split('+')[1]))
-				elif "real" in line:
-					avg_user_time += float(line.split()[2])
-					e_t = float(line.split()[0])
-					avg_elapsed_time += e_t
-					if max_elapsed_time < e_t:
-						max_elapsed_time = e_t
+		if script_log.endswith(".txt"):
+			num_batches += 1
+			max_time = 0
+			with open(os.path.join(log_dir, script_log), "r") as sl:
+				for line in sl:
+					if "amp[3]" in line:
+						amp['3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
+					elif "amp[1/4]" in line:
+						amp['1/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
+					elif "amp[1/2]" in line:
+						amp['1/2'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
+					elif "amp[3/4]" in line:
+						amp['3/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
+					elif "amp[-3]" in line:
+						amp['-3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
+					elif "Runtime" in line:
+						time_r = line.split()[1]
+						time_r = time_r.replace("(", "")# re.findall("\d+\.\d+", line)
+						avg_time_per_process += float(time_r)
+						# else:
+						# 	time_r = re.findall("\d+", line)
+						# 	avg_time_per_process += float(time_r)
+					elif "H (" in line:
+						avg_time_per_category['H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "CZ & T" in line:
+						avg_time_per_category['CZ & T'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "xCZ (" in line:
+						avg_time_per_category['xCZ'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Single X" in line:
+						avg_time_per_category['Single X'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+						avg_time_per_category['Single Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Merged X & Y" in line:
+						avg_time_per_category['Merged X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Rescaling passes" in line:
+						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Copying" in line:
+						avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Phase 1 " in line:
+						temp_str = line.split(":")[1].split()[0]
+						avg_cz_time += float(temp_str)
+					elif "Phase 2 " in line:
+						temp_str = line.split(":")[1].split()[0]
+						avg_dfs_time += float(temp_str)
+					elif "elapsed" in line:
+						elapsed_time = line.split()[2].split(':')
+						e_t = 0.0
+						if len(elapsed_time) == 2:
+							e_t = float(elapsed_time[0]) * 60 \
+							+ float(re.sub('[a-zA-Z_]', '', elapsed_time[1]))
+						elif len(elapsed_time) == 3:
+							e_t = (float(elapsed_time[0]) * 60 * 60) + (float(elapsed_time[1]) * 60) \
+							+ float(re.sub('[a-zA-Z_]', '', elapsed_time[1]))
+						avg_elapsed_time += e_t
+						max_time += e_t
+						
+						user_time = line.split()[0]
+						avg_user_time += float(re.sub('[a-zA-Z_]', '', user_time))
+						avg_cpu_percent += float(line.split()[3].split('%')[0])
+						avg_residents += float(re.sub('[^0-9]', '', line.split()[-1])) * 1000
+					elif "pagefaults" in line:
+						pf_str = line.split()[1].split('+')
+						avg_major_pagefaults += float(re.sub('[^0-9]', '', line.split()[1].split('+')[0]))
+						avg_minor_pagefaults += float(re.sub('[^0-9]', '', line.split()[1].split('+')[1]))
+					elif "real" in line:
+						avg_user_time += float(line.split()[2])
+						e_t = float(line.split()[0])
+						avg_elapsed_time += e_t
+						max_time += e_t
+						
+					if max_elapsed_time < max_time:
+							max_elapsed_time = max_time
 					
 	print("\nDistributed simulation " , end="")
 	if max_procs and max_procs < (1 << cz_path_len):
@@ -185,7 +190,7 @@ def main(cir_file, est_time, max_procs):
 		+ " s \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
 		str(round(max_elapsed_time, 3))+ " s (max)")
 	if avg_cpu_percent:
-		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_batches, 3)) + "% ")
+		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_CZ_paths, 3)) + "% ")
 	if avg_cz_time:
 		print("\t\tAvg simulation runtime breakdown : \n\t\t\tPhase 1 : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
 			str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
@@ -219,46 +224,46 @@ def main(cir_file, est_time, max_procs):
 	for key, val in avg_time_per_category.items():
 		avg_time_per_category[key] = val/num_CZ_paths
 
-	print("Avg runtime (" + str(round(avg_time_per_process, 6)) + " s total) per process by category ")
+	print("Avg runtime (" + str(round(avg_time_per_process, 3)) + " s total) per process by category ")
 	if avg_time_per_category['H']:
 		print("\tH ("+ str(categories['H']) + ")\t\t\t: " \
-			+ str(round(avg_time_per_category['H'], 6)) + " s  \t= " +\
+			+ str(round(avg_time_per_category['H'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['H'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['CZ & T']:
 		print("\tCZ & T (" + str(categories['CZ & T']) + ")\t\t: " \
-			+ str(round(avg_time_per_category['CZ & T'], 6)) + " s  \t= " +\
+			+ str(round(avg_time_per_category['CZ & T'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['CZ & T'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['xCZ']:
 		print("\txCZ (" + str(categories['xCZ']) + ") \t\t: "\
-		 + str(round(avg_time_per_category['xCZ'], 6)) + " s  \t= " +\
+		 + str(round(avg_time_per_category['xCZ'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['xCZ'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Single X']:
 		print("\tSingle X (" + str(categories['Single X']) + ") & Y (" \
 			+ str(categories['Single Y']) + ")\t: " \
 			+ str(round((avg_time_per_category['Single X'] + \
-			avg_time_per_category['Single Y']), 6)) + " s  \t= " +\
+			avg_time_per_category['Single Y']), 3)) + " s  \t= " +\
 		str(round((((avg_time_per_category['Single X'] + \
 			avg_time_per_category['Single Y']))/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Merged X & Y']:
 		print("\tMerged X & Y (" + str(categories['Merged X & Y']) + ")\t: "\
-		 + str(round(avg_time_per_category['Merged X & Y'], 6)) + " s  \t= " +\
+		 + str(round(avg_time_per_category['Merged X & Y'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Merged X & Y'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Rescaling passes']:
 		print("\tRescaling passes (" + str(categories['Rescaling passes']) + ")\t: "\
-		 + str(round(avg_time_per_category['Rescaling passes'], 6)) + " s  \t= " +\
+		 + str(round(avg_time_per_category['Rescaling passes'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Rescaling passes'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Copying']:
 		print("\tCopying (" + str(categories['Copying']) + ")\t\t: "\
-		 + str(round(avg_time_per_category['Copying'], 6)) + " s  \t= " +\
+		 + str(round(avg_time_per_category['Copying'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Copying'])/avg_time_per_process)*100, 3)) + "%")
 
-	sum_time = sum(avg_time_per_category.values())/num_CZ_paths
+	sum_time = sum(avg_time_per_category.values())
 
 	sum_percen = 0
 	for cat, time in avg_time_per_category.items():
@@ -267,21 +272,23 @@ def main(cir_file, est_time, max_procs):
 	print("\t\t\t\t\t\t----------")
 	print("\tTotal \t\t\t\t\t  " + str(round(sum_percen, 3)) + "%\n")
 	
-	print("Avg time per gate per process : " + str(round(sum_time, 6)) + " s")	
+	sum_time -= (avg_time_per_category['Copying'] + avg_time_per_category['Rescaling passes'])
+	sum_time /= num_CZ_paths + (1 << cz_path_ranges) + (1 << dfs_bits)
+	print("Avg time per gate : " + str(round(sum_time, 6)) + " s")	
 	if avg_cz_time:
 		print("Simulation per process runtime breakdown : ")
-		print ("\tPhase 1 : " + str(round(avg_cz_time, 6)) + " s = " +\
+		print ("\tPhase 1 : " + str(round(avg_cz_time, 3)) + " s = " +\
 		str(round((avg_cz_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_dfs_time:
-		print("\tPhase 2 : " + str(round(avg_dfs_time, 6)) + " s = " +\
+		print("\tPhase 2 : " + str(round(avg_dfs_time, 3)) + " s = " +\
 			str(round((avg_dfs_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_CPU_uti_per_p:
 		print("Avg CPU utilization per process : " + \
-			str(round(avg_CPU_uti_per_p/num_CZ_paths, 6)) + " % ")
+			str(round(avg_CPU_uti_per_p/num_CZ_paths, 3)) + " % ")
 
 	if max_procs != 0:
 		print("\033[1m\nThe estimated time for the complete run is " \
-			+ str(round((avg_elapsed_time/max_procs) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
+			+ str(round((avg_elapsed_time/(max_procs)) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
 
 	print("\n¯\_(ツ)_/¯ \n")
 

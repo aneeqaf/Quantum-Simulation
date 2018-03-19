@@ -47,6 +47,7 @@ public:
     static int num_threads;
     static Config::SimMode sim_mode;
     vector<cmplx> amps_of_interest;
+    static char partition_to_sim;
     
     virtual int ApplyBlockOfDiagGates(string& cz_bits,
                                       idx_size prefix_size,
@@ -105,7 +106,7 @@ public:
     virtual void PrintProbabilities(const string& out_file,
                                     const int cycle_num)  = 0;
         
-    GenericQuantumState(): amps_of_interest({}) {}
+    GenericQuantumState(): amps_of_interest({}){}
     GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };

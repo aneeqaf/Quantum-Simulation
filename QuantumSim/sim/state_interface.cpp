@@ -13,6 +13,7 @@ Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
 Config::SimMode GenericQuantumState::sim_mode = Config::SimMode::Phase1;
+char GenericQuantumState::partition_to_sim = 'x';
 
 #ifdef Parallel
 int GenericQuantumState::num_threads = omp_get_num_procs();
@@ -21,7 +22,7 @@ int GenericQuantumState::num_threads = 8;
 #endif
 
 GenericQuantumState::
-GenericQuantumState(int n_threads): amps_of_interest({}) {
+GenericQuantumState(int n_threads): amps_of_interest({}){
     num_threads = n_threads;
 }
 
@@ -195,7 +196,7 @@ HorizontalCut(bitset<128>& a_qubits_bitmask,
 //    }
     const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
     modified_q = total_qubits - 1;
-    num_qubits_a = cut ? cut : ceil(x_axis_sz/2)  * y_axis_sz;
+    num_qubits_a = cut ? cut : (ceil(x_axis_sz/2.0)  * y_axis_sz);
     
     for (int i = 0; i < num_qubits_a; ++i)
         a_qubits_bitmask [modified_q - i] = 1;
@@ -215,7 +216,7 @@ VerticalCut(bitset<128>& a_qubits_bitmask,
             const int cut)
 {
     const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
-    modified_q = total_qubits - 1, v_cut = !cut ? ceil(y_axis_sz/2) : cut;
+    modified_q = total_qubits - 1, v_cut = !cut ? ceil(y_axis_sz/2.0) : cut;
     
     for (int i = 0; i < x_axis_sz; ++i) {
         for (int j = 0; j < v_cut; ++j) {

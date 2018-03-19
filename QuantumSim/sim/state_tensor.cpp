@@ -96,12 +96,10 @@ ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
                                const int qubit_a,
                                const int qubit_b)
 {
-    state_a -> ApplyCZDecompositions(qubit_a, CZ_D_A);
-//    cout << "state A:\n";
-//    state_a -> PrintStateVector();
-    state_b -> ApplyCZDecompositions(qubit_b, CZ_D_B);
-//    cout << "state B:\n";
-//    state_b -> PrintStateVector();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> ApplyCZDecompositions(qubit_a, CZ_D_A);
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> ApplyCZDecompositions(qubit_b, CZ_D_B);
 }
 
 void TensorProductStateVector::
@@ -110,26 +108,24 @@ ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
                                bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                                bitset<128>* __restrict xCZ_bitmasks_path1_D4D3)
 {
-    idx_size state_A_gate_bm[3] = {0};
-    idx_size state_B_gate_bm[3] = {0};
-    for (int i = 0; i < num_q_a; ++i) {
-        state_A_gate_bm[0] |= xCZ_bitmasks_path0_D1D2[i].count() % 2 ? (1ull << (num_q_a - 1 - i)) : 0;
-        state_A_gate_bm[1] |= xCZ_bitmasks_path0_D2D1[i].count() ? (1ull << (num_q_a - 1 - i)) : 0;
-        state_A_gate_bm[2] |= xCZ_bitmasks_path1_D4D3[i].count() ? (1ull << (num_q_a - 1 - i)) : 0;
+    if (partition_to_sim == 'a' || partition_to_sim == 'x') {
+        idx_size state_A_gate_bm[3] = {0};
+        for (int i = 0; i < num_q_a; ++i) {
+            state_A_gate_bm[0] |= xCZ_bitmasks_path0_D1D2[i].count() % 2 ? (1ull << (num_q_a - 1 - i)) : 0;
+            state_A_gate_bm[1] |= xCZ_bitmasks_path0_D2D1[i].count() ? (1ull << (num_q_a - 1 - i)) : 0;
+            state_A_gate_bm[2] |= xCZ_bitmasks_path1_D4D3[i].count() ? (1ull << (num_q_a - 1 - i)) : 0;
+        }
+        state_a -> ApplyCZDecompositionDist(state_A_gate_bm);
     }
-    
-    for (int i = 0; i < num_q_a; ++i) {
-        state_B_gate_bm[1] |= xCZ_bitmasks_path0_D1D2[i].to_ulong();
-        state_B_gate_bm[0] ^= xCZ_bitmasks_path0_D2D1[i].to_ulong();
-        state_B_gate_bm[2] |= xCZ_bitmasks_path1_D3D4[i].to_ulong();
+   if (partition_to_sim == 'b' || partition_to_sim == 'x') {
+        idx_size state_B_gate_bm[3] = {0};
+        for (int i = 0; i < num_q_a; ++i) {
+            state_B_gate_bm[1] |= xCZ_bitmasks_path0_D1D2[i].to_ulong();
+            state_B_gate_bm[0] ^= xCZ_bitmasks_path0_D2D1[i].to_ulong();
+            state_B_gate_bm[2] |= xCZ_bitmasks_path1_D3D4[i].to_ulong();
+        }
+        state_b -> ApplyCZDecompositionDist(state_B_gate_bm);
     }
-    
-//     cout << "state A before : " << state_A_gate_bm[1] << " : " << (*this)[1073741821] << endl;
-    state_a -> ApplyCZDecompositionDist(state_A_gate_bm);
-//        cout << "state A after : " << state_A_gate_bm[1] << " : " << (*this)[1073741821] << endl;
-//    cout << "state B before : " << state_B_gate_bm[0] << " : " << (*this)[1073741821] << endl;
-    state_b -> ApplyCZDecompositionDist(state_B_gate_bm);
-//        cout << "state B after : " << state_B_gate_bm[0] << " : " << (*this)[1073741821] << endl;
 }
 
 int TensorProductStateVector::
@@ -143,25 +139,43 @@ ApplyBlockOfDiagGates(string& cz_bits,
     
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
     total_circuit_qubits = num_q_a + num_q_b;
-    bitset<128> CZ_bitmasks_a[num_q_a];
-    bitset<128> CZ_bitmasks_b[num_q_b];
-    bitset<128> T_bitmasks_a[2] = {0};
-    bitset<128> T_bitmasks_b[2] = {0};
     
-    for (int i = 0; i < num_q_a; ++i)
-        CZ_bitmasks_a[i] = 0;
+    if (partition_to_sim == 'a' || partition_to_sim == 'x') {
+        bitset<128> CZ_bitmasks_a[num_q_a];
+        bitset<128> T_bitmasks_a[2] = {0};
         
-    for (int i = 0; i < num_q_b; ++i)
-        CZ_bitmasks_b[i] = 0;
-    
-    bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, a_qubits_bitmask, CZ_bitmasks, total_circuit_qubits);
-    bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, b_qubits_bitmask, CZ_bitmasks, total_circuit_qubits);
-    for (int i = 0; i < 2; ++i) {
-        T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
-        T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
+        for (int i = 0; i < num_q_a; ++i)
+            CZ_bitmasks_a[i] = 0;
+        
+        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, a_qubits_bitmask, CZ_bitmasks, total_circuit_qubits);
+        for (int i = 0; i < 2; ++i)
+            T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
+        
+        if (applyCZ_a || T_bitmasks_a[0] != 0)
+            state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a);
+        
+        time_by_category.CZ_T += time.GetElapsedTime();
+        
     }
-
-    time_by_category.CZ_T += time.GetElapsedTime();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x') {
+        bitset<128> CZ_bitmasks_b[num_q_b];
+        bitset<128> T_bitmasks_b[2] = {0};
+        
+        for (int i = 0; i < num_q_b; ++i)
+            CZ_bitmasks_b[i] = 0;
+        
+        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, b_qubits_bitmask, CZ_bitmasks, total_circuit_qubits);
+        for (int i = 0; i < 2; ++i)
+            T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
+        
+        if (applyCZ_b || T_bitmasks_b[0] != 0)
+            state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
+        
+        time_by_category.CZ_T += time.GetElapsedTime();
+        
+    }
+    
+    // TODO : Fix the book keeping for approximation
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
@@ -186,11 +200,6 @@ ApplyBlockOfDiagGates(string& cz_bits,
         }
     }
     
-    if (applyCZ_a || T_bitmasks_a[0] != 0)
-        state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a);
-    if (applyCZ_b || T_bitmasks_b[0] != 0)
-        state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
-
     return -1;
 }
 
@@ -281,8 +290,10 @@ ApplyNonCGate(const int gate_qubit,
 void TensorProductStateVector::
 ApplyHGateOnAllAmps()
 {
-    state_a -> ApplyHGateOnAllAmps();
-    state_b -> ApplyHGateOnAllAmps();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> ApplyHGateOnAllAmps();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> ApplyHGateOnAllAmps();
 }
 
 //TODO
@@ -327,13 +338,17 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 {
     bitset<128> temp = a_qubits_bitmask | b_qubits_bitmask;
     int total_circuit_qubits =  (int)temp.count();
-    bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, a_qubits_bitmask, total_circuit_qubits, true);
-    bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, a_qubits_bitmask, total_circuit_qubits, true);
-    bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, b_qubits_bitmask, total_circuit_qubits, true);
-    bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, b_qubits_bitmask, total_circuit_qubits, true);
     
-    state_a -> ApplyXYRecursiveTransform(stateA_Xbitmask, stateA_Ybitmask, th);
-    state_b -> ApplyXYRecursiveTransform(stateB_Xbitmask, stateB_Ybitmask, th);
+    if (partition_to_sim == 'a' || partition_to_sim == 'x') {
+        bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, a_qubits_bitmask, total_circuit_qubits, true);
+        bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, a_qubits_bitmask, total_circuit_qubits, true);
+        state_a -> ApplyXYRecursiveTransform(stateA_Xbitmask, stateA_Ybitmask, th);
+    }
+    if (partition_to_sim == 'b' || partition_to_sim == 'x') {
+        bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, b_qubits_bitmask, total_circuit_qubits, true);
+        bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, b_qubits_bitmask, total_circuit_qubits, true);
+        state_b -> ApplyXYRecursiveTransform(stateB_Xbitmask, stateB_Ybitmask, th);
+    }
 }
 
 cmplx TensorProductStateVector::
@@ -496,43 +511,58 @@ CalculateCrossEntropy(int range) const
 void TensorProductStateVector::
 ResetAmpVector()
 {
-    state_a -> ResetAmpVector();
-    state_b -> ResetAmpVector();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> ResetAmpVector();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> ResetAmpVector();
 }
 
 void TensorProductStateVector::
 Normalize()
 {
-    state_a -> Normalize();
-    state_b -> Normalize();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> Normalize();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> Normalize();
 }
 
 void TensorProductStateVector::
 Rescale()
 {
-    state_a -> Rescale();
-    state_b -> Rescale();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> Rescale();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> Rescale();
 }
 
 void TensorProductStateVector::
 RescaleAndApplyGlobalICounter()
 {
-    state_a -> RescaleAndApplyGlobalICounter();
-    state_b -> RescaleAndApplyGlobalICounter();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> RescaleAndApplyGlobalICounter();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> RescaleAndApplyGlobalICounter();
 }
 
 void TensorProductStateVector::
 ApplyGlobalICounter()
 {
-    state_a -> ApplyGlobalICounter();
-    state_b -> ApplyGlobalICounter();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+         state_a -> ApplyGlobalICounter();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> ApplyGlobalICounter();
 }
 
 idx_size TensorProductStateVector::
 GetGlobalFactorPower() const
 {
-    return state_a -> GetGlobalFactorPower() > state_b -> GetGlobalFactorPower() ?
-    state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
+    if (partition_to_sim == 'a')
+        return state_a -> GetGlobalFactorPower();
+    else if (partition_to_sim == 'b')
+        return state_b -> GetGlobalFactorPower();
+    else
+        return state_a -> GetGlobalFactorPower() > state_b -> GetGlobalFactorPower() ?
+        state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
 }
 
 idx_size TensorProductStateVector::

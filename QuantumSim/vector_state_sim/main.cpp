@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     bool inputfile = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
-    int numQ = 0, numG = 0, threshold = -1, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
+    int numQ = 0, numG = 0, threshold = 15, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0;
     idx_size cz_path = 0;
     Config::SimType sim_type = Config::FullState;
@@ -98,15 +98,29 @@ int main(int argc, char *argv[])
                 string cz_path_temp = string(optarg);
                 
                 if (cz_path_temp.find(",") != string::npos) {
+                    idx_size pos2 = 0;
                     cz_len = stoi(cz_path_temp.substr(0, cz_path_temp.find(",")));
+                    auto count_commas =  count(cz_path_temp.begin(), cz_path_temp.end(), ',');
+                    
+                    if (count_commas < 1) {
+                        cerr << "Invalid CZ path";
+                        exit(1);
+                    }
                     
                     if (cz_len) {
                         idx_size pos1 = cz_path_temp.find(",");
-                        idx_size pos2 = cz_path_temp.find(",", pos1 + 1);
-                        idx_size pos3 = cz_path_temp.find(",", pos2 + 1);
+                        
+                        if (count_commas > 1)
+                            pos2 = cz_path_temp.find(",", pos1 + 1);
+                        else pos2 = pos1 + 1;
                         cz_path = stoul(cz_path_temp.substr(pos1 + 1, pos2 - pos1));
-                        czp_app_len = stoi(cz_path_temp.substr(pos2 + 1, pos3 - pos2));
-                        auto count_commas = count(cz_path_temp.begin(), cz_path_temp.end(), ',');
+
+                        if (count_commas == 2)
+                            czp_app_len = stoi(cz_path_temp.substr(pos2 + 1));
+                        else if (count_commas > 2)
+                            czp_app_len = stoi(cz_path_temp.substr(pos2 + 1,
+                                                                   cz_path_temp.find_last_of(",") - pos2));
+                        
                         if (count_commas == 3)
                             dfs_length = stoi(cz_path_temp.substr(cz_path_temp.find_last_of(",") + 1));
                     }

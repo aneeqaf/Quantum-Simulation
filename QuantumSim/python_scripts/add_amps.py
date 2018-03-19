@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Script for distributed execution - demo"""
+"""Script for adding amplitudes from the output files of the simulator"""
 
 import os
 import click

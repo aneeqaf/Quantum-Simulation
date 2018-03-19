@@ -3,10 +3,12 @@ from itertools import product
 import numpy as np
 import tempfile
 import time
+import datetime
 import re
 import shutil
 import psutil
 import random
+from math import ceil
 
 def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 	print_opt = ""
@@ -95,6 +97,8 @@ def CheckxCZGates(report_file):
 
 def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 
+	num_cz = 1 if not num_cz else num_cz
+
 	dirpath = tempfile.mkdtemp()
 
 	# Horizontal trial run
@@ -147,16 +151,38 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 
 	cut = ""
 	command = ""
+	num_xCZ = 0
 	
-	if num_xCZH == num_xCZV:
+	if float(H_time) != float(V_time):
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
 		command = commandH if (float(H_time) <= float(V_time)) else commandV
+		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV
 	else:
 		cut = "horizontal-cut" if (num_xCZV >= num_xCZH) else "vertical-cut"
 		command = commandH if (num_xCZV >= num_xCZH) else commandV
-		
+		num_xCZ = num_xCZH if (num_xCZV >= num_xCZH) else num_xCZV
+
 	dirpath = tempfile.mkdtemp()
 	command_to_pass = command
+
+	if proc_prefix_bits + ranges_bits + branch_bits < num_xCZ:
+		proc_prefix_bits = 0
+		ranges_bits = 0
+		branch_bits = 0
+
+	if not proc_prefix_bits and not ranges_bits and not branch_bits:
+		branch_bits = ceil(num_xCZ / 3)
+		proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)
+		ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
+	elif not ranges_bits and not branch_bits:
+		num_xCZ -= max(proc_prefix_bits, 0)
+		if num_xCZ:
+			branch_bits = ceil(num_xCZ / 2)
+			ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
+	elif not ranges_bits:
+		ranges_bits = max(num_xCZ - proc_prefix_bits - branch_bits, 0)
+	elif not branch_bits:
+		branch_bits = max(num_xCZ - proc_prefix_bits - ranges_bits, 0)
 
 	# Horizontal trial run
 	print ("\033[1m" + "\nPerforming a complete trial simulation run with a " +  cut + \
@@ -173,9 +199,11 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 	if branch_bits:
 		command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + "," + str(ranges_bits) \
 		+ "," + str(branch_bits) + " > " + str(temp_file) + " 2>&1"
-	else:
+	elif ranges_bits:
 		command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + "," + str(ranges_bits)\
-		 + " > " + str(branch_bits) + " 2>&1"
+		 + " > " + str(temp_file) + " 2>&1"
+	else:
+		command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + " > " + str(temp_file) + " 2>&1"
 
 	print("/usr/bin/time " + command)
 	os.system("/usr/bin/time " + command)
@@ -225,42 +253,58 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 					raise
 	
 	num_procs = len(cz_bits_strings) if truncated == 0 else truncated
-	proc_per_script = int(num_procs/ num_batches);
+	
+	if t_time > 100:
+		proc_per_script = 1
+	else:
+		proc_per_script = int(num_procs/ num_batches);
+
 	proc_c = 0
 	if proc_per_script:
 		for i in range(int(num_batches - 1)):
 			proc_c += 1
 			with open(os.path.join(script_dir, "script_" + str(i) + ".sh"), "w") as script:
-				script.write("#!/bin/bash\nset -e\n")
+				script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
+					+ str(proc_per_script) + "\n\n")
 				start_idx = i * proc_per_script
 				for j in range(start_idx, start_idx + proc_per_script):
+					script.write("START_TIME=$SECONDS\n")
 					if j < (start_idx + proc_per_script - 1):
-						script.write("echo " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
-						script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
 					else:
-						script.write("echo " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-						script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
+						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
+						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
+					script.write("ELAPSED_TIME=$((($PROCS - " + str(j + 1) + ")*($SECONDS - $START_TIME)))\n" + \
+					"echo \"\n" + str(j + 1)  + " out of " + str(proc_per_script) \
+					+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
+						 + str(proc_per_script - j - 1) + " processes to complete\n\"\n\n")
 	else:
 		proc_per_script = 1
 
 	with open(os.path.join(script_dir, "script_" + str(proc_c) + ".sh"), "w") as script:
-			script.write("#!/bin/bash\nset -e\n")
 			start_idx = proc_c * proc_per_script
+			script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
+					+ str(num_procs - start_idx) + "\n\n")
 			proc_c += 1
 			for j in range(start_idx, num_procs):
+				script.write("START_TIME=$SECONDS\n")
 				if j < (num_procs - 1):
-					script.write("echo " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
-					script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+					script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
 				else:
-					script.write("echo " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-					script.write(command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-
+					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
+					script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
+				script.write("ELAPSED_TIME=$((($PROCS - " + str(j + 1) + ")*($SECONDS - $START_TIME)))\n" + \
+						"echo \"\n" + str(j + 1)  + " out of " + str(num_procs - start_idx) \
+						+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
+						 + str(num_procs - start_idx - j - 1) + " processes to complete\n\"\n\n")
 
 	os.system("chmod +x " + script_dir + "/*")
 
 	est_time =  round((float(t_time) * int(num_procs)) / int(num_batches), 3)
-	print ("\033[1m" + "Launching " +  str(num_procs) + " " + cut + " simulations with " +\
-		str(num_batches) + " parallel processes and with upto " + str(num_threads) + \
+	print ("\033[1m" + str(datetime.datetime.now()) + " : Launching " +  str(num_procs) + " " + cut + " simulations with " +\
+		str(num_batches) + " batches and with upto " + str(num_threads) + \
 		" threads each.\nThe distributed run is estimated to take " + str(round(float(est_time) + (0.3 * float(est_time)),3)) + " +- " \
 	 + str(round(0.3 * float(est_time), 3)) + \
 		" s.\nThe peak memory usage is expected to be ", end = "") 
@@ -272,7 +316,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 		print(str(round((mem * num_batches) / pow(2,10), 3)) + " KiB")
 	else:
 		print(str(round((mem * num_batches), 3)) + " B")
-	print("The CZ path length is " + str(num_cz) + "p + " + str(app_cz_len) + "r + " + str(dfs_len) + "d\033[0m")
+	print("The CZ path breakdown is " + str(num_cz) + "p + " + str(app_cz_len) + "r + " + str(dfs_len) + "b\033[0m")
 
 	# Create the log directory if it doesn't already exist
 	log_dir = os.path.join("output", "log")
@@ -303,8 +347,8 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	# Launch the scripts and print the logs generated by the processes in each script into a file 
 	# in the log directory
 	for p in range(num_batches):
-		print("/usr/bin/time ./" + os.path.join(script_dir, "script_" + str(p) + ".sh") +\
+		print("./" + os.path.join(script_dir, "script_" + str(p) + ".sh") +\
 		  " > " + os.path.join(log_dir, "log_script_" + str(p))+ ".txt 2>&1 &")
-		os.system("/usr/bin/time ./" + os.path.join(script_dir, "script_" + str(p) + ".sh") + \
+		os.system("./" + os.path.join(script_dir, "script_" + str(p) + ".sh") + \
 		  " > " + os.path.join(log_dir, "log_script_" + str(p)) + ".txt 2>&1 &")
 

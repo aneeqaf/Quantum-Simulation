@@ -312,7 +312,20 @@ Phase1Simulation(GenericQuantumState& amp,
     
     Time cz_path_time;
     cz_path_time.StartTime();
-    bool terminate = SimulationLoop(amp, circuit, cz_path, config.dfs_length);
+    
+    bool terminate = false;
+    
+//    if (cz_path != "-") {
+//        amp.partition_to_sim = 'a';
+//        string cz_path_copy = cz_path;
+//        terminate = SimulationLoop(amp, circuit, cz_path, config.dfs_length);
+//        amp.partition_to_sim = 'b';
+//        SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length);
+//        amp.partition_to_sim = 'x';
+//    }
+//    else
+    SimulationLoop(amp, circuit, cz_path, config.dfs_length);
+   
     phase1_time += cz_path_time.GetElapsedTime();
     
     if (terminate && config.dfs_length != 0)
@@ -377,8 +390,12 @@ Phase2Simulation(GenericQuantumState& amp,
         amp.time_by_category.copying += copy_time.GetElapsedTime();
         ++amp.count_of_category.copying;
         
+        string cz_path_copy = cz_path;
+        temp_amp.partition_to_sim = 'a';
         SimulationLoop(temp_amp, circuit, cz_path, 0, gate_i);
-                
+        temp_amp.partition_to_sim = 'b';
+        SimulationLoop(temp_amp, circuit, cz_path_copy, 0, gate_i);
+        
         auto& idx = config.indices;
         for(idx_size i = 0; i < idx.size(); ++i)
             amp.amps_of_interest[i] += temp_amp[idx[i]];
@@ -660,48 +677,48 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     else if (config.sim_type == Config::SimType::Approx1CutH) {
         cout << "tensor products / approx single cut\n";
         cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : ignored\n";
     }
     else if (config.sim_type == Config::SimType::Approx1CutV) {
         cout << "tensor products / approx single cut\n";
         cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : ignored\n";
     }
     else if (config.sim_type == Config::SimType::Approx2011) {
         cout << "tensor products / approx2011 \n";
         cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : approx\n";
     }
     else if (config.sim_type == Config::SimType::Approx_i11i) {
         cout << "tensor products / approx-i11i \n";
         cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : approx\n";
     }
     else if (config.sim_type == Config::SimType::ApproxOWT) {
         cout << "sum of tensor products / approx 2 cuts \n";
+        cout << amp.log[log_count++] << "\n";
         cout << amp.log[log_count++];
-        cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : approx\n";
        
     }
     else if (config.sim_type == Config::SimType::Approx2011OWT) {
         cout << "sum of tensor products / approx 2 cuts (2011) \n";
+        cout << amp.log[log_count++] << "\n";
         cout << amp.log[log_count++];
-        cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : approx\n";
         
     }
     else if (config.sim_type == Config::SimType::Approx_i11iOWT) {
         cout << "sum of tensor products / approx 2 cuts (-i11i) \n";
+        cout << amp.log[log_count++] << "\n";
         cout << amp.log[log_count++];
-        cout << amp.log[log_count++];
-        cout << "Recursion end-case(max) : " << config.th << " q\n";
+        cout << "\nRecursion end-case(max) : " << config.th << " q\n";
         cout << "Simulating xCZ gates : approx\n";
         
     }
@@ -741,9 +758,7 @@ void SequentialSimulation::
 PrintSimReport(GenericQuantumState& amp,
                const Circuit& circuit) const
 {
-//    if (amp.GetGlobalFactorPower())
-        amp.RescaleAndApplyGlobalICounter();
-//    cout << "\n";
+    amp.RescaleAndApplyGlobalICounter();
     
     if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT
         || config.sim_type == Config::SimType::Approx_i11iOWT)
@@ -938,7 +953,7 @@ PrintSimReport(GenericQuantumState& amp,
     }
 
     {
-        int factor = 1ull << config.czp_append_len;
+        int factor = (1ull << config.czp_append_len);
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
@@ -997,6 +1012,7 @@ PrintSimReport(GenericQuantumState& amp,
             << (amp.time_by_category.copying/(total_time)) * 100 << "%\n";
         }
         
+        factor += (1ull << config.dfs_length);
         double sum_percen = ((amp.time_by_category.H/total_time) * 100) + ((amp.time_by_category.CZ_T/total_time) * 100)
         + ((amp.time_by_category.decomposed_CZ/total_time) * 100)
         + (((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100)

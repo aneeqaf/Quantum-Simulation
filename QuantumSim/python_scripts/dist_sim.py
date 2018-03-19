@@ -15,28 +15,36 @@ from multiprocessing import cpu_count
 import numpy as np
 
 @click.command()
-@click.argument("command", nargs=1, required=True)
-@click.argument("proc_prefix_bits", nargs=1)
+@click.argument("circuit", nargs=1, required=True)
+@click.option("--depth", nargs=1, required=False, default=0)
+@click.option("--proc_prefix_bits", required=False, nargs=1, default=0)
 @click.option("--ranges_bits", nargs=1, required=False, default=0)
 @click.option("--branch_bits", nargs=1, required=False, default=0)
-@click.option("--num_batches", nargs=1, required=False, default=1)
-@click.option("--num_threads", nargs=1, required=False, default=8)
+@click.option("--num_batches", nargs=1, required=False, default=0)
+@click.option("--num_threads", nargs=1, required=False, default=4)
+@click.option("--ft_threshold", nargs=1, required=False, default=15)
 @click.option("--max_procs", nargs=1, required=False, default=0)
-@click.option("--idx_seed", nargs=1, required=False, default=-1)
+@click.option("--idx_seed", nargs=1, required=False, default=7)
 @click.option("--idx_file", nargs=1, required=False, default="")
-@click.option("--num_idx", nargs=1, required=False, default=0)
+@click.option("--num_idx", nargs=1, required=False, default=10)
 @click.option("--print_idxs", nargs=1, required=False, default=-1)
 @click.option("--print_all", nargs=1, required=False, default=-1)
-def main(proc_prefix_bits, branch_bits, num_idx, command, idx_seed,\
+def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_threshold, \
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits):
+
+	max_threads = cpu_count()
+	binary = "./bin/rr "
+	command = binary + "-p " + circuit + " -f " + str(ft_threshold)
+
+	if depth:
+		command += " -d " + str(depth)
+
+	if not num_batches:
+		num_batches = int(max_threads/num_threads);
 
 	if num_batches * num_threads > cpu_count():
 		print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.")
 		exit()
-
-	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
-		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
-		max_procs = 0
 
 	# If the entire state vector needs to be printed, specify this command.
 	# The value is the number of qubits in the circuit
@@ -61,9 +69,15 @@ def main(proc_prefix_bits, branch_bits, num_idx, command, idx_seed,\
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits, branch_bits)
 
+	if t_time > 100 and max_procs:
+		max_procs = num_batches
+
+	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
+		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
+		max_procs = 0
+
 	cir_name += str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
-	print(cir_name)
 
 	if os.path.isdir(cir_dir):
 		shutil.rmtree(cir_dir, ignore_errors=True)
@@ -71,67 +85,33 @@ def main(proc_prefix_bits, branch_bits, num_idx, command, idx_seed,\
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
 
 	cz_bits_strings = []
-	for bit_comb in range(0, (1 << int(proc_prefix_bits))):
+	num_bit_strings = (1 << int(proc_prefix_bits)) if not max_procs else max_procs
+	for bit_comb in range(0, num_bit_strings):
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")
-		else:
+		elif ranges_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) + " ")
+		else:
+			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
 
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, print_idxs, num_idx) + " --CZ_path "
-	num_batches = 1 if len(cz_bits_strings) == 1 else num_batches
+
+	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches
 
 	dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, cz_bits_strings, \
 		command, t_time, num_threads, mem, cut, ranges_bits, max_procs)
 
-	# Sleep 5 * time taken in trial run. Check if the logs are changing in size. Once the logs
-	# stop changing, verify they completed without errors, then launch reporting script.
-	proc_per_script = int(len(cz_bits_strings)/num_batches) if len(cz_bits_strings) > 1 else 1
+	# Launch error checking and report gen script in the background
+	num_procs = len(cz_bits_strings) if not max_procs else max_procs 
 	log_dir = os.path.join("output", "log", cir_name)
-	changing = True
-	logs_prev_mem = np.zeros(num_batches)
-	log_files = []
-	for i in range(num_batches):
-		log_files.append(os.path.join(log_dir, "log_script_" + str(i) + ".txt"))
-
-	os.system("chmod +x python_scripts/add_amps.py")
-	while changing:
-		time.sleep(5 * t_time) # Put script to sleep for substantial changes to take place
-		any_log_changed = False
-		for i, lf in enumerate(log_files):
-			if os.stat(lf).st_size > logs_prev_mem[i]:
-				any_log_changed = True
-				logs_prev_mem[i] = os.stat(lf).st_size
-				# os.system("./python_scripts/add_amps.py " + cir_name + " " + num_idx)
-
-		if not any_log_changed:
-			changing = False
-
-	# Check logs for completion
-	print(proc_per_script)
-	if max_procs == 0 : 
-		for i in range(int(num_batches - 1)):
-			with open(log_files[i], "r") as lf:
-				log_content = lf.read()
-				count_runtimes = sum(1 for _ in re.finditer(r'\b%s\b' % re.escape("Runtime"), log_content))
-				if count_runtimes != proc_per_script:
-					print ("The simulations in script_" + str(i) + " did not complete")
-					exit()
-			
-		with open(log_files[num_batches - 1], "r") as lf:
-			log_content = lf.read()
-			proc_per_script = len(cz_bits_strings) - ((num_batches - 1) * proc_per_script)
-			count_runtimes = sum(1 for _ in re.finditer(r'\b%s\b' % re.escape("Runtime"), log_content))
-			if count_runtimes != proc_per_script:
-				print ("The simulations in script_" + str(num_batches - 1) + " did not complete")
-				exit()
-
-	per_proc = (1 << int(proc_prefix_bits)) if max_procs == 0 else max_procs
-	est_time = round((float(t_time) * int(per_proc))/int(num_batches), 3)
-	os.system("chmod +x python_scripts/dist_sim_report_gen.py")
-	os.system("./python_scripts/dist_sim_report_gen.py " + cir_name + " " + str(est_time)\
-	 + " --max_procs " + str(max_procs))
-	os.system("./python_scripts/add_amps.py " + str(cir_name) + " " + str(num_idx))
+	print("./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
+		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
+		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs) + " > " +\
+		str(log_dir) + "/final_report 2>&1 &")
+	os.system("./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
+		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
+		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs))
 
 if __name__ == "__main__":
     main()		

@@ -246,7 +246,7 @@ FormGatesBitmaskXCZ(bool& terminate,
     if (!(tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks)))
         return -1;
     int last_xCZ_idx = 0;
-
+    
     for (idx_size i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             
