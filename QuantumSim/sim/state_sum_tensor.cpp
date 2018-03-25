@@ -18,24 +18,24 @@ SumOfTensorsProductsStateVector(const int qubits,
     
     if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
-                                                              TensorProductStateVector::Cuts::Horizontal,
+                                                              QubitPartition::Cuts::Horizontal,
                                                               hcut,
                                                               vcut,
                                                               sim_type));
     else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
-                                                              TensorProductStateVector::Cuts::Vertical,
+                                                              QubitPartition::Cuts::Vertical,
                                                               hcut,
                                                               vcut,
                                                               sim_type));
     else if (sim_type == Config::SimType::Approx2011OWT || sim_type == Config::SimType::Approx_i11iOWT) {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
-                                                              TensorProductStateVector::Cuts::Horizontal,
+                                                              QubitPartition::Cuts::Horizontal,
                                                               hcut,
                                                               vcut,
                                                               sim_type));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
-                                                              TensorProductStateVector::Cuts::Vertical,
+                                                              QubitPartition::Cuts::Vertical,
                                                               hcut,
                                                               vcut,
                                                               sim_type));
@@ -45,12 +45,12 @@ SumOfTensorsProductsStateVector(const int qubits,
     }
     else {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
-                                                              TensorProductStateVector::Cuts::Horizontal,
+                                                              QubitPartition::Cuts::Horizontal,
                                                               hcut,
                                                               vcut,
                                                               Config::SimType::LosslessH));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
-                                                              TensorProductStateVector::Cuts::Vertical,
+                                                              QubitPartition::Cuts::Vertical,
                                                               hcut,
                                                               vcut,
                                                               Config::SimType::LosslessV));

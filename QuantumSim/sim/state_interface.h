@@ -13,14 +13,16 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+#include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string>
 #include "sys/time.h"
 
 #include "kernels1.h"
 #include "profile.h"
 #include "config.h"
+
+using namespace std;
 
 constexpr int sampling_factor = 1;
 
@@ -38,15 +40,6 @@ typedef struct DataPerCycle {
     addends({}), memory({}){}
 } Data;
 
-#include <algorithm>
-#include <bitset>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
-
-using namespace std;
-
 
 // This class allows one to map global indices in a qubit grid
 // to partition indices and back. It can renumber qubits in blocks
@@ -54,14 +47,19 @@ using namespace std;
 class QubitPartition {
     
 public:
+    enum Cuts : int {Vertical, Horizontal};
+
     // two blocks, as balanced as possible (may use a Z cut)
-    QubitPartition(int rows, int cols)
+    QubitPartition(int rows,
+                   int cols)
     : QubitPartition(rows, cols,
     bitset<128>((1ull << (rows * cols / 2)) - 1)) {
     }
     
     // two blocks, of which one is specified, the other is its complement
-    QubitPartition(int rows, int cols, bitset<128> block0)
+    QubitPartition(int rows,
+                   int cols,
+                   bitset<128> block0)
     : _rows(rows), _cols(cols), _blocks(1, block0) {
         if (rows * cols > 64) {
             cerr << " More than 64 qubits not supported here yet" << endl;
@@ -71,6 +69,10 @@ public:
         _blocks.push_back(mask ^ (mask & block0));
         InitMappings();
     }
+    
+    QubitPartition(const Cuts cut_type,
+                   int total_qubits,
+                   int cut = 0);
     
     QubitPartition(int rows, int cols, const vector<bitset<128>>& blocks);
     
@@ -84,7 +86,8 @@ public:
     
     int globalToBlock(int q) const { return _global_to_block[q]; }
     int globalToLocal(int q) const { return _global_to_local[q]; }
-    int localToGlobal(int block, int q) const {
+    int localToGlobal(int block,
+                      int q) const {
         return _local_to_global[block][q];
     }
     
@@ -188,28 +191,16 @@ public:
 };
 
 int FindDivisor(int num);
-void HorizontalCut(bitset<128>& a_qubits_bitmask,
-                   bitset<128>& b_qubits_bitmask,
-                   int& num_qubits_a,
-                   int& num_qubits_b,
-                   const int total_qubits,
-                   const int cut = 0);
-void VerticalCut(bitset<128>& a_qubits_bitmask,
-                 bitset<128>& b_qubits_bitmask,
-                 int& num_qubits_a,
-                 int& num_qubits_b,
-                 const int total_qubits,
-                 const int cut = 0);
 idx_size Project1QBitmask(const bitset<128> gate_bitmask,
-                          const bitset<128> partition_bitmask,
-                          const int num_qubits,
-                          const bool zero_least_sig,
-                          const bool leading_ones = false);
+                          const QubitPartition& block_bitmasks,
+                          const int block_idx,
+                          const bool is_zero_least_sig = false);
 int ProjectQubit(const int qubit_to_project,
                  const bitset<128> partition_bitmask,
                  const int num_qubits);
 bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
-                      const bitset<128> partition_bitmask,
+                      const QubitPartition& block_bitmasks,
+                      const int block_idx,
                       const bitset<128>* __restrict gate_bitmasks,
                       const int total_circuit_qubits);
 bitset<128> ScatterGlobalIndex(const bitset<128> i,

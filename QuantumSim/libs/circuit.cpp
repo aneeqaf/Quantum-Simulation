@@ -134,8 +134,8 @@ GroupSimilarGates()
 }
 
 int Circuit::
-MovexCZGates(bitset<128>& a_qubits_bitmask,
-             bitset<128>& b_qubits_bitmask)
+MovexCZGates(bitset<128> a_qubits_bitmask,
+             bitset<128> b_qubits_bitmask)
 {
     const int modified_q = qubits - 1;
     int total_xCZ_count = 0, count_CZ = 0;

@@ -14,15 +14,9 @@
 using namespace std;
 
 class TensorProductStateVector : public GenericQuantumState {
-public:
-    enum Cuts : int {Vertical, Horizontal};
-
 private:
-    bitset<128> a_qubits_bitmask;
-    bitset<128> b_qubits_bitmask;
-    int num_q_a;
-    int num_q_b;
-    Cuts cut_type;
+    QubitPartition bitmasks;
+    QubitPartition::Cuts cut_type;
     Config::SimType sim_type;
 
 public:
@@ -98,7 +92,7 @@ public:
                             const int cycle_num) ;
     
     TensorProductStateVector(const int qubits,
-                             const Cuts type,
+                             const QubitPartition::Cuts type,
                              const int hcut = 0,
                              const int vcut = 0,
                              const Config::SimType sim = Config::LosslessH);

@@ -11,50 +11,37 @@
 
 TensorProductStateVector::
 TensorProductStateVector(const int qubits,
-                         const Cuts cut,
+                         const QubitPartition::Cuts cut_type,
                          const int hcut,
                          const int vcut,
-                         const Config::SimType sim):
-a_qubits_bitmask(0), b_qubits_bitmask(0), num_q_a(0), num_q_b(0), sim_type(sim) 
+                         const Config::SimType sim): sim_type(sim),
+bitmasks(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubits, hcut)
+         : QubitPartition(cut_type, qubits, vcut))
 {
     static int count_h = 0, count_v = 0;
-    cut_type = cut;
+    this -> cut_type = cut_type;
 
-    if (cut == Cuts::Horizontal)
-        HorizontalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, qubits, hcut);
-    else
-        VerticalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, qubits, vcut);
+    int num_q_b0 = bitmasks.getNumQubitsInBlock(0), num_q_b1 = bitmasks.getNumQubitsInBlock(1);
+    state_a = new FullAmpStateVector(num_q_b0);
+    state_b = new FullAmpStateVector(num_q_b1);
     
-    
-    state_a = new FullAmpStateVector(num_q_a);
-    state_b = new FullAmpStateVector(num_q_b);
-    
-    if (!count_h && cut == Cuts::Horizontal) {
+    if (!count_h && cut_type == QubitPartition::Cuts::Horizontal) {
         string data = "";
-        data += "Cut : horizontal " + to_string(num_q_a) + "q + " + to_string(num_q_b) + "q";
+        data += "Cut : horizontal " + to_string(num_q_b0) + "q + " + to_string(num_q_b1) + "q";
         log.push_back(data);
         ++count_h;
     }
-    if (!count_v && cut == Cuts::Vertical) {
+    if (!count_v && cut_type == QubitPartition::Cuts::Vertical) {
         string data = "";
-        data += "Cut : vertical " + to_string(num_q_a) + "q + " + to_string(num_q_b) + "q";
+        data += "Cut : vertical " + to_string(num_q_b0) + "q + " + to_string(num_q_b1) + "q";
         log.push_back(data);
         ++count_v;
     }
 }
 
 TensorProductStateVector::
-TensorProductStateVector(const TensorProductStateVector& rhs)
-{
-    state_a = new FullAmpStateVector(*(rhs.state_a));
-    state_b = new FullAmpStateVector(*(rhs.state_b));
-    a_qubits_bitmask = rhs.a_qubits_bitmask;
-    b_qubits_bitmask = rhs.b_qubits_bitmask;
-    cut_type = rhs.cut_type;
-    num_q_a = rhs.num_q_a;
-    num_q_b = rhs.num_q_b;
-    sim_type = rhs.sim_type;
-}
+TensorProductStateVector(const TensorProductStateVector& rhs) : state_a(new FullAmpStateVector(*(rhs.state_a))),
+state_b(new FullAmpStateVector(*(rhs.state_b))), bitmasks(rhs.bitmasks), cut_type(rhs.cut_type), sim_type(rhs.sim_type) {}
 
 TensorProductStateVector::
 ~TensorProductStateVector()
@@ -69,22 +56,19 @@ FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
 {
     const int qubits_a = state_a -> GetNumQubits();
     const int modified_q = qubits_a + state_b -> GetNumQubits() - 1;
-    int count = 0;
-    bitset<128> temp;
-    int c = 0;
+    const bitset<128> block0_bitmask = bitmasks.getBlockBitmask(0);
+    int count = 0, c = 0;
+    
     for (int i = 0; c <  qubits_a; ++i) {
         bitset<128> temp1 = 0;
         temp1[modified_q - i] = 1;
-        if ((temp1 & a_qubits_bitmask) != 0) {
-            if ((gate_bitmasks[modified_q - i] & a_qubits_bitmask) != gate_bitmasks[modified_q - i]) {
-                temp = Project1QBitmask(gate_bitmasks[modified_q - i],
-                                        b_qubits_bitmask, modified_q + 1,
-                                        false);
-                xCZ_bitmasks[c++] = temp;
+        if ((temp1 & block0_bitmask) != 0) {
+            if ((gate_bitmasks[modified_q - i] & block0_bitmask) != gate_bitmasks[modified_q - i]) {
+                xCZ_bitmasks[bitmasks.globalToLocal(i)] = Project1QBitmask(gate_bitmasks[modified_q - i],
+                                                                           bitmasks, 1) ;
                 ++count;
             }
-            else
-                xCZ_bitmasks[c++] = 0;
+            ++c;
         }
     }
     return count;
@@ -108,6 +92,7 @@ ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
                                bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                                bitset<128>* __restrict xCZ_bitmasks_path1_D4D3)
 {
+    int num_q_a = bitmasks.getNumQubitsInBlock(0);
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         idx_size state_A_gate_bm[3] = {0};
         for (int i = 0; i < num_q_a; ++i) {
@@ -148,9 +133,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         for (int i = 0; i < num_q_a; ++i)
             CZ_bitmasks_a[i] = 0;
         
-        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, a_qubits_bitmask, CZ_bitmasks, total_circuit_qubits);
+        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, bitmasks, 0, CZ_bitmasks, total_circuit_qubits);
         for (int i = 0; i < 2; ++i)
-            T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], a_qubits_bitmask, total_circuit_qubits, false);
+            T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], bitmasks, 0);
         
         time_by_category.CZ_T += time.GetElapsedTime();
         
@@ -167,9 +152,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         for (int i = 0; i < num_q_b; ++i)
             CZ_bitmasks_b[i] = 0;
         
-        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, b_qubits_bitmask, CZ_bitmasks, total_circuit_qubits);
+        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, bitmasks, 1, CZ_bitmasks, total_circuit_qubits);
         for (int i = 0; i < 2; ++i)
-            T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], b_qubits_bitmask, total_circuit_qubits, false);
+            T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], bitmasks, 1); 
         
         time_by_category.CZ_T += time.GetElapsedTime();
 
@@ -193,7 +178,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
         idx_size count = CountXCZGates(CZ_bitmasks);
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
-        if (cut_type == Cuts::Horizontal) {
+        if (cut_type == QubitPartition::Cuts::Horizontal) {
             data_per_cycles.xCZ_H.push_back(count);
             data_per_cycles.xCZ_V.push_back(0);
         }
@@ -209,6 +194,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
 idx_size TensorProductStateVector::
 CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
 {
+    const idx_size num_q_a = bitmasks.getNumQubitsInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
     for (int i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
@@ -220,8 +206,8 @@ CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
         while (xCZ_bitmask[i] != 0) {
             ++new_count;
             int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
-            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
-            const int q1 = first_half ? first_half : second_half ? 63 + second_half : 0;
+            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 64).to_ulong());
+            const int q1 = first_half ? first_half : second_half ? 64 + second_half : 0;
             xCZ_bitmask[i][q1] = 0;
         }
     }
@@ -236,6 +222,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     Time time;
     time.StartTime();
     
+    const int num_q_a = bitmasks.getNumQubitsInBlock(0), num_q_b = bitmasks.getNumQubitsInBlock(1);
     bitset<128> xCZ_bitmask[num_q_a];
     for (int i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
@@ -261,7 +248,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
         (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
-        if (cut_type == Cuts::Horizontal) {
+        if (cut_type == QubitPartition::Cuts::Horizontal) {
             data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_V.push_back(0);
         }
@@ -278,6 +265,7 @@ ApplyNonCGate(const int gate_qubit,
               const Gate& g)
 {
     const int modified_q = state_a -> GetNumQubits() + state_b -> GetNumQubits() - 1;
+    const bitset<128> a_qubits_bitmask = bitmasks.getBlockBitmask(0), b_qubits_bitmask = bitmasks.getBlockBitmask(1);
     bitset<128> temp = 0;
     temp[gate_qubit] = 1;
     if ((a_qubits_bitmask & temp) != 0) {
@@ -317,6 +305,8 @@ ApplyMergedXYGate(const Gate& gate1,
     temp1[gate1.qubits[0]] = 1;
     temp2[gate2.qubits[0]] = 1;
     
+    const bitset<128> a_qubits_bitmask = bitmasks.getBlockBitmask(0), b_qubits_bitmask = bitmasks.getBlockBitmask(1);
+
     if ((temp1 & a_qubits_bitmask) != 0 && (temp2 & a_qubits_bitmask) != 0)
         state_a -> ApplyMergedXYGate(gate1, gate2);
     else if ((temp1 & b_qubits_bitmask) != 0 && (temp2 & b_qubits_bitmask) != 0)
@@ -339,17 +329,14 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const int th)
 {
-    bitset<128> temp = a_qubits_bitmask | b_qubits_bitmask;
-    int total_circuit_qubits =  (int)temp.count();
-    
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
-        bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, a_qubits_bitmask, total_circuit_qubits, true);
-        bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, a_qubits_bitmask, total_circuit_qubits, true);
+        bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, bitmasks, 0, true);
+        bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, bitmasks, 0, true);
         state_a -> ApplyXYRecursiveTransform(stateA_Xbitmask, stateA_Ybitmask, th);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
-        bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, b_qubits_bitmask, total_circuit_qubits, true);
-        bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, b_qubits_bitmask, total_circuit_qubits, true);
+        bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, bitmasks, 1, true);
+        bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, bitmasks, 1, true);
         state_b -> ApplyXYRecursiveTransform(stateB_Xbitmask, stateB_Ybitmask, th);
     }
 }
@@ -357,17 +344,17 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 cmplx TensorProductStateVector::
 operator[](bitset<128> i) const
 {
-    const idx_size total_q = num_q_a + num_q_b;
+    const idx_size total_q = bitmasks.getNumQubits();
     
-    if (cut_type == Cuts::Horizontal) {
+    if (cut_type == QubitPartition::Cuts::Horizontal) {
         bitset<128> temp_i = i;
-        bitset<128> a = i >> num_q_b;
-        bitset<128> b = temp_i & b_qubits_bitmask;
+        bitset<128> a = i >> bitmasks.getNumQubitsInBlock(1);
+        bitset<128> b = temp_i & bitmasks.getBlockBitmask(1);
         return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
     }
     else {
-        bitset<128> a = ScatterGlobalIndex(i, a_qubits_bitmask, total_q);
-        bitset<128> b = ScatterGlobalIndex(i, b_qubits_bitmask, total_q);
+        bitset<128> a = ScatterGlobalIndex(i, bitmasks.getBlockBitmask(0), total_q);
+        bitset<128> b = ScatterGlobalIndex(i, bitmasks.getBlockBitmask(1), total_q);
         return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
     }
 }
@@ -413,33 +400,31 @@ GetSize() const
 idx_size TensorProductStateVector::
 GetFullStateVectorSize() const
 {
-    bitset<128> temp = 0;
-    temp[num_q_a + num_q_b] = 1;
-    return temp.to_ulong();
+    return 1ull << bitmasks.getNumQubits();
 }
 
 int TensorProductStateVector::
 GetStateANumQ() const
 {
-    return num_q_a;
+    return bitmasks.getNumQubitsInBlock(0);
 }
 
 int TensorProductStateVector::
 GetStateBNumQ() const
 {
-    return num_q_b;
+    return bitmasks.getNumQubitsInBlock(1);
 }
 
 bitset<128> TensorProductStateVector::
 GetStateABitmask() const
 {
-    return a_qubits_bitmask;
+    return bitmasks.getBlockBitmask(0);
 }
 
 bitset<128> TensorProductStateVector::
 GetStateBBitmask() const
 {
-    return b_qubits_bitmask;
+    return bitmasks.getBlockBitmask(1);
 }
 
 double TensorProductStateVector::
@@ -457,7 +442,7 @@ CalculateAverageInaccuracy(double norm) const
 double TensorProductStateVector::
 CalculateMeanEntropy() const
 {
-    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b, range = sampling_factor;
+    const idx_size a_size = 1ull << bitmasks.getNumQubitsInBlock(0), b_size = 1ull << bitmasks.getNumQubitsInBlock(1), range = sampling_factor;
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
     double entropy = 0.0;
     const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;
@@ -486,7 +471,7 @@ CalculateMeanEntropy() const
 double TensorProductStateVector::
 CalculateCrossEntropy(int range) const
 {
-    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    const idx_size a_size = 1ull << bitmasks.getNumQubitsInBlock(0), b_size = 1ull << bitmasks.getNumQubitsInBlock(1);
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
     double xe = 0.0;
     const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;

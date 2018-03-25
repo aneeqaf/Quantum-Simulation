@@ -60,8 +60,10 @@ GetNumAddends() const
     return 0;
 }
 
-QubitPartition::QubitPartition(int rows, int cols,
-                               const vector<bitset<128>>& blocks)
+QubitPartition::
+QubitPartition(int rows,
+               int cols,
+               const vector<bitset<128>>& blocks)
 : _rows(rows), _cols(cols), _blocks(blocks) {
     const bitset<128> mask((1ull << (rows * cols)) - 1);
     bitset<128> all(0);
@@ -87,6 +89,43 @@ QubitPartition::QubitPartition(int rows, int cols,
         }
     }
     InitMappings();
+}
+
+QubitPartition::
+QubitPartition(const Cuts cut_type,
+               int total_qubits,
+               int cut)
+{
+    const int y_axis = FindDivisor(total_qubits),
+    x_axis = total_qubits/y_axis,
+    modified_q = total_qubits - 1;
+    
+    if (cut_type == QubitPartition::Cuts::Horizontal) {
+        const int block_bits = cut ? cut : (ceil(x_axis/2.0)  * y_axis);
+        
+        if (!cut)
+            (*this) = QubitPartition(x_axis, y_axis);
+        else {
+            bitset<128> block0_bitmask = 0;
+            for (int i = 0; i < block_bits; ++i)
+                block0_bitmask [modified_q - i] = 1;
+            (*this) = QubitPartition(x_axis, y_axis, block0_bitmask);
+        }
+    }
+    else {
+        const int v_cut = !cut ? ceil(y_axis/2.0) : cut;
+        
+        if(!v_cut)
+           (*this) = QubitPartition(y_axis, x_axis);
+        else {
+            bitset<128> block0_bitmask = 0;
+            for (int i = 0; i < x_axis; ++i) {
+                for (int j = 0; j < v_cut; ++j)
+                    block0_bitmask [modified_q - ((i * y_axis) + j)] = 1;
+            }
+           (*this) = QubitPartition(y_axis, x_axis, block0_bitmask);
+        }
+    }
 }
 
 void QubitPartition::InitMappings() {
@@ -200,42 +239,23 @@ int FindDivisor(int num)
 
 idx_size
 Project1QBitmask(const bitset<128> gate_bitmask,
-                 const bitset<128> partition_bitmask,
-                 const int num_qubits,
-                 const bool zero_least_sig,
-                 const bool leading_ones)
+                 const QubitPartition& block_bitmasks,
+                 const int block_idx,
+                 const bool is_zero_least_sig)
 {
-    const int modified_q = num_qubits - 1;
-    idx_size projected_bitmask = 0, c = 0;
-    if (!leading_ones) {
-        if (!zero_least_sig) {
-            for (int i = modified_q; i >= 0; --i) {
-                bitset<128> temp = 0;
-                temp[modified_q - i] = 1;
-                if ((temp & partition_bitmask) != 0) {
-                    if ((temp & gate_bitmask) != 0)
-                        projected_bitmask |= 1ull << c;
-                    ++c;
-                }
-            }
-        }
-        else {
-            for (int i = 0; i < num_qubits; ++i) {
-                bitset<128> temp = 0, temp1 = 0;
-                temp[modified_q - i] = 1;
-                temp1[i] = 1;
-                if ((temp & partition_bitmask) != 0) {
-                    if ((temp1 & gate_bitmask) != 0)
-                        projected_bitmask |= 1ull << c;
-                    ++c;
-                }
-            }
-        }
+    idx_size projected_bitmask = 0;
+    int adjust = is_zero_least_sig ? 0 : block_bitmasks.getNumQubits() - 1;
+    
+    bitset<128> gate_bitmask_copy = gate_bitmask;
+    while (gate_bitmask_copy != 0) {
+        int first_half = __builtin_ctzl(gate_bitmask_copy.to_ulong());
+        int second_half = __builtin_ctzl((gate_bitmask_copy >> 64).to_ulong());
+        const int q = first_half ? first_half : second_half ? 64 + second_half : 0;
+        
+        if (block_bitmasks.globalToBlock(q) == block_idx) 
+            projected_bitmask |= 1ull << block_bitmasks.globalToLocal(abs(adjust - q));
+        gate_bitmask_copy[q] = 0;
     }
-    else {
-        assert(false);
-        //        return gate_bitmask & partition_bitmask;
-    }//TODO:FIX
     
     return projected_bitmask;
 }
@@ -262,27 +282,24 @@ ProjectQubit(const int qubit_to_project,
 
 bool
 ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
-                 const bitset<128> partition_bitmask,
+                 const QubitPartition& block_bitmasks,
+                 const int block_idx,
                  const bitset<128>* __restrict gate_bitmasks,
                  const int total_circuit_qubits)
 {
     const int modified_q = total_circuit_qubits - 1;
-    idx_size c = 0;
-    bool bitmask_0 = true;
+    const bitset<128> partition_bitmask = block_bitmasks.getBlockBitmask(block_idx);
+    bool is_bitmask_all_0 = true;
     for (int i = modified_q; i >= 0; --i) {
         bitset<128> temp = 0;
         temp[modified_q - i] = 1;
-        if ((temp & partition_bitmask) != 0) {
-            if ((gate_bitmasks[modified_q - i] & partition_bitmask) != 0) {
-                projected_bitmasks[c] = Project1QBitmask(gate_bitmasks[modified_q - i] & partition_bitmask,
-                                                         partition_bitmask, total_circuit_qubits,
-                                                         false);
-                bitmask_0 = false;
-            }
-            ++c;
+        if ((gate_bitmasks[modified_q - i] & partition_bitmask) != 0) {
+            projected_bitmasks[block_bitmasks.globalToLocal(i)] = Project1QBitmask(gate_bitmasks[modified_q - i] & partition_bitmask,
+                                                                                   block_bitmasks, block_idx);
+            is_bitmask_all_0 = false;
         }
     }
-    return !bitmask_0;
+    return !is_bitmask_all_0;
 }
 
 bitset<128>
@@ -304,58 +321,5 @@ ScatterGlobalIndex(const bitset<128> i,
     return local_idx;
 }
 
-void
-HorizontalCut(bitset<128>& a_qubits_bitmask,
-              bitset<128>& b_qubits_bitmask,
-              int& num_qubits_a,
-              int& num_qubits_b,
-              const int total_qubits,
-              const int cut)
-{
-//    num_qubits_a = !cut ? ceil(total_qubits/2) : cut;
-//    const int modified_q = total_qubits - 1;
-//
-//    for (int i = 0; i < num_qubits_a; ++i)
-//        a_qubits_bitmask [modified_q - i] = 1;
-//
-//    for (int i = num_qubits_a; i < total_qubits; ++i) {
-//        b_qubits_bitmask [modified_q - i] = 1;
-//        ++num_qubits_b;
-//    }
-    const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
-    modified_q = total_qubits - 1;
-    num_qubits_a = cut ? cut : (ceil(x_axis_sz/2.0)  * y_axis_sz);
-    
-    for (int i = 0; i < num_qubits_a; ++i)
-        a_qubits_bitmask [modified_q - i] = 1;
-        
-    for (int i = num_qubits_a ; i < total_qubits; ++i) {
-        b_qubits_bitmask [modified_q - i] = 1;
-        ++num_qubits_b;
-    }
-}
-
-void
-VerticalCut(bitset<128>& a_qubits_bitmask,
-            bitset<128>& b_qubits_bitmask,
-            int& num_qubits_a,
-            int& num_qubits_b,
-            const int total_qubits,
-            const int cut)
-{
-    const int x_axis_sz = FindDivisor(total_qubits), y_axis_sz = total_qubits/x_axis_sz,
-    modified_q = total_qubits - 1, v_cut = !cut ? ceil(y_axis_sz/2.0) : cut;
-    
-    for (int i = 0; i < x_axis_sz; ++i) {
-        for (int j = 0; j < v_cut; ++j) {
-            a_qubits_bitmask [modified_q - ((i * y_axis_sz) + j)] = 1;
-            ++num_qubits_a;
-        }
-        for (int j = v_cut; j < y_axis_sz; ++j) {
-            b_qubits_bitmask [modified_q - ((i * y_axis_sz) + j)] = 1;
-            ++num_qubits_b;
-        }
-    }
-}
 
 

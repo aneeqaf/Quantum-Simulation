@@ -59,14 +59,12 @@ Simulate(GenericQuantumState& amp,
     
     int xCZ_gate_count = 0;
     if (config.sim_type != Config::SimType::FullState) {
-        bitset<128> a_qubits_bitmask = 0, b_qubits_bitmask = 0;
-        int num_q_a = 0, num_q_b = 0;
-        if (config.sim_type == Config::SimType::LosslessH || config.sim_type == Config::SimType::Approx1CutH)
-            HorizontalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, circuit.GetNumQubits(), config.hcut);
-        else
-            VerticalCut(a_qubits_bitmask, b_qubits_bitmask, num_q_a, num_q_b, circuit.GetNumQubits(), config.vcut);
+        QubitPartition bitmasks = config.sim_type == Config::SimType::LosslessH ||
+        config.sim_type == Config::SimType::Approx1CutH ?
+        QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.hcut) :
+        QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.vcut) ;
         
-        xCZ_gate_count = circuit.MovexCZGates(a_qubits_bitmask, b_qubits_bitmask);
+        xCZ_gate_count = circuit.MovexCZGates(bitmasks.getBlockBitmask(0), bitmasks.getBlockBitmask(1));
     }
     
     if (config.verbose)
@@ -436,7 +434,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);

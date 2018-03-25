@@ -31,9 +31,9 @@ num_qubits(__builtin_log2l(size))
 }
 
 FullAmpStateVector::
-FullAmpStateVector(const FullAmpStateVector& rhs)
+FullAmpStateVector(const FullAmpStateVector& rhs): amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
+global_i_counter(rhs.global_i_counter), min_prob(rhs.min_prob), max_prob(rhs.max_prob), num_qubits(rhs.num_qubits)
 {
-    amp_size = rhs.amp_size;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
     idx_size size = 2 * rhs.GetSize();
     
@@ -45,11 +45,6 @@ FullAmpStateVector(const FullAmpStateVector& rhs)
         const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
         _mm256_store_ps(&t_amp[i], temp_amp);
     }
-    global_factor_power = rhs.global_factor_power;
-    global_i_counter = rhs.global_i_counter;
-    min_prob = rhs.min_prob;
-    max_prob = rhs.max_prob;
-    num_qubits = rhs.num_qubits;
 }
 
 FullAmpStateVector::

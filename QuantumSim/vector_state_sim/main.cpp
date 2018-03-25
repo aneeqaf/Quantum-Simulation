@@ -365,13 +365,13 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011 || sim_type == Config::Approx_i11i
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Horizontal, hcut, vcut,
+                                      QubitPartition::Cuts::Horizontal, hcut, vcut,
                                       (Config::SimType)sim_type);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      TensorProductStateVector::Cuts::Vertical, hcut, vcut,
+                                      QubitPartition::Cuts::Vertical, hcut, vcut,
                                       (Config::SimType)sim_type);
         sim.Simulate(amp, cir);
     }
