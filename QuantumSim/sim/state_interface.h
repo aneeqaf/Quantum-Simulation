@@ -38,6 +38,82 @@ typedef struct DataPerCycle {
     addends({}), memory({}){}
 } Data;
 
+#include <algorithm>
+#include <bitset>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
+using namespace std;
+
+
+// This class allows one to map global indices in a qubit grid
+// to partition indices and back. It can renumber qubits in blocks
+// so that boundary qubits appear upfront.
+class QubitPartition {
+    
+public:
+    // two blocks, as balanced as possible (may use a Z cut)
+    QubitPartition(int rows, int cols)
+    : QubitPartition(rows, cols,
+    bitset<128>((1ull << (rows * cols / 2)) - 1)) {
+    }
+    
+    // two blocks, of which one is specified, the other is its complement
+    QubitPartition(int rows, int cols, bitset<128> block0)
+    : _rows(rows), _cols(cols), _blocks(1, block0) {
+        if (rows * cols > 64) {
+            cerr << " More than 64 qubits not supported here yet" << endl;
+            exit(1);
+        }
+        const bitset<128> mask((1ull << (rows * cols)) - 1);
+        _blocks.push_back(mask ^ (mask & block0));
+        InitMappings();
+    }
+    
+    QubitPartition(int rows, int cols, const vector<bitset<128>>& blocks);
+    
+    string print() const;
+    
+    int getNumQubits() const { return _rows * _cols; }
+    int getNumBlocks() const { return static_cast<int>(_blocks.size()); }
+    int getNumQubitsInBlock(int i) const { return _blocks[i].count(); }
+    int getNumX() const { return _numX; }
+    bitset<128> getBlockBitmask(int i) const { return _blocks[i]; }
+    
+    int globalToBlock(int q) const { return _global_to_block[q]; }
+    int globalToLocal(int q) const { return _global_to_local[q]; }
+    int localToGlobal(int block, int q) const {
+        return _local_to_global[block][q];
+    }
+    
+    // move up boundary qubits up front in each block
+    void RenumberLocalQubits();
+    
+//    ostream& operator<<(ostream& o, const QubitPartition& qp) {
+//        return o << qp.print();
+//    }
+//    
+//    ostream& operator<<(ostream& o, const vector<int>& v) {
+//        for (auto k : v) o << k << " ";
+//        return o << endl;
+//    }
+    
+private:
+    int _rows = 0;
+    int _cols = 0;
+    vector<bitset<128>> _blocks;
+    vector<int> _global_to_block;
+    vector<int> _global_to_local;
+    vector<vector<int>> _local_to_global;  // block, local -> global
+    int _numX = 0;
+    bitset<128> _boundary_qubits;  // global indices
+    
+    void InitMappings();
+};
+
+
 class GenericQuantumState {    
 public:
     static Data data_per_cycles;
@@ -80,8 +156,8 @@ public:
                                      const int total_circuit_qubits);
     
     virtual cmplx operator[](bitset<128> i) const = 0;
-    virtual double GetMinProb() const = 0;
-    virtual double GetMaxProb() const = 0;
+    virtual double GetMinProb()  = 0;
+    virtual double GetMaxProb()  = 0;
     virtual double GetAvgProb() const = 0;
     virtual double GetMemUsage() const = 0;
     virtual idx_size GetSize() const = 0;
@@ -92,7 +168,7 @@ public:
     virtual double CalculateMeanEntropy() const = 0;
     virtual double CalculateCrossEntropy(int range) const = 0;
     virtual void Normalize() = 0;
-    virtual idx_size CountZeroAmp() const = 0;
+    virtual double CountZeroAmpPercentage() const = 0;
     virtual idx_size GetNumAddends() const;
     
     virtual void ResetAmpVector() = 0;

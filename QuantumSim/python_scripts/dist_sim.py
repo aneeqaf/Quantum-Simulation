@@ -17,6 +17,8 @@ import numpy as np
 @click.command()
 @click.argument("circuit", nargs=1, required=True)
 @click.option("--depth", nargs=1, required=False, default=0)
+@click.option("--v_cut", nargs=1, required=False, default=0)
+@click.option("--h_cut", nargs=1, required=False, default=0)
 @click.option("--proc_prefix_bits", required=False, nargs=1, default=0)
 @click.option("--ranges_bits", nargs=1, required=False, default=0)
 @click.option("--branch_bits", nargs=1, required=False, default=0)
@@ -29,8 +31,9 @@ import numpy as np
 @click.option("--num_idx", nargs=1, required=False, default=10)
 @click.option("--print_idxs", nargs=1, required=False, default=-1)
 @click.option("--print_all", nargs=1, required=False, default=-1)
-def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_threshold, \
- idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits):
+@click.option("--trial", nargs=1, required=False, is_flag=True)
+def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_threshold, v_cut, h_cut,\
+ idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial):
 
 	max_threads = cpu_count()
 	binary = "./bin/rr "
@@ -63,11 +66,12 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 		+ command[d_idx + 2 :] + "_"
 	# os.makedirs(cir_dir)
 
-	commandH = dist_util.BuildDistCommand(command, 0, num_threads) 
-	commandV = dist_util.BuildDistCommand(command, 1, num_threads) 
+	commandH = dist_util.BuildDistCommand(command, 0, num_threads, h_cut = h_cut) 
+	commandV = dist_util.BuildDistCommand(command, 1, num_threads, v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command = \
-	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits, branch_bits)
+	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
+		ranges_bits, branch_bits, trial, v_cut, h_cut)
 
 	if t_time > 100 and max_procs:
 		max_procs = num_batches
@@ -109,6 +113,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
 		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs) + " > " +\
 		str(log_dir) + "/final_report 2>&1 &")
+	if not t_time:
+		t_time = 150
 	os.system("./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
 		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
 		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs))

@@ -1,41 +1,45 @@
 # Rollright - A Quantum Simulator
 
-Rollright is a Schrondinger-style quantum simulator that is particularly efficient on Google quantum-supremacy circuits. In addition, to a full state-vector representation, it also uses sum-of-tensors representations. 
+Rollright is a hybrid Schrondinger-Feynman quantum simulator that is particularly efficient on Google quantum-supremacy circuits. In addition to a full state-vector representation, it uses sum-of-tensors representations. Distributed simulation with no interprocess communication is performed using a meta-simulation script. 
 
-## Run the Simulator
+Tensor partitions are currently specified by the choice of a vertical or horizontal cut with a particular size breakdown (3q + 4q versus 4q + 3q). Non-straightline cuts are supported internally but would require additional command-line controls. Straightline cuts are preferrable for deeper circuits.
+
+In order to simulate each two-qubit gate acting across tensor partitions, Rollright branches on SVD components of the gate. For example, each CZ gate implies a branching factor of two. Optional command-line arguments specify a branch for each crossing CZ gate (xCZ), which cumulatively form a "CZ path". Command-line arguments may request a range of such CZ paths to be simulated in the same process with resulting amplitudes added up and saved in an output file, or added up to a previously existing file (saved by another process). 
+
+The indices of the amplitudes to save can be specified either explicitly or using a pseudo-random number generator by providing a seed and the number of indices (produced indices can be optionally saved into a file). To minimize I/O effort, Rollright reads and saves the amplitudes in binary format using memory mapped I/O by default. ASCII output can be requested for the last process in a batch. 
+
+Rollright prints many details about its hardware and software environment, as well as runtime statistics, with requested verbosity. 
+
+Rollright supports multithreaded execution, however the number of threads requested must be carefully balanced against the number of parallel processes launched. 
+
+## Running the Simulator
 
 ### Command line options
 * **--CZ_path, -c**
-	* CZ path has 4 different components, 2 of which are optional.
-	* Must be followed by two integers separated by a comma specifying the length of the CZ path and the value of the CZ path. 
+	* CZ path is usually specified for distributed simulation.
+	* CZ path has four components, the last two of which are optional.
+	* The first two integers separated by a comma specify the length of the CZ path and the value of the CZ path. 
 	* The third argument is the number of bits that specify the range of CZ paths that the simulator goes over in a single process.
 	* The fourth argument is the number of bits to branch on using depth first search.
-	* Phase 1 simulation includes the prefixed CZ bits and the ranges. Phase 2 simulation is the execution of branching using depth first search. 
+	* Initially, simulations consumes the process prefix and subsequent CZ bits from the specified range. Then, a branching simulation is performed for specified number of bits. 
 	* Defines the CZ path for CZ gates that cross partitions for distributed simulation.
 * **--depth, -d** 
 	* Must be followed by an integer to specify the number of cycles to simulate
 	* The default setting simulates all cycles specified in the input. 
-	* This option is only relevant when reading from input files.
-* **--google_spec, -g**
-	* Must be followed by two arguments - number of qubits and total depth of the circuit.
-	* It is used to generate Google-style circuits.
-* **--google_input, -p**
-	* Must be followed by a filename of a circuit in the Google format.
-	* The file is assumed to be in `input\random_circuits_google`.
 * **--hcut, --b**
 	* Must be followed by an integer that specifies one side of a horizontal cut in a circuit.
 	* The program calculates the size of the other partition given number of qubits in the first partition.
 	* If not specified, then the sum-of-tensors simulation calculates the best horizontal cut. 
 * **--help, --h**
-	* Help option for command line options.
+	* Lists available command line options.
 * **--inputfile, -i**
-	* Must be followed by a filename (currently only reads the file in the Rollright format).
-	* The file is assumed to be in `input\random_circuits_rollright`.
+	* Must be followed by a filename (currently only reads the file in the Rollright or in the Google circuit format).
+	* The file is assumed to be in `input\random_circuits_rollright` or in `input\random_circuits_google`.
 * **--idx, -x**
-	* Must be followed by either a filename or two integers separated by a comma - seed and number of indices.
+	* Must be followed by either a filename or two comma separated integers, seed and number of indices.
 	* Optionally, end the two integers argument with a '+' to print the generated indices to a file.
-	* The program prints the values of the amplitudes in the specified indices to a file in `output\amp_vectors\<dirname>\output_<pid>.amps` or `output\amp_vectors\output_<pid>.amps`. `<dirname>` can be specified using the -o option. Providing a `<dirname>` is recommended for distributed simulation to simplify recollection of files for computations.
-	* Generated indices are printed in `output\amp_vectors\<dirname>\output_<pid>.idx` or `output\amp_vectors\output_<pid>.idx`
+	* The program prints the values of the amplitudes in the specified indices to a file in `output\amp_vectors\<dirname pertaining to circuit>\<filename>.amps` or `output\amp_vectors\<filename>.amps`. `<filename>` can be specified using the -o option. Providing a `<filename>` is recommended for distributed simulation to simplify recollection of files for computations. 
+	* Generated indices are printed in `output\amp_vectors\<dirname>\<filename>.idx` or `output\amp_vectors\<filename>.idx`
 * **--num_threads, -t**
 	* Must be followed by an integer.
 	* Sets a maximum limit on the number of threads to be used 
@@ -47,8 +51,7 @@ Rollright is a Schrondinger-style quantum simulator that is particularly efficie
 * **--sim_type, -s**
 	* Must be followed by an integer between 0 and 8 that specifies the type of simulation.
 	* The simulation types supported (in order): LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState, Approx2011, Approx1_101, Approx1110. Default simulation type is FullState. 
-* **--FTthreshold, -f**
-	* Must be followed by an integer that is smaller than the total number of qubits (default is 14). It controls the base case of the Recursive Transform algorithm for X and Y gates.
+	* The default is FullState for up to 32 qubits and LosslessH for circuits with greater than 32 qubits. 
 * **--vcut, -a**
 	* Must be followed by an integer that specifies one side of a vertical cut in a circuit.
 	* The program calculates the size of the other partition given number of qubits in the first partition.
@@ -64,7 +67,7 @@ Rollright is a Schrondinger-style quantum simulator that is particularly efficie
 	(4) Cycles : monitor doubled cycles and output it in report. May significantly increase runtime.
 	```
 
-**Mandatory option** : You must either specify the input file (-h or -i) or specify that the simulator creates its own random circuit (-g).
+**Mandatory argument** : You must either specify the input file (-i).
 
 ### Building a binary
 
@@ -82,46 +85,33 @@ $ make all
 Navigate to the working directory (QuantumSim).
 
 #### Example runs:
-1. Create and simulate an entire circuit of 6 qubits and 100 cycles using full state-vector simulation and with default report:
-```shellsession
-$ ./bin/rr -g 6 100
-```
 
-2. Create and simulate an entire circuit of 6 qubits and 100 cycles using full state-vector simulation and with default report. Output the circuit to a file and create the Quiddpro script:
-```shellsession
-$ ./bin/rr -g 6 100 -o test
-```
-
-This creates two files, test0.txt and test0.qpro in the folders `input\random_circuits_aneeqa` and `output\qpro_scripts`, respectively.
-
-3. Read Rollright's circuit file test0.txt from `input\random_circuits_aneeqa` and simulate to full depth:
+1. Read Rollright circuit file test0.txt from `input\random_circuits_aneeqa` and simulate to full depth:
 ```shellsession
 $ ./bin/rr -i test0.txt
 ```
 
-4. Read Google's circuit file inst_5_5_100_5 from `input\random_circuits_google` and simulate to depth 26:
+2. Read Google circuit file inst_5_5_100_5 from `input\random_circuits_google` and simulate to depth 26:
 ```shellsession
-$ ./bin/rr -p inst_5_5_100_5 -d 26
+$ ./bin/rr -i inst_5_5_100_5 -d 26
 ```
 
-5. This command is an example of distributed simulation. Read Google's circuit file inst_5_5_100_5.txt, simulate to depth 10 using sum-of-tensors simulation with a vertical cut. Print 5 randomly generated indices with seed 7 to a file. The CZ path is a lenth 8 bit string of value 31. The amplitudes are printed to `output\amp_vectors\test\output_<pid>.amps`.
+3. This command is an example of distributed simulation. Read Google's circuit file inst_5_5_100_5.txt, simulate to depth 10 using sum-of-tensors simulation with a vertical cut. Print 5 randomly generated indices with seed 7 to a file. The CZ path is a length-8 bitstring of value 31 (00011111). The amplitudes are printed to `output\amp_vectors\inst_5_5_100_5_10_8_8\test.amps`.
 ```shellsession
-$ ./bin/rr -p inst_5_5_100_5 -d 10 -s 1 -x 7,5 -c 8,31 -o test
+$ ./bin/rr -i inst_5_5_100_5 -d 10 -s 1 -x 7,5 -c 8,31 -o test
 ```
 
-6. Read Google's circuit file inst_5_5_100_5 and using only 10 threads simulate to full depth using full state-vector simulation.
+4. Read Google circuit file inst_5_5_100_5 and using only 10 threads simulate to full depth using full state-vector simulation.
 ```shellsession
-$ ./bin/rr -p inst_5_5_100_5 -s 5 -t 10 
+$ ./bin/rr -i inst_5_5_100_5 -s 5 -t 10 
 ```
 
-7. Read Google's circuit file inst_6_5_100_5. Simulate using sum-of-tensors with a horizontal cut of size 15 + 15. Set the XY Fast Transform threshold to 15.
+5. Read Google circuit file inst_6_5_100_5. Simulate using sum-of-tensors with a horizontal cut of size 15 + 15. 
 ```shellsession
-$ ./bin/rr -p inst_6_5_100_5 -s 0 -f 15 -b 15
+$ ./bin/rr -i inst_6_5_100_5 -s 0 -b 15
 ```
 
-8. Read Google's circuit file inst_6_5_100_5. Simulate upto depth 16 (15 excluding the H gate application) using sum-of-tensors with a horizontal cut and a maximum of 4 threads. Print 20 amplitudes in ASCII format to `output\amp_vectors\inst_6_5_100_5_16_10_4\output_1.amps` from randomly generated indices with a seed of 7. 
+6. Read Google circuit file inst_6_5_100_5. Simulate upto depth 16 (15 excluding the H gate application) using sum-of-tensors with a horizontal cut and a maximum of 4 threads. Print 20 amplitudes in ASCII format to `output\amp_vectors\inst_6_5_100_5_16_10_4\output_1.amps` from randomly generated indices with a seed of 7. 
 ```shellsession
-$ ./bin/rr -p inst_6_5_100_5 -d 16 --num_threads 4 --sim_type 0 --idx 7,20 --CZ_path 8,0,2,2 --outfile output_1@
+$ ./bin/rr -i inst_6_5_100_5 -d 16 --num_threads 4 --sim_type 0 --idx 7,20 --CZ_path 8,0,2,2 --outfile output_1@
 ```
-
-### Macros (TODO)

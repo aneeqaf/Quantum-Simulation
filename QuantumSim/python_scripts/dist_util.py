@@ -25,8 +25,15 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 
 	return print_opt
 
-def BuildDistCommand(command, sim_type, num_threads):
-	return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type)
+def BuildDistCommand(command, sim_type, num_threads, h_cut = 0, v_cut = 0):
+	if h_cut:
+		return command + " --num_threads " + str(num_threads) + " --sim_type " \
+		+ str(sim_type) + " --hcut " + str(h_cut)
+	elif v_cut:
+		return command + " --num_threads " + str(num_threads) + " --sim_type " \
+		+ str(sim_type) + " --vcut " + str(v_cut)
+	else:
+		return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type)
 	
 
 def TrialRunEval(report_file, num_CZ, start_time, end_time, app_cz_len = 0, dfs_len = 0):
@@ -145,15 +152,24 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 
 	return num_xCZH, num_xCZV, (end_timeH - start_timeH), (end_timeV - start_timeV)
 
-def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branch_bits = 0):
+def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branch_bits = 0, trial=True, \
+	v_cut = 0, h_cut = 0):
 
 	num_xCZH, num_xCZV, H_time, V_time = ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
 
 	cut = ""
 	command = ""
 	num_xCZ = 0
-	
-	if float(H_time) != float(V_time):
+	if h_cut or v_cut:
+		if h_cut:
+			cut = "horizontal-cut" 
+			command = commandH 
+			num_xCZ = num_xCZH 
+		elif v_cut:
+			cut = "vertical-cut" 
+			command = commandV 
+			num_xCZ = num_xCZV 
+	elif float(H_time) != float(V_time):
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
 		command = commandH if (float(H_time) <= float(V_time)) else commandV
 		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV
@@ -165,7 +181,8 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 	dirpath = tempfile.mkdtemp()
 	command_to_pass = command
 
-	if proc_prefix_bits + ranges_bits + branch_bits < num_xCZ:
+	if (proc_prefix_bits and ranges_bits and branch_bits) and \
+	(proc_prefix_bits + ranges_bits + branch_bits < num_xCZ) :
 		proc_prefix_bits = 0
 		ranges_bits = 0
 		branch_bits = 0
@@ -175,9 +192,9 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 		proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)
 		ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
 	elif not ranges_bits and not branch_bits:
-		num_xCZ -= max(proc_prefix_bits, 0)
-		if num_xCZ:
-			branch_bits = ceil(num_xCZ / 2)
+		temp_num_xCZ = num_xCZ - max(proc_prefix_bits, 0)
+		if temp_num_xCZ:
+			branch_bits = ceil(temp_num_xCZ / 2)
 			ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
 	elif not ranges_bits:
 		ranges_bits = max(num_xCZ - proc_prefix_bits - branch_bits, 0)
@@ -185,38 +202,42 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 		branch_bits = max(num_xCZ - proc_prefix_bits - ranges_bits, 0)
 
 	# Horizontal trial run
-	print ("\033[1m" + "\nPerforming a complete trial simulation run with a " +  cut + \
-	 " and " + str(proc_prefix_bits) + "p + " + str(ranges_bits) +"r + " + str(branch_bits) +"b CZ path " + "\033[0m")
-	
-	start_time = time.time()
+	trial_time = 0.0
+	mem = 0.0
+	if trial:
+		start_time = time.time()
+		print ("\033[1m" + "\nPerforming a complete trial simulation run with a " +  cut + \
+		 " and " + str(proc_prefix_bits) + "p + " + str(ranges_bits) +"r + " + str(branch_bits) +"b CZ path " + "\033[0m")
 
-	temp_file = os.path.join(dirpath, "trial.txt")
+		temp_file = os.path.join(dirpath, "trial.txt")
 
-	cz_p = ""
-	for i in range(int(proc_prefix_bits)):
-		cz_p += str(i % 2);
+		cz_p = ""
+		for i in range(int(proc_prefix_bits)):
+			cz_p += str(i % 2);
 
-	if branch_bits:
-		command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + "," + str(ranges_bits) \
-		+ "," + str(branch_bits) + " > " + str(temp_file) + " 2>&1"
-	elif ranges_bits:
-		command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + "," + str(ranges_bits)\
-		 + " > " + str(temp_file) + " 2>&1"
-	else:
-		command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + " > " + str(temp_file) + " 2>&1"
+		if branch_bits:
+			command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + "," + str(ranges_bits) \
+			+ "," + str(branch_bits) + " > " + str(temp_file) + " 2>&1"
+		elif ranges_bits:
+			command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + "," + str(ranges_bits)\
+			 + " > " + str(temp_file) + " 2>&1"
+		else:
+			command += " --CZ_path " + str(proc_prefix_bits) + "," + str(int(cz_p, 2)) + " > " + str(temp_file) + " 2>&1"
 
-	print("/usr/bin/time " + command)
-	os.system("/usr/bin/time " + command)
-	os.system("cat " + temp_file)
+		print("/usr/bin/time " + command)
+		os.system("/usr/bin/time " + command)
+		os.system("cat " + temp_file)
 
-	end_time = time.time()
+		end_time = time.time()
 
-	# Trial run evaluation
-	print("\033[1m" + "Trial run took " + str (round(end_time - start_time, 3)) +  " s \033[0m")
-	proc_prefix_bits, mem, branch_bits, ranges_bits = TrialRunEval(temp_file, proc_prefix_bits, \
-		start_time, end_time, ranges_bits, branch_bits)
+		trial_time = end_time - start_time
 
-	return proc_prefix_bits, branch_bits, (end_time - start_time), mem, ranges_bits, cut, command_to_pass 
+		# Trial run evaluation
+		print("\033[1m" + "Trial run took " + str (round(trial_time, 3)) +  " s \033[0m")
+		proc_prefix_bits, mem, branch_bits, ranges_bits = TrialRunEval(temp_file, proc_prefix_bits, \
+			start_time, end_time, ranges_bits, branch_bits)
+
+	return proc_prefix_bits, branch_bits, trial_time, mem, ranges_bits, cut, command_to_pass 
 
 def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulation"):
 
@@ -305,17 +326,22 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	est_time =  round((float(t_time) * int(num_procs)) / int(num_batches), 3)
 	print ("\033[1m" + str(datetime.datetime.now()) + " : Launching " +  str(num_procs) + " " + cut + " simulations with " +\
 		str(num_batches) + " batches and with upto " + str(num_threads) + \
-		" threads each.\nThe distributed run is estimated to take " + str(round(float(est_time) + (0.3 * float(est_time)),3)) + " +- " \
-	 + str(round(0.3 * float(est_time), 3)) + \
-		" s.\nThe peak memory usage is expected to be ", end = "") 
-	if mem * num_batches >= pow(2, 30):
-		print(str(round((mem * num_batches) / pow(2,30), 3)) + " GiB")
-	elif mem * num_batches >= pow(2, 20):
-		print(str(round((mem * num_batches) / pow(2,20), 3)) + " MiB")
-	elif mem * num_batches >= pow(2, 10):
-		print(str(round((mem * num_batches) / pow(2,10), 3)) + " KiB")
-	else:
-		print(str(round((mem * num_batches), 3)) + " B")
+		" threads each.")
+	if est_time:
+		print("The distributed run is estimated to take " + str(round(float(est_time) \
+			+ (0.3 * float(est_time)),3)) + " +- " + str(round(0.3 * float(est_time), 3)) + " s.")
+
+	if mem:
+		print("The peak memory usage is expected to be ", end = "") 
+		if mem * num_batches >= pow(2, 30):
+			print(str(round((mem * num_batches) / pow(2,30), 3)) + " GiB")
+		elif mem * num_batches >= pow(2, 20):
+			print(str(round((mem * num_batches) / pow(2,20), 3)) + " MiB")
+		elif mem * num_batches >= pow(2, 10):
+			print(str(round((mem * num_batches) / pow(2,10), 3)) + " KiB")
+		else:
+			print(str(round((mem * num_batches), 3)) + " B")
+
 	print("The CZ path breakdown is " + str(num_cz) + "p + " + str(app_cz_len) + "r + " + str(dfs_len) + "b\033[0m")
 
 	# Create the log directory if it doesn't already exist

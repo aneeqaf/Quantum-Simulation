@@ -60,6 +60,134 @@ GetNumAddends() const
     return 0;
 }
 
+QubitPartition::QubitPartition(int rows, int cols,
+                               const vector<bitset<128>>& blocks)
+: _rows(rows), _cols(cols), _blocks(blocks) {
+    const bitset<128> mask((1ull << (rows * cols)) - 1);
+    bitset<128> all(0);
+    for(auto& b : _blocks) {
+        b != mask;
+        if (b.count() == 0) {
+            cerr << " Found an empty qubit block " << endl;
+            exit(1);
+        }
+        all |= b;
+    }
+    if (all != mask) {
+        cerr << " Some qubit is not in any block: " << (mask & ~all) << endl;
+        exit(1);
+    }
+    for(int i = 0; i < _blocks.size(); ++i) {
+        for(int j = 0; j < i; ++j) {
+            if ( (_blocks[i] & _blocks[j]).count() >0 ) {
+                cerr << " Blocks " << i << " " << j << " are not disjoint "
+                << endl;
+                exit(1);
+            }
+        }
+    }
+    InitMappings();
+}
+
+void QubitPartition::InitMappings() {
+    _global_to_block.resize(getNumQubits(), -1);
+    _global_to_local.resize(getNumQubits(), -1);
+    _local_to_global.resize(getNumBlocks());
+    
+    for (int b = 0; b < _blocks.size(); ++b) {
+        int local = 0;
+        for(int i = 0; i < getNumQubits(); ++i) {  // slow but OK
+            if (_blocks[b][i] == 1) {
+                if (_global_to_block[i] != -1) {
+                    cerr << " Qubit " << i << " is in blocks " << b
+                    << " and " << _global_to_block[i] << endl;
+                    exit(1);
+                }
+                _global_to_block[i] = b;
+                _global_to_local[i] = local++;
+                _local_to_global[b].push_back(i);
+            }
+        }
+    }
+    
+    // go over 2q-gate locations and check for cross-gates,
+    // in which case mark boundary qubits
+    for(int r = 0; r < _rows - 1; ++r) {
+        for(int c = 0; c < _cols; ++c) {
+            int q0 = r * _cols + c;
+            int q1 = (r + 1) * _cols + c;
+            if (_global_to_block[q0] != _global_to_block[q1]) {
+                ++_numX;
+                _boundary_qubits.set(q0);
+                _boundary_qubits.set(q1);
+            }
+        }
+    }
+    for(int r = 0; r < _rows; ++r) {
+        for(int c = 0; c < _cols - 1; ++c) {
+            int q0 = r * _cols + c;
+            int q1 = r * _cols + c + 1;
+            if (_global_to_block[q0] != _global_to_block[q1]) {
+                ++_numX;
+                _boundary_qubits.set(q0);
+                _boundary_qubits.set(q1);
+            }
+        }
+    }
+}
+
+// Move up boundary qubits upfront in each block,
+// then repopulate _global_to_local accordingly
+void QubitPartition::RenumberLocalQubits() {
+    for(auto& block : _local_to_global) {
+        partition(block.begin(), block.end(), [&](int i) {
+            return _boundary_qubits[i]; });
+        for(int i = 0; i < block.size(); ++i) _global_to_local[block[i]] = i;
+    }
+}
+
+//string QubitPartition::print() const {
+//    stringstream s;
+//    s << "\nQubit grid " << _rows << "x" << _cols << " with "
+//    << getNumBlocks() << " blocks " << endl;
+//    
+//    if (!_blocks.empty()) {
+//        s << " Blocks :";
+//        if (_rows * _cols < 64) {
+//            for (auto b : _blocks) s << " " << b.to_ullong();
+//        } else {
+//            s << endl;
+//            for (auto b : _blocks) s << "  " << b << " " << endl;
+//        }
+//        s << endl;
+//    }
+//    
+//    if (!_global_to_block.empty()) {
+//        s << " Global to block : " << _global_to_block;
+//    }
+//    
+//    if (!_global_to_local.empty()) {
+//        s << " Global to local : " << _global_to_local;
+//    }
+//    
+//    if (!_local_to_global.empty()) {
+//        s << " Local to global : " << endl;
+//        for (const auto& block : _local_to_global) {
+//            s << "   " << block;
+//        }
+//    }
+//    
+//    if (_numX) {
+//        s << " Cross-gates : " << _numX << endl;
+//        s << " Boundary qubits :";
+//        for(int i = 0; i < getNumQubits(); ++i) {
+//            if (_boundary_qubits[i]) s << " " << i;
+//        }
+//        s << endl;
+//    }
+//    return s.str();
+//}
+
 int FindDivisor(int num)
 {
     int div = 0;

@@ -64,6 +64,8 @@ public:
     string report_outfile;
     string misc_outfile;
     idx_size cz_path;
+    float norm_perc;
+    int norm_depth;
     int czp_append_len;
     int cz_num_bits;
     int dfs_length;
@@ -86,13 +88,16 @@ public:
                                const idx_size amp_size);
     
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
-    cz_path(0), czp_append_len(0), cz_num_bits(0), dfs_length(0), depth(26), th(15), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
+    cz_path(0),  norm_perc(0), norm_depth(0), czp_append_len(0), cz_num_bits(0), dfs_length(0), depth(26), th(15), num_threads(1),
+    vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
     Config(const idx_size amp_size,
            const string ifile,
            const string pfile,
            const string afile,
            const string rfile,
            const string mfile,
+           const float norm_p,
+           const int norm_d,
            const idx_size cz_p,
            const int cz_append_len,
            const int cz_len,

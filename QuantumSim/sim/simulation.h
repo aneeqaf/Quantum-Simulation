@@ -33,6 +33,7 @@ private:
     double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time;
     idx_size curr_gate;
     Config config;
+    vector<double> norms_CZ_paths;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
    

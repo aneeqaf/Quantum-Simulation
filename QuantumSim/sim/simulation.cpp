@@ -10,7 +10,13 @@
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
-SequentialSimulation(const Config& c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0), config(c){}
+SequentialSimulation(const Config& c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0), config(c)
+{
+    if (config.norm_depth) {
+        idx_size num_norms = config.norm_depth ? 1ull << config.norm_depth : 1ull << config.czp_append_len;
+        norms_CZ_paths.resize(num_norms, 0);
+    }
+}
 
 void SequentialSimulation::
 PopulateBenchmarkMap()
@@ -71,12 +77,13 @@ Simulate(GenericQuantumState& amp,
     Time time;
     time.StartTime();
     string cz_path = "-";
-    if (config.cz_num_bits) {
+    if (config.cz_num_bits || config.norm_perc) {
         amp.amps_of_interest.resize(config.indices.size(), 0);
        
         config.cz_path <<= config.czp_append_len;
-        idx_size cz_paths_ex = 1ull << config.czp_append_len;
-        idx_size total_bits = config.cz_num_bits + config.czp_append_len;
+        idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
+        total_bits = config.cz_num_bits ? config.cz_num_bits + config.czp_append_len : config.norm_depth;
+        
         for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
             cz_path = bitset<128>(config.cz_path + cz_p).to_string();
             cz_path = cz_path.substr(cz_path.size() - total_bits);
@@ -88,6 +95,9 @@ Simulate(GenericQuantumState& amp,
             if (config.dfs_length == 0)
                 for(idx_size i = 0; i < idx.size(); ++i)
                     amp.amps_of_interest[i] += amp[idx[i]];
+            
+            if (config.norm_perc)
+                norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
             
         }
         if (config.print_amp)
@@ -333,7 +343,7 @@ Phase1Simulation(GenericQuantumState& amp,
     else if (exec == 1) {
         if (terminate && config.dfs_length == 0 && cz_path == "" && cz_path != "-") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
-            + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. ";
+            + to_string(amp.count_of_category.decomposed_CZ/2) + " xCZ gates. ";
             
             if (circuit.GetTotalNumGates() != curr_gate) {
                 int current_cycle = 0;
@@ -343,7 +353,7 @@ Phase1Simulation(GenericQuantumState& amp,
                         break;
                     }
                 }
-                cout << "CZpath exhausted early.\n";// Simulated " << current_cycle << " out of " << config.depth << " cycles\n";
+                cout << "CZpath exhausted early.\n";
             }
             else {
                 cout << "No xCZ gates left\n";
@@ -352,7 +362,7 @@ Phase1Simulation(GenericQuantumState& amp,
         }
         else if (!terminate && cz_path == "") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
-            + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. No xCZ gates left.\n";
+            + to_string(amp.count_of_category.decomposed_CZ/2) + " xCZ gates. No xCZ gates left.\n";
             if (config.dfs_length != 0)
                 cout << "Truncated DFS length : " << config.dfs_length << "\n";
         }
@@ -412,7 +422,7 @@ Phase2Simulation(GenericQuantumState& amp,
     if (exec == 1) {
         if (!cz_path.size()) {
             if (circuit.GetTotalNumGates() != curr_gate)
-                cout << "DFS path exhausted early";
+                cout << "DFS path exhausted early\n";
             else
                 cout << "No xCZ gates left\n";
         }
@@ -441,6 +451,22 @@ ReportingAfterSim(GenericQuantumState& amp,
     if (config.verbose)
         PrintSimReport(amp, circuit);
 #endif
+    
+    amp.RescaleAndApplyGlobalICounter();
+    
+    if (config.norm_perc) {
+        ofstream norm_out;
+        norm_out.open(config.misc_outfile + "/" + config.infile + "_" + to_string(config.norm_depth) + ".norms");
+        
+        double sq_sum = 0;
+        for (auto n : norms_CZ_paths){
+            norm_out << -2 * log2(n) << "\n";
+            sq_sum += (n * n);
+        }
+
+        cout << "Sum of squares: " << sq_sum << endl;
+        norm_out.close();
+    }
     
     if (config.print_amp) {
       if (config.cz_num_bits) {
@@ -637,8 +663,8 @@ PrintSystemReport() const
         <<  now->tm_hour << ":" << now->tm_min << ":"
         << std::setw(2) << std::setfill('0') << now->tm_sec
         <<"\n";
-        cout << "Size of complex : " << sizeof(cmplx) << " B\n";
-        cout << "Verbosity : " << config.verbose << "\n\n";
+        cout << "Size of complex : " << sizeof(cmplx) << " B\n\n";
+        cout << "Verbosity : " << config.verbose << "\n";
     }
 }
 
@@ -749,7 +775,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         }
         
         cout << "\n";
-        config.verbose = Config::Verbose::NCC;
+//        config.verbose = Config::Verbose::NCC;
     }
 //    else
 //       cout << "None\n";
@@ -759,7 +785,6 @@ void SequentialSimulation::
 PrintSimReport(GenericQuantumState& amp,
                const Circuit& circuit) const
 {
-    amp.RescaleAndApplyGlobalICounter();
     
     if (config.sim_type == Config::SimType::ApproxOWT || config.sim_type == Config::SimType::Approx2011OWT
         || config.sim_type == Config::SimType::Approx_i11iOWT)
@@ -770,8 +795,6 @@ PrintSimReport(GenericQuantumState& amp,
     {
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
-        double norm = amp.CalculateNormSquared();
-        double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 
         double memory = amp.GetMemUsage();
         ss << "State representation size : ";
@@ -788,12 +811,15 @@ PrintSimReport(GenericQuantumState& amp,
         else
             ss << memory << " B \n";
         
+        double norm = amp.CalculateNormSquared();
+        ss << "Norm";
+        if (amp.GetNumAddends() > 1)
+            ss << "(assuming orthogonal addends)";
+        ss << " : " << sqrt(norm) << "\n";
+        
         if (config.verbose >= Config::Verbose::Default) {
-            ss << "Norm";
-            if (amp.GetNumAddends() > 1)
-                ss << "(assuming orthogonal addends)";
-            ss << " : " << sqrt(norm) << "\n";
-            
+            double avg_inacc = amp.CalculateAverageInaccuracy(norm);
+
             double min = amp.GetMinProb();
             if (sqrt(norm) > 0.9) {
                 ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
@@ -808,9 +834,22 @@ PrintSimReport(GenericQuantumState& amp,
             if (norm >= 0.9)
                 ss << "Avg inaccuracy per probability > " << avg_inacc << " ("<< (avg_inacc/amp.GetAvgProb()) * 100 << "%)\n";
             
-            idx_size zero_amps = amp.CountZeroAmp();
-            if (zero_amps)
-                ss << "Stored zero amplitudes : " << (double(zero_amps)/double(temp_amp_size)) * 100 << "%\n";
+            double zero_amps_A = amp.CountZeroAmpPercentage();
+            double zero_amps_B = 0;
+            if (amp.GetNumAddends())
+                zero_amps_B = amp.CountZeroAmpPercentage();
+            
+            if (zero_amps_A || zero_amps_B) {
+                ss << "Stored zero amplitudes : ";
+                if (amp.GetNumAddends()) {
+                    ss << " 1st block = ";
+                    ss << zero_amps_A << "% 2nd block = " ;
+                    ss << zero_amps_B << "%\n";
+                }
+                else {
+                   ss << zero_amps_A << "%\n";
+                }
+            }
         }
         ss << "\n";
         cout << ss.str();
@@ -954,7 +993,7 @@ PrintSimReport(GenericQuantumState& amp,
     }
 
     {
-        int factor = 2 * (1ull << config.czp_append_len);
+        int factor = config.czp_append_len ? 2 * (1ull << config.czp_append_len) : 2 * (1ull << config.norm_depth);
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
@@ -1011,6 +1050,13 @@ PrintSimReport(GenericQuantumState& amp,
             ss <<  RP_s << setw(30 - RP_s.size()) << right << ": "
             << amp.time_by_category.copying << " s\t\t= "
             << (amp.time_by_category.copying/(total_time)) * 100 << "%\n";
+        }
+        
+        if(amp.time_by_category.norm && config.norm_depth) {
+            string RP_n = "\tNorm ";
+            ss <<  RP_n << setw(30 - RP_n.size()) << right << ": "
+            << amp.time_by_category.norm << " s\t\t= "
+            << (amp.time_by_category.norm/(total_time)) * 100 << "%\n";
         }
         
         factor = (1ull << config.czp_append_len) * (1ull << config.dfs_length);

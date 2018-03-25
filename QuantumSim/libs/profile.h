@@ -21,9 +21,9 @@ typedef struct TimesByCategory{
     double rescale;
     double conversion;
     double copying;
+    double norm;
     
-    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0),
-    copying(0){}
+    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), copying(0), norm(0) {}
 }Times;
 
 

@@ -290,14 +290,26 @@ GetAmpVector() const
 }
 
 double FullAmpStateVector::
-GetMinProb() const
+GetMinProb()
 {
+     for (idx_size i = 0; i < amp_size; ++i) {
+        float t = norm(amp[i]);
+
+       if (min_prob > t)
+            min_prob = t;
+    }
     return min_prob;
 }
 
 double FullAmpStateVector::
-GetMaxProb() const
+GetMaxProb()
 {
+    for (idx_size i = 0; i < amp_size; ++i) {
+        float t = norm(amp[i]);
+        
+        if (max_prob < t)
+            max_prob = t;
+    }
     return max_prob;
 }
 
@@ -317,33 +329,63 @@ GetMemUsage() const
 double FullAmpStateVector::
 CalculateNormSquared()
 {
+    Time norm_time;
+    norm_time.StartTime();
+
     float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
-    
-    double norm_sq = 0;
-    
-    for (idx_size i = 0; i < amp_size; ++i) {
-        float t = norm(amp[i] * rescaling_factor);
+
+    double hi_sum = 0, lo_sum = 0;
+
+    for (idx_size i = 0; i < amp_size; i += 4) {
         
-        if (t > (1.0/(1ull << num_qubits)))
-            norm_sq += t;
-        
-        if (min_prob > t)
-            min_prob = t;
-        
-        if (max_prob < t)
-            max_prob = t;
+        float t = 0;
+        for (int j = 0; j < 4; ++j)
+         t += norm(amp[i + j] * rescaling_factor);
+
+        if ((t * (1ull << num_qubits)) > 1.0)
+            hi_sum += t;
+        else
+            lo_sum += t;
     }
     
-    for (idx_size i = 0; i < amp_size; ++i) {
-        float t = norm(amp[i] * rescaling_factor);
     
-        if (t <= (1.0/(1ull << num_qubits)))
-            norm_sq += t;
-    }
-    
-    return norm_sq;
+//    const float rescaling_factor = (global_factor_power % 2) ? 1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0))
+//    : 1.0/pow(2,(global_factor_power/2));
+//
+//    const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
+//        rescaling_factor, rescaling_factor , rescaling_factor, rescaling_factor};
+//
+//    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+//
+//    double hi_sum = 0, lo_sum = 0;
+//
+//    #pragma omp parallel for num_threads(num_threads) reduction(+:hi_sum, lo_sum)
+//    for (idx_size i = 0; i < amp_size; i += 4) {
+//        __m256 t = _mm256_load_ps(t_amp + (2 * i));
+////        __m256 t_1 = _mm256_load_ps(t_amp + (2 * (i + 4)));
+//        t = _mm256_mul_ps(t, rescaling);
+//        t = _mm256_mul_ps(t, t);
+////        t_1 = _mm256_mul_ps(t_1, rescaling);
+////        t_1 = _mm256_mul_ps(t_1, t_1);
+////        __m256 t_r = _mm256_hadd_ps(t_0, t_1);
+//
+//        __m256 t1 = _mm256_hadd_ps(t,t);
+//        __m256 t2 = _mm256_hadd_ps(t1,t1);
+//        __m128 t3 = _mm256_extractf128_ps(t2,1);
+//        __m128 t4 = _mm_add_ss(_mm256_castps256_ps128(t2),t3);
+//        float t_hs = _mm_cvtss_f32(t4);
+//
+//        if ((t_hs * (i + 3)) > hi_sum || (!hi_sum && (t_hs * (i + 3)) > 1/(1ull << GetNumQubits())))
+//            hi_sum += t_hs;
+//        else
+//            lo_sum += t_hs;
+//    }
+//
+    time_by_category.norm += norm_time.GetElapsedTime();
+
+    return hi_sum + lo_sum;
 }
 
 double FullAmpStateVector::
@@ -514,8 +556,8 @@ ApplyGlobalICounter()
     global_i_counter = 0;
 }
 
-idx_size FullAmpStateVector::
-CountZeroAmp() const
+double FullAmpStateVector::
+CountZeroAmpPercentage() const
 {
     idx_size zero_count = 0;
     
@@ -524,7 +566,7 @@ CountZeroAmp() const
             ++zero_count;
     }
     
-    return zero_count;
+    return double(zero_count)/double(amp_size) * 100;
 }
 
 void FullAmpStateVector::

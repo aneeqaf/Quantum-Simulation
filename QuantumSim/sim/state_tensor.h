@@ -68,8 +68,8 @@ public:
     cmplx operator[](bitset<128> i) const;
     cmplx GetAmpFromGlobalState(const idx_size a,
                                 const idx_size b) const;
-    double GetMinProb() const;
-    double GetMaxProb() const;
+    double GetMinProb();
+    double GetMaxProb();
     double GetAvgProb() const;
     double GetMemUsage() const;
     idx_size GetSize() const;
@@ -84,7 +84,7 @@ public:
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
     void Normalize();
-    idx_size CountZeroAmp() const;
+    double CountZeroAmpPercentage() const;
     void ResetAmpVector();
 
     void Rescale();

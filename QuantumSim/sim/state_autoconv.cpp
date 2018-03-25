@@ -153,7 +153,7 @@ operator[](bitset<128> i) const
 }
 
 double AdaptiveStateVector::
-GetMinProb() const
+GetMinProb() 
 {
     if (full_state)
         return full_state -> GetMinProb();
@@ -162,7 +162,7 @@ GetMinProb() const
 }
 
 double AdaptiveStateVector::
-GetMaxProb() const
+GetMaxProb()
 {
     if (full_state)
         return full_state -> GetMaxProb();
@@ -297,13 +297,13 @@ RescaleAndApplyGlobalICounter()
         return sumOfTensors -> RescaleAndApplyGlobalICounter();
 }
 
-idx_size AdaptiveStateVector::
-CountZeroAmp() const
+double AdaptiveStateVector::
+CountZeroAmpPercentage() const
 {
     if (full_state)
-        return full_state -> CountZeroAmp();
+        return full_state -> CountZeroAmpPercentage();
     else
-        return sumOfTensors -> CountZeroAmp();
+        return sumOfTensors -> CountZeroAmpPercentage();
 }
 
 void AdaptiveStateVector::

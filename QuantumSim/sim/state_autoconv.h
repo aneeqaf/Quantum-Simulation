@@ -42,8 +42,8 @@ public:
                                    const int th);
     
     cmplx operator[](bitset<128> i) const;
-    double GetMinProb() const;
-    double GetMaxProb() const;
+    double GetMinProb();
+    double GetMaxProb();
     double GetAvgProb() const;
     double GetMemUsage() const;
     idx_size GetSize() const;
@@ -54,7 +54,7 @@ public:
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
     void Normalize();
-    idx_size CountZeroAmp() const;
+    double CountZeroAmpPercentage() const;
     idx_size GetNumAddends() const;
     void ResetAmpVector();
 

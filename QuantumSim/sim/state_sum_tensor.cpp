@@ -467,7 +467,7 @@ operator[](bitset<128> i) const
 }
 
 double SumOfTensorsProductsStateVector::
-GetMinProb() const
+GetMinProb() 
 {
     double min = 0;
     for (auto& t : tensor_addends)
@@ -476,7 +476,7 @@ GetMinProb() const
 }
 
 double SumOfTensorsProductsStateVector::
-GetMaxProb() const
+GetMaxProb()
 {
     double max = 0;
     for (auto& t : tensor_addends)
@@ -716,8 +716,8 @@ ApplyGlobalICounter()
         t -> ApplyGlobalICounter();
 }
 
-idx_size SumOfTensorsProductsStateVector::
-CountZeroAmp() const
+double SumOfTensorsProductsStateVector::
+CountZeroAmpPercentage() const
 {
     // const idx_size total_size = 1ull << (tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ());
     // idx_size zero_count = 0;
@@ -727,9 +727,8 @@ CountZeroAmp() const
 //            ++zero_count;
 //    }
 
-    if (num_addends == 1)
-        return tensor_addends[0] -> CountZeroAmp();
-    
+    if (num_addends == 1) return tensor_addends[0] -> CountZeroAmpPercentage();
+
    return 0;
 }
 

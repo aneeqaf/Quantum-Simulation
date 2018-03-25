@@ -57,8 +57,8 @@ public:
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
    
     cmplx operator[](bitset<128> i) const;
-    double GetMinProb() const;
-    double GetMaxProb() const;
+    double GetMinProb();
+    double GetMaxProb();
     double GetAvgProb() const;
     double GetMemUsage() const;
     Config::SimType GetSimType() const;
@@ -77,7 +77,7 @@ public:
     double CalculateMeanEntropy2Cuts() const;
     double CalculateCrossEntropy2Cuts(int range) const;
     void Normalize();
-    idx_size CountZeroAmp() const;
+    double CountZeroAmpPercentage() const;
     void ResetAmpVector();
 
     void Rescale();

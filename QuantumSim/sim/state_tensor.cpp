@@ -381,13 +381,13 @@ GetAmpFromGlobalState(const idx_size a,
 }
 
 double TensorProductStateVector::
-GetMinProb() const
+GetMinProb()
 {
     return state_a -> GetMinProb() * state_b -> GetMinProb();
 }
 
 double TensorProductStateVector::
-GetMaxProb() const
+GetMaxProb() 
 {
     return state_a -> GetMaxProb() * state_b -> GetMaxProb();
 }
@@ -568,24 +568,29 @@ GetGlobalFactorPower() const
         state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
 }
 
-idx_size TensorProductStateVector::
-CountZeroAmp() const
+double TensorProductStateVector::
+CountZeroAmpPercentage() const
 {
-    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
-    idx_size zero_count = 0;
+//    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+//    idx_size zero_count = 0;
+//
+//    for (idx_size i = 0; i < a_size; ++i) {
+//        if ((*state_a)[i] == cmplx(0,0))
+//            zero_count += b_size;
+//        else {
+//            for (idx_size j = 0; j < b_size; ++j) {
+//                if ((*state_b)[j] == cmplx(0,0))
+//                    ++zero_count;
+//            }
+//        }
+//    }
+
+    static int calls = 0;
+    ++calls;
     
-    for (idx_size i = 0; i < a_size; ++i) {
-        if ((*state_a)[i] == cmplx(0,0))
-            zero_count += b_size;
-        else {
-            for (idx_size j = 0; j < b_size; ++j) {
-                if ((*state_b)[j] == cmplx(0,0))
-                    ++zero_count;
-            }
-        }
-    }
-    
-    return zero_count;
+    if (calls % 2)
+        return state_a -> CountZeroAmpPercentage();
+    else return state_b -> CountZeroAmpPercentage();
 }
 
 void TensorProductStateVector::

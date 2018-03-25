@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
     }
     
     static struct option longopts[] = {
+        { "approx",    required_argument,       nullptr, 'a' },
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "idx",    required_argument,       nullptr, 'x' },
         { "low_value_q",    required_argument,       nullptr, 'l' },
@@ -86,10 +87,11 @@ int main(int argc, char *argv[])
         { "google_spec",    required_argument,       nullptr, 'g' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
-        { "vcut",    required_argument,       nullptr, 'a' },
-        { "hcut",    required_argument,       nullptr, 'b' },
+        { "vcut",    required_argument,       nullptr, '|' },
+        { "hcut",    required_argument,       nullptr, '_' },
         { "verbose",    required_argument,       nullptr, 'v' },
         { "CZ_path",    required_argument,       nullptr, 'c' },
+        { "norm_est",    required_argument,       nullptr, 'n' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
@@ -97,8 +99,9 @@ int main(int argc, char *argv[])
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
-    int numQ = 0, numG = 0, threshold = 15, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0;
+    int numQ = 0, numG = 0, threshold = 15, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
+    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0;
+    float norm_perc = 0;
     idx_size cz_path = 0;
     int sim_type = -1;
     Config::Verbose verbose = Config::Default;
@@ -108,7 +111,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "i:o:g:t:d:s:a:v:b:x:f:c:h", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:f:c:n:h", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -116,12 +119,12 @@ int main(int argc, char *argv[])
                 vcut = stoi(s_c);
                 break;
             }
-            case 'b': {
-                string s_c = string(optarg);
-                hcut = stoi(s_c);
-                break;
-            }
             case 'c': {
+                if (norm_perc) {
+                    cerr << "Please specify either norm estimation or CZ_path simulation.\n";
+                    exit(1);
+                }
+                
                 string cz_path_temp = string(optarg);
                 
                 if (cz_path_temp.find(",") != string::npos) {
@@ -137,10 +140,12 @@ int main(int argc, char *argv[])
                     if (cz_len) {
                         idx_size pos1 = cz_path_temp.find(",");
                         
-                        if (count_commas > 1)
+                        if (count_commas > 1) {
                             pos2 = cz_path_temp.find(",", pos1 + 1);
-                        else pos2 = pos1 + 1;
-                        cz_path = stoul(cz_path_temp.substr(pos1 + 1, pos2 - pos1));
+                            cz_path = stoul(cz_path_temp.substr(pos1 + 1, pos2 - pos1));
+                        }
+                        else cz_path = stoul(cz_path_temp.substr(pos1 + 1));
+
 
                         if (count_commas == 2)
                             czp_app_len = stoi(cz_path_temp.substr(pos2 + 1));
@@ -165,6 +170,11 @@ int main(int argc, char *argv[])
                 depth = stoi(s_d);
                 break;
             }
+            case 'f': {
+                string s_th = string(optarg);
+                threshold = stoi(s_th);
+                break;
+            }
             case 'g': {
                 valid = true;
                 create = true;
@@ -179,6 +189,23 @@ int main(int argc, char *argv[])
                     num_qubits.push_back(numQ);
                     num_gates.push_back(numG);
                 }
+                break;
+            }
+            case 'h':{
+                cout
+                << "\n--idx, -x       \t: int<seed>,int<num_indices> or int<seed>,int<num_indices>+\n"
+                << "--low_value_qubits, -l \t: int<base case threshold for XYFastTransform>\n"
+                << "--num_threads, -t \t: int<max_num_threads>\n"
+                << "--depth, -d     \t: int<depth of circuit to be simulated>\n"
+                << "--inputfile, -i \t: string<circuit file>\n"
+                << "--outfile, -o   \t: string<filename to print output to>\n"
+                << "--sim_type, -s  \t: int<type of sim> (Please refer to the manual)\n"
+                << "--vcut, -a      \t: int<cut_size>\n"
+                << "--hcut, -b      \t: int<cut_size>\n"
+                << "--verbose, -v   \t: int<verbosity level of report> (Please refer to the manual)\n"
+                << "--CZ_path, -c   \t: string<0s and 1s> or int<length_bitstring>,int<value_bitstring>\n\n"
+                << "Please refer to the manual for more options.\n\n";
+                return 0;
                 break;
             }
             case 'i': {
@@ -205,14 +232,23 @@ int main(int argc, char *argv[])
                     out_file = out_file.substr(0, p);
                 break;
             }
+            case 'n': {
+                if (cz_len) {
+                    cerr << "Please specify either norm estimation or CZ_path simulation.\n";
+                    exit(1);
+                }
+                string n_str = string(optarg);
+                if (n_str.find(",") == string::npos) {
+                    cerr << "Missing argument in the norm estimation mode\n";
+                    exit(1);
+                }
+                norm_perc = stof(n_str.substr(0, n_str.find(",")));
+                norm_depth = stoi(n_str.substr(n_str.find(",") + 1));
+                break;
+            }
             case 's': {
                 string s_type = string(optarg);
                 sim_type = (Config::SimType)stoi(s_type);
-                break;
-            }
-            case 'f': {
-                string s_th = string(optarg);
-                threshold = stoi(s_th);
                 break;
             }
             case 'v': {
@@ -250,23 +286,6 @@ int main(int argc, char *argv[])
                 else
                     idx_filename = idx_arg;
                 
-                break;
-            }
-            case 'h':{
-                cout
-                << "\n--idx, -x       \t: int<seed>,int<num_indices> or int<seed>,int<num_indices>+\n"
-                << "--low_value_qubits, -l \t: int<base case threshold for XYFastTransform>\n"
-                << "--num_threads, -t \t: int<max_num_threads>\n"
-                << "--depth, -d     \t: int<depth of circuit to be simulated>\n"
-                << "--inputfile, -i \t: string<circuit file>\n"
-                << "--outfile, -o   \t: string<filename to print output to>\n"
-                << "--sim_type, -s  \t: int<type of sim> (Please refer to the manual)\n"
-                << "--vcut, -a      \t: int<cut_size>\n"
-                << "--hcut, -b      \t: int<cut_size>\n"
-                << "--verbose, -v   \t: int<verbosity level of report> (Please refer to the manual)\n"
-                << "--CZ_path, -c   \t: string<0s and 1s> or int<length_bitstring>,int<value_bitstring>\n\n"
-                << "Please refer to the manual for more options.\n\n";
-                return 0;
                 break;
             }
             default: {
@@ -318,12 +337,12 @@ int main(int argc, char *argv[])
     }
     
     if (sim_type == -1) {
-        if (cir.GetNumQubits() >= 32) sim_type = 5;
+        if (cir.GetNumQubits() <= 32) sim_type = 5;
         else sim_type = 0;
     }
     
     Config config(1ull << cir.GetNumQubits(), input_filename ,"output/probabilities/" + out_file,
-                  "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc/g_" + out_file,
+                  "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
                   cz_path, czp_app_len, cz_len, dfs_length, ascii, print_amp, print_idx, (Config::SimType) sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads);
     

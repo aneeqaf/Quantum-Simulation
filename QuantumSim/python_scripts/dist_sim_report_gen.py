@@ -185,8 +185,9 @@ def main(cir_file, est_time, max_procs):
 	if dfs:
 		mem_val *= 2
 	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit)
-	print("\tPredicted time : " + str(round(float(est_time), 3)) \
-		+ " +- " + str(round(float(est_time) * 0.3, 3)) + " s")
+	if float(est_time):
+		print("\tPredicted time : " + str(round(float(est_time), 3)) \
+			+ " +- " + str(round(float(est_time) * 0.3, 3)) + " s")
 	print("\tBatch stats :\n\t\tAvg user time : " + str(round((avg_user_time/num_batches), 3)) \
 		+ " s \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
 		str(round(max_elapsed_time, 3))+ " s (max)")
