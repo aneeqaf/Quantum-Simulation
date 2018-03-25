@@ -133,7 +133,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
         for (int i = 0; i < num_q_a; ++i)
             CZ_bitmasks_a[i] = 0;
         
-        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, bitmasks, 0, CZ_bitmasks, total_circuit_qubits);
+        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, bitmasks, 0, CZ_bitmasks);
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], bitmasks, 0);
         
@@ -152,7 +152,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
         for (int i = 0; i < num_q_b; ++i)
             CZ_bitmasks_b[i] = 0;
         
-        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, bitmasks, 1, CZ_bitmasks, total_circuit_qubits);
+        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, bitmasks, 1, CZ_bitmasks);
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], bitmasks, 1); 
         
@@ -162,7 +162,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
             state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
         
     }
-    
+    state_a -> PrintStateVector();
+    cout << endl;
+    state_b -> PrintStateVector();
+    cout << endl;
     // TODO : Fix the book keeping for approximation
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
@@ -194,7 +197,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
 idx_size TensorProductStateVector::
 CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
 {
-    const idx_size num_q_a = bitmasks.getNumQubitsInBlock(0);
+    const int num_q_a = bitmasks.getNumQubitsInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
     for (int i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;

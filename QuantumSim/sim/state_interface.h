@@ -53,7 +53,7 @@ public:
     QubitPartition(int rows,
                    int cols)
     : QubitPartition(rows, cols,
-    bitset<128>((1ull << (rows * cols / 2)) - 1)) {
+    bitset<128>((1ull << (rows * cols / 2)) - 1) << ((rows * cols) - (rows * cols / 2))) {
     }
     
     // two blocks, of which one is specified, the other is its complement
@@ -201,8 +201,7 @@ int ProjectQubit(const int qubit_to_project,
 bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
                       const QubitPartition& block_bitmasks,
                       const int block_idx,
-                      const bitset<128>* __restrict gate_bitmasks,
-                      const int total_circuit_qubits);
+                      const bitset<128>* __restrict gate_bitmasks);
 bitset<128> ScatterGlobalIndex(const bitset<128> i,
                                const bitset<128> partition_bitmask,
                                const idx_size total_qubits);
