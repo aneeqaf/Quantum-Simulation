@@ -32,10 +32,11 @@ import numpy as np
 @click.option("--print_idxs", nargs=1, required=False, default=-1)
 @click.option("--print_all", nargs=1, required=False, default=-1)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
-@click.option("--approx", nargs=1, required=False, is_flag=True)
+@click.option("--approx", nargs=1, required=False, default=0)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_threshold, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, approx):
 
+	epsilon = 1
 	max_threads = cpu_count()
 	binary = "./bin/rr "
 	command = binary + "-i " + circuit 
@@ -78,8 +79,10 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 		max_procs = num_batches
 
 	if approx:
-		proc_prefix_bits += ranges_bits;
-		ranges_bits = 0;
+		proc_prefix_bits += ranges_bits
+		ranges_bits = 0
+		epsilon = approx
+
 
 	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
 		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
@@ -91,11 +94,12 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 	if os.path.isdir(cir_dir):
 		shutil.rmtree(cir_dir, ignore_errors=True)
 	
+	# evaluate the memory and runtime before proceeding
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
 
 	cz_bits_strings = []
 	num_bit_strings = (1 << int(proc_prefix_bits)) if not max_procs else max_procs
-	for bit_comb in range(0, num_bit_strings):
+	for bit_comb in range(0, num_bit_strings, epsilon):
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")

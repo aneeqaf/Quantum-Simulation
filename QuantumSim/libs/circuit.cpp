@@ -134,10 +134,8 @@ GroupSimilarGates()
 }
 
 int Circuit::
-MovexCZGates(bitset<128> a_qubits_bitmask,
-             bitset<128> b_qubits_bitmask)
+MovexCZGates(const QubitPartition& bitmasks)
 {
-    const int modified_q = qubits - 1;
     int total_xCZ_count = 0, count_CZ = 0;
   
     for (idx_size i = qubits; i < gates.size(); ++i) {
@@ -146,29 +144,16 @@ MovexCZGates(bitset<128> a_qubits_bitmask,
              idx_size j = i;
              for (; j < gates.size() && gates[j].ids.back() == Gate::Type::Z; ++j) {
                  ++count_CZ;
-                 bitset<128> a_bm = 0, b_bm = 0;
-                 a_bm[modified_q - gates[j].qubits.front()] = 1;
-                 b_bm[modified_q - gates[j].qubits.back()] = 1;
-                 if ((a_bm & a_qubits_bitmask) != 0) {
-                     if ((b_bm & a_qubits_bitmask) == 0) {
-                         swap(gates[i + count_xCZ++], gates[j]);
-                     }
-                 }
-                 else if ((b_bm & a_qubits_bitmask) != 0) {
-                     if ((a_bm & a_qubits_bitmask) == 0) {
-                         swap(gates[i + count_xCZ++], gates[j]);
-                     }
-                 }
-                 else if ((b_bm & b_qubits_bitmask) != 0) {
-                     if ((a_bm & b_qubits_bitmask) == 0) {
-                         swap(gates[i + count_xCZ++], gates[j]);
-                     }
-                 }
-                 else if ((a_bm & b_qubits_bitmask) != 0) {
-                     if ((b_bm & b_qubits_bitmask) == 0) {
-                         swap(gates[i + count_xCZ++], gates[j]);
-                     }
-                 }
+                 int q0 = gates[j].qubits.front(), q1 = gates[j].qubits.back();
+                
+                 if (bitmasks.globalToBlock(q0) == 0 && bitmasks.globalToBlock(q1) == 1)
+                    swap(gates[i + count_xCZ++], gates[j]);
+                 else if (bitmasks.globalToBlock(q0) == 1 && bitmasks.globalToBlock(q1) == 0)
+                    swap(gates[i + count_xCZ++], gates[j]);
+//                 else if (bitmasks.globalToBlock(q1) == 1 && bitmasks.globalToBlock(q0) == 0)
+//                    swap(gates[i + count_xCZ++], gates[j]);
+//                 else if (bitmasks.globalToBlock(q1) == 0 && bitmasks.globalToBlock(q0) == 1)
+//                     swap(gates[i + count_xCZ++], gates[j]);
              }
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,
                   [](Gate& g1, Gate& g2){ return g1.qubits.front() < g2.qubits.front();});

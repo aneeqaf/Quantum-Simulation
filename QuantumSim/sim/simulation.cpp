@@ -66,7 +66,7 @@ Simulate(GenericQuantumState& amp,
         QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.hcut) :
         QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.vcut) ;
         
-        xCZ_gate_count = circuit.MovexCZGates(bitmasks.getBlockBitmask(0), bitmasks.getBlockBitmask(1));
+        xCZ_gate_count = circuit.MovexCZGates(bitmasks);
     }
     
     if (config.verbose)
@@ -345,16 +345,9 @@ Phase1Simulation(GenericQuantumState& amp,
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
             + to_string(amp.count_of_category.decomposed_CZ/2) + " xCZ gates. ";
             
-            if (circuit.GetTotalNumGates() != curr_gate) {
-                int current_cycle = 0;
-                for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
-                    if (curr_gate < (idx_size)circuit.GateIndexForCycle(c)) {
-                        current_cycle = c;
-                        break;
-                    }
-                }
+            if (circuit.GetTotalNumGates() != curr_gate)
                 cout << "CZpath exhausted early.\n";
-            }
+            
             else {
                 cout << "No xCZ gates left\n";
                 cout << "Truncated CZ path : " << cz_path.size() << "\n";
@@ -680,7 +673,10 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     
     cout << "Qubits : " << circuit.GetNumQubits() << "  ";
     cout << "Gates : " << circuit.GetTotalNumGates() << "  ";
-    cout << "Cycles : " << circuit.GetNumCycles() << "\n\n";
+    cout << "Cycles : " << circuit.GetNumCycles() << "\n";
+    
+    if (!amp.log.empty())
+        cout << amp.log[amp.log.size() - 1]<< "\n";
     
     idx_size log_count = 0;
     cout << "Simulation type : ";
@@ -1083,26 +1079,26 @@ PrintSimReport(GenericQuantumState& amp,
         cout << ss.str() << "\n";
     }
     
-    if (config.verbose == Config::Verbose::Cycles) {
-        cout << log.str() << "\n";
-        cout << "Cycle\t xCZ\t Addends\t  Memory\n";
-        for (idx_size c = 0; c < amp.data_per_cycles.memory.size(); ++c) {
-            cout << amp.data_per_cycles.cycles[c] << "\t "
-            << amp.data_per_cycles.xCZ_H[c] << "," << amp.data_per_cycles.xCZ_V[c] << "\t "
-            << amp.data_per_cycles.addends[c] << "\t  " ;
-            if (amp.data_per_cycles.memory[c] >= (1 << 30)) {
-                cout << amp.data_per_cycles.memory[c] / (1 << 30) << " GiB \n";
-            }
-            else if (amp.data_per_cycles.memory[c] >= (1 << 20)) {
-                cout << amp.data_per_cycles.memory[c] / (1 << 20) << " MiB \n";
-            }
-            else if (amp.data_per_cycles.memory[c] >= (1 << 10)) {
-                cout << amp.data_per_cycles.memory[c] / (1 << 10) << " KiB \n";
-            }
-            else
-                cout << amp.data_per_cycles.memory[c] << " B \n";
-        }
-    }
+//    if (config.verbose == Config::Verbose::Cycles) {
+//        cout << log.str() << "\n";
+//        cout << "Cycle\t xCZ\t Addends\t  Memory\n";
+//        for (idx_size c = 0; c < amp.data_per_cycles.memory.size(); ++c) {
+//            cout << amp.data_per_cycles.cycles[c] << "\t "
+//            << amp.data_per_cycles.xCZ_H[c] << "," << amp.data_per_cycles.xCZ_V[c] << "\t "
+//            << amp.data_per_cycles.addends[c] << "\t  " ;
+//            if (amp.data_per_cycles.memory[c] >= (1 << 30)) {
+//                cout << amp.data_per_cycles.memory[c] / (1 << 30) << " GiB \n";
+//            }
+//            else if (amp.data_per_cycles.memory[c] >= (1 << 20)) {
+//                cout << amp.data_per_cycles.memory[c] / (1 << 20) << " MiB \n";
+//            }
+//            else if (amp.data_per_cycles.memory[c] >= (1 << 10)) {
+//                cout << amp.data_per_cycles.memory[c] / (1 << 10) << " KiB \n";
+//            }
+//            else
+//                cout << amp.data_per_cycles.memory[c] << " B \n";
+//        }
+//    }
     
     cout << "¯\\_(ツ)_/¯ \n\n";
 }

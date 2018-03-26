@@ -94,7 +94,8 @@ public:
                              const QubitPartition::Cuts type,
                              const int hcut = 0,
                              const int vcut = 0,
-                             const Config::SimType sim = Config::LosslessH);
+                             const Config::SimType sim = Config::LosslessH,
+                             const int verb = 3);
     TensorProductStateVector(const TensorProductStateVector& rhs) ;
     TensorProductStateVector& operator=(const TensorProductStateVector& rhs) = delete;
     ~TensorProductStateVector();

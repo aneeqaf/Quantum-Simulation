@@ -287,6 +287,16 @@ int main(int argc, char *argv[])
                 
                 break;
             }
+            case '|': {
+                string s_c = string(optarg);
+                vcut = stoi(s_c);
+                break;
+            }
+            case '_': {
+                string s_c = string(optarg);
+                hcut = stoi(s_c);
+                break;
+            }
             default: {
                 cerr << "Unknown option " << c << '\n';
                 exit(1);
@@ -365,22 +375,23 @@ int main(int argc, char *argv[])
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Horizontal, hcut, vcut,
-                                      (Config::SimType)sim_type);
+                                      (Config::SimType)sim_type, config.verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
-                                      (Config::SimType)sim_type);
+                                      (Config::SimType)sim_type, config.verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
-        SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type, hcut, vcut);
+        SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
+                                             hcut, vcut, config.verbose);
         sim.Simulate(amp, cir);
     }
     else {
         AdaptiveStateVector amp(cir.GetNumQubits(),
-                                (Config::SimType)sim_type, hcut, vcut);
+                                (Config::SimType)sim_type, hcut, vcut, config.verbose);
         sim.Simulate(amp, cir);
     }
     return 0;

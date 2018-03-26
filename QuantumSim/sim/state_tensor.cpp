@@ -14,18 +14,21 @@ TensorProductStateVector(const int qubits,
                          const QubitPartition::Cuts cut_type,
                          const int hcut,
                          const int vcut,
-                         const Config::SimType sim):
+                         const Config::SimType sim,
+                         const int verb):
 bitmasks(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubits, hcut)
          : QubitPartition(cut_type, qubits, vcut))
 {
     sim_type = sim;
     static int count_h = 0, count_v = 0;
     this -> cut_type = cut_type;
+    
+    bitmasks.RenumberLocalQubits();
 
     int num_q_b0 = bitmasks.getNumQubitsInBlock(0), num_q_b1 = bitmasks.getNumQubitsInBlock(1);
     state_a = new FullAmpStateVector(num_q_b0);
     state_b = new FullAmpStateVector(num_q_b1);
-    
+        
     if (!count_h && cut_type == QubitPartition::Cuts::Horizontal) {
         string data = "";
         data += "Cut : horizontal " + to_string(num_q_b0) + "q + " + to_string(num_q_b1) + "q";
@@ -38,11 +41,12 @@ bitmasks(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type,
         log.push_back(data);
         ++count_v;
     }
+    log.push_back(bitmasks.print(verb));
 }
 
 TensorProductStateVector::
-TensorProductStateVector(const TensorProductStateVector& rhs) : state_a(new FullAmpStateVector(*(rhs.state_a))),
-state_b(new FullAmpStateVector(*(rhs.state_b))), bitmasks(rhs.bitmasks), cut_type(rhs.cut_type) {
+TensorProductStateVector(const TensorProductStateVector& rhs) : bitmasks(rhs.bitmasks), cut_type(rhs.cut_type),
+state_a(new FullAmpStateVector(*(rhs.state_a))), state_b(new FullAmpStateVector(*(rhs.state_b))) {
     sim_type = rhs.sim_type;
 }
 
@@ -123,6 +127,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
 {
     
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
+    state_a -> PrintStateVector() ; cout << endl;
+    state_b -> PrintStateVector() ; cout << endl;
     
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         Time time;
@@ -163,6 +169,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
             state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
         
     }
+    state_a -> PrintStateVector() ; cout << endl;
+    state_b -> PrintStateVector() ; cout << endl;
     // TODO : Fix the book keeping for approximation
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
@@ -264,9 +272,19 @@ ApplyNonCGate(const int gate_qubit,
               const Gate::Type gate_type,
               const Gate& g)
 {
-    const int modified_q = state_a -> GetNumQubits() + state_b -> GetNumQubits() - 1;
+    int modified_q = bitmasks.getNumQubits() - 1;
+//    int block = bitmasks.globalToBlock(modified_q - gate_qubit);
+//    int modified_q_partition = bitmasks.getNumQubitsInBlock(block) - 1;
+
+//    const int projected_gate_q = bitmasks.globalToLocal(modified_q - gate_qubit);
+//    if (bitmasks.globalToBlock(gate_qubit) == 0)
+//        state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
+//    else
+//        state_b -> ApplyNonCGate(projected_gate_q, gate_type, g);
     const bitset<128> a_qubits_bitmask = bitmasks.getBlockBitmask(0), b_qubits_bitmask = bitmasks.getBlockBitmask(1);
-    if (bitmasks.globalToBlock(gate_qubit) == 0) {
+    bitset<128> temp = 0;
+    temp[gate_qubit] = 1;
+    if ((a_qubits_bitmask & temp) != 0) {
         const int projected_gate_q = ProjectQubit(modified_q - gate_qubit, a_qubits_bitmask, modified_q + 1);
         state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
     }
@@ -327,7 +345,6 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const int th)
 {
-    cout << "xy:" << endl;
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, bitmasks, 0, true);
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, bitmasks, 0, true);
@@ -343,16 +360,16 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 cmplx TensorProductStateVector::
 operator[](bitset<128> i) const
 {    
-    if (cut_type == QubitPartition::Cuts::Horizontal) {
-        bitset<128> temp_i = i;
-        bitset<128> a = i >> bitmasks.getNumQubitsInBlock(1);
-        bitset<128> b = temp_i & bitmasks.getBlockBitmask(1);
-        return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
-    }
-    else {
+//    if (cut_type == QubitPartition::Cuts::Horizontal) {
+//        bitset<128> temp_i = i;
+//        bitset<128> a = i >> bitmasks.getNumQubitsInBlock(1);
+//        bitset<128> b = temp_i & bitmasks.getBlockBitmask(1);
+//        return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
+//    }
+//    else {
         vector<idx_size> idx = bitmasks.IndexScatter(i);
         return (*state_a)[idx[0]] * (*state_b)[idx[1]];
-    }
+//    }
 }
 
 
