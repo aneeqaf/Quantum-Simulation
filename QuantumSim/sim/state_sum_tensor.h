@@ -15,7 +15,6 @@ using namespace std;
 
 class SumOfTensorsProductsStateVector : public GenericQuantumState {
 private:
-    Config::SimType sim_type;
     vector<TensorProductStateVector*> tensor_addends;
     idx_size num_addends;
     

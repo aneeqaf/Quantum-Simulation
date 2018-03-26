@@ -91,6 +91,9 @@ public:
         return _local_to_global[block][q];
     }
     
+    // Scatters the global amp index into local amp indices.
+    vector<idx_size> IndexScatter(const bitset<128>& i) const;
+    
     // move up boundary qubits up front in each block
     void RenumberLocalQubits();
     
@@ -125,6 +128,8 @@ public:
     static Times time_by_category;
     static int num_threads;
     static Config::SimMode sim_mode;
+    static Config::SimType sim_type;
+    static bool approx;
     vector<cmplx> amps_of_interest;
     static char partition_to_sim;
     
@@ -191,20 +196,16 @@ public:
 };
 
 int FindDivisor(int num);
-idx_size Project1QBitmask(const bitset<128> gate_bitmask,
+idx_size Project1QBitmask(const bitset<128>& gate_bitmask,
                           const QubitPartition& block_bitmasks,
                           const int block_idx,
                           const bool is_zero_least_sig = false);
 int ProjectQubit(const int qubit_to_project,
-                 const bitset<128> partition_bitmask,
+                 const bitset<128>& partition_bitmask,
                  const int num_qubits);
 bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
                       const QubitPartition& block_bitmasks,
                       const int block_idx,
                       const bitset<128>* __restrict gate_bitmasks);
-bitset<128> ScatterGlobalIndex(const bitset<128> i,
-                               const bitset<128> partition_bitmask,
-                               const idx_size total_qubits);
-
 
 #endif /* state_interface_h */

@@ -50,6 +50,8 @@ void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
+    amp.approx = config.approx;
+    
     PopulateBenchmarkMap();
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -991,7 +993,8 @@ PrintSimReport(GenericQuantumState& amp,
     }
 
     {
-        int factor = config.czp_append_len ? 2 * (1ull << config.czp_append_len) : 2 * (1ull << config.norm_depth);
+        int factor = config.czp_append_len ? 1ull << config.czp_append_len : 1ull << config.norm_depth;
+        factor = factor > 1 ? factor * 2 : factor;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";

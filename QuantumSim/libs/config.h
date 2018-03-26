@@ -52,7 +52,7 @@ public:
 class Config {
 public:
     enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, ApproxOWT, FullState,
-        Approx2011, Approx1_101, Approx1110, Approx2011OWT, Approx_i11i, Approx_i11iOWT};
+        Approx2011, Approx1_101, Approx1110, Approx2011OWT, Approx_i11i, Approx_i11iOWT, ApproxCZPath};
     enum Verbose : int {None, NCCV, NCC, Default, Cycles};
     enum SimMode : int {Phase1, Phase2, Phase3};
     
@@ -78,6 +78,7 @@ public:
     bool print_amp;
     bool print_idx;
     bool ascii;
+    bool approx;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -89,7 +90,8 @@ public:
     
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
     cz_path(0),  norm_perc(0), norm_depth(0), czp_append_len(0), cz_num_bits(0), dfs_length(0), depth(26), th(15), num_threads(1),
-    vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
+    vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), approx(true),
+    sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
     Config(const idx_size amp_size,
            const string ifile,
            const string pfile,
@@ -102,6 +104,7 @@ public:
            const int cz_append_len,
            const int cz_len,
            const int dfs,
+           const bool approx = false,
            const bool ascii = false,
            const bool p_amp = false,
            const bool p_idx = false,

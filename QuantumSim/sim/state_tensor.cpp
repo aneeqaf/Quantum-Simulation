@@ -14,10 +14,11 @@ TensorProductStateVector(const int qubits,
                          const QubitPartition::Cuts cut_type,
                          const int hcut,
                          const int vcut,
-                         const Config::SimType sim): sim_type(sim),
+                         const Config::SimType sim):
 bitmasks(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubits, hcut)
          : QubitPartition(cut_type, qubits, vcut))
 {
+    sim_type = sim;
     static int count_h = 0, count_v = 0;
     this -> cut_type = cut_type;
 
@@ -41,7 +42,9 @@ bitmasks(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type,
 
 TensorProductStateVector::
 TensorProductStateVector(const TensorProductStateVector& rhs) : state_a(new FullAmpStateVector(*(rhs.state_a))),
-state_b(new FullAmpStateVector(*(rhs.state_b))), bitmasks(rhs.bitmasks), cut_type(rhs.cut_type), sim_type(rhs.sim_type) {}
+state_b(new FullAmpStateVector(*(rhs.state_b))), bitmasks(rhs.bitmasks), cut_type(rhs.cut_type) {
+    sim_type = rhs.sim_type;
+}
 
 TensorProductStateVector::
 ~TensorProductStateVector()
@@ -55,22 +58,21 @@ FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
                              const bitset<128>* __restrict gate_bitmasks)
 {
     const int qubits_a = state_a -> GetNumQubits();
-    const int modified_q = qubits_a + state_b -> GetNumQubits() - 1;
+    const int modified_q = bitmasks.getNumQubits() - 1; 
     const bitset<128> block0_bitmask = bitmasks.getBlockBitmask(0);
     int count = 0, c = 0;
     
-    for (int i = 0; c <  qubits_a; ++i) {
-        bitset<128> temp1 = 0;
-        temp1[modified_q - i] = 1;
-        if ((temp1 & block0_bitmask) != 0) {
+    for (int i = 0; c < qubits_a; ++i) {
+        if (bitmasks.globalToBlock(modified_q - i) == 0) {
             if ((gate_bitmasks[modified_q - i] & block0_bitmask) != gate_bitmasks[modified_q - i]) {
-                xCZ_bitmasks[bitmasks.globalToLocal(i)] = Project1QBitmask(gate_bitmasks[modified_q - i],
-                                                                           bitmasks, 1) ;
+                xCZ_bitmasks[qubits_a - 1 - bitmasks.globalToLocal(modified_q - i)] =
+                        Project1QBitmask(gate_bitmasks[modified_q - i], bitmasks, 1) ;
                 ++count;
             }
             ++c;
         }
     }
+   
     return count;
 }
 
@@ -120,8 +122,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       const bitset<128> T_bitmasks[2])
 {
     
-    const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits(),
-    total_circuit_qubits = num_q_a + num_q_b;
+    const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
     
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         Time time;
@@ -162,10 +163,6 @@ ApplyBlockOfDiagGates(string& cz_bits,
             state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
         
     }
-    state_a -> PrintStateVector();
-    cout << endl;
-    state_b -> PrintStateVector();
-    cout << endl;
     // TODO : Fix the book keeping for approximation
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
@@ -210,7 +207,7 @@ CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
             ++new_count;
             int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
             int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 64).to_ulong());
-            const int q1 = first_half ? first_half : second_half ? 64 + second_half : 0;
+            const int q1 = xCZ_bitmask[i].to_ulong() ? first_half : second_half ? 63 + second_half : 0;
             xCZ_bitmask[i][q1] = 0;
         }
     }
@@ -237,7 +234,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
         while (xCZ_bitmask[i] != 0) {
             int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
             int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
-            const int q = first_half ? first_half : second_half ? 63 + second_half : 0;
+            const int q = xCZ_bitmask[i].to_ulong() ? first_half : second_half ? 63 + second_half : 0;
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
             ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, (int)i, modified_num_q_B - q);
@@ -269,9 +266,7 @@ ApplyNonCGate(const int gate_qubit,
 {
     const int modified_q = state_a -> GetNumQubits() + state_b -> GetNumQubits() - 1;
     const bitset<128> a_qubits_bitmask = bitmasks.getBlockBitmask(0), b_qubits_bitmask = bitmasks.getBlockBitmask(1);
-    bitset<128> temp = 0;
-    temp[gate_qubit] = 1;
-    if ((a_qubits_bitmask & temp) != 0) {
+    if (bitmasks.globalToBlock(gate_qubit) == 0) {
         const int projected_gate_q = ProjectQubit(modified_q - gate_qubit, a_qubits_bitmask, modified_q + 1);
         state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
     }
@@ -332,6 +327,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const int th)
 {
+    cout << "xy:" << endl;
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, bitmasks, 0, true);
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, bitmasks, 0, true);
@@ -346,9 +342,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 
 cmplx TensorProductStateVector::
 operator[](bitset<128> i) const
-{
-    const idx_size total_q = bitmasks.getNumQubits();
-    
+{    
     if (cut_type == QubitPartition::Cuts::Horizontal) {
         bitset<128> temp_i = i;
         bitset<128> a = i >> bitmasks.getNumQubitsInBlock(1);
@@ -356,9 +350,8 @@ operator[](bitset<128> i) const
         return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
     }
     else {
-        bitset<128> a = ScatterGlobalIndex(i, bitmasks.getBlockBitmask(0), total_q);
-        bitset<128> b = ScatterGlobalIndex(i, bitmasks.getBlockBitmask(1), total_q);
-        return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
+        vector<idx_size> idx = bitmasks.IndexScatter(i);
+        return (*state_a)[idx[0]] * (*state_b)[idx[1]];
     }
 }
 

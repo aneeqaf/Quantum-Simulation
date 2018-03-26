@@ -17,8 +17,7 @@ class TensorProductStateVector : public GenericQuantumState {
 private:
     QubitPartition bitmasks;
     QubitPartition::Cuts cut_type;
-    Config::SimType sim_type;
-
+    
 public:
     FullAmpStateVector* state_a;
     FullAmpStateVector* state_b;

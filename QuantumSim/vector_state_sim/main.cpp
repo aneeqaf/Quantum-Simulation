@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     }
     
     static struct option longopts[] = {
-        { "approx",    required_argument,       nullptr, 'a' },
+        { "approx",    no_argument,       nullptr, 'a' },
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "idx",    required_argument,       nullptr, 'x' },
         { "low_value_q",    required_argument,       nullptr, 'l' },
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
-    print_idx = false, valid = false, ascii = false;
+    print_idx = false, valid = false, ascii = false, approx = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 15, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0;
@@ -111,12 +111,11 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:f:c:n:h", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "ai:o:g:t:d:s:|:v:_:x:f:c:n:h", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
-                string s_c = string(optarg);
-                vcut = stoi(s_c);
+                approx = true;
                 break;
             }
             case 'c': {
@@ -343,7 +342,7 @@ int main(int argc, char *argv[])
     
     Config config(1ull << cir.GetNumQubits(), input_filename ,"output/probabilities/" + out_file,
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
-                  cz_path, czp_app_len, cz_len, dfs_length, ascii, print_amp, print_idx, (Config::SimType) sim_type, verbose, vcut, hcut, depth,
+                  cz_path, czp_app_len, cz_len, dfs_length, approx, ascii, print_amp, print_idx, (Config::SimType) sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads);
     
     if (print_amp) {

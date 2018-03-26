@@ -151,25 +151,21 @@ MovexCZGates(bitset<128> a_qubits_bitmask,
                  b_bm[modified_q - gates[j].qubits.back()] = 1;
                  if ((a_bm & a_qubits_bitmask) != 0) {
                      if ((b_bm & a_qubits_bitmask) == 0) {
-//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
                      }
                  }
                  else if ((b_bm & a_qubits_bitmask) != 0) {
                      if ((a_bm & a_qubits_bitmask) == 0) {
-//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
                      }
                  }
                  else if ((b_bm & b_qubits_bitmask) != 0) {
                      if ((a_bm & b_qubits_bitmask) == 0) {
-//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
                      }
                  }
                  else if ((a_bm & b_qubits_bitmask) != 0) {
                      if ((b_bm & b_qubits_bitmask) == 0) {
-//                         cout << "Gate " << j << " : " << gates[j].qubits[0] << ", " << gates[j].qubits[1] << " q\n";
                          swap(gates[i + count_xCZ++], gates[j]);
                      }
                  }

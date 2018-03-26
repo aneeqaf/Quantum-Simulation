@@ -254,7 +254,7 @@ def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulati
 		exit()
 
 def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings, \
-	command, t_time, num_threads, mem, cut, app_cz_len = 0, truncated = 0):
+	command, t_time, num_threads, mem, cut, app_cz_len = 0, truncated = 0, approx = False):
 
 	# Generating scripts for each parallel run
 	print("\033[1m" + "Generating scripts for execution" + "\033[0m\n")
@@ -274,6 +274,9 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 					raise
 	
 	num_procs = len(cz_bits_strings) if truncated == 0 else truncated
+
+	if approx:
+		num_procs = num_procs/200;
 	
 	if t_time > 100:
 		proc_per_script = 1

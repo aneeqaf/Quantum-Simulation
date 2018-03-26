@@ -146,7 +146,7 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
         while (xCZ_bitmask[i] != 0) {
             int first_half = __builtin_ctzl(xCZ_bitmask[i] .to_ulong());
             int second_half = __builtin_ctzl((xCZ_bitmask[i]  >> 63).to_ulong());
-            int q = first_half ? first_half : second_half ? 63 + second_half : 0;
+            int q = xCZ_bitmask[i] .to_ulong() ? first_half : second_half ? 63 + second_half : 0;
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
             for (idx_size n = 0; n < num_addends; ++n) {
@@ -257,30 +257,21 @@ FormGatesBitmaskXCZ(bool& terminate,
             ++last_xCZ_idx;
             int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
             int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
-            int q = first_half ? first_half : second_half ? 63 + second_half : 0;
+            int q = xCZ_bitmask[i].to_ulong() ? first_half : second_half ? 63 + second_half : 0;
 
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
             if (cz_bits[0] == '0') {
-                if ((cz_bits.size() + prefix_size) % 2 == 0) {
-//                    cout << "D1D2\n";
+                if ((cz_bits.size() + prefix_size) % 2 == 0 || approx)
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
-                }
-                
-                else {
-//                    cout << "D2D1\n";
+                else
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
-                }
             }
             else {
-                if ((cz_bits.size() + prefix_size) % 2 == 0) {
-//                    cout << "D3D4\n";
+                if ((cz_bits.size() + prefix_size) % 2 == 0 || approx)
                     xCZ_bitmasks_path1_D3D4[i][q] = 1;
-                }
-                else {
-//                    cout << "D4D3\n";
+                else
                     xCZ_bitmasks_path1_D4D3[i][q] = 1;
-                }
             }
             
             cz_bits.erase(0, 1);
