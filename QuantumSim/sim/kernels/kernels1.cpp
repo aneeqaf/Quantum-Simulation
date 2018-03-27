@@ -50,14 +50,14 @@ ApplyControlGate(cmplx* __restrict amp,
                  const Gate::Type gate_type)
 {
     int loop_count = num_qubits_amp - num_controls;
-    const idx_size modified_q = num_qubits_amp -1, num_indices = 1ull << loop_count;
+    const idx_size num_q_1 = num_qubits_amp -1, num_indices = 1ull << loop_count;
     idx_size idx = 0, gate_bitmask = 0, c_bits = 0, iter_count = 0, gate_qubits_bitmask = 0;
     
     for (int j = 0 ; j < num_controls; ++j)
-        c_bits |= (1 << (modified_q - (gate_qubits[j])));
+        c_bits |= (1 << (num_q_1 - (gate_qubits[j])));
     
     for (idx_size i = 0; i < gate_qubits.size(); ++i) {
-        gate_bitmask |= (1ull << (modified_q - gate_qubits[i]));
+        gate_bitmask |= (1ull << (num_q_1 - gate_qubits[i]));
         gate_qubits_bitmask |= 1ull << gate_qubits[i];
     }
     

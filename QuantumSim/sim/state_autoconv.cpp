@@ -77,10 +77,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
             
             //Add support for finding the cut type
 
-            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
-                && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
-                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
-            else
+//            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
+//                && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
+//                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
+//            else
                 full_state = sumOfTensors -> ConvertSumOfTensorsToState();
            
             time_by_category.conversion += time.GetElapsedTime();

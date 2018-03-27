@@ -62,15 +62,15 @@ FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
                              const bitset<128>* __restrict gate_bitmasks)
 {
     const int qubits_a = state_a -> GetNumQubits();
-    const int modified_q = bitmasks.getNumQubits() - 1; 
+    const int num_q_1 = bitmasks.getNumQubits() - 1; 
     const bitset<128> block0_bitmask = bitmasks.getBlockBitmask(0);
     int count = 0, c = 0;
     
     for (int i = 0; c < qubits_a; ++i) {
-        if (bitmasks.globalToBlock(modified_q - i) == 0) {
-            if ((gate_bitmasks[modified_q - i] & block0_bitmask) != gate_bitmasks[modified_q - i]) {
-                xCZ_bitmasks[qubits_a - 1 - bitmasks.globalToLocal(modified_q - i)] =
-                        Project1QBitmask(gate_bitmasks[modified_q - i], bitmasks, 1) ;
+        if (bitmasks.globalToBlock(num_q_1 - i) == 0) {
+            if ((gate_bitmasks[num_q_1 - i] & block0_bitmask) != gate_bitmasks[num_q_1 - i]) {
+                xCZ_bitmasks[qubits_a - 1 - bitmasks.globalToLocal(num_q_1 - i)] =
+                        Project1QBitmask(gate_bitmasks[num_q_1 - i], bitmasks, 1) ;
                 ++count;
             }
             ++c;
@@ -127,8 +127,6 @@ ApplyBlockOfDiagGates(string& cz_bits,
 {
     
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
-    state_a -> PrintStateVector() ; cout << endl;
-    state_b -> PrintStateVector() ; cout << endl;
     
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         Time time;
@@ -167,11 +165,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
 
         if (applyCZ_b || T_bitmasks_b[0] != 0)
             state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b);
-        
     }
-    state_a -> PrintStateVector() ; cout << endl;
-    state_b -> PrintStateVector() ; cout << endl;
-    // TODO : Fix the book keeping for approximation
+//    state_a -> PrintStateVector() ; cout << endl;
+//    state_b -> PrintStateVector() ; cout << endl;
+//    // TODO : Fix the book keeping for approximation
     
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
@@ -213,9 +210,9 @@ CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             ++new_count;
-            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
-            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 64).to_ulong());
-            const int q1 = xCZ_bitmask[i].to_ulong() ? first_half : second_half ? 63 + second_half : 0;
+            const idx_size first_half = xCZ_bitmask[i].to_ulong();
+            const idx_size second_half = (xCZ_bitmask[i] >> 64).to_ulong();
+            const int q1 = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
             xCZ_bitmask[i][q1] = 0;
         }
     }
@@ -240,9 +237,9 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
-            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
-            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
-            const int q = xCZ_bitmask[i].to_ulong() ? first_half : second_half ? 63 + second_half : 0;
+            const idx_size first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            const idx_size second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
+            const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
             ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, (int)i, modified_num_q_B - q);
@@ -272,26 +269,14 @@ ApplyNonCGate(const int gate_qubit,
               const Gate::Type gate_type,
               const Gate& g)
 {
-    int modified_q = bitmasks.getNumQubits() - 1;
-//    int block = bitmasks.globalToBlock(modified_q - gate_qubit);
-//    int modified_q_partition = bitmasks.getNumQubitsInBlock(block) - 1;
+    int block = bitmasks.globalToBlock(gate_qubit);
+    int num_q_1_partition = bitmasks.getNumQubitsInBlock(block) - 1;
 
-//    const int projected_gate_q = bitmasks.globalToLocal(modified_q - gate_qubit);
-//    if (bitmasks.globalToBlock(gate_qubit) == 0)
-//        state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
-//    else
-//        state_b -> ApplyNonCGate(projected_gate_q, gate_type, g);
-    const bitset<128> a_qubits_bitmask = bitmasks.getBlockBitmask(0), b_qubits_bitmask = bitmasks.getBlockBitmask(1);
-    bitset<128> temp = 0;
-    temp[gate_qubit] = 1;
-    if ((a_qubits_bitmask & temp) != 0) {
-        const int projected_gate_q = ProjectQubit(modified_q - gate_qubit, a_qubits_bitmask, modified_q + 1);
+    const int projected_gate_q = num_q_1_partition - bitmasks.globalToLocal(gate_qubit);
+    if (bitmasks.globalToBlock(gate_qubit) == 0)
         state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
-    }
-    else {
-        const int projected_gate_q = ProjectQubit(modified_q - gate_qubit, b_qubits_bitmask, modified_q + 1);
+    else
         state_b -> ApplyNonCGate(projected_gate_q, gate_type, g);
-    }
 }
 
 void TensorProductStateVector::

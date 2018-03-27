@@ -151,9 +151,10 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
     
     for (idx_size i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
-            int first_half = __builtin_ctzl(xCZ_bitmask[i] .to_ulong());
-            int second_half = __builtin_ctzl((xCZ_bitmask[i]  >> 63).to_ulong());
-            int q = xCZ_bitmask[i] .to_ulong() ? first_half : second_half ? 63 + second_half : 0;
+            const idx_size first_half = xCZ_bitmask[i] .to_ulong();
+            const idx_size second_half = (xCZ_bitmask[i]  >> 63).to_ulong();
+            const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
+            
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
             for (idx_size n = 0; n < num_addends; ++n) {
@@ -247,24 +248,25 @@ FormGatesBitmaskXCZ(bool& terminate,
 {
     const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
     bitset<128> xCZ_bitmask[num_q_a];
+    int last_xCZ_idx = 0;
+
     for (idx_size i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
+    
     if (!(tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks)))
         return -1;
-    int last_xCZ_idx = 0;
     
     for (idx_size i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
-            
             if (cz_bits == "") {
                 terminate = true;
                 break;
             }
             
             ++last_xCZ_idx;
-            int first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
-            int second_half = __builtin_ctzl((xCZ_bitmask[i] >> 63).to_ulong());
-            int q = xCZ_bitmask[i].to_ulong() ? first_half : second_half ? 63 + second_half : 0;
+            const idx_size first_half = xCZ_bitmask[i].to_ulong();
+            const idx_size second_half = (xCZ_bitmask[i] >> 63).to_ulong();
+            const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 +  __builtin_ctzl(second_half) : 0;
 
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
@@ -296,9 +298,9 @@ ApplyNonCGate(const int gate_qubit,
               const Gate::Type gate_type,
               const Gate& g)
 {
-    const int modified_q = tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ() - 1;
+    const int num_q_1 = tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ() - 1;
     for (auto& t : tensor_addends)
-        t -> ApplyNonCGate(modified_q - gate_qubit, gate_type, g);
+        t -> ApplyNonCGate(num_q_1 - gate_qubit, gate_type, g);
 }
 
 void SumOfTensorsProductsStateVector::
@@ -422,34 +424,34 @@ ConvertSumOfTensorsToState()
     RescaleAndApplyGlobalICounter();
     const int num_q_B = tensor_addends[0] -> GetStateBNumQ(), num_q_A = tensor_addends[0] -> GetStateANumQ(),
     total_q = num_q_A  + num_q_B;
-    const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A, B_size = 1ull << num_q_B;
-    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
+    const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A;// B_size = 1ull << num_q_B;
+//    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
     
     cmplx* amp = new cmplx[size];
     for (idx_size i = 0; i < size; ++i)
         amp[i] = 0;
   
-    if (sim_type == Config::SimType::LosslessV) {
+//    if (sim_type == Config::SimType::LosslessV) {
         for (idx_size i = 0; i < size; ++i) {
             for (idx_size n = 0; n < num_addends; ++n)
                 amp[i] += (*tensor_addends[n])[i];
         }
-    }
-    else {
-        for (idx_size j = 0; j < num_addends; ++j) {
-            auto& state_A = *(tensor_addends[j] -> state_a);
-            auto& state_B = *(tensor_addends[j] -> state_b);
-            for (idx_size a = 0; a < A_size; ++a) {
-                const cmplx t_a = state_A[a];
-                for (idx_size b = 0; b < B_size; ++b) {
-                    bitset<128> temp_b = b;
-                    bitset<128> temp_a = a << num_q_B;
-                    bitset<128> i = temp_a | (temp_b & B_qubits_bitmask);
-                    amp[i.to_ulong()] += t_a * state_B[b];
-                }
-            }
-        }
-    }
+//    }
+//    else {
+//        for (idx_size j = 0; j < num_addends; ++j) {
+//            auto& state_A = *(tensor_addends[j] -> state_a);
+//            auto& state_B = *(tensor_addends[j] -> state_b);
+//            for (idx_size a = 0; a < A_size; ++a) {
+//                const cmplx t_a = state_A[a];
+//                for (idx_size b = 0; b < B_size; ++b) {
+//                    bitset<128> temp_b = b;
+//                    bitset<128> temp_a = a << num_q_B;
+//                    bitset<128> i = temp_a | (temp_b & B_qubits_bitmask);
+//                    amp[i.to_ulong()] += t_a * state_B[b];
+//                }
+//            }
+//        }
+//    }
     FullAmpStateVector* full_state = new FullAmpStateVector(amp, size);
     delete [] amp;
     return full_state;

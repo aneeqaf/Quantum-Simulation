@@ -191,17 +191,14 @@ public:
 };
 
 int FindDivisor(int num);
-idx_size Project1QBitmask(const bitset<128>& gate_bitmask,
+idx_size Project1QBitmask(bitset<128> gate_bitmask,
                           const QubitPartition& block_bitmasks,
                           const int block_idx,
                           const bool is_zero_least_sig = false);
-bool ProjectCZBitmask(bitset<128>* __restrict projected_bitmasks,
+bool ProjectCZBitmask(bitset<128> projected_bitmasks[],
                       const QubitPartition& block_bitmasks,
                       const int block_idx,
-                      const bitset<128>* __restrict gate_bitmasks);
-int
-ProjectQubit(const int qubit_to_project,
-             const bitset<128> partition_bitmask,
-             const int num_qubits);
+                      const bitset<128>* gate_bitmasks);
+
 
 #endif /* state_interface_h */
