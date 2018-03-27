@@ -153,7 +153,8 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
         while (xCZ_bitmask[i] != 0) {
             const idx_size first_half = xCZ_bitmask[i] .to_ulong();
             const idx_size second_half = (xCZ_bitmask[i]  >> 63).to_ulong();
-            const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
+            const int q = first_half ? __builtin_ctzl(first_half)
+            : second_half ? 63 + __builtin_ctzl(second_half) : 0;
             
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
@@ -246,17 +247,18 @@ FormGatesBitmaskXCZ(bool& terminate,
                     bitset<128>* __restrict xCZ_bitmasks_path1_D4D3,
                     const bitset<128>* __restrict CZ_bitmasks)
 {
-    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    const QubitPartition qp = tensor_addends[0] -> GetQp();
+    const int num_q_a = qp.getNumQubitsInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
     int last_xCZ_idx = 0;
-
-    for (idx_size i = 0; i < num_q_a; ++i)
+   
+    for (int i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
     
     if (!(tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks)))
         return -1;
     
-    for (idx_size i = 0; i < num_q_a; ++i) {
+    for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             if (cz_bits == "") {
                 terminate = true;
@@ -266,7 +268,8 @@ FormGatesBitmaskXCZ(bool& terminate,
             ++last_xCZ_idx;
             const idx_size first_half = xCZ_bitmask[i].to_ulong();
             const idx_size second_half = (xCZ_bitmask[i] >> 63).to_ulong();
-            const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 +  __builtin_ctzl(second_half) : 0;
+            const int q = first_half ? __builtin_ctzl(first_half)
+            : second_half ? 63 +  __builtin_ctzl(second_half) : 0;
 
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.decomposed_CZ;
@@ -424,7 +427,7 @@ ConvertSumOfTensorsToState()
     RescaleAndApplyGlobalICounter();
     const int num_q_B = tensor_addends[0] -> GetStateBNumQ(), num_q_A = tensor_addends[0] -> GetStateANumQ(),
     total_q = num_q_A  + num_q_B;
-    const idx_size size = 1ull << total_q, A_size = 1ull << num_q_A;// B_size = 1ull << num_q_B;
+    const idx_size size = 1ull << total_q;
 //    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
     
     cmplx* amp = new cmplx[size];

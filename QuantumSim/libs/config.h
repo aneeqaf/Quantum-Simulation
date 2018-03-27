@@ -52,7 +52,8 @@ public:
 class Config {
 public:
     enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, ApproxOWT, FullState,
-        Approx2011, Approx1_101, Approx1110, Approx2011OWT, Approx_i11i, Approx_i11iOWT, ApproxCZPath};
+        Approx2011, Approx1_101, Approx1110, Approx2011OWT, Approx_i11i, Approx_i11iOWT,
+        ApproxCZPathH2011, ApproxCZPathV2011};
     enum Verbose : int {None, NCCV, NCC, Default, Cycles};
     enum SimMode : int {Phase1, Phase2, Phase3};
     

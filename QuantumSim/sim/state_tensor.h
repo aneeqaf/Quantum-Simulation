@@ -15,7 +15,7 @@ using namespace std;
 
 class TensorProductStateVector : public GenericQuantumState {
 private:
-    QubitPartition bitmasks;
+    QubitPartition qp;
     QubitPartition::Cuts cut_type;
     
 public:
@@ -72,6 +72,7 @@ public:
     bitset<128> GetStateABitmask() const;
     bitset<128> GetStateBBitmask() const;
     idx_size GetGlobalFactorPower() const;
+    const QubitPartition& GetQp() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;

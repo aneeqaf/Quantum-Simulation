@@ -8,7 +8,7 @@ import re
 import shutil
 import psutil
 import random
-from math import ceil
+from math import ceil, sqrt
 
 def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 	print_opt = ""
@@ -275,9 +275,6 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	
 	num_procs = len(cz_bits_strings) if truncated == 0 else truncated
 
-	if approx:
-		num_procs = num_procs/200;
-	
 	if t_time > 100:
 		proc_per_script = 1
 	else:
@@ -380,4 +377,26 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 		  " > " + os.path.join(log_dir, "log_script_" + str(p))+ ".txt 2>&1 &")
 		os.system("./" + os.path.join(script_dir, "script_" + str(p) + ".sh") + \
 		  " > " + os.path.join(log_dir, "log_script_" + str(p)) + ".txt 2>&1 &")
+
+def CalculateFidelity(exact_amp_file, approx_amp_file):
+
+	print(exact_amp_file)
+	print(approx_amp_file)
+	if not os.path.isfile(exact_amp_file) or not os.path.isfile(approx_amp_file):
+		return float('nan');
+
+	exact_amps = []
+	with open(exact_amp_file, "r") as f:
+		lines = f.readlines()
+		exact_amps.append(np.loadtxt(lines, dtype=complex))
+
+	approx_amps = []
+	with open(approx_amp_file, "r") as f:
+		lines = f.readlines()
+		approx_amps.append(np.loadtxt(lines, dtype=complex))
+
+	dotp_exact_approx = np.vdot(exact_amps, approx_amps) / sqrt(np.linalg.norm(exact_amps) * np.linalg.norm(approx_amps))
+	fidelity = round(np.linalg.norm(dotp_exact_approx), 5)
+
+	return fidelity
 

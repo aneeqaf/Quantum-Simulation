@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
                 auto count_a = count(out_file.begin(), out_file.end(), '@');
                 if (count_a)
                     ascii = true;
-                idx_size p = out_file.find(",");
+                idx_size p = out_file.find("@");
                 if (p != string::npos)
                     out_file = out_file.substr(0, p);
                 break;
@@ -278,8 +278,8 @@ int main(int argc, char *argv[])
                     string num_idx_str = idx_arg.substr(idx_arg.find_first_of(",") + 1, idx_arg.find_first_of("+"));
                     seed = stoi(seed_str);
                     num_idx = stoi(num_idx_str);
-                    if (num_idx > 10000)
-                        throw "Cannot print more than 10000 amps";
+//                    if (num_idx > 10000)
+//                        throw "Cannot print more than 10000 amps";
                     print_idx = idx_arg.find_first_of("+") != string::npos;
                 }
                 else

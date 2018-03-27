@@ -61,12 +61,13 @@ Simulate(GenericQuantumState& amp,
     
     int xCZ_gate_count = 0;
     if (config.sim_type != Config::SimType::FullState) {
-        QubitPartition bitmasks = config.sim_type == Config::SimType::LosslessH ||
+        QubitPartition qp = config.sim_type == Config::SimType::LosslessH ||
         config.sim_type == Config::SimType::Approx1CutH ?
         QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.hcut) :
         QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.vcut) ;
+        qp.RenumberLocalQubits();
         
-        xCZ_gate_count = circuit.MovexCZGates(bitmasks);
+        xCZ_gate_count = circuit.MovexCZGates(qp);
     }
     
     if (config.verbose)
@@ -98,7 +99,6 @@ Simulate(GenericQuantumState& amp,
             
             if (config.norm_perc)
                 norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
-            
         }
         if (config.print_amp)
             for (idx_size i = 0; i < config.indices.size(); ++i)
@@ -340,6 +340,8 @@ Phase1Simulation(GenericQuantumState& amp,
     
     if (terminate && config.dfs_length != 0)
         Phase2Simulation(amp, circuit, curr_gate);
+    else if (!terminate &&  config.dfs_length != 0)
+        config.dfs_length = 0;
     else if (exec == 1) {
         if (terminate && config.dfs_length == 0 && cz_path == "" && cz_path != "-") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
@@ -429,7 +431,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-    amp.PrintStateVector();
+//    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
@@ -477,9 +479,11 @@ ReportingAfterSim(GenericQuantumState& amp,
 void SequentialSimulation::
  WriteMmapToASCIIFile() const
 {
-    string amp_outfile ="output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
-    + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads) +
-    config.amp_outfile.substr(config.amp_outfile.find_last_of("/")) + "_ascii.amps";
+    string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
+    + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
+    if (config.approx)
+        dir += "_approx";
+    string amp_outfile = dir + config.amp_outfile.substr(config.amp_outfile.find_last_of("/")) + "_ascii.amps";
     ofstream amp_out;
     amp_out.open(amp_outfile);
     
@@ -499,6 +503,8 @@ WriteAmpToASCIIFile(const GenericQuantumState& amp) const
 {
     string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
     + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
+    if (config.approx)
+        dir += "_approx";
     string command = "mkdir -p " + dir;
     system(command.c_str());
     auto time = to_string(clock());
@@ -745,6 +751,17 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "Simulating xCZ gates : approx\n";
         
     }
+    if (config.approx) {
+        cout << "Approximation type : ";
+        if (config.czp_append_len == 0)
+            cout << "pruned CZ branches";
+        if (config.sim_type == Config::SimType::ApproxCZPathH2011 || config.sim_type == Config::SimType::ApproxCZPathV2011) {
+             if (config.czp_append_len == 0)
+                 cout << " / ";
+            cout << "Approx2011";
+        }
+        cout << "\n";
+    }
     
     if (config.cz_num_bits) {
         cout << "xCZ path breakdown : " << config.cz_num_bits << "p" ;
@@ -807,13 +824,14 @@ PrintSimReport(GenericQuantumState& amp,
         else
             ss << memory << " B \n";
         
-        double norm = amp.CalculateNormSquared();
-        ss << "Norm";
-        if (amp.GetNumAddends() > 1)
-            ss << "(assuming orthogonal addends)";
-        ss << " : " << sqrt(norm) << "\n";
         
         if (config.verbose >= Config::Verbose::Default) {
+            double norm = amp.CalculateNormSquared();
+            ss << "Norm";
+            if (amp.GetNumAddends() > 1)
+                ss << "(assuming orthogonal addends)";
+            ss << " : " << sqrt(norm) << "\n";
+            
             double avg_inacc = amp.CalculateAverageInaccuracy(norm);
 
             double min = amp.GetMinProb();

@@ -4,12 +4,14 @@
 import os
 import click
 import re
+import dist_util
 
 @click.command()
 @click.argument("cir_file", nargs=1)
 @click.argument("est_time", nargs=1)
 @click.option("--max_procs", nargs=1, required=False, default=0)
 def main(cir_file, est_time, max_procs):
+
 	log_dir = os.path.join("output", "log", cir_file)
 
 	if not os.path.isdir(log_dir):
@@ -28,6 +30,7 @@ def main(cir_file, est_time, max_procs):
 	cz_path_ranges = 0
 	dfs_bits = 0
 	dfs = False
+
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
 		for line in first_file:
@@ -80,7 +83,7 @@ def main(cir_file, est_time, max_procs):
 			elif "¯\_(ツ)_/¯ " in line:
 				break
 
-	num_CZ_paths = 1 << cz_path_len if max_procs == 0 else max_procs
+	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
 	avg_time_per_category = {'H':0.0, 'CZ & T':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
 		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0}
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
@@ -100,6 +103,7 @@ def main(cir_file, est_time, max_procs):
 	avg_minor_pagefaults = 0.0
 	avg_time_per_gate = 0.0
 
+	# Calculating other statistics for the report 
 	for script_log in scripts:
 		if script_log.endswith(".txt"):
 			num_batches += 1
@@ -117,6 +121,7 @@ def main(cir_file, est_time, max_procs):
 					elif "amp[-3]" in line:
 						amp['-3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
 					elif "Runtime" in line:
+						num_CZ_paths += 1
 						time_r = line.split()[1]
 						time_r = time_r.replace("(", "")# re.findall("\d+\.\d+", line)
 						avg_time_per_process += float(time_r)
@@ -172,7 +177,17 @@ def main(cir_file, est_time, max_procs):
 						
 					if max_elapsed_time < max_time:
 							max_elapsed_time = max_time
-					
+
+	# Fidelity calculations for approximation
+	fidelity = 0.0
+	print(cir_file)
+	if "_approx" in cir_file:
+		exact_res_file= os.path.join("output", "amp_vectors", cir_file.replace("_approx", ""), "result.amps")
+		approx_res_file = os.path.join("output", "amp_vectors", cir_file, "result.amps")
+		if os.path.isfile(exact_res_file):
+			fidelity = dist_util.CalculateFidelity(exact_res_file, approx_res_file)
+
+	# printing statistics onto reports				
 	print("\nDistributed simulation " , end="")
 	if max_procs and max_procs < (1 << cz_path_len):
 		print ("(truncated) ", end="")
@@ -212,6 +227,9 @@ def main(cir_file, est_time, max_procs):
 	if avg_major_pagefaults or avg_minor_pagefaults:
 		print("\t\tAvg page faults : " + str(round(avg_major_pagefaults/num_batches, 3)) + " (major), " \
 			+ str(round(avg_minor_pagefaults/num_batches, 3)) + " (minor)")
+
+	if fidelity != 0.0:
+		print("\tEnd-to-end circuit fidelity : " + str(fidelity))
 	
 	print("\namp[3]  \t= {:.8f}".format(amp['3']))
 	print("amp[1/4]\t= {:.8f}".format(amp['1/4']))

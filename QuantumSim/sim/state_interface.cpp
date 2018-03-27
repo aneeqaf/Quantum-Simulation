@@ -14,7 +14,7 @@ vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
 Config::SimMode GenericQuantumState::sim_mode = Config::SimMode::Phase1;
 Config::SimType GenericQuantumState::sim_type = Config::SimType::FullState;
-bool GenericQuantumState::approx = false;
+idx_size GenericQuantumState::approx = 0;
 char GenericQuantumState::partition_to_sim = 'x';
 
 #ifdef Parallel
@@ -108,7 +108,7 @@ QubitPartition(const Cuts cut_type,
     num_q_1 = total_qubits - 1;
     
     if (cut_type == QubitPartition::Cuts::Horizontal) {
-        const int block_bits = cut ? cut : (ceil(y_axis/2.0)  * x_axis);
+        const int block_bits = cut ? (cut * x_axis) : (ceil(y_axis/2.0)  * x_axis);
         
 //        if (!cut)
 //            (*this) = QubitPartition(y_axis, x_axis);

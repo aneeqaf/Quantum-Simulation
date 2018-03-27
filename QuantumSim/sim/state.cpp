@@ -271,8 +271,8 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 cmplx FullAmpStateVector::
 operator[](bitset<128> i) const
 {
-    const float rescaling_factor = (global_factor_power % 2) ? 1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0))
-    : 1.0/pow(2,(global_factor_power/2));
+    const float rescaling_factor = (global_factor_power % 2) ?
+    1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0)): 1.0/pow(2,(global_factor_power/2));
     cmplx a = amp[i.to_ulong()] * cmplx(pow(ki, global_i_counter));
     a *= rescaling_factor;
     

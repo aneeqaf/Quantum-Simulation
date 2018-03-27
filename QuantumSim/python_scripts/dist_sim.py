@@ -64,8 +64,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 	cir_name = "test10.txt_0_"
 
 	if len(file_name):
-		cir_name = re.findall(r'\binst\w+', command)[0] + "_" \
-		+ command[d_idx + 2 :] + "_"
+		cir_name = file_name[0] + "_" + str(depth) + "_"
 	# os.makedirs(cir_dir)
 
 	commandH = dist_util.BuildDistCommand(command, 0, num_threads, h_cut = h_cut) 
@@ -89,6 +88,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 		max_procs = 0
 
 	cir_name += str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
+	if approx:
+		cir_name += "_approx"
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
 
 	if os.path.isdir(cir_dir):
@@ -126,7 +127,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs) + " > " +\
 		str(log_dir) + "/final_report 2>&1 &")
 	if not t_time:
-		t_time = 150
+		t_time = 20
 	os.system("./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
 		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
 		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs))

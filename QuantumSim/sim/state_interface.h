@@ -124,7 +124,7 @@ public:
     static int num_threads;
     static Config::SimMode sim_mode;
     static Config::SimType sim_type;
-    static bool approx;
+    static idx_size approx;
     vector<cmplx> amps_of_interest;
     static char partition_to_sim;
     

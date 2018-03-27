@@ -95,7 +95,7 @@ InitializeMemMap(const string file_n,
             perror("Error writing last byte of the file");
             exit(EXIT_FAILURE);
         }
-        for (idx_size i = 0; i < size; ++i)
+        for (idx_size i = 0; i < size/sizeof(cmplx); ++i)
             map_ptr[i] = 0;
     }
 }
@@ -174,12 +174,14 @@ ReadIndices(const string& idx_infile)
         throw "Empty filename for indices";
     }
     
-    string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth) + "_" + to_string(cz_num_bits + czp_append_len)
-    + "_" + to_string(num_threads);
+    string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth)
+    + "_" + to_string(cz_num_bits + czp_append_len) + "_" + to_string(num_threads);
+    if (approx)
+        file_n += "_approx";
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".amps",
-                               (indices.size()));
+                               sizeof(cmplx) * (indices.size()));
 }
 
 void Config::
@@ -188,8 +190,10 @@ GenerateRandomIndices(const int seed,
                       const idx_size amp_size)
 {
     srand(seed);
-    string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth) + "_" + to_string(cz_num_bits + czp_append_len)
-    + "_" + to_string(num_threads);
+    string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth)
+    + "_" + to_string(cz_num_bits + czp_append_len) + "_" + to_string(num_threads);
+    if (approx)
+        file_n += "_approx";
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     
@@ -207,7 +211,7 @@ GenerateRandomIndices(const int seed,
     }
 
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/"))  + ".amps",
-                               num_idx + 5);
+                               sizeof(cmplx) * (num_idx + 5));
 }
 
 Config::
