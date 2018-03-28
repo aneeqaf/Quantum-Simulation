@@ -17,14 +17,16 @@ SumOfTensorsProductsStateVector(const int qubits,
 {
     sim_type = type;
     
-    if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH)
+    if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH
+        || type == Config::SimType::ApproxCZPathH2011)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               QubitPartition::Cuts::Horizontal,
                                                               hcut,
                                                               vcut,
                                                               sim_type,
                                                               verb));
-    else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV)
+    else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV
+             || type == Config::SimType::ApproxCZPathV2011)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               QubitPartition::Cuts::Vertical,
                                                               hcut,
@@ -96,6 +98,20 @@ SumOfTensorsProductsStateVector::
     }
 }
 
+void SumOfTensorsProductsStateVector::
+PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs)
+{
+    // Since the global to local arrays are static , a single call to PopulateGlobalToLocalMap
+    // is enough.
+    tensor_addends[0] -> PopulateGlobalToLocalMap(idxs);
+}
+
+void SumOfTensorsProductsStateVector::
+UnpopulateGlobalToLocalMap()
+{
+    tensor_addends[0] -> UnpopulateGlobalToLocalMap();
+}
+
 //TODO
 int SumOfTensorsProductsStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
@@ -105,7 +121,8 @@ ApplyBlockOfDiagGates(string& cz_bits,
 {
     int last_xCZ_idx = -1;
     
-    if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV) {
+    if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV
+        || sim_type == Config::SimType::ApproxCZPathH2011 || sim_type == Config::SimType::ApproxCZPathV2011) {
         if (cz_bits != "-")
             last_xCZ_idx = ApplyXCZGatesForDist(cz_bits, prefix_size, CZ_bitmasks);
         else
@@ -175,11 +192,11 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (sim_mode != Config::SimMode::Phase2) {
-        if (sim_type == Config::SimType::LosslessH) {
+        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
             data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_V.push_back(0);
         }
-        else if (sim_type == Config::SimType::LosslessV) {
+        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
             data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_H.push_back(0);
         }
@@ -222,11 +239,11 @@ ApplyXCZGatesForDist(string& cz_bits,
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (last_xCZ_idx && sim_mode != Config::SimMode::Phase2) {
-        if (sim_type == Config::SimType::LosslessH) {
+        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
             data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_V.push_back(0);
         }
-        else if (sim_type == Config::SimType::LosslessV) {
+        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
             data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_H.push_back(0);
         }
@@ -461,13 +478,22 @@ ConvertSumOfTensorsToState()
 }
 
 cmplx SumOfTensorsProductsStateVector::
-operator[](bitset<128> i) const
+operator[](bitset<128> i) 
 {
-    cmplx val = 0;
+   cmplx val = 0;
     for (auto& t : tensor_addends)
         val += (*t)[i];
     return val;
 }
+
+cmplx SumOfTensorsProductsStateVector::
+GetGlobalAmpAtInterestingIdx(idx_size i)
+{
+    //Assuming this is function is only being used for CZ paths and so there is only one addend.
+    //For loops can be expensive.
+    return tensor_addends[0] -> GetGlobalAmpAtInterestingIdx(i);
+}
+
 
 double SumOfTensorsProductsStateVector::
 GetMinProb() 
@@ -648,7 +674,7 @@ CalculateMeanEntropy2Cuts() const
     const idx_size amp_size = GetFullStateVectorSize();
     double entropy = 0.0;
     
-    const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+    auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
     idx_size range = sampling_factor , num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
@@ -671,7 +697,7 @@ CalculateCrossEntropy2Cuts(int range) const
     long double xe = 0.0;
     
     srand(6);
-    const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+    auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
     idx_size num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
@@ -747,7 +773,7 @@ PrintStateVector(const string& outfile,
     if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx2011OWT ||
         sim_type == Config::SimType::Approx_i11iOWT) {
         srand(6);
-        const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+        auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
         
         idx_size off = 0, amp_size = GetFullStateVectorSize();
         for (idx_size i = 0; i + off < amp_size; i += off) {
@@ -804,7 +830,7 @@ PrintProbabilities(const string& out_file,
     if (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx2011OWT ||
         sim_type == Config::SimType::Approx_i11iOWT) {
         srand(6);
-        const auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
+        auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
         
         idx_size off = 0, amp_size = GetFullStateVectorSize();
         for (idx_size i = 0; i + off < amp_size; i += off) {

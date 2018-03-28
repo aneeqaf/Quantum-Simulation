@@ -145,13 +145,24 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 cmplx AdaptiveStateVector::
-operator[](bitset<128> i) const
+operator[](bitset<128> i)
 {
     if (full_state)
         return (*full_state)[i];
     else
         return (*sumOfTensors)[i];
 }
+
+cmplx AdaptiveStateVector::
+GetGlobalAmpAtInterestingIdx(idx_size i)
+{
+    if (full_state)
+        return full_state -> GetGlobalAmpAtInterestingIdx(i);
+    else
+        return sumOfTensors -> GetGlobalAmpAtInterestingIdx(i);
+    
+}
+
 
 double AdaptiveStateVector::
 GetMinProb() 

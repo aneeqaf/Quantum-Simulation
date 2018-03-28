@@ -45,6 +45,7 @@ def main(qubits, prob_files, amp_files, fid_file):
 		elif probs[0][i] < med_exact and probs[1][i] < med_approx:
 			confusion_matrix[1][1] += 1.0;
 
+	
 	cos_sim = (float)(1.0 - spatial.distance.cosine(probs[0], probs[1]) - (1.0/pow(2,int(qubits))))
 	dotp_exact_approx = np.vdot(amps[0], amps[1]) / sqrt(np.linalg.norm(amps[0]) * np.linalg.norm(amps[1]))
 	fidelity = round(np.linalg.norm(dotp_exact_approx), 5)

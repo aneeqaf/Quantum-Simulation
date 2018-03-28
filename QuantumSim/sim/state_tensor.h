@@ -17,6 +17,9 @@ class TensorProductStateVector : public GenericQuantumState {
 private:
     QubitPartition qp;
     QubitPartition::Cuts cut_type;
+    static idx_size* global_to_local_a;
+    static idx_size* global_to_local_b;
+    static idx_size num_requested_amps;
     
 public:
     FullAmpStateVector* state_a;
@@ -57,10 +60,13 @@ public:
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
                                    const int th);
-    
-    cmplx operator[](bitset<128> i) const;
+    void PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs);
+    void UnpopulateGlobalToLocalMap();
+
+    cmplx operator[](bitset<128> i);
     cmplx GetAmpFromGlobalState(const idx_size a,
                                 const idx_size b) const;
+    cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     double GetMinProb();
     double GetMaxProb();
     double GetAvgProb() const;

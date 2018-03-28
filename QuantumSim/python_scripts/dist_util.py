@@ -288,7 +288,9 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
 					+ str(proc_per_script) + "\n\n")
 				start_idx = i * proc_per_script
+				proc_count = 0
 				for j in range(start_idx, start_idx + proc_per_script):
+					proc_count += 1
 					script.write("START_TIME=$SECONDS\n")
 					if j < (start_idx + proc_per_script - 1):
 						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
@@ -297,7 +299,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
 						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
 					script.write("ELAPSED_TIME=$((($PROCS - " + str(j + 1) + ")*($SECONDS - $START_TIME)))\n" + \
-					"echo \"\n" + str(j + 1)  + " out of " + str(proc_per_script) \
+					"echo \"\n" + str(proc_count)  + " out of " + str(proc_per_script) \
 					+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
 						 + str(proc_per_script - j - 1) + " processes to complete\n\"\n\n")
 	else:
@@ -308,7 +310,9 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 			script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
 					+ str(num_procs - start_idx) + "\n\n")
 			proc_c += 1
+			proc_count = 0
 			for j in range(start_idx, num_procs):
+				proc_count += 1
 				script.write("START_TIME=$SECONDS\n")
 				if j < (num_procs - 1):
 					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
@@ -317,7 +321,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
 					script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
 				script.write("ELAPSED_TIME=$((($PROCS - " + str(j + 1) + ")*($SECONDS - $START_TIME)))\n" + \
-						"echo \"\n" + str(j + 1)  + " out of " + str(num_procs - start_idx) \
+						"echo \"\n" + str(proc_count)  + " out of " + str(num_procs - start_idx) \
 						+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
 						 + str(num_procs - start_idx - j - 1) + " processes to complete\n\"\n\n")
 
@@ -380,22 +384,20 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 
 def CalculateFidelity(exact_amp_file, approx_amp_file):
 
-	print(exact_amp_file)
-	print(approx_amp_file)
 	if not os.path.isfile(exact_amp_file) or not os.path.isfile(approx_amp_file):
 		return float('nan');
 
 	exact_amps = []
 	with open(exact_amp_file, "r") as f:
 		lines = f.readlines()
-		exact_amps.append(np.loadtxt(lines, dtype=complex))
+		exact_amps = np.loadtxt(lines, dtype=complex)
 
 	approx_amps = []
 	with open(approx_amp_file, "r") as f:
 		lines = f.readlines()
-		approx_amps.append(np.loadtxt(lines, dtype=complex))
+		approx_amps = np.loadtxt(lines, dtype=complex)
 
-	dotp_exact_approx = np.vdot(exact_amps, approx_amps) / sqrt(np.linalg.norm(exact_amps) * np.linalg.norm(approx_amps))
+	dotp_exact_approx = np.vdot(exact_amps, approx_amps) / (np.linalg.norm(exact_amps) * np.linalg.norm(approx_amps))
 	fidelity = round(np.linalg.norm(dotp_exact_approx), 5)
 
 	return fidelity

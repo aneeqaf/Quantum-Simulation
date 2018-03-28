@@ -129,6 +129,7 @@ Config(const idx_size amp_size,
        const int cz_append_l,
        const int cz_len,
        const int dfs,
+       const idx_size epsilon,
        const bool approx,
        const bool ascii,
        const bool p_amp,
@@ -141,9 +142,9 @@ Config(const idx_size amp_size,
        const int t,
        const int n_threads,
        const bool google) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
-misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), czp_append_len(cz_append_l), cz_num_bits(cz_len),
-dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), google(google), print_amp(p_amp), print_idx(p_idx),
-ascii(ascii), approx(approx), sim_type(sim), verbose(v), curr_mode(Phase1)
+misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), czp_append_len(cz_append_l),
+cz_num_bits(cz_len), approx_epsilon(epsilon), dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc),
+google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx), sim_type(sim), verbose(v), curr_mode(Phase1)
 {
     if (!print_amp)
         mmap_obj = new MMapContent();
@@ -228,6 +229,7 @@ Config(const Config& rhs)
     cz_path = rhs.cz_path;
     czp_append_len = rhs.czp_append_len;
     cz_num_bits = rhs.cz_num_bits;
+    approx_epsilon = rhs.approx_epsilon;
     dfs_length = rhs.dfs_length;
     print_amp = rhs.print_amp;
     print_idx = rhs.print_idx;
@@ -262,6 +264,7 @@ operator=(const Config& rhs)
     czp_append_len = rhs.czp_append_len;
     cz_num_bits = rhs.cz_num_bits;
     dfs_length = rhs.dfs_length;
+    approx_epsilon = rhs.approx_epsilon;
     print_amp = rhs.print_amp;
     print_idx = rhs.print_idx;
     depth = rhs.depth;

@@ -65,7 +65,7 @@ public:
     void ReportingAfterSim(GenericQuantumState& amp,
                            Circuit& circuit);
     void WriteMmapToASCIIFile() const;
-    void WriteAmpToASCIIFile(const GenericQuantumState& amp) const;
+    void WriteAmpToASCIIFile(GenericQuantumState& amp) const;
     
     SequentialSimulation(const Config& c);
     SequentialSimulation(const SequentialSimulation& rhs) = delete;

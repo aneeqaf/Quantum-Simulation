@@ -53,7 +53,8 @@ public:
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);
     
-    cmplx operator[](bitset<128> i) const;
+    cmplx operator[](bitset<128> i);
+    cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     const cmplx* const GetAmpVector() const;
     double GetMinProb();
     double GetMaxProb();

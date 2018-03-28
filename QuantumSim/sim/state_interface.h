@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "sys/time.h"
+#include <unordered_map>
 
 #include "kernels1.h"
 #include "profile.h"
@@ -80,7 +81,7 @@ public:
     
     int getNumQubits() const { return _rows * _cols; }
     int getNumBlocks() const { return static_cast<int>(_blocks.size()); }
-    int getNumQubitsInBlock(int i) const { return _blocks[i].count(); }
+    int getNumQubitsInBlock(int i) const { return (int)_blocks[i].count(); }
     int getNumX() const { return _numX; }
     bitset<128> getBlockBitmask(int i) const { return _blocks[i]; }
     
@@ -92,8 +93,9 @@ public:
     }
     
     // Scatters the global amp index into local amp indices.
-    vector<idx_size> IndexScatter(const bitset<128>& i) const;
-    
+    vector<idx_size> IndexScatter(const bitset<128>& i);
+    idx_size IndexScatter(const bitset<128>& i,
+                          const int block_idx);
     // move up boundary qubits up front in each block
     void RenumberLocalQubits();
     
@@ -158,7 +160,8 @@ public:
                                      const vector<Gate>& all_gates,
                                      const int total_circuit_qubits);
     
-    virtual cmplx operator[](bitset<128> i) const = 0;
+    virtual cmplx operator[](bitset<128> i) = 0;
+    virtual cmplx GetGlobalAmpAtInterestingIdx(idx_size i) = 0;
     virtual double GetMinProb()  = 0;
     virtual double GetMaxProb()  = 0;
     virtual double GetAvgProb() const = 0;

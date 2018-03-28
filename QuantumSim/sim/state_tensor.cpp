@@ -8,6 +8,9 @@
 
 #include "state_tensor.h"
 
+idx_size* TensorProductStateVector::global_to_local_a(nullptr);
+idx_size* TensorProductStateVector::global_to_local_b(nullptr);
+idx_size TensorProductStateVector::num_requested_amps(0);
 
 TensorProductStateVector::
 TensorProductStateVector(const int qubits,
@@ -23,7 +26,7 @@ qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubit
     static int count_h = 0, count_v = 0;
     this -> cut_type = cut_type;
     
-//    qp.RenumberLocalQubits();
+    qp.RenumberLocalQubits();
 
     int num_q_b0 = qp.getNumQubitsInBlock(0), num_q_b1 = qp.getNumQubitsInBlock(1);
     state_a = new FullAmpStateVector(num_q_b0);
@@ -46,7 +49,8 @@ qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubit
 
 TensorProductStateVector::
 TensorProductStateVector(const TensorProductStateVector& rhs) : qp(rhs.qp), cut_type(rhs.cut_type),
-state_a(new FullAmpStateVector(*(rhs.state_a))), state_b(new FullAmpStateVector(*(rhs.state_b))) {
+state_a(new FullAmpStateVector(*(rhs.state_a))), state_b(new FullAmpStateVector(*(rhs.state_b)))
+{
     sim_type = rhs.sim_type;
 }
 
@@ -55,6 +59,37 @@ TensorProductStateVector::
 {
     delete state_a;
     delete state_b;
+}
+
+void TensorProductStateVector::
+PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs)
+{
+    if (global_to_local_a != nullptr && global_to_local_b != nullptr) {
+        delete [] global_to_local_a;
+        delete [] global_to_local_b;
+        global_to_local_a = nullptr;
+        global_to_local_b = nullptr;
+    }
+    
+    num_requested_amps = idxs.size();
+    
+    global_to_local_a = new idx_size[num_requested_amps];
+    global_to_local_b = new idx_size[num_requested_amps];
+    memset(global_to_local_a, 0, num_requested_amps * sizeof(idx_size));
+    memset(global_to_local_b, 0, num_requested_amps * sizeof(idx_size));
+    
+    for (idx_size i = 0; i < num_requested_amps; ++i) {
+        global_to_local_a[i] = qp.IndexScatter(idxs[i], 0);
+        global_to_local_b[i] = qp.IndexScatter(idxs[i], 1);
+    }
+}
+
+void TensorProductStateVector::
+UnpopulateGlobalToLocalMap(){
+    delete [] global_to_local_a;
+    delete [] global_to_local_b;
+    global_to_local_a = nullptr;
+    global_to_local_b = nullptr;
 }
 
 int TensorProductStateVector::
@@ -342,7 +377,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 cmplx TensorProductStateVector::
-operator[](bitset<128> i) const
+operator[](bitset<128> i) 
 {    
 //    if (cut_type == QubitPartition::Cuts::Horizontal) {
 //        bitset<128> temp_i = i;
@@ -351,9 +386,14 @@ operator[](bitset<128> i) const
 //        return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
 //    }
 //    else {
-        vector<idx_size> idx = qp.IndexScatter(i);
-        return (*state_a)[idx[0]] * (*state_b)[idx[1]];
+        return (*state_a)[qp.IndexScatter(i, 0)] * (*state_b)[qp.IndexScatter(i, 1)];
 //    }
+}
+
+cmplx TensorProductStateVector::
+GetGlobalAmpAtInterestingIdx(idx_size i)
+{
+    return (*state_a)[global_to_local_a[i]] * (*state_b)[global_to_local_b[i]];
 }
 
 

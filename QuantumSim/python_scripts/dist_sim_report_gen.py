@@ -10,7 +10,8 @@ import dist_util
 @click.argument("cir_file", nargs=1)
 @click.argument("est_time", nargs=1)
 @click.option("--max_procs", nargs=1, required=False, default=0)
-def main(cir_file, est_time, max_procs):
+@click.option("--test_fid", nargs=1, required=False, is_flag=True)
+def main(cir_file, est_time, max_procs, test_fid):
 
 	log_dir = os.path.join("output", "log", cir_file)
 
@@ -36,8 +37,10 @@ def main(cir_file, est_time, max_procs):
 		for line in first_file:
 			if "Qubits" in line:
 				qubits = int(line.split(":")[1].split()[0].replace(' ',''))
+				pass
 			if "Max threads per process" in line:
 				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
+				pass
 
 			if "xCZ path breakdown" in line:
 				print(line, end="")
@@ -55,7 +58,6 @@ def main(cir_file, est_time, max_procs):
 
 				if len(cz_path) == 3 :
 					dfs = True
-
 			elif "State representation size" not in line and print_line:
 				print(line,  end='')
 			elif "State representation size" in line:
@@ -64,6 +66,10 @@ def main(cir_file, est_time, max_procs):
 				mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
 				unit = mem_usage.split(" ")[2].replace(' ','')
 				print_line = False
+			elif "Low-value qubits" in line:
+				print(line, end="")
+			elif "Requested num" in line:
+				print(line, end="")
 			elif "H (" in line:
 				categories['H'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "CZ & T" in line:
@@ -85,7 +91,7 @@ def main(cir_file, est_time, max_procs):
 
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
 	avg_time_per_category = {'H':0.0, 'CZ & T':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
-		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0}
+		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0, 'Storing amps':0.0}
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
 	avg_time_per_process = 0.0
 	avg_user_time = 0.0
@@ -143,6 +149,8 @@ def main(cir_file, est_time, max_procs):
 						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Copying" in line:
 						avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Storing amps" in line:
+						avg_time_per_category['Storing amps'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Prefix " in line:
 						avg_cz_time += float(line.split(":")[1].split()[0])
 					elif "Branches " in line:
@@ -180,12 +188,23 @@ def main(cir_file, est_time, max_procs):
 
 	# Fidelity calculations for approximation
 	fidelity = 0.0
-	print(cir_file)
 	if "_approx" in cir_file:
-		exact_res_file= os.path.join("output", "amp_vectors", cir_file.replace("_approx", ""), "result.amps")
-		approx_res_file = os.path.join("output", "amp_vectors", cir_file, "result.amps")
+		exact_dir = os.path.join("output", "amp_vectors", cir_file.replace("_approx", ""))
+		approx_dir = os.path.join("output", "amp_vectors", cir_file)
+		exact_res_file= os.path.join(exact_dir, "result.amps")
+		approx_res_file = os.path.join(approx_dir, "result.amps")
 		if os.path.isfile(exact_res_file):
 			fidelity = dist_util.CalculateFidelity(exact_res_file, approx_res_file)
+
+		if test_fid:
+			exact_path1_file= os.path.join(approx_dir, "test_fid_1_ascii.amps")
+			exact_path2_file = os.path.join(approx_dir, "test_fid_2_ascii.amps")
+			if os.path.isdir(approx_dir):
+				test_fid = dist_util.CalculateFidelity(exact_path1_file, exact_path2_file)
+				# print(test_fid)
+				# if test_fid > 1e-3:
+				# 	fidelity = float("nan")
+	
 
 	# printing statistics onto reports				
 	print("\nDistributed simulation " , end="")
@@ -229,8 +248,9 @@ def main(cir_file, est_time, max_procs):
 			+ str(round(avg_minor_pagefaults/num_batches, 3)) + " (minor)")
 
 	if fidelity != 0.0:
-		print("\tEnd-to-end circuit fidelity : " + str(fidelity))
-	
+		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
+			# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
+
 	print("\namp[3]  \t= {:.8f}".format(amp['3']))
 	print("amp[1/4]\t= {:.8f}".format(amp['1/4']))
 	print("amp[1/2]\t= {:.8f}".format(amp['1/2']))
@@ -282,6 +302,11 @@ def main(cir_file, est_time, max_procs):
 		print("\tCopying (" + str(categories['Copying']) + ")\t\t: "\
 		 + str(round(avg_time_per_category['Copying'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Copying'])/avg_time_per_process)*100, 3)) + "%")
+
+	if avg_time_per_category['Storing amps']:
+		print("\tStoring amps \t\t: "\
+		 + str(round(avg_time_per_category['Storing amps'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['Storing amps'])/avg_time_per_process)*100, 3)) + "%")
 
 	sum_time = sum(avg_time_per_category.values())
 

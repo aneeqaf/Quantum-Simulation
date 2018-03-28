@@ -15,8 +15,9 @@ import re
 @click.option("--t_time", nargs=1, required=True, default= 0.0)
 @click.option("--num_idx", nargs=1, required=True, default= 0)
 @click.option("--max_procs", nargs=1, required=True, default= 0)
+@click.option("--test_fid", nargs=1, required=False, is_flag=True)
 def main(cir_file, num_procs, num_batches, est_time, t_time,
- num_idx, max_procs):
+ num_idx, max_procs, test_fid):
 
 	proc_per_script = int(num_procs/num_batches) if num_procs > 1 else 1
 	per_proc = num_procs if max_procs == 0 else max_procs
@@ -29,6 +30,8 @@ def main(cir_file, num_procs, num_batches, est_time, t_time,
 	for i in range(num_batches):
 		log_files.append(os.path.join(log_dir, "log_script_" + str(i) + ".txt"))
 
+	if not t_time:
+		t_time = 20
 	changing = True
 	while changing:
 		if t_time < 500:
@@ -62,8 +65,10 @@ def main(cir_file, num_procs, num_batches, est_time, t_time,
 			exit()
 
 	os.system("./python_scripts/add_amps.py " + str(cir_file) + " " + str(num_idx))
+	print("./python_scripts/dist_sim_report_gen.py " + cir_file + " " + str(est_time)\
+	 + " --max_procs " + str(max_procs) + " --test_fid")
 	os.system("./python_scripts/dist_sim_report_gen.py " + cir_file + " " + str(est_time)\
-	 + " --max_procs " + str(max_procs))
+	 + " --max_procs " + str(max_procs) + " --test_fid")
 
 	
 if __name__ == "__main__":

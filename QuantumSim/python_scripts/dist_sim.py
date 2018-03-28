@@ -33,9 +33,11 @@ import numpy as np
 @click.option("--print_all", nargs=1, required=False, default=-1)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
+@click.option("--test_fid", nargs=1, required=False, is_flag=True)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_threshold, v_cut, h_cut,\
- idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, approx):
+ idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, approx, test_fid):
 
+	epsilon_sq = 1
 	epsilon = 1
 	max_threads = cpu_count()
 	binary = "./bin/rr "
@@ -80,8 +82,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 	if approx:
 		proc_prefix_bits += ranges_bits
 		ranges_bits = 0
+		epsilon_sq = approx * approx
 		epsilon = approx
-
 
 	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
 		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
@@ -100,7 +102,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 
 	cz_bits_strings = []
 	num_bit_strings = (1 << int(proc_prefix_bits)) if not max_procs else max_procs
-	for bit_comb in range(0, num_bit_strings, epsilon):
+	for bit_comb in range(0, num_bit_strings, epsilon_sq):
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")
@@ -111,7 +113,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, print_idxs, num_idx)
 	if approx:
-		command += " -a "
+		command += " -a " + str(epsilon)
 	command += " --CZ_path "
 
 	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches
@@ -119,18 +121,22 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 	dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, cz_bits_strings, \
 		command, t_time, num_threads, mem, cut, ranges_bits, max_procs, approx)
 
+	if test_fid:
+		if len(cz_bits_strings) > 2:
+			temp_dir =  tempfile.mkdtemp()
+			os.system(command + cz_bits_strings[0] + "--outfile test_fid_1@ > " + os.path.join(temp_dir, "t1.txt"))
+			os.system(command + cz_bits_strings[-1] + "--outfile test_fid_2@ > " + os.path.join(temp_dir, "t2.txt"))
+
 	# Launch error checking and report gen script in the background
 	num_procs = len(cz_bits_strings) if not max_procs else max_procs 
 	log_dir = os.path.join("output", "log", cir_name)
-	print("./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
+	post_launch_cmd = "./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
 		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
-		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs) + " > " +\
-		str(log_dir) + "/final_report 2>&1 &")
-	if not t_time:
-		t_time = 20
-	os.system("./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
-		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
-		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs))
+		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs)
+	if test_fid:
+		post_launch_cmd += " --test_fid"
+	print(post_launch_cmd + " > " + str(log_dir) + "/final_report 2>&1 &")
+	os.system(post_launch_cmd)
 
 if __name__ == "__main__":
     main()		

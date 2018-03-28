@@ -52,10 +52,13 @@ public:
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
                                    const int th);
+    void PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs);
+    void UnpopulateGlobalToLocalMap();
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
    
-    cmplx operator[](bitset<128> i) const;
+    cmplx operator[](bitset<128> i);
+    cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     double GetMinProb();
     double GetMaxProb();
     double GetAvgProb() const;

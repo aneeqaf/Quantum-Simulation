@@ -50,8 +50,9 @@ void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
-    amp.approx = config.approx;
-    
+    if (config.approx && config.approx_epsilon)
+        amp.approx = ceil(log2(config.cz_num_bits * config.approx_epsilon));
+        
     PopulateBenchmarkMap();
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -61,8 +62,10 @@ Simulate(GenericQuantumState& amp,
     
     int xCZ_gate_count = 0;
     if (config.sim_type != Config::SimType::FullState) {
-        QubitPartition qp = config.sim_type == Config::SimType::LosslessH ||
-        config.sim_type == Config::SimType::Approx1CutH ?
+        bool H_sims = config.sim_type == Config::SimType::LosslessH ||
+        config.sim_type == Config::SimType::Approx1CutH || config.sim_type == Config::SimType::ApproxCZPathH2011;
+        
+        QubitPartition qp = config.sim_type == H_sims ?
         QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.hcut) :
         QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.vcut) ;
         qp.RenumberLocalQubits();
@@ -93,16 +96,24 @@ Simulate(GenericQuantumState& amp,
             Phase1Simulation(amp, circuit, cz_path);
 
             auto& idx = config.indices;
-            if (config.dfs_length == 0)
+            if (config.dfs_length == 0) {
+                Time amp_st_time;
+                amp_st_time.StartTime();
                 for(idx_size i = 0; i < idx.size(); ++i)
-                    amp.amps_of_interest[i] += amp[idx[i]];
+                    amp.amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
+                amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+            }
             
             if (config.norm_perc)
                 norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
         }
-        if (config.print_amp)
+        if (config.print_amp) {
+            Time amp_st_time;
+            amp_st_time.StartTime();
             for (idx_size i = 0; i < config.indices.size(); ++i)
                 *(*config.mmap_obj)[i] += amp.amps_of_interest[i];
+            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+        }
     }
     else
         Phase1Simulation(amp, circuit, cz_path);
@@ -403,8 +414,12 @@ Phase2Simulation(GenericQuantumState& amp,
         amp.partition_to_sim = 'x';
 
         auto& idx = config.indices;
-        for(idx_size i = 0; i < idx.size(); ++i)
-            amp.amps_of_interest[i] += temp_amp[idx[i]];
+        for(idx_size i = 0; i < idx.size(); ++i) {
+            Time amp_st_time;
+            amp_st_time.StartTime();
+            amp.amps_of_interest[i] += temp_amp.GetGlobalAmpAtInterestingIdx(i);
+            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+        }
         
         config.curr_mode = Config::SimMode::Phase2;
         amp.sim_mode = Config::SimMode::Phase2;
@@ -472,8 +487,7 @@ ReportingAfterSim(GenericQuantumState& amp,
       }
      else
         WriteAmpToASCIIFile(amp);
-    }
-    
+    }    
 }
 
 void SequentialSimulation::
@@ -499,7 +513,7 @@ void SequentialSimulation::
 }
 
 void SequentialSimulation::
-WriteAmpToASCIIFile(const GenericQuantumState& amp) const
+WriteAmpToASCIIFile(GenericQuantumState& amp) const
 {
     string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
     + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
@@ -684,54 +698,75 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     if (!amp.log.empty())
         cout << amp.log[amp.log.size() - 1]<< "\n";
     
+    stringstream approx_type;
+    if (config.approx) {
+        approx_type << "Requested end-to-end circuit fidelity: " << setprecision(3)
+        << 1.0/float(config.approx_epsilon) << "\nApproximation type : ";
+        if (config.czp_append_len == 0)
+            approx_type << "pruned xCZ branches";
+        if (config.sim_type == Config::SimType::ApproxCZPathH2011 || config.sim_type == Config::SimType::ApproxCZPathV2011) {
+            if (config.czp_append_len == 0)
+                approx_type << " / ";
+            approx_type << "Approx2011";
+        }
+        approx_type << "\n";
+    }
+    
     idx_size log_count = 0;
     cout << "Simulation type : ";
     if (config.sim_type == Config::SimType::FullState) {
         cout << "full state-vector  \n";
-        cout << "Low-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
     }
-    else if (config.sim_type == Config::SimType::LosslessH) {
+    else if (config.sim_type == Config::SimType::LosslessH
+             || config.sim_type == Config::SimType::ApproxCZPathH2011) {
         cout << "sum of tensor products / single cut\n";
-        cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ)\n";
-        cout << "Low-value qubits : " << config.th << " q\n";
-        cout << "Simulating xCZ gates : exactly\n";
+        cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ gates)\n";
+        cout << approx_type.str();
+        if (config.cz_num_bits)
+            cout << "Simulating xCZ gates : using projection-based branches\n";
+        else
+            cout << "Simulating xCZ gates : exactly\n";
         
     }
-    else if (config.sim_type == Config::SimType::LosslessV) {
+    else if (config.sim_type == Config::SimType::LosslessV
+             || config.sim_type == Config::SimType::ApproxCZPathV2011) {
         cout << "sum of tensor products / single cut\n";
-        cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ)\n";
-        cout << "Low-value qubits : " << config.th << " q\n";
-        cout << "Simulating xCZ gates : exactly\n";
-    }
+        cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ gates)\n";
+        cout << approx_type.str();
+        if (config.cz_num_bits)
+            cout << "Simulating xCZ gates : using projection-based branches\n";
+        else
+            cout << "Simulating xCZ gates : exactly\n";    }
     else if (config.sim_type == Config::SimType::Approx1CutH) {
         cout << "tensor products / approx single cut\n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : ignored\n";
     }
     else if (config.sim_type == Config::SimType::Approx1CutV) {
         cout << "tensor products / approx single cut\n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : ignored\n";
     }
     else if (config.sim_type == Config::SimType::Approx2011) {
         cout << "tensor products / approx2011 \n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : approx\n";
     }
     else if (config.sim_type == Config::SimType::Approx_i11i) {
         cout << "tensor products / approx-i11i \n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : approx\n";
     }
     else if (config.sim_type == Config::SimType::ApproxOWT) {
         cout << "sum of tensor products / approx 2 cuts \n";
         cout << amp.log[log_count++] << "\n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : approx\n";
        
     }
@@ -739,7 +774,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "sum of tensor products / approx 2 cuts (2011) \n";
         cout << amp.log[log_count++] << "\n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits :  " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : approx\n";
         
     }
@@ -747,20 +782,9 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "sum of tensor products / approx 2 cuts (-i11i) \n";
         cout << amp.log[log_count++] << "\n";
         cout << amp.log[log_count++];
-        cout << "\nLow-value qubits : " << config.th << " q\n";
+        cout << approx_type.str();
         cout << "Simulating xCZ gates : approx\n";
         
-    }
-    if (config.approx) {
-        cout << "Approximation type : ";
-        if (config.czp_append_len == 0)
-            cout << "pruned CZ branches";
-        if (config.sim_type == Config::SimType::ApproxCZPathH2011 || config.sim_type == Config::SimType::ApproxCZPathV2011) {
-             if (config.czp_append_len == 0)
-                 cout << " / ";
-            cout << "Approx2011";
-        }
-        cout << "\n";
     }
     
     if (config.cz_num_bits) {
@@ -788,8 +812,12 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         }
         
         cout << "\n";
-//        config.verbose = Config::Verbose::NCC;
+        config.verbose = Config::Verbose::NCC;
     }
+    cout << "\nLow-value qubits : " << config.th << " q\n";
+    if (config.print_amp)
+        cout << "Requested num amps : " << config.indices.size() - 5 << "\n";
+    
 //    else
 //       cout << "None\n";
 }
@@ -1074,12 +1102,20 @@ PrintSimReport(GenericQuantumState& amp,
             << (amp.time_by_category.norm/(total_time)) * 100 << "%\n";
         }
         
+        if(amp.time_by_category.amp_storage) {
+            string RP_s = "\tStoring amps ";
+            ss <<  RP_s << setw(30 - RP_s.size()) << right << ": "
+            << amp.time_by_category.amp_storage << " s\t\t= "
+            << (amp.time_by_category.amp_storage/(total_time)) * 100 << "%\n";
+        }
+        
         factor = (1ull << config.czp_append_len) * (1ull << config.dfs_length);
         double sum_percen = ((amp.time_by_category.H/total_time) * 100) + ((amp.time_by_category.CZ_T/total_time) * 100)
         + ((amp.time_by_category.decomposed_CZ/total_time) * 100)
         + (((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100)
         + ((amp.time_by_category.merged_XY1_2/total_time) * 100) + ((amp.time_by_category.rescale/total_time) * 100)
-        + ((amp.time_by_category.conversion/total_time) * 100) + ((amp.time_by_category.copying/total_time) * 100);
+        + ((amp.time_by_category.conversion/total_time) * 100) + ((amp.time_by_category.copying/total_time) * 100)
+        + ((amp.time_by_category.norm/total_time) * 100) + ((amp.time_by_category.amp_storage/total_time) * 100);
         
         ss << "\t\t\t\t\t\t\t  ----\n";
         ss << "\tTotal \t\t\t\t\t\t   " << sum_percen << "%\n";

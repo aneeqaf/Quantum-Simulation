@@ -182,9 +182,36 @@ void QubitPartition::InitMappings() {
     }
 }
 
-vector<idx_size> QubitPartition::
-IndexScatter(const bitset<128>& idx) const
+idx_size QubitPartition::
+IndexScatter(const bitset<128>& idx,
+             const int block_idx)
 {
+    idx_size local_idx = 0;
+    int total_qubits = getNumQubits();
+
+    for (int j = 0; j < total_qubits; ++j) {
+        if (idx[j] == 0)
+            continue;
+        if (globalToBlock(j) == block_idx)
+            local_idx |= (1ull << globalToLocal(j));
+    }
+    return local_idx;
+}
+
+vector<idx_size> QubitPartition::
+IndexScatter(const bitset<128>& idx)
+{
+    //    int total_qubits = getNumQubits();
+    //
+    //    if (!_global_to_local_amp_idxs.count(idx)){
+    //        _global_to_local_amp_idxs[idx].resize(_blocks.size(), 0);
+    //        for (int j = 0; j < total_qubits; ++j) {
+    //            if (idx[j] == 0)
+    //                continue;
+    //            _global_to_local_amp_idxs[idx][globalToBlock(j)] |= (1ull << globalToLocal(j));
+    //        }
+    //    }
+    //    return _global_to_local_amp_idxs[idx];
     vector<idx_size> local_idx(_blocks.size(), 0);
     int total_qubits = getNumQubits();
     
