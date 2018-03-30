@@ -351,7 +351,7 @@ ApplyMergedXYGate(const Gate& gate1,
 void SumOfTensorsProductsStateVector::
 ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                          bitset<128> Y_bitmask,
-                         const int th)
+                         int th)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
     for (auto& t : tensor_addends)

@@ -437,40 +437,11 @@ XYFastTransform(cmplx* __restrict amp,
                 const int num_threads,
                 const int th)
 {
-    idx_size i_count = 0;
     //base case
-    if (num_qubits <= th) {
-        for (int i = 0; i < num_qubits; ++i) {
-            if (X_bitmask || Y_bitmask)
-                i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits);
-            else break;
-        }
-        return i_count;
-    }
+    if (num_qubits <= th)
+        return XYFastTransformHighQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
     
-    if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1)
-            i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits);
-
-    const int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
-    const int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
-    const int k = min(Yunused_qubits, Xunused_qubits);
-        
-    if (k != kRT) {
-        const idx_size num_iters = 1ull << k;
-        const idx_size stride = (1ull << num_qubits)/num_iters;
-        X_bitmask >>= k;
-        Y_bitmask >>= k;
-        idx_size temp_i = 0;
-        
-        #pragma omp parallel for schedule(guided) reduction(+:temp_i) num_threads(num_threads)
-        for (idx_size i = 0; i < num_iters ; ++i)
-            temp_i += XYFastTransform(amp + (i * stride), X_bitmask,
-                                      Y_bitmask, num_qubits - k, num_threads, th);
-        
-        i_count += temp_i / num_iters;
-    }
-    
-    return i_count;
+    return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
 }
 
 idx_size
@@ -505,4 +476,57 @@ XYFastTransformIterative(cmplx* __restrict amp,
 
     return i_count;
 }
+
+idx_size
+XYFastTransformLowQ(cmplx* __restrict amp,
+                     idx_size X_bitmask,
+                     idx_size Y_bitmask,
+                     const int num_qubits,
+                     const int num_threads)
+{
+    idx_size i_count = 0;
+   
+    if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1)
+        i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits);
+    
+    const int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
+    const int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
+    const int k = min(Yunused_qubits, Xunused_qubits);
+    
+    if (k != kRT) {
+        const idx_size num_iters = 1ull << k;
+        const idx_size stride = (1ull << num_qubits)/num_iters;
+        X_bitmask >>= k;
+        Y_bitmask >>= k;
+        idx_size temp_i = 0;
+        
+    #pragma omp parallel for schedule(guided) reduction(+:temp_i) num_threads(num_threads)
+        for (idx_size i = 0; i < num_iters ; ++i)
+            temp_i += XYFastTransformHighQ(amp + (i * stride), X_bitmask,
+                                           Y_bitmask, num_qubits - k, num_threads);
+        
+        i_count += temp_i / num_iters;
+    }
+    
+    return i_count;
+}
+
+idx_size
+XYFastTransformHighQ(cmplx* __restrict amp,
+                    idx_size X_bitmask,
+                    idx_size Y_bitmask,
+                    const int num_qubits,
+                    const int num_threads)
+{
+    idx_size i_count = 0;
+    
+    for (int i = 0; i < num_qubits; ++i) {
+        if (X_bitmask || Y_bitmask)
+            i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits);
+        else break;
+    }
+    return i_count;
+
+}
+
 

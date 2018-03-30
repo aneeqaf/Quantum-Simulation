@@ -327,6 +327,13 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
     }
 }
 
+idx_size
+XYFastTransformLowQ(cmplx* __restrict amp,
+                    idx_size X_bitmask,
+                    idx_size Y_bitmask,
+                    const int num_qubits,
+                    const int num_threads);
+
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
                            const int num_qubits_amp,
@@ -340,4 +347,13 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const idx_size* __restrict T_bitmasks,
                                 const int num_threads);
 
+idx_size
+ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
+                                 const int num_qubits_amp,
+                                 const idx_size* __restrict CZ_bitmasks,
+                                 const idx_size* __restrict T_bitmasks,
+                                 const idx_size Lo_X_bitmask,
+                                 const idx_size Lo_Y_bitmask,
+                                 const int num_threads,
+                                 const int th);
 #endif /* kernelsAVX_h */

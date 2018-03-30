@@ -26,7 +26,7 @@ qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubit
     static int count_h = 0, count_v = 0;
     this -> cut_type = cut_type;
     
-    qp.RenumberLocalQubits();
+//    qp.RenumberLocalQubits();
 
     int num_q_b0 = qp.getNumQubitsInBlock(0), num_q_b1 = qp.getNumQubitsInBlock(1);
     state_a = new FullAmpStateVector(num_q_b0);
@@ -99,15 +99,24 @@ FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
     const int qubits_a = state_a -> GetNumQubits(), qubits_a_1 = qubits_a - 1,
     num_q_1 = qp.getNumQubits() - 1;
     const bitset<128> block0_bitmask = qp.getBlockBitmask(0);
+    const bitset<128> block1_bitmask = qp.getBlockBitmask(1);
     int count = 0;
     
-    for (int i = 0; i < num_q_1 + 1; ++i) {
+    // CZ bitmasks array is numbered in the opposite direction
+    for (int i = 0; i <  num_q_1 + 1; ++i) {
         if (qp.globalToBlock(num_q_1 - i) == 0) {
-            if ((gate_bitmasks[num_q_1 - i] & block0_bitmask) != gate_bitmasks[num_q_1 - i]) {
+//            cout << "bm 1: " << gate_bitmasks[num_q_1 - i].to_string().substr(128-15) << endl;
+//            cout << "bm 0: " << gate_bitmasks[num_q_1 - i].to_string().substr(128-30, 15) << endl;
+//            cout << "g i 0 :" << num_q_1 - i << endl;
+//            cout << "gtl 0 : "<< qp.globalToLocal(num_q_1 - i) << endl;
+            
+             if ((gate_bitmasks[num_q_1 - i] & block0_bitmask) != gate_bitmasks[num_q_1 - i]) {
+                 cout << "xCZ" << endl;
                 xCZ_bitmasks[qubits_a_1 - qp.globalToLocal(num_q_1 - i)] =
-                        Project1QBitmask(gate_bitmasks[num_q_1 - i], qp, 1) ;
+                        Project1QBitmask(gate_bitmasks[num_q_1 - i] & block1_bitmask, qp, 1) ;
                 ++count;
             }
+//            cout << "gtl 1: "<< __builtin_ctzl(xCZ_bitmasks[qubits_a_1 - qp.globalToLocal(num_q_1 - i)].to_ulong()) << endl;
         }
     }
     return count;
@@ -362,7 +371,7 @@ ApplyMergedXYGate(const Gate& gate1,
 void TensorProductStateVector::
 ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
-                          const int th)
+                          int th)
 {
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, qp, 0, true);

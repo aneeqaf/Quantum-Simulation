@@ -25,6 +25,19 @@ private:
     int num_qubits;
     
     bitset<128> FormBitmask(const vector<int>& qubits);
+    void TransferOddBitsFromHiQubitsBM(int& th,
+                                       idx_size& hi_q_X_bitmask,
+                                       idx_size& hi_q_Y_bitmask,
+                                       idx_size& lo_q_X_bitmask,
+                                       idx_size& lo_q_Y_bitmask,
+                                       int& num_hi_X_bits,
+                                       int& num_hi_Y_bits,
+                                       const idx_size X_bitmask,
+                                       const idx_size Y_bitmask);
+    void ApplyOddGates(idx_size& X_bitmask,
+                       idx_size& Y_bitmask,
+                       int& num_X_bits,
+                       int& num_Y_bits);
     
 public:
     
@@ -48,7 +61,7 @@ public:
                                 const vector<Gate>& all_gates);
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
-                                   const int th);
+                                   int th);
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);

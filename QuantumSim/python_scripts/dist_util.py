@@ -298,10 +298,10 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 					else:
 						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
 						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-					script.write("ELAPSED_TIME=$((($PROCS - " + str(j + 1) + ")*($SECONDS - $START_TIME)))\n" + \
+					script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
 					"echo \"\n" + str(proc_count)  + " out of " + str(proc_per_script) \
 					+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
-						 + str(proc_per_script - j - 1) + " processes to complete\n\"\n\n")
+						 + str(proc_per_script - proc_count) + " processes to complete\n\"\n\n")
 	else:
 		proc_per_script = 1
 
@@ -320,10 +320,10 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				else:
 					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
 					script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-				script.write("ELAPSED_TIME=$((($PROCS - " + str(j + 1) + ")*($SECONDS - $START_TIME)))\n" + \
+				script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
 						"echo \"\n" + str(proc_count)  + " out of " + str(num_procs - start_idx) \
 						+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
-						 + str(num_procs - start_idx - j - 1) + " processes to complete\n\"\n\n")
+						 + str(num_procs - start_idx - proc_count) + " processes to complete\n\"\n\n")
 
 	os.system("chmod +x " + script_dir + "/*")
 

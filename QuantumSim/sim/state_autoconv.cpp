@@ -135,7 +135,7 @@ ApplyMergedXYGate(const Gate& gate1,
 void AdaptiveStateVector::
 ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
-                          const int th)
+                          int th)
 {
     if (full_state)
         full_state -> ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);

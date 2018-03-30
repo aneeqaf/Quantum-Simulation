@@ -31,7 +31,7 @@ def main(cir_file, num_procs, num_batches, est_time, t_time,
 		log_files.append(os.path.join(log_dir, "log_script_" + str(i) + ".txt"))
 
 	if not t_time:
-		t_time = 20
+		t_time = 5
 	changing = True
 	while changing:
 		if t_time < 500:

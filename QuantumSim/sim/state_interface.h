@@ -150,7 +150,7 @@ public:
                                         const vector<Gate>& all_gates) = 0;
     virtual void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                            bitset<128> Y_bitmask,
-                                           const int th) = 0;
+                                           int th) = 0;
     virtual bitset<128> FormXYGatesBitmask(idx_size& gate_i,
                                         const vector<Gate>& all_gates,
                                         const Gate::Type gate_type);

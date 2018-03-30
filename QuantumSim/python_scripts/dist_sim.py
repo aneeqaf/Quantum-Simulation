@@ -16,7 +16,7 @@ import numpy as np
 
 @click.command()
 @click.argument("circuit", nargs=1, required=True)
-@click.option("--depth", nargs=1, required=False, default=0)
+@click.option("--depth", nargs=1, required=False, default=26)
 @click.option("--v_cut", nargs=1, required=False, default=0)
 @click.option("--h_cut", nargs=1, required=False, default=0)
 @click.option("--proc_prefix_bits", required=False, nargs=1, default=0)

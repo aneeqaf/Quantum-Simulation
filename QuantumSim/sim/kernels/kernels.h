@@ -274,4 +274,13 @@ XYFastTransform(cmplx* __restrict amp,
                 const int num_threads,
                 const int th = 16);
 
+idx_size
+XYFastTransformHighQ(cmplx* __restrict amp,
+                     idx_size X_bitmask,
+                     idx_size Y_bitmask,
+                     const int num_qubits,
+                     const int num_threads);
+
+
+
 #endif /* kernels_h */

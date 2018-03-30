@@ -146,8 +146,7 @@ MovexCZGates(const QubitPartition& qp)
              for (; j < gates.size() && gates[j].ids.back() == Gate::Type::Z; ++j) {
                  ++count_CZ;
                  int q0 = num_q_1 - gates[j].qubits.front(), q1 = num_q_1 - gates[j].qubits.back();
-                
-                 if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1))
+                 if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) 
                     swap(gates[i + count_xCZ++], gates[j]);
              }
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,

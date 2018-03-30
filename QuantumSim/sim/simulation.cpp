@@ -65,10 +65,10 @@ Simulate(GenericQuantumState& amp,
         bool H_sims = config.sim_type == Config::SimType::LosslessH ||
         config.sim_type == Config::SimType::Approx1CutH || config.sim_type == Config::SimType::ApproxCZPathH2011;
         
-        QubitPartition qp = config.sim_type == H_sims ?
+        QubitPartition qp = H_sims ?
         QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.hcut) :
         QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.vcut) ;
-        qp.RenumberLocalQubits();
+//        qp.RenumberLocalQubits();
         
         xCZ_gate_count = circuit.MovexCZGates(qp);
     }
@@ -256,7 +256,7 @@ SimulationLoop(GenericQuantumState &amp,
                     return terminate;
                 }
                 
-                i -= 1;
+                --i;
                 
                 CZ_T_top_time += CZT_time.GetElapsedTime();
         }
@@ -337,12 +337,13 @@ Phase1Simulation(GenericQuantumState& amp,
     bool terminate = false;
     
     if (cz_path != "-") {
-        amp.partition_to_sim = 'a';
-        string cz_path_copy = cz_path;
+//        amp.partition_to_sim = 'a';
+//        string cz_path_copy = cz_path;
+//        terminate = SimulationLoop(amp, circuit, cz_path, config.dfs_length);
+//        amp.partition_to_sim = 'b';
+//        SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length);
+//        amp.partition_to_sim = 'x';
         terminate = SimulationLoop(amp, circuit, cz_path, config.dfs_length);
-        amp.partition_to_sim = 'b';
-        SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length);
-        amp.partition_to_sim = 'x';
     }
     else
         SimulationLoop(amp, circuit, cz_path, config.dfs_length);
@@ -356,7 +357,7 @@ Phase1Simulation(GenericQuantumState& amp,
     else if (exec == 1) {
         if (terminate && config.dfs_length == 0 && cz_path == "" && cz_path != "-") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
-            + to_string(amp.count_of_category.decomposed_CZ/2) + " xCZ gates. ";
+            + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. ";
             
             if (circuit.GetTotalNumGates() != curr_gate)
                 cout << "CZpath exhausted early.\n";
@@ -368,7 +369,7 @@ Phase1Simulation(GenericQuantumState& amp,
         }
         else if (!terminate && cz_path == "") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
-            + to_string(amp.count_of_category.decomposed_CZ/2) + " xCZ gates. No xCZ gates left.\n";
+            + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. No xCZ gates left.\n";
             if (config.dfs_length != 0)
                 cout << "Truncated DFS length : " << config.dfs_length << "\n";
         }
@@ -406,12 +407,12 @@ Phase2Simulation(GenericQuantumState& amp,
         amp.time_by_category.copying += copy_time.GetElapsedTime();
         ++amp.count_of_category.copying;
         
-        string cz_path_copy = cz_path;
-        temp_amp.partition_to_sim = 'a';
+//        string cz_path_copy = cz_path;
+//        temp_amp.partition_to_sim = 'a';
         SimulationLoop(temp_amp, circuit, cz_path, 0, gate_i);
-        temp_amp.partition_to_sim = 'b';
-        SimulationLoop(temp_amp, circuit, cz_path_copy, 0, gate_i);
-        amp.partition_to_sim = 'x';
+//        temp_amp.partition_to_sim = 'b';
+//        SimulationLoop(temp_amp, circuit, cz_path_copy, 0, gate_i);
+//        amp.partition_to_sim = 'x';
 
         auto& idx = config.indices;
         for(idx_size i = 0; i < idx.size(); ++i) {
@@ -814,7 +815,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "\n";
         config.verbose = Config::Verbose::NCC;
     }
-    cout << "\nLow-value qubits : " << config.th << " q\n";
+    cout << "Low-value qubits : " << config.th << " q\n";
     if (config.print_amp)
         cout << "Requested num amps : " << config.indices.size() - 5 << "\n";
     
@@ -1036,7 +1037,7 @@ PrintSimReport(GenericQuantumState& amp,
 
     {
         int factor = config.czp_append_len ? 1ull << config.czp_append_len : 1ull << config.norm_depth;
-        factor = factor > 1 ? factor * 2 : factor;
+//        factor = config.cz_num_bits ? factor * 2 : factor;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
@@ -1162,4 +1163,5 @@ PrintReportToFile(GenericQuantumState& amp,
                   const Circuit& circuit) const
 {
 }
+
 

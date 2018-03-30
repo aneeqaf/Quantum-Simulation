@@ -39,7 +39,7 @@ public:
                                 const vector<Gate>& all_gates) {};
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
-                                   const int th);
+                                   int th);
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
