@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
         { "approx",    required_argument,       nullptr, 'a' },
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "idx",    required_argument,       nullptr, 'x' },
-        { "low_value_q",    required_argument,       nullptr, 'l' },
+        { "high_value_q",    required_argument,       nullptr, 'q' },
         { "num_threads",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
         { "google_spec",    required_argument,       nullptr, 'g' },
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:f:c:n:h", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:n:h", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
                 depth = stoi(s_d);
                 break;
             }
-            case 'f': {
+            case 'q': {
                 string s_th = string(optarg);
                 threshold = stoi(s_th);
                 break;

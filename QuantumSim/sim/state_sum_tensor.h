@@ -18,6 +18,10 @@ private:
     vector<TensorProductStateVector*> tensor_addends;
     idx_size num_addends;
     
+    int HandlexCZApplication(string& cz_bits,
+                             idx_size prefix_size,
+                             const bitset<128>* __restrict CZ_bitmasks);
+    
 public:
     int ApplyBlockOfDiagGates(string& cz_bits,
                               idx_size prefix_size,
@@ -51,6 +55,13 @@ public:
                                 const vector<Gate>& all_gates) {};
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
+                                   int th);
+    int ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                                   idx_size prefix_size,
+                                   bitset<128> X_bitmask,
+                                   bitset<128> Y_bitmask,
+                                   const bitset<128>* __restrict CZ_bitmasks,
+                                   const bitset<128> T_bitmasks[2],
                                    int th);
     void PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();

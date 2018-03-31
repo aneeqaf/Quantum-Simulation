@@ -228,22 +228,55 @@ TransferOddBitsFromHiQubitsBM(int& th,
     num_hi_Y_bits = __builtin_popcountll(hi_q_Y_bitmask);
     
     if ((num_hi_X_bits + num_hi_Y_bits) % 2 == 1) {
-        const int least_sig_q_X = 63 - __builtin_clzl(hi_q_X_bitmask);
-        const int least_sig_q_Y = 63 - __builtin_clzl(hi_q_Y_bitmask);
-        if (least_sig_q_X > least_sig_q_Y) {
-            th -= th - least_sig_q_X;
-            hi_q_X_bitmask ^= 1ull << least_sig_q_X;
+        const int most_sig_q_X = hi_q_X_bitmask ? 63 - __builtin_clzl(hi_q_X_bitmask) : kRT;
+        const int most_sig_q_Y = hi_q_Y_bitmask ? 63 - __builtin_clzl(hi_q_Y_bitmask) : kRT;
+        if (most_sig_q_X > most_sig_q_Y) {
+            th = most_sig_q_X;
+            hi_q_X_bitmask ^= 1ull << most_sig_q_X;
             --num_hi_X_bits;
         }
         else {
-            th -= th - least_sig_q_Y;
-            hi_q_Y_bitmask ^= 1ull << least_sig_q_Y;
+            th = most_sig_q_Y;
+            hi_q_Y_bitmask ^= 1ull << most_sig_q_Y;
             --num_hi_Y_bits;
         }
     }
     
     lo_q_X_bitmask = X_bitmask & ~((1ull << th) - 1);
     lo_q_Y_bitmask = Y_bitmask & ~((1ull << th) - 1);
+}
+
+void FullAmpStateVector::
+TransferOddBitsFromLowQubitsBM(int& th,
+                              idx_size& hi_q_X_bitmask,
+                              idx_size& hi_q_Y_bitmask,
+                              idx_size& lo_q_X_bitmask,
+                              idx_size& lo_q_Y_bitmask,
+                              int& num_lo_X_bits,
+                              int& num_lo_Y_bits,
+                              const idx_size X_bitmask,
+                              const idx_size Y_bitmask)
+{
+    num_lo_X_bits = __builtin_popcountll(lo_q_X_bitmask);
+    num_lo_Y_bits = __builtin_popcountll(lo_q_Y_bitmask);
+    
+    if ((num_lo_X_bits + num_lo_Y_bits) % 2 == 1) {
+        const int least_sig_q_X = lo_q_X_bitmask ? __builtin_ctzl(lo_q_X_bitmask) : kRT;
+        const int least_sig_q_Y = lo_q_Y_bitmask ? __builtin_ctzl(lo_q_Y_bitmask) : kRT;
+        if (least_sig_q_X < least_sig_q_Y) {
+            th = least_sig_q_X + 1;
+            lo_q_X_bitmask ^= 1ull << least_sig_q_X;
+            --num_lo_X_bits;
+        }
+        else {
+            th = least_sig_q_Y + 1;
+            lo_q_Y_bitmask ^= 1ull << least_sig_q_Y;
+            --num_lo_Y_bits;
+        }
+    }
+    
+    hi_q_X_bitmask = X_bitmask & ((1ull << th) - 1);
+    hi_q_Y_bitmask = Y_bitmask & ((1ull << th) - 1);
 }
 
 void FullAmpStateVector::
@@ -300,6 +333,10 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                   num_bits_hi_X, num_bits_hi_Y, X_bitmask_64, Y_bitmask_64);
     
     int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask), num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
+   
+    assert((num_lo_X_bits + num_bits_hi_X + num_bits_hi_Y + num_lo_Y_bits) ==
+           ( __builtin_popcountll(X_bitmask_64) + __builtin_popcountll(Y_bitmask_64)));
+    
     if ((num_lo_X_bits + num_lo_Y_bits) % 2 == 1)
         ApplyOddGates(loq_X_bitmask, loq_Y_bitmask, num_lo_X_bits, num_lo_Y_bits);
     
@@ -310,9 +347,65 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
         //Process low qubits first
         global_i_counter += XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask, num_qubits, num_threads);
         global_i_counter += XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask, num_qubits, num_threads);
-//        global_i_counter += XYFastTransform(amp, X_bitmask_64, Y_bitmask_64, num_qubits, num_threads, th);
     }
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
+}
+
+int FullAmpStateVector::
+ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                          idx_size prefix_size,
+                          bitset<128> X_bitmask,
+                          bitset<128> Y_bitmask,
+                          const bitset<128>* __restrict CZ_bitmasks,
+                          const bitset<128> T_bitmasks[2],
+                          int th)
+{    
+    Time time;
+    time.StartTime();
+    
+    idx_size CZ_bitmasks_64[num_qubits];
+    idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
+    idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
+    idx_size hiq_X_bitmask = 0, hiq_Y_bitmask = 0;
+    idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
+    idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
+    int num_lo_X_bits = 0, num_lo_Y_bits = 0;
+    
+    for (int i = 0; i < num_qubits; ++i)
+        CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
+    
+    TransferOddBitsFromLowQubitsBM(th, hiq_X_bitmask,  hiq_Y_bitmask, loq_X_bitmask, loq_Y_bitmask,
+                                  num_lo_X_bits, num_lo_Y_bits, X_bitmask_64, Y_bitmask_64);
+    
+//    assert((num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits) ==
+//           ( __builtin_popcountll(X_bitmask_64) + __builtin_popcountll(Y_bitmask_64)));
+//    assert((__builtin_popcountll(loq_X_bitmask >> th) + num_hi_X_bits + num_hi_Y_bits + __builtin_popcountll(loq_Y_bitmask >> th)) ==
+//           ( __builtin_popcountll(X_bitmask_64) + __builtin_popcountll(Y_bitmask_64)));
+
+    if (loq_X_bitmask || loq_Y_bitmask)
+        global_i_counter += ApplyBlockOfCZTAndLowQXYGatesAVX(amp, num_qubits, CZ_bitmasks_64,
+                                                             T_bitmasks_64, loq_X_bitmask >> th,
+                                                             loq_Y_bitmask >> th, num_threads, th);
+    else
+        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads);
+
+    time_by_category.low_q_XY_CZT += time.GetElapsedTime();
+    
+    int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
+    if ((num_hi_X_bits + num_hi_Y_bits) % 2 == 1)
+        ApplyOddGates(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits);
+
+    time.StartTime();
+    if (hiq_X_bitmask || hiq_Y_bitmask)
+        global_i_counter += XYFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, num_qubits, num_threads);
+    time_by_category.high_q_XY1_2 += time.GetElapsedTime();
+    
+    global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
+    
+    count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
+    count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
+    
+    return -1;
 }
 
 cmplx FullAmpStateVector::

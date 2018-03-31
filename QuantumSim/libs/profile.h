@@ -23,8 +23,10 @@ typedef struct TimesByCategory{
     double copying;
     double norm;
     double amp_storage;
+    double low_q_XY_CZT;
+    double high_q_XY1_2;
     
-    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), copying(0), norm(0), amp_storage(0) {}
+    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), copying(0), norm(0), amp_storage(0), low_q_XY_CZT(0), high_q_XY1_2(0) {}
 }Times;
 
 
@@ -39,8 +41,10 @@ typedef struct CountOfCategory{
     ul conversion;
     ul xCZ_not_applied;
     ul copying;
+    ul low_q_XY1_2;
+    ul high_q_XY1_2;
     
-    CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0) {}
+    CountOfCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0), low_q_XY1_2(0), high_q_XY1_2(0) {}
 }Counts;
 
 class Time {

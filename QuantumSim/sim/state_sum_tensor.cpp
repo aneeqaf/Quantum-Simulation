@@ -112,12 +112,10 @@ UnpopulateGlobalToLocalMap()
     tensor_addends[0] -> UnpopulateGlobalToLocalMap();
 }
 
-//TODO
-int SumOfTensorsProductsStateVector::
-ApplyBlockOfDiagGates(string& cz_bits,
-                      idx_size prefix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2])
+int  SumOfTensorsProductsStateVector::
+HandlexCZApplication(string& cz_bits,
+                     idx_size prefix_size,
+                     const bitset<128>* __restrict CZ_bitmasks)
 {
     int last_xCZ_idx = -1;
     
@@ -129,19 +127,31 @@ ApplyBlockOfDiagGates(string& cz_bits,
             last_xCZ_idx = ApplyXCZGatesExact(CZ_bitmasks);
     }
     else if (sim_mode != Config::SimMode::Phase2 &&
-             (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
-             sim_type == Config::SimType::Approx2011OWT)){
-        data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
-        data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
+     (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
+      sim_type == Config::SimType::Approx2011OWT)){
+         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
+         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
+     }
+    
+    if (sim_mode != Config::SimMode::Phase2) {
+        data_per_cycles.memory.push_back(GetMemUsage());
+        data_per_cycles.addends.push_back(GetNumAddends());
     }
+    
+    return last_xCZ_idx;
+}
+
+int SumOfTensorsProductsStateVector::
+ApplyBlockOfDiagGates(string& cz_bits,
+                      idx_size prefix_size,
+                      const bitset<128>* __restrict CZ_bitmasks,
+                      const bitset<128> T_bitmasks[2])
+{
+    int last_xCZ_idx = HandlexCZApplication(cz_bits, prefix_size, CZ_bitmasks);
     
     if (last_xCZ_idx == -1) {
         for (auto& t : tensor_addends)
             t -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks);
-    }
-    if (sim_mode != Config::SimMode::Phase2) {
-        data_per_cycles.memory.push_back(GetMemUsage());
-        data_per_cycles.addends.push_back(GetNumAddends());
     }
     
     return last_xCZ_idx;
@@ -366,6 +376,36 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
             /(num_addends);
     }
 }
+
+int SumOfTensorsProductsStateVector::
+ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                          idx_size prefix_size,
+                          bitset<128> X_bitmask,
+                          bitset<128> Y_bitmask,
+                          const bitset<128>* __restrict CZ_bitmasks,
+                          const bitset<128> T_bitmasks[2],
+                          int th)
+{
+    idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
+    int last_xCZ_idx = HandlexCZApplication(cz_bits, prefix_size, CZ_bitmasks);
+    
+    if (last_xCZ_idx == -1) {
+        for (auto& t : tensor_addends)
+            t -> ApplyLoXYAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask, CZ_bitmasks, T_bitmasks, th);
+    }
+    
+    if (sim_mode != Config::SimMode::Phase2) {
+        if (count_of_category.X1_2 - prev_X_count)
+            count_of_category.X1_2 -= (num_addends - 1) * (count_of_category.X1_2 - prev_X_count)
+            /(num_addends);
+        if (count_of_category.Y1_2 - prev_Y_count)
+            count_of_category.Y1_2 -= (num_addends - 1) * (count_of_category.Y1_2 - prev_Y_count)
+            /(num_addends);
+    }
+    
+    return last_xCZ_idx;
+}
+
 
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToStateAVX()

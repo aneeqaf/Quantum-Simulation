@@ -24,7 +24,7 @@ import numpy as np
 @click.option("--branch_bits", nargs=1, required=False, default=0)
 @click.option("--num_batches", nargs=1, required=False, default=0)
 @click.option("--num_threads", nargs=1, required=False, default=4)
-@click.option("--ft_threshold", nargs=1, required=False, default=15)
+@click.option("--num_highq", nargs=1, required=False, default=8)
 @click.option("--max_procs", nargs=1, required=False, default=0)
 @click.option("--idx_seed", nargs=1, required=False, default=7)
 @click.option("--idx_file", nargs=1, required=False, default="")
@@ -34,7 +34,7 @@ import numpy as np
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
-def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_threshold, v_cut, h_cut,\
+def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, approx, test_fid):
 
 	epsilon_sq = 1
@@ -69,8 +69,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, ft_th
 		cir_name = file_name[0] + "_" + str(depth) + "_"
 	# os.makedirs(cir_dir)
 
-	commandH = dist_util.BuildDistCommand(command, 0, num_threads, h_cut = h_cut) 
-	commandV = dist_util.BuildDistCommand(command, 1, num_threads, v_cut = v_cut) 
+	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, h_cut = h_cut) 
+	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 

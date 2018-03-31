@@ -111,7 +111,6 @@ FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
 //            cout << "gtl 0 : "<< qp.globalToLocal(num_q_1 - i) << endl;
             
              if ((gate_bitmasks[num_q_1 - i] & block0_bitmask) != gate_bitmasks[num_q_1 - i]) {
-                 cout << "xCZ" << endl;
                 xCZ_bitmasks[qubits_a_1 - qp.globalToLocal(num_q_1 - i)] =
                         Project1QBitmask(gate_bitmasks[num_q_1 - i] & block1_bitmask, qp, 1) ;
                 ++count;
@@ -158,6 +157,33 @@ ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
             state_B_gate_bm[2] |= xCZ_bitmasks_path1_D3D4[i].to_ulong();
         }
         state_b -> ApplyCZDecompositionDist(state_B_gate_bm);
+    }
+}
+
+void TensorProductStateVector::
+HandleCZApprox(const bitset<128> *CZ_bitmasks)
+{
+    if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
+    else if (sim_type == Config::SimType::Approx1_101) //compute norm and divide by the norm
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D1, Gate::Type::CZ_D2);
+    else if (sim_type == Config::SimType::Approx1110)
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
+    else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
+    else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
+             && sim_mode != Config::SimMode::Phase2){
+        idx_size count = CountXCZGates(CZ_bitmasks);
+        data_per_cycles.memory.push_back(GetMemUsage());
+        data_per_cycles.addends.push_back(1);
+        if (cut_type == QubitPartition::Cuts::Horizontal) {
+            data_per_cycles.xCZ_H.push_back(count);
+            data_per_cycles.xCZ_V.push_back(0);
+        }
+        else {
+            data_per_cycles.xCZ_H.push_back(count);
+            data_per_cycles.xCZ_H.push_back(0);
+        }
     }
 }
 
@@ -212,28 +238,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
 //    state_b -> PrintStateVector() ; cout << endl;
 //    // TODO : Fix the book keeping for approximation
     
-    if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
-    else if (sim_type == Config::SimType::Approx1_101) //compute norm and divide by the norm
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D1, Gate::Type::CZ_D2);
-    else if (sim_type == Config::SimType::Approx1110)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
-    else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
-    else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
-             && sim_mode != Config::SimMode::Phase2){
-        idx_size count = CountXCZGates(CZ_bitmasks);
-        data_per_cycles.memory.push_back(GetMemUsage());
-        data_per_cycles.addends.push_back(1);
-        if (cut_type == QubitPartition::Cuts::Horizontal) {
-            data_per_cycles.xCZ_H.push_back(count);
-            data_per_cycles.xCZ_V.push_back(0);
-        }
-        else {
-            data_per_cycles.xCZ_H.push_back(count);
-            data_per_cycles.xCZ_H.push_back(0);
-        }
-    }
+    HandleCZApprox(CZ_bitmasks);
     
     return -1;
 }
@@ -383,6 +388,55 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
         bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, qp, 1, true);
         state_b -> ApplyXYRecursiveTransform(stateB_Xbitmask, stateB_Ybitmask, th);
     }
+}
+
+int TensorProductStateVector::
+ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                          idx_size prefix_size,
+                          bitset<128> X_bitmask,
+                          bitset<128> Y_bitmask,
+                          const bitset<128>* __restrict CZ_bitmasks,
+                          const bitset<128> T_bitmasks[2],
+                          int th)
+{
+    const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
+
+    if (partition_to_sim == 'a' || partition_to_sim == 'x') {
+        bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, qp, 0, true);
+        bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, qp, 0, true);
+        
+        bitset<128> CZ_bitmasks_a[num_q_a];
+        bitset<128> T_bitmasks_a[2] = {0};
+        
+        for (int i = 0; i < num_q_a; ++i)
+            CZ_bitmasks_a[i] = 0;
+        
+        ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks);
+        for (int i = 0; i < 2; ++i)
+            T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
+        
+        state_a -> ApplyLoXYAndCZTInSamePass(cz_bits, prefix_size, stateA_Xbitmask, stateA_Ybitmask,
+                                             CZ_bitmasks_a, T_bitmasks_a, th);
+    }
+    if (partition_to_sim == 'b' || partition_to_sim == 'x') {
+        bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
+        bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, qp, 1, true);
+        
+        bitset<128> CZ_bitmasks_b[num_q_b];
+        bitset<128> T_bitmasks_b[2] = {0};
+        
+        for (int i = 0; i < num_q_b; ++i)
+            CZ_bitmasks_b[i] = 0;
+        
+        ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks);
+        for (int i = 0; i < 2; ++i)
+            T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
+        
+        state_b -> ApplyLoXYAndCZTInSamePass(cz_bits, prefix_size, stateB_Xbitmask, stateB_Ybitmask,
+                                            CZ_bitmasks_b, T_bitmasks_b, th);
+    }
+    
+    return -1;
 }
 
 cmplx TensorProductStateVector::

@@ -25,15 +25,16 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 
 	return print_opt
 
-def BuildDistCommand(command, sim_type, num_threads, h_cut = 0, v_cut = 0):
+def BuildDistCommand(command, sim_type, num_threads, num_highq, h_cut = 0, v_cut = 0):
 	if h_cut:
 		return command + " --num_threads " + str(num_threads) + " --sim_type " \
-		+ str(sim_type) + " --hcut " + str(h_cut)
+		+ str(sim_type) + " --hcut " + str(h_cut) + " --low_value_q " + str(num_highq)
 	elif v_cut:
 		return command + " --num_threads " + str(num_threads) + " --sim_type " \
-		+ str(sim_type) + " --vcut " + str(v_cut)
+		+ str(sim_type) + " --vcut " + str(v_cut) + " --low_value_q " + str(num_highq)
 	else:
-		return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type)
+		return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type) \
+		+ " --low_value_q " + str(num_highq)
 	
 
 def TrialRunEval(report_file, num_CZ, start_time, end_time, app_cz_len = 0, dfs_len = 0):
@@ -366,7 +367,6 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				if e.errno != errno.EEXIST:
 					raise
 		else:
-			print(log_dir)
 			shutil.rmtree(log_dir, ignore_errors=True)
 			try:
 				os.makedirs(log_dir)

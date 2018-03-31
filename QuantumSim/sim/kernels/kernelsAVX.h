@@ -36,6 +36,7 @@
 #endif
 
 #include "gates.h"
+#include "profile.h"
 
 using namespace std;
 
@@ -334,6 +335,13 @@ XYFastTransformLowQ(cmplx* __restrict amp,
                     const int num_qubits,
                     const int num_threads);
 
+idx_size
+XYFastTransformHighQ(cmplx* __restrict amp,
+                     idx_size X_bitmask,
+                     idx_size Y_bitmask,
+                     const int num_qubits,
+                     const int num_threads);
+
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
                            const int num_qubits_amp,
@@ -355,5 +363,5 @@ ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
                                  const int num_threads,
-                                 const int th);
+                                 const int num_high_qubits);
 #endif /* kernelsAVX_h */

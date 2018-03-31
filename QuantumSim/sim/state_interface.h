@@ -151,6 +151,13 @@ public:
     virtual void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                            bitset<128> Y_bitmask,
                                            int th) = 0;
+    virtual int ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                                           idx_size prefix_size,
+                                           bitset<128> X_bitmask,
+                                           bitset<128> Y_bitmask,
+                                           const bitset<128>* __restrict CZ_bitmasks,
+                                           const bitset<128> T_bitmasks[2],
+                                           int th) = 0;
     virtual bitset<128> FormXYGatesBitmask(idx_size& gate_i,
                                         const vector<Gate>& all_gates,
                                         const Gate::Type gate_type);

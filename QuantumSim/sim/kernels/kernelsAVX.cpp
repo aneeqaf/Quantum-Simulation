@@ -106,6 +106,55 @@ SecondGroupOf8GatesHelper(float* __restrict t_amp,
     _mm256_store_ps(&t_amp[2 * gray_codes[0]], second_set);
 }
 
+__attribute__((always_inline)) inline void
+ApplyCZTGatesInABlock(float* __restrict t_amp,
+                       const int num_qubits_amp,
+                       const idx_size* __restrict CZ_bitmasks,
+                       const idx_size* __restrict T_bitmasks /*2*/,
+                       const int num_threads,
+                       const idx_size block_begin,
+                       const idx_size block_size)
+{
+    const idx_size block_end = block_begin + block_size;
+    
+    // Before starting a block compute `negate_Z`
+    bool negate_Z = false;
+    idx_size prev_gc = 0;
+    
+    if (block_begin) {
+        prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
+        idx_size gate_count = 0;
+        for (idx_size i = 0; i < (idx_size)num_qubits_amp; ++i) {
+            if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i]))
+                gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
+        }
+        if (gate_count & 2)
+            negate_Z = true;
+    }
+    
+    //Use `negate_Z` to enable a Gray-code optimized loop.
+    for (idx_size count = block_begin; count + 15 < block_end ; count+=16) {
+        
+        idx_size gc0 = count ^ (count >> 1);
+        idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
+        const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
+        
+        idx_size Tgate_count_1[8] = {0};
+        GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
+        FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
+        prev_gc = gc_first[7];
+        
+        gc0 = (count + 8) ^ ((count + 8) >> 1);
+        gc4 = (count + 12) ^ ((count + 12) >> 1);
+        const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
+        
+        idx_size Tgate_count_2[8] = {0};
+        GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
+        FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
+        prev_gc = gc_second[7];
+    }
+}
+
 void
 ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_qubits_amp,
@@ -117,47 +166,8 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
-    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
-        const idx_size block_end = block_begin + block_size;
-   
-        // Before starting a block compute `negate_Z`
-        bool negate_Z = false;
-        idx_size prev_gc = 0;
-        
-        if (block_begin) {
-            prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
-//            idx_size leading_0 = 64 - __builtin_clzl(prev_gc);// last_non0_bit = num_qubits_amp - trailing_0;
-            idx_size gate_count = 0;
-            for (idx_size i = 0; i < (idx_size)num_qubits_amp; ++i) {
-                if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i]))
-                    gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
-            }
-            if (gate_count & 2)
-                negate_Z = true;
-        }
-       
-        //Use `negate_Z` to enable a Gray-code optimized loop.
-        for (idx_size count = block_begin; count + 15 < block_end ; count+=16) {
-            
-            idx_size gc0 = count ^ (count >> 1);
-            idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
-            const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-            
-            idx_size Tgate_count_1[8] = {0};
-            GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
-            FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
-            prev_gc = gc_first[7];
-            
-            gc0 = (count + 8) ^ ((count + 8) >> 1);
-            gc4 = (count + 12) ^ ((count + 12) >> 1);
-            const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-            
-            idx_size Tgate_count_2[8] = {0};
-            GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
-            FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
-            prev_gc = gc_second[7];
-        }
-    }
+    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size)
+        ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks, num_threads, block_begin, block_size);
 }
 
 void
@@ -201,57 +211,27 @@ ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
                                  const int num_threads,
-                                 const int th)
+                                 const int num_high_qubits)
 {
-    const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1u << th) ? (1u << th) : amp_size;
+    const idx_size amp_size = (1ull << num_qubits_amp),
+    block_size = amp_size > (1u << (num_qubits_amp - num_high_qubits))
+    ? (1u << (num_qubits_amp - num_high_qubits)) : amp_size;
+    const int block_bits = block_size != amp_size ? num_qubits_amp - num_high_qubits : num_qubits_amp;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
     idx_size i_count = 0;
     
-#pragma omp parallel for schedule(guided) num_threads(num_threads)
+    #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
-        const idx_size block_end = block_begin + block_size;
+
+        ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks, num_threads, block_begin, block_size);
         
-        // Before starting a block compute `negate_Z`
-        bool negate_Z = false;
-        idx_size prev_gc = 0;
+        idx_size num_iters = block_begin/block_size;
+        idx_size offset_idx = num_iters ^ (num_iters >> 1);
+        i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
+                                        Lo_Y_bitmask, block_bits, num_threads);
         
-        if (block_begin) {
-            prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
-            //            idx_size leading_0 = 64 - __builtin_clzl(prev_gc);// last_non0_bit = num_qubits_amp - trailing_0;
-            idx_size gate_count = 0;
-            for (idx_size i = 0; i < (idx_size)num_qubits_amp; ++i) {
-                if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i]))
-                    gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
-            }
-            if (gate_count & 2)
-                negate_Z = true;
-        }
-        
-        //Use `negate_Z` to enable a Gray-code optimized loop.
-        for (idx_size count = block_begin; count + 15 < block_end ; count+=16) {
-            
-            idx_size gc0 = count ^ (count >> 1);
-            idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
-            const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-            
-            idx_size Tgate_count_1[8] = {0};
-            GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
-            FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
-            prev_gc = gc_first[7];
-            
-            gc0 = (count + 8) ^ ((count + 8) >> 1);
-            gc4 = (count + 12) ^ ((count + 12) >> 1);
-            const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-            
-            idx_size Tgate_count_2[8] = {0};
-            GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
-            FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
-            prev_gc = gc_second[7];
-        }
-        
-        i_count += XYFastTransformLowQ(amp + (block_begin * th), Lo_X_bitmask, Lo_Y_bitmask, th, num_threads);
-    }
+   }
     
     return i_count;
 }

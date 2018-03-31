@@ -144,6 +144,45 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     
 }
 
+int AdaptiveStateVector::
+ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                          idx_size prefix_size,
+                          bitset<128> X_bitmask,
+                          bitset<128> Y_bitmask,
+                          const bitset<128>* __restrict CZ_bitmasks,
+                          const bitset<128> T_bitmasks[2],
+                          int th)
+{
+    int last_xCZ_idx = -1;
+    if (full_state) {
+        if (sim_mode != Config::SimMode::Phase2) {
+            data_per_cycles.xCZ_H.push_back(0);
+            data_per_cycles.xCZ_V.push_back(0);
+            data_per_cycles.addends.push_back(0);
+            data_per_cycles.memory.push_back(GetMemUsage());
+        }
+        full_state -> ApplyLoXYAndCZTInSamePass(cz_bits, prefix_size, X_bitmask,
+                                                Y_bitmask, CZ_bitmasks, T_bitmasks, th);
+    }
+    else {
+        last_xCZ_idx = sumOfTensors -> ApplyLoXYAndCZTInSamePass(cz_bits, prefix_size, X_bitmask,
+                                                                 Y_bitmask, CZ_bitmasks, T_bitmasks, th);
+        
+        if (sumOfTensors -> GetNumAddends() > 10) {
+            Time time;
+            time.StartTime();
+            
+            full_state = sumOfTensors -> ConvertSumOfTensorsToState();
+            
+            time_by_category.conversion += time.GetElapsedTime();
+            
+            delete sumOfTensors;
+            sumOfTensors = nullptr;
+        }
+    }
+    return last_xCZ_idx;
+}
+
 cmplx AdaptiveStateVector::
 operator[](bitset<128> i)
 {

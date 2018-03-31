@@ -21,6 +21,8 @@ private:
     static idx_size* global_to_local_b;
     static idx_size num_requested_amps;
     
+    void HandleCZApprox(const bitset<128>* __restrict CZ_bitmasks);
+    
 public:
     FullAmpStateVector* state_a;
     FullAmpStateVector* state_b;
@@ -59,6 +61,13 @@ public:
                                 const vector<Gate>& all_gates) {};
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
+                                   int th);
+    int ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                                   idx_size prefix_size,
+                                   bitset<128> X_bitmask,
+                                   bitset<128> Y_bitmask,
+                                   const bitset<128>* __restrict CZ_bitmasks,
+                                   const bitset<128> T_bitmasks[2],
                                    int th);
     void PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();

@@ -34,6 +34,15 @@ private:
                                        int& num_hi_Y_bits,
                                        const idx_size X_bitmask,
                                        const idx_size Y_bitmask);
+    void TransferOddBitsFromLowQubitsBM(int& th,
+                                        idx_size& hi_q_X_bitmask,
+                                        idx_size& hi_q_Y_bitmask,
+                                        idx_size& lo_q_X_bitmask,
+                                        idx_size& lo_q_Y_bitmask,
+                                        int& num_lo_X_bits,
+                                        int& num_lo_Y_bits,
+                                        const idx_size X_bitmask,
+                                        const idx_size Y_bitmask);
     void ApplyOddGates(idx_size& X_bitmask,
                        idx_size& Y_bitmask,
                        int& num_X_bits,
@@ -62,6 +71,13 @@ public:
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
                                    int th);
+   int ApplyLoXYAndCZTInSamePass(string& cz_bits,
+                                  idx_size prefix_size,
+                                  bitset<128> X_bitmask,
+                                  bitset<128> Y_bitmask,
+                                  const bitset<128>* __restrict CZ_bitmasks,
+                                  const bitset<128> T_bitmasks[2],
+                                  int th);
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);

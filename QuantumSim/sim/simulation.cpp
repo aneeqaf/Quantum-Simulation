@@ -114,6 +114,8 @@ Simulate(GenericQuantumState& amp,
                 *(*config.mmap_obj)[i] += amp.amps_of_interest[i];
             amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
         }
+        amp.count_of_category.low_q_XY1_2 /= 2 + amp.GetNumAddends();
+        amp.count_of_category.high_q_XY1_2 /= 2 + amp.GetNumAddends();
     }
     else
         Phase1Simulation(amp, circuit, cz_path);
@@ -225,11 +227,21 @@ SimulationLoop(GenericQuantumState &amp,
                 }
                 
                 cycle_time.StartTime();
-                idx_size prev_i = i;
+                idx_size prev_i_CZT = i;
                 bitset<128> T_bitmasks[2] = {0};
                 bitset<128> CZ_bitmasks[total_circuit_qubits];
                 amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
-                int last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks, T_bitmasks);
+                idx_size prev_i_XY = i;
+                bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
+                bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+
+                int last_xCZ_idx = -1;
+                if (X_bitmask != 0 || Y_bitmask != 0) {
+                    last_xCZ_idx = amp.ApplyLoXYAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask,
+                                                                 CZ_bitmasks, T_bitmasks, config.th);
+                }
+                else
+                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks, T_bitmasks);
                 terminate = last_xCZ_idx != -1 ? true : false;
                 
                 if (config.curr_mode != Config::SimMode::Phase2) {
@@ -239,9 +251,9 @@ SimulationLoop(GenericQuantumState &amp,
                     }
                     
                     if (!terminate) {
-                        amp.count_of_category.CZ_T += i - prev_i - amp.count_of_category.xCZ_not_applied;
+                        amp.count_of_category.CZ_T += prev_i_XY - prev_i_CZT - amp.count_of_category.xCZ_not_applied;
                         amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
-                        amp.data_per_cycles.CZ_gates.push_back(i - prev_i -
+                        amp.data_per_cycles.CZ_gates.push_back(prev_i_XY - prev_i_CZT -
                                                                amp.data_per_cycles.T_gates.back() -
                                                                amp.count_of_category.xCZ_not_applied);
                     }
@@ -249,10 +261,11 @@ SimulationLoop(GenericQuantumState &amp,
                         amp.count_of_category.CZ_T += last_xCZ_idx;
                         amp.data_per_cycles.CZ_gates.push_back(last_xCZ_idx); //not accurate
                     }
+                    amp.data_per_cycles.XY_gates.push_back(i - prev_i_XY);
                 }
                 
                 if (terminate) {
-                    curr_gate = prev_i + last_xCZ_idx;
+                    curr_gate = prev_i_CZT + last_xCZ_idx;
                     return terminate;
                 }
                 
@@ -271,7 +284,6 @@ SimulationLoop(GenericQuantumState &amp,
                  current_gate.ids.back() == Gate::Type::Y_1_2) &&
                 (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                  circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-                    
                     Time XY_time;
                     XY_time.StartTime();
                     
@@ -678,7 +690,7 @@ PrintSystemReport() const
         << std::setw(2) << std::setfill('0') << now->tm_sec
         <<"\n";
         cout << "Size of complex : " << sizeof(cmplx) << " B\n\n";
-        cout << "Verbosity : " << config.verbose << "\n";
+        cout << "Verbosity : " << config.verbose ;
     }
 }
 
@@ -688,7 +700,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
                    const int xCZ_gates)
 {
     if (config.google) {
-        cout << "Circuit file : " + config.infile + "\n";
+        cout << "\nCircuit file : " + config.infile + "\n";
         cout << "Circuit type : Google\n";
     }
     
@@ -1046,12 +1058,13 @@ PrintSimReport(GenericQuantumState& amp,
         ss << H_s << setw(30 - H_s.size()) << right << ": " << amp.time_by_category.H
         << " s\t\t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
-        if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ) {
+        if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
-            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor) + ")" ;
+            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor) + ") & Low XY ("
+            + to_string(amp.count_of_category.low_q_XY1_2/factor) + ")";
             ss << CZ_T_s << setw(30 - CZ_T_s.size()) << right << ": "
-            << amp.time_by_category.CZ_T << " s\t\t= "
-            << (amp.time_by_category.CZ_T/(total_time)) * 100 << "%\n";
+            << amp.time_by_category.low_q_XY_CZT << " s\t\t= "
+            << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
         }
         
         if(amp.count_of_category.decomposed_CZ) {
@@ -1076,6 +1089,14 @@ PrintSimReport(GenericQuantumState& amp,
             ss << X_Y_s << setw(30 - X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
             << " s\t\t= " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
         }
+        
+        if(amp.count_of_category.high_q_XY1_2) {
+            string xy_s = "\tHigh XY (" + to_string(amp.count_of_category.high_q_XY1_2/factor) + ")" ;
+            ss << xy_s << setw(30 - xy_s.size()) << right << ": "
+            << amp.time_by_category.high_q_XY1_2 << " s\t\t= "
+            << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";
+        }
+        
         if (amp.count_of_category.rescale) {
             string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale/factor) + ")";
             ss <<  RP_s << setw(30 - RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
@@ -1116,7 +1137,9 @@ PrintSimReport(GenericQuantumState& amp,
         + (((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/total_time) * 100)
         + ((amp.time_by_category.merged_XY1_2/total_time) * 100) + ((amp.time_by_category.rescale/total_time) * 100)
         + ((amp.time_by_category.conversion/total_time) * 100) + ((amp.time_by_category.copying/total_time) * 100)
-        + ((amp.time_by_category.norm/total_time) * 100) + ((amp.time_by_category.amp_storage/total_time) * 100);
+        + ((amp.time_by_category.norm/total_time) * 100) + ((amp.time_by_category.amp_storage/total_time) * 100)
+        + ((amp.time_by_category.low_q_XY_CZT/(total_time)) * 100)
+        + ((amp.time_by_category.high_q_XY1_2/(total_time)) * 100);
         
         ss << "\t\t\t\t\t\t\t  ----\n";
         ss << "\tTotal \t\t\t\t\t\t   " << sum_percen << "%\n";
