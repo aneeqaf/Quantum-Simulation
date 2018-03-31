@@ -194,6 +194,35 @@ ApplyGateOnAmps(cmplx* __restrict amp,
     }
 }
 
+template<typename function>
+void
+Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
+                            const idx_size gate_qubits,
+                            const int num_qubits_amp,
+                            const function& gate_func,
+                            const idx_size add = 1);
+
+__attribute__((always_inline)) inline void
+ApplyMergedXYFT(cmplx* __restrict amp,
+                const idx_size gates_bitmask,
+                const int gate_type,
+                const int num_qubits)
+{
+    void (*XYApplicationFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12Gate, ApplyXY12Gate,
+        ApplyYY12Gate, ApplyYX12Gate};
+    void (*XYApplicationAVXFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12GateAVX, ApplyXY12GateAVX,
+        ApplyYY12GateAVX, ApplyYX12GateAVX};
+
+    bool AVX = (__builtin_ctzl(gates_bitmask) < num_qubits - 1
+                && __builtin_ctzl(gates_bitmask ^ (1ull << __builtin_ctzl(gates_bitmask))) < num_qubits - 2);
+    
+    if (AVX)
+        Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, XYApplicationAVXFuncs[gate_type], 4);
+    else
+        Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, XYApplicationFuncs[gate_type], 1);
+
+}
+
 void
 GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
              const int num_qubits_amp,

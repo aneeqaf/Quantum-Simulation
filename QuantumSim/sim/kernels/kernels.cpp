@@ -256,7 +256,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
                             const idx_size gate_qubits,
                             const int num_qubits_amp,
                             const function& gate_func,
-                            const idx_size add = 1)
+                            const idx_size add)
 {
     constexpr idx_size num_indices = 4;
     const idx_size amp_size = 1ull << num_qubits_amp,
@@ -358,41 +358,6 @@ UpdateXYBitmask(idx_size& X_bitmask,
     gates_bitmask = (1ull << first_q) | (1ull << second_q);
     
     return gate_type;
-}
-
-__attribute__((always_inline)) inline void
-ApplyMergedXYFT(cmplx* __restrict amp,
-               const idx_size gates_bitmask,
-               const int gate_type,
-               const int num_qubits)
-{
-    bool AVX = (__builtin_ctzl(gates_bitmask) < num_qubits - 1
-                && __builtin_ctzl(gates_bitmask ^ (1ull << __builtin_ctzl(gates_bitmask))) < num_qubits - 2);
-    if (gate_type == 0) {
-        if (AVX)
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyXX12GateAVX, 4);
-        else
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyXX12Gate, 1);
-    }
-    else if (gate_type == 1) {
-        if (AVX)
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyXY12GateAVX, 4);
-        else
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyXY12Gate, 1);
-    }
-    else if (gate_type == 2) {
-        if (AVX)
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyYY12GateAVX, 4);
-        else
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyYY12Gate, 1);
-    }
-    else if (gate_type == 3) {
-        if (AVX)
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyYX12GateAVX, 4);
-        else
-            Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits, ApplyYX12Gate, 1);
-    }
-    else assert(false);
 }
 
 

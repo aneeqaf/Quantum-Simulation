@@ -288,8 +288,8 @@ ApplyOddGates(idx_size& X_bitmask,
     Time time;
     time.StartTime();
 
-    const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : 1000;
-    const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : 1000;
+    const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : kRT;
+    const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : kRT;
     
     //        const int X_q = X_bitmask_64 ? 63 - __builtin_clzl(X_bitmask_64) : 1000;
     //        const int Y_q = Y_bitmask_64 ? 63 - __builtin_clzl(Y_bitmask_64): 1000;
@@ -313,6 +313,93 @@ ApplyOddGates(idx_size& X_bitmask,
             if (sim_mode != Config::SimMode::Phase2)
                 ++count_of_category.Y1_2;
         }
+    }
+}
+
+pair<int, int> FullAmpStateVector::
+GetMostSigOddBit(idx_size& X_bitmask,
+                 idx_size& Y_bitmask,
+                 int& num_X_bits,
+                 int& num_Y_bits)
+{
+    if ((num_X_bits + num_Y_bits) % 2 == 1) {
+        const int X_q = X_bitmask ? __builtin_ctzl(X_bitmask) : kRT;
+        const int Y_q = Y_bitmask ? __builtin_ctzl(Y_bitmask) : kRT;
+        if (X_q < Y_q) {
+            X_bitmask ^= 1ull << X_q;
+            --num_X_bits;
+            return pair<int, int>(X_q, 0);
+        }
+        else {
+            Y_bitmask ^= 1ull << Y_q;
+            --num_Y_bits;
+              return pair<int, int>(Y_q, 1);
+        }
+    }
+    return pair<int, int> (-1, -1);
+}
+
+pair<int, int> FullAmpStateVector::
+GetLeasttSigOddBit(idx_size& X_bitmask,
+                   idx_size& Y_bitmask,
+                   int& num_X_bits,
+                   int& num_Y_bits)
+{
+    if ((num_X_bits + num_Y_bits) % 2 == 1) {
+        const int X_q = X_bitmask ? 63 - __builtin_clzl(X_bitmask) : kRT;
+        const int Y_q = Y_bitmask ? 63 - __builtin_clzl(Y_bitmask) : kRT;
+        if (X_q > Y_q) {
+            X_bitmask ^= 1ull << X_q;
+            --num_X_bits;
+            return pair<int, int>(X_q, 0);
+        }
+        else {
+            Y_bitmask ^= 1ull << Y_q;
+            --num_Y_bits;
+            return pair<int, int>(Y_q, 1);
+        }
+    }
+    return pair<int, int> (-1, -1);
+}
+
+void FullAmpStateVector::
+HandleLowOddAndHighOdd(idx_size& hiq_X_bitmask,
+                       idx_size& hiq_Y_bitmask,
+                       int& num_hi_X_bits,
+                       int& num_hi_Y_bits,
+                       const pair<int, int>& odd_bit_low_XY)
+{
+    Time time;
+    
+    if ((num_hi_X_bits + num_hi_Y_bits) % 2 == 1) {
+        if (odd_bit_low_XY.first != -1) {
+            time.StartTime();
+            pair<int, int> odd_bit_high_XY = GetLeasttSigOddBit(hiq_X_bitmask, hiq_Y_bitmask,
+                                                              num_hi_X_bits, num_hi_Y_bits);
+            int gate_type = 0;
+            if (odd_bit_high_XY.second == 0 && odd_bit_low_XY.second == 0) gate_type = 0;
+            else if (odd_bit_low_XY.second == 1 && odd_bit_high_XY.second == 0) gate_type = 1;
+            else if (odd_bit_low_XY.second == 1 && odd_bit_high_XY.second == 1) {
+                gate_type = 2;
+                ++global_i_counter;
+            }
+            else if (odd_bit_low_XY.second == 0 && odd_bit_high_XY.second == 1) gate_type = 3;
+            else assert(false);
+            ApplyMergedXYFT(amp, (1ull << odd_bit_low_XY.first) | (1ull << odd_bit_high_XY.first),
+                            gate_type, num_qubits);
+            time_by_category.merged_XY1_2 += time.GetElapsedTime();
+            ++count_of_category.merged_XY1_2;
+            global_factor_power += 2;
+        }
+        else
+            ApplyOddGates(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits);
+    }
+    else if (odd_bit_low_XY.first != -1) {
+        idx_size X_bm = odd_bit_low_XY.second == 0 ? 1ull << odd_bit_low_XY.first : 0;
+        idx_size Y_bm = odd_bit_low_XY.second == 1 ? 1ull << odd_bit_low_XY.first : 0;
+        int num_X_bits = X_bm != 0 ? 1 : 0, num_Y_bits = Y_bm != 0 ? 1 : 0;
+        
+        ApplyOddGates(X_bm, Y_bm, num_X_bits, num_Y_bits);
     }
 }
 
@@ -366,22 +453,19 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
-    idx_size hiq_X_bitmask = 0, hiq_Y_bitmask = 0;
+    idx_size hiq_X_bitmask = X_bitmask_64 & ((1ull << th) - 1);
+    idx_size hiq_Y_bitmask = Y_bitmask_64 & ((1ull << th) - 1);
     idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
     idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
-    int num_lo_X_bits = 0, num_lo_Y_bits = 0;
+    int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask);
+    int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
     
     for (int i = 0; i < num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
-    TransferOddBitsFromLowQubitsBM(th, hiq_X_bitmask,  hiq_Y_bitmask, loq_X_bitmask, loq_Y_bitmask,
-                                  num_lo_X_bits, num_lo_Y_bits, X_bitmask_64, Y_bitmask_64);
+    pair<int, int> odd_bit_low_XY = GetMostSigOddBit(loq_X_bitmask, loq_Y_bitmask,
+                                                     num_lo_X_bits, num_lo_Y_bits);
     
-//    assert((num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits) ==
-//           ( __builtin_popcountll(X_bitmask_64) + __builtin_popcountll(Y_bitmask_64)));
-//    assert((__builtin_popcountll(loq_X_bitmask >> th) + num_hi_X_bits + num_hi_Y_bits + __builtin_popcountll(loq_Y_bitmask >> th)) ==
-//           ( __builtin_popcountll(X_bitmask_64) + __builtin_popcountll(Y_bitmask_64)));
-
     if (loq_X_bitmask || loq_Y_bitmask)
         global_i_counter += ApplyBlockOfCZTAndLowQXYGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                              T_bitmasks_64, loq_X_bitmask >> th,
@@ -392,16 +476,14 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     
     int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
-    if ((num_hi_X_bits + num_hi_Y_bits) % 2 == 1)
-        ApplyOddGates(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits);
-
+    HandleLowOddAndHighOdd(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits, odd_bit_low_XY);
+    
     time.StartTime();
     if (hiq_X_bitmask || hiq_Y_bitmask)
         global_i_counter += XYFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, num_qubits, num_threads);
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
-    
     count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
     count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
     

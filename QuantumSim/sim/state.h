@@ -47,7 +47,19 @@ private:
                        idx_size& Y_bitmask,
                        int& num_X_bits,
                        int& num_Y_bits);
-    
+    pair<int, int> GetMostSigOddBit(idx_size& X_bitmask,
+                                     idx_size& Y_bitmask,
+                                     int& num_X_bits,
+                                     int& num_Y_bits);
+    pair<int, int> GetLeasttSigOddBit(idx_size& X_bitmask,
+                                    idx_size& Y_bitmask,
+                                    int& num_X_bits,
+                                    int& num_Y_bits);
+    void HandleLowOddAndHighOdd(idx_size& hiq_X_bitmask,
+                                idx_size& hiq_Y_bitmask,
+                                int& num_hi_X_bits,
+                                int& num_hi_Y_bits,
+                                const pair<int, int>& odd_bit_low_XY);
 public:
     
     int ApplyBlockOfDiagGates(string& cz_bits,
