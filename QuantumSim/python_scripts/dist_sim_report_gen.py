@@ -25,12 +25,13 @@ def main(cir_file, est_time, max_procs, test_fid):
 	qubits = 0
 	print_line = True
 	categories = {'H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0,\
-	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0}
+	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0, 'High XY': 0 , 'Low XY': 0}
 	num_threads = 0
 	cz_path_len = 0
 	cz_path_ranges = 0
 	dfs_bits = 0
 	dfs = False
+	epsilon = 0
 
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
@@ -58,6 +59,9 @@ def main(cir_file, est_time, max_procs, test_fid):
 
 				if len(cz_path) == 3 :
 					dfs = True
+			if "fidelity" in line:
+				epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
+				print(line,  end='')
 			elif "State representation size" not in line and print_line:
 				print(line,  end='')
 			elif "State representation size" in line:
@@ -66,7 +70,7 @@ def main(cir_file, est_time, max_procs, test_fid):
 				mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
 				unit = mem_usage.split(" ")[2].replace(' ','')
 				print_line = False
-			elif "Low-value qubits" in line:
+			elif "High-value qubits" in line:
 				print(line, end="")
 			elif "Requested num" in line:
 				print(line, end="")
@@ -74,6 +78,7 @@ def main(cir_file, est_time, max_procs, test_fid):
 				categories['H'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "CZ & T" in line:
 				categories['CZ & T'] = int(line.split()[3].replace("(","").replace(")",""))
+				categories['Low XY'] = int(line.split()[7].replace("(","").replace(")",""))
 			elif "xCZ (" in line:
 				categories['xCZ'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "Single X" in line:
@@ -81,6 +86,8 @@ def main(cir_file, est_time, max_procs, test_fid):
 				categories['Single Y'] = int(line.split()[5].replace("(","").replace(")",""))
 			elif "Merged X & Y" in line:
 				categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
+			elif "High XY" in line:
+				categories['High XY'] = int(line.split()[2].replace("(","").replace(")",""))
 			elif "Rescaling passes" in line:
 				categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
 			elif "Copying" in line:
@@ -90,8 +97,9 @@ def main(cir_file, est_time, max_procs, test_fid):
 				break
 
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
-	avg_time_per_category = {'H':0.0, 'CZ & T':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
-		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0, 'Storing amps':0.0}
+	avg_time_per_category = {'H':0.0, 'CZ & T & Low XY':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
+		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0, 'Storing amps':0.0,\
+		  'High XY':0.0}
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
 	avg_time_per_process = 0.0
 	avg_user_time = 0.0
@@ -137,7 +145,7 @@ def main(cir_file, est_time, max_procs, test_fid):
 					elif "H (" in line:
 						avg_time_per_category['H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "CZ & T" in line:
-						avg_time_per_category['CZ & T'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+						avg_time_per_category['CZ & T & Low XY'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "xCZ (" in line:
 						avg_time_per_category['xCZ'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Single X" in line:
@@ -145,6 +153,8 @@ def main(cir_file, est_time, max_procs, test_fid):
 						avg_time_per_category['Single Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Merged X & Y" in line:
 						avg_time_per_category['Merged X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "High XY" in line:
+						avg_time_per_category['High XY'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Rescaling passes" in line:
 						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Copying" in line:
@@ -193,8 +203,25 @@ def main(cir_file, est_time, max_procs, test_fid):
 		approx_dir = os.path.join("output", "amp_vectors", cir_file)
 		exact_res_file= os.path.join(exact_dir, "result.amps")
 		approx_res_file = os.path.join(approx_dir, "result.amps")
+		model_dir = os.path.join("output", "misc", cir_file)
+
+		if not os.path.isdir(model_dir):
+			try:
+				os.makedirs(model_dir)
+			except OSError as e:
+				if e.errno != errno.EEXIST:
+					raise
+		model_file = os.path.join(model_dir, "model.txt")
+
 		if os.path.isfile(exact_res_file):
 			fidelity = dist_util.CalculateFidelity(exact_res_file, approx_res_file)
+			if os.path.isfile(model_file):
+				with open(model_file, "a") as file:
+					file.write(str(num_CZ_paths) + "," + str(fidelity) + "," + str(epsilon) + "\n")
+			else:
+				with open(model_file, "w") as file:
+					file.write(str(num_CZ_paths) + "," + str(fidelity) + "," + str(epsilon) + "\n")
+
 
 		if test_fid:
 			exact_path1_file= os.path.join(approx_dir, "test_fid_1_ascii.amps")
@@ -251,11 +278,11 @@ def main(cir_file, est_time, max_procs, test_fid):
 		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
 			# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
 
-	print("\namp[3]  \t= {:.8f}".format(amp['3']))
-	print("amp[1/4]\t= {:.8f}".format(amp['1/4']))
-	print("amp[1/2]\t= {:.8f}".format(amp['1/2']))
-	print("amp[3/4]\t= {:.8f}".format(amp['3/4']))
-	print("amp[-3] \t= {:.8f}".format(amp['-3']) + "\n")
+	print("\namp[3]  \t= {:.6e}".format(amp['3']))
+	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))
+	print("amp[1/2]\t= {:.6e}".format(amp['1/2']))
+	print("amp[3/4]\t= {:.6e}".format(amp['3/4']))
+	print("amp[-3] \t= {:.6e}".format(amp['-3']) + "\n")
 
 	avg_time_per_process /= num_CZ_paths
 	avg_dfs_time /= num_CZ_paths
@@ -266,45 +293,50 @@ def main(cir_file, est_time, max_procs, test_fid):
 
 	print("Avg runtime (" + str(round(avg_time_per_process, 3)) + " s total) per process by category ")
 	if avg_time_per_category['H']:
-		print("\tH ("+ str(categories['H']) + ")\t\t\t: " \
+		print("\tH ("+ str(categories['H']) + ")\t\t\t\t: " \
 			+ str(round(avg_time_per_category['H'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['H'])/avg_time_per_process)*100, 3)) + "%")
 	
-	if avg_time_per_category['CZ & T']:
-		print("\tCZ & T (" + str(categories['CZ & T']) + ")\t\t: " \
-			+ str(round(avg_time_per_category['CZ & T'], 3)) + " s  \t= " +\
-		str(round(((avg_time_per_category['CZ & T'])/avg_time_per_process)*100, 3)) + "%")
+	if avg_time_per_category['CZ & T & Low XY']:
+		print("\tCZ & T (" + str(categories['CZ & T']) + ") & Low XY (" + str(categories['Low XY']) + ")\t: " \
+			+ str(round(avg_time_per_category['CZ & T & Low XY'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['CZ & T & Low XY'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['xCZ']:
-		print("\txCZ (" + str(categories['xCZ']) + ") \t\t: "\
+		print("\txCZ (" + str(categories['xCZ']) + ") \t\t\t: "\
 		 + str(round(avg_time_per_category['xCZ'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['xCZ'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Single X']:
 		print("\tSingle X (" + str(categories['Single X']) + ") & Y (" \
-			+ str(categories['Single Y']) + ")\t: " \
+			+ str(categories['Single Y']) + ")\t\t: " \
 			+ str(round((avg_time_per_category['Single X'] + \
 			avg_time_per_category['Single Y']), 3)) + " s  \t= " +\
 		str(round((((avg_time_per_category['Single X'] + \
 			avg_time_per_category['Single Y']))/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Merged X & Y']:
-		print("\tMerged X & Y (" + str(categories['Merged X & Y']) + ")\t: "\
+		print("\tMerged X & Y (" + str(categories['Merged X & Y']) + ")\t\t: "\
 		 + str(round(avg_time_per_category['Merged X & Y'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Merged X & Y'])/avg_time_per_process)*100, 3)) + "%")
 	
+	if avg_time_per_category['High XY']:
+		print("\tHigh XY (" + str(categories['High XY']) + ")\t\t\t: "\
+		 + str(round(avg_time_per_category['High XY'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['High XY'])/avg_time_per_process)*100, 3)) + "%")
+
 	if avg_time_per_category['Rescaling passes']:
-		print("\tRescaling passes (" + str(categories['Rescaling passes']) + ")\t: "\
+		print("\tRescaling passes (" + str(categories['Rescaling passes']) + ")\t\t: "\
 		 + str(round(avg_time_per_category['Rescaling passes'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Rescaling passes'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Copying']:
-		print("\tCopying (" + str(categories['Copying']) + ")\t\t: "\
+		print("\tCopying (" + str(categories['Copying']) + ")\t\t\t: "\
 		 + str(round(avg_time_per_category['Copying'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Copying'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Storing amps']:
-		print("\tStoring amps \t\t: "\
+		print("\tStoring amps \t\t\t: "\
 		 + str(round(avg_time_per_category['Storing amps'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Storing amps'])/avg_time_per_process)*100, 3)) + "%")
 
@@ -314,8 +346,8 @@ def main(cir_file, est_time, max_procs, test_fid):
 	for cat, time in avg_time_per_category.items():
 		sum_percen += (time/avg_time_per_process) * 100
 	
-	print("\t\t\t\t\t\t----------")
-	print("\tTotal \t\t\t\t\t  " + str(round(sum_percen, 3)) + "%\n")
+	print("\t\t\t\t\t\t\t----------")
+	print("\tTotal \t\t\t\t\t\t  " + str(round(sum_percen, 3)) + "%\n")
 	
 	print("Avg time per gate : " + str(round(avg_time_per_gate/num_CZ_paths, 6)) + " s")	
 	if avg_cz_time:

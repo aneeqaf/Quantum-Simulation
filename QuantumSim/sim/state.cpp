@@ -346,8 +346,8 @@ GetLeasttSigOddBit(idx_size& X_bitmask,
                    int& num_Y_bits)
 {
     if ((num_X_bits + num_Y_bits) % 2 == 1) {
-        const int X_q = X_bitmask ? 63 - __builtin_clzl(X_bitmask) : kRT;
-        const int Y_q = Y_bitmask ? 63 - __builtin_clzl(Y_bitmask) : kRT;
+        const int X_q = X_bitmask ? 63 - __builtin_clzl(X_bitmask) : -kRT;
+        const int Y_q = Y_bitmask ? 63 - __builtin_clzl(Y_bitmask) : -kRT;
         if (X_q > Y_q) {
             X_bitmask ^= 1ull << X_q;
             --num_X_bits;
@@ -360,47 +360,6 @@ GetLeasttSigOddBit(idx_size& X_bitmask,
         }
     }
     return pair<int, int> (-1, -1);
-}
-
-void FullAmpStateVector::
-HandleLowOddAndHighOdd(idx_size& hiq_X_bitmask,
-                       idx_size& hiq_Y_bitmask,
-                       int& num_hi_X_bits,
-                       int& num_hi_Y_bits,
-                       const pair<int, int>& odd_bit_low_XY)
-{
-    Time time;
-    
-    if ((num_hi_X_bits + num_hi_Y_bits) % 2 == 1) {
-        if (odd_bit_low_XY.first != -1) {
-            time.StartTime();
-            pair<int, int> odd_bit_high_XY = GetLeasttSigOddBit(hiq_X_bitmask, hiq_Y_bitmask,
-                                                              num_hi_X_bits, num_hi_Y_bits);
-            int gate_type = 0;
-            if (odd_bit_high_XY.second == 0 && odd_bit_low_XY.second == 0) gate_type = 0;
-            else if (odd_bit_low_XY.second == 1 && odd_bit_high_XY.second == 0) gate_type = 1;
-            else if (odd_bit_low_XY.second == 1 && odd_bit_high_XY.second == 1) {
-                gate_type = 2;
-                ++global_i_counter;
-            }
-            else if (odd_bit_low_XY.second == 0 && odd_bit_high_XY.second == 1) gate_type = 3;
-            else assert(false);
-            ApplyMergedXYFT(amp, (1ull << odd_bit_low_XY.first) | (1ull << odd_bit_high_XY.first),
-                            gate_type, num_qubits);
-            time_by_category.merged_XY1_2 += time.GetElapsedTime();
-            ++count_of_category.merged_XY1_2;
-            global_factor_power += 2;
-        }
-        else
-            ApplyOddGates(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits);
-    }
-    else if (odd_bit_low_XY.first != -1) {
-        idx_size X_bm = odd_bit_low_XY.second == 0 ? 1ull << odd_bit_low_XY.first : 0;
-        idx_size Y_bm = odd_bit_low_XY.second == 1 ? 1ull << odd_bit_low_XY.first : 0;
-        int num_X_bits = X_bm != 0 ? 1 : 0, num_Y_bits = Y_bm != 0 ? 1 : 0;
-        
-        ApplyOddGates(X_bm, Y_bm, num_X_bits, num_Y_bits);
-    }
 }
 
 void FullAmpStateVector::
@@ -472,11 +431,21 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
                                                              loq_Y_bitmask >> th, num_threads, th);
     else
         ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads);
-
+    
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     
     int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
-    HandleLowOddAndHighOdd(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits, odd_bit_low_XY);
+    if (odd_bit_low_XY.second == 0) {
+        hiq_X_bitmask |= 1ull << odd_bit_low_XY.first;
+        ++num_hi_X_bits;
+    }
+    else if (odd_bit_low_XY.second == 1) {
+        hiq_Y_bitmask |= 1ull << odd_bit_low_XY.first;
+        ++num_hi_Y_bits;
+    }
+    
+    if ((num_hi_X_bits + num_hi_Y_bits) % 2 == 1)
+        ApplyOddGates(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits);
     
     time.StartTime();
     if (hiq_X_bitmask || hiq_Y_bitmask)
@@ -484,8 +453,10 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
-    count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
-    count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
+    if (sim_mode != Config::SimMode::Phase2) {
+        count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
+        count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
+    }
     
     return -1;
 }

@@ -167,6 +167,27 @@ MovexCZGates(const QubitPartition& qp)
     return total_xCZ_count;
 }
 
+int Circuit::
+ComputeNumberOfHighValuedQubits(int num_qubits)
+{
+    double num_XY_gates = 0;
+    vector<int> XY_gates_per_qubit(qubits, 0);
+    for (idx_size i = qubits; i < gates.size(); ++i) {
+        if (gates[i].ids.back() == Gate::Type::X_1_2 || gates[i].ids.back() == Gate::Type::Y_1_2) {
+            ++num_XY_gates;
+            ++XY_gates_per_qubit[gates[i].qubits.back()];
+        }
+    }
+    
+    double high_XY = 0, th = 0;
+    for (; th < num_qubits; ++th) {
+        high_XY += XY_gates_per_qubit[th];
+        if (th <= (num_qubits/2 - 2) && th > (num_qubits/2 - 5)  && high_XY/num_XY_gates >= 0.40)
+            break;
+    }
+    return th;
+}
+
 void Circuit::
 PrintGates() const
 {

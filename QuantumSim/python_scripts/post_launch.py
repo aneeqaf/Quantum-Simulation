@@ -31,7 +31,7 @@ def main(cir_file, num_procs, num_batches, est_time, t_time,
 		log_files.append(os.path.join(log_dir, "log_script_" + str(i) + ".txt"))
 
 	if not t_time:
-		t_time = 5
+		t_time = 2
 	changing = True
 	while changing:
 		if t_time < 500:
@@ -65,10 +65,13 @@ def main(cir_file, num_procs, num_batches, est_time, t_time,
 			exit()
 
 	os.system("./python_scripts/add_amps.py " + str(cir_file) + " " + str(num_idx))
-	print("./python_scripts/dist_sim_report_gen.py " + cir_file + " " + str(est_time)\
-	 + " --max_procs " + str(max_procs) + " --test_fid")
-	os.system("./python_scripts/dist_sim_report_gen.py " + cir_file + " " + str(est_time)\
-	 + " --max_procs " + str(max_procs) + " --test_fid")
+	
+	report_cmd = "./python_scripts/dist_sim_report_gen.py " + cir_file + " " + str(est_time)\
+	 + " --max_procs " + str(max_procs)
+	if test_fid:
+		report_cmd += " --test_fid"
+	print(report_cmd)
+	os.system(report_cmd)
 
 	
 if __name__ == "__main__":

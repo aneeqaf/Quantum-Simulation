@@ -404,9 +404,9 @@ XYFastTransform(cmplx* __restrict amp,
 {
     //base case
     if (num_qubits <= th)
-        return XYFastTransformHighQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
+        return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
     
-    return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
+    return XYFastTransformHighQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
 }
 
 idx_size

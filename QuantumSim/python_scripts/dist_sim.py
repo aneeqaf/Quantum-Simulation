@@ -24,7 +24,7 @@ import numpy as np
 @click.option("--branch_bits", nargs=1, required=False, default=0)
 @click.option("--num_batches", nargs=1, required=False, default=0)
 @click.option("--num_threads", nargs=1, required=False, default=4)
-@click.option("--num_highq", nargs=1, required=False, default=8)
+@click.option("--num_highq", nargs=1, required=False, default=0)
 @click.option("--max_procs", nargs=1, required=False, default=0)
 @click.option("--idx_seed", nargs=1, required=False, default=7)
 @click.option("--idx_file", nargs=1, required=False, default="")

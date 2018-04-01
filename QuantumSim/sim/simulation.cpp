@@ -47,11 +47,17 @@ PopulateBenchmarkMap()
 }
 
 void SequentialSimulation::
+SetThreshold(int th)
+{
+    config.th = th;
+}
+
+void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
     if (config.approx && config.approx_epsilon)
-        amp.approx = ceil(log2(config.cz_num_bits * config.approx_epsilon));
+        amp.approx = config.cz_num_bits + ceil(log2(config.approx_epsilon));
         
     PopulateBenchmarkMap();
     if (circuit.google) {
@@ -114,9 +120,9 @@ Simulate(GenericQuantumState& amp,
                 *(*config.mmap_obj)[i] += amp.amps_of_interest[i];
             amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
         }
-        amp.count_of_category.low_q_XY1_2 /= 2 + amp.GetNumAddends();
-        amp.count_of_category.high_q_XY1_2 /= 2 + amp.GetNumAddends();
-        amp.count_of_category.merged_XY1_2 /= 2 + amp.GetNumAddends();
+//        amp.count_of_category.low_q_XY1_2 /= 2 + amp.GetNumAddends();
+//        amp.count_of_category.high_q_XY1_2 /= 2 + amp.GetNumAddends();
+//        amp.count_of_category.merged_XY1_2 /= 2 + amp.GetNumAddends();
     }
     else
         Phase1Simulation(amp, circuit, cz_path);
@@ -460,7 +466,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
@@ -828,7 +834,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "\n";
         config.verbose = Config::Verbose::NCC;
     }
-    cout << "Low-value qubits : " << config.th << " q\n";
+    cout << "High-value qubits : " << config.th << " q\n";
     if (config.print_amp)
         cout << "Requested num amps : " << config.indices.size() - 5 << "\n";
     
@@ -1056,28 +1062,28 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "Runtime (" << total_time << " s total) by category \n";
         
         string H_s = "\tH (" + to_string(amp.count_of_category.H/factor) +  ")";
-        ss << H_s << setw(30 - (int)H_s.size()) << right << ": " << amp.time_by_category.H
+        ss << H_s << setw(35 - (int)H_s.size()) << right << ": " << amp.time_by_category.H
         << " s\t\t= " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
             to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor) + ") & Low XY ("
             + to_string(amp.count_of_category.low_q_XY1_2/factor) + ")";
-            ss << CZ_T_s << setw(30 - (int)CZ_T_s.size()) << right << ": "
+            ss << CZ_T_s << setw(35 - (int)CZ_T_s.size()) << right << ": "
             << amp.time_by_category.low_q_XY_CZT << " s\t\t= "
             << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
         }
         
         if(amp.count_of_category.decomposed_CZ) {
             string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor) + ")" ;
-            ss << CZ_s << setw(30 - (int)CZ_s.size()) << right << ": "
+            ss << CZ_s << setw(35 - (int)CZ_s.size()) << right << ": "
             << amp.time_by_category.decomposed_CZ << " s\t\t= "
             << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
         }
         if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
             string XY_s = "\tSingle X (" + to_string(amp.count_of_category.X1_2/factor)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2/factor) + ")";
-            ss << XY_s << setw(30 - (int)XY_s.size()) << right << ": "
+            ss << XY_s << setw(35 - (int)XY_s.size()) << right << ": "
             << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s\t\t= "
             << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/(total_time)) * 100 << "%\n";
         }
@@ -1085,47 +1091,47 @@ PrintSimReport(GenericQuantumState& amp,
         if (amp.count_of_category.merged_XY1_2) {
             string X_Y_s = "\tMerged X & Y ("
             + to_string(amp.count_of_category.merged_XY1_2/factor) + ")";
-            ss << X_Y_s << setw(30 - (int)X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
+            ss << X_Y_s << setw(35 - (int)X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
             << " s\t\t= " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
         }
         
         if(amp.count_of_category.high_q_XY1_2) {
             string xy_s = "\tHigh XY (" + to_string(amp.count_of_category.high_q_XY1_2/factor) + ")" ;
-            ss << xy_s << setw(30 - (int)xy_s.size()) << right << ": "
+            ss << xy_s << setw(35 - (int)xy_s.size()) << right << ": "
             << amp.time_by_category.high_q_XY1_2 << " s\t\t= "
             << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";
         }
         
         if (amp.count_of_category.rescale) {
             string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale/factor) + ")";
-            ss <<  RP_s << setw(30 - (int)RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
+            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
             << " s\t\t= " << (amp.time_by_category.rescale/(total_time)) * 100 << "%\n";
         }
         
         if (amp.time_by_category.conversion) {
             string RP_s = "\tConversion ";
-            ss <<  RP_s << setw(30 - (int)RP_s.size()) << right << ": "
+            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
             << amp.time_by_category.conversion<< " s\t\t= "
             << (amp.time_by_category.conversion/(total_time)) * 100 << "%\n";
         }
         
         if (amp.time_by_category.copying) {
             string RP_s = "\tCopying (" + to_string(amp.count_of_category.copying) + ")";
-            ss <<  RP_s << setw(30 - (int)RP_s.size()) << right << ": "
+            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
             << amp.time_by_category.copying << " s\t\t= "
             << (amp.time_by_category.copying/(total_time)) * 100 << "%\n";
         }
         
         if(amp.time_by_category.norm && config.norm_depth) {
             string RP_n = "\tNorm ";
-            ss <<  RP_n << setw(30 - (int)RP_n.size()) << right << ": "
+            ss <<  RP_n << setw(35 - (int)RP_n.size()) << right << ": "
             << amp.time_by_category.norm << " s\t\t= "
             << (amp.time_by_category.norm/(total_time)) * 100 << "%\n";
         }
         
         if(amp.time_by_category.amp_storage) {
             string RP_s = "\tStoring amps ";
-            ss <<  RP_s << setw(30 - (int)RP_s.size()) << right << ": "
+            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
             << amp.time_by_category.amp_storage << " s\t\t= "
             << (amp.time_by_category.amp_storage/(total_time)) * 100 << "%\n";
         }
@@ -1140,8 +1146,8 @@ PrintSimReport(GenericQuantumState& amp,
         + ((amp.time_by_category.low_q_XY_CZT/(total_time)) * 100)
         + ((amp.time_by_category.high_q_XY1_2/(total_time)) * 100);
         
-        ss << "\t\t\t\t\t\t\t  ----\n";
-        ss << "\tTotal \t\t\t\t\t\t   " << sum_percen << "%\n";
+        ss << "\t\t\t\t\t\t\t\t  ----\n";
+        ss << "\tTotal \t\t\t\t\t\t\t   " << sum_percen << "%\n";
         
         ss << "\nAverage time per gate : " << total_time/(factor * circuit.GetTotalNumGates()) << " s\n";
         

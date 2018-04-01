@@ -40,6 +40,7 @@ private:
     void PopulateBenchmarkMap();
    
 public:
+    void SetThreshold(int th);
     void PrintSystemReport() const;
     void PrintSimSpecReport(const GenericQuantumState& amp,
                             const Circuit& circuit,

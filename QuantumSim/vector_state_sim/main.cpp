@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
-    int numQ = 0, numG = 0, threshold = 15, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
+    int numQ = 0, numG = 0, threshold = 0, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0;
     float norm_perc = 0;
     idx_size cz_path = 0, epsilon = 0;
@@ -371,6 +371,9 @@ int main(int argc, char *argv[])
     GenericQuantumState::num_threads = num_threads;
     if (sim_type == Config::FullState) {
         FullAmpStateVector amp(cir.GetNumQubits());
+        if (threshold == 0)
+            sim.SetThreshold(cir.ComputeNumberOfHighValuedQubits(cir.GetNumQubits()));
+        
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011 || sim_type == Config::Approx_i11i
@@ -384,6 +387,12 @@ int main(int argc, char *argv[])
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
                                       (Config::SimType)sim_type, config.verbose);
+        
+        if (threshold == 0) {
+            int num_q = amp.GetStateANumQ() > amp.GetStateBNumQ() ? amp.GetStateBNumQ() : amp.GetStateANumQ();
+            sim.SetThreshold(num_q/2);
+        }
+        
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
@@ -391,6 +400,11 @@ int main(int argc, char *argv[])
                                              hcut, vcut, config.verbose);
         if (!config.indices.empty())
             amp.PopulateGlobalToLocalMap(config.indices);
+        
+        if (threshold == 0) {
+            int num_q = amp.GetStateANumQ() > amp.GetStateBNumQ() ? amp.GetStateBNumQ() : amp.GetStateANumQ();
+            sim.SetThreshold(num_q/2);
+        }
         
         sim.Simulate(amp, cir);
         if (!config.indices.empty())
