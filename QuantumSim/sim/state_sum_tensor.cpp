@@ -798,7 +798,7 @@ CountZeroAmpPercentage() const
 
     if (num_addends == 1) return tensor_addends[0] -> CountZeroAmpPercentage();
 
-   return 0;
+   return NAN;
 }
 
 void SumOfTensorsProductsStateVector::

@@ -57,15 +57,15 @@ public:
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
     idx_size GetGlobalFactorPower() const;
+    idx_size GetNumAddends() const;
+    double CountZeroAmpPercentage() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    
     void Normalize();
-    double CountZeroAmpPercentage() const;
-    idx_size GetNumAddends() const;
     void ResetAmpVector();
-
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();

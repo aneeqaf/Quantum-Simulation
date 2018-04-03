@@ -37,6 +37,7 @@
 
 #include "gates.h"
 #include "profile.h"
+#include "zero_opt_mask.h"
 
 using namespace std;
 
@@ -72,6 +73,25 @@ const __m256 knegZ[4] = {{0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
                         {0, 0, -0.0f, -0.0f, -0.0f, -0.0f, 0, 0}};
 
 
+//__attribute__((always_inline)) inline bool
+//CheckIfBlockIsZero(const ZeroOptMask& zero_opt_mask,
+//                   const int idx,
+//                   const idx_size block_size)
+//{
+//    const idx_size num_qubits = zero_opt_mask.size();
+//
+//    for (idx_size i = 0; i < num_qubits; ++i) {
+//        const idx_size zero_block = (1ull << (num_qubits - 1 - i));
+//        if (zero_opt_mask[i] != '*' && zero_block >= block_size) {
+//            if (zero_opt_mask[i] == '0' && (~(idx + block_size - 1) & zero_block))
+//                return true;
+//            else if (zero_opt_mask[i] == '1' && ((idx + block_size - 1) & zero_block))
+//                return true;
+//        }
+//    }
+//    return false;
+//}
+
 __attribute__((always_inline)) inline void
 ApplyX12GateAVX(cmplx* __restrict amp,
                 const idx_size* indices /*2*/)
@@ -80,9 +100,9 @@ ApplyX12GateAVX(cmplx* __restrict amp,
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     
-    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255)
-        return;
+//    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255)
+//        return;
     
     __m256 a0_p = _mm256_permute_ps(a0, 0b10110001);
     __m256 a1_p = _mm256_permute_ps(a1, 0b10110001);
@@ -109,10 +129,10 @@ ApplyY12GateAVX(cmplx* __restrict amp,
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     
-    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255)
-        return;
-    
+//    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255)
+//        return;
+//
     __m256 a1_neg = _mm256_xor_ps(a1, kneg2);
     __m256 a0_p = _mm256_permute_ps(a0, 0b10110001);
     __m256 a1_p = _mm256_permute_ps(a1, 0b10110001);
@@ -141,11 +161,11 @@ ApplyXX12GateAVX(cmplx* __restrict amp,
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
     
-    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
-        return;
+//    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+//        return;
 
     const __m256 t0 = _mm256_add_ps(a0, a3);
     const __m256 t1 = _mm256_add_ps(a1, a2);
@@ -177,11 +197,11 @@ ApplyYY12GateAVX(cmplx* __restrict amp,
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
     
-    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
-        return;
+//    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+//        return;
 
     const __m256 t0 = _mm256_add_ps(a0, a3);
     const __m256 t1 = _mm256_sub_ps(a0, a3);
@@ -209,11 +229,11 @@ ApplyXY12GateAVX(cmplx* __restrict amp,
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
     
-    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
-        return;
+//    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+//        return;
     
     const __m256 t0 = _mm256_sub_ps(a0, a1);
     const __m256 t1 = _mm256_sub_ps(a2, a3);
@@ -252,11 +272,11 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
     
-    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
-        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
-        return;
+//    if (_mm256_movemask_ps(_mm256_cmp_ps(a0, kzeros, _CMP_EQ_OQ)) == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a1, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a2, kzeros, _CMP_EQ_OQ))  == 255
+//        && _mm256_movemask_ps(_mm256_cmp_ps(a3, kzeros, _CMP_EQ_OQ))  == 255)
+//        return;
     
     __m256 ia0 = _mm256_permute_ps(a0, 0b10110001);
     ia0 = _mm256_xor_ps(ia0, kneg1);
@@ -287,7 +307,8 @@ __attribute__((always_inline)) inline void
 ApplyxCZGateAVX(cmplx* __restrict amp,
                 int num_threads,
                 const int num_qubits_amp,
-                const idx_size* __restrict gate_bitmask)
+                const idx_size* __restrict gate_bitmask,
+                const ZeroOptMask& zero_opt_mask)
 {
     /*0 : Z; 1 : 01; 2 : 10 */
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
@@ -333,14 +354,16 @@ XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
                     const int num_qubits,
-                    const int num_threads);
+                    const int num_threads,
+                    const ZeroOptMask& zero_opt_mask);
 
 idx_size
 XYFastTransformHighQ(cmplx* __restrict amp,
                      idx_size X_bitmask,
                      idx_size Y_bitmask,
                      const int num_qubits,
-                     const int num_threads);
+                     const int num_threads,
+                     const ZeroOptMask& zero_opt_mask);
 
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
@@ -353,7 +376,8 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_qubits_amp,
                                 const idx_size* __restrict CZ_bitmasks,
                                 const idx_size* __restrict T_bitmasks,
-                                const int num_threads);
+                                const int num_threads,
+                                const ZeroOptMask& zero_opt_mask);
 
 idx_size
 ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
@@ -363,5 +387,6 @@ ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
                                  const int num_threads,
-                                 const int num_high_qubits);
+                                 const int num_high_qubits,
+                                 const ZeroOptMask& zero_opt_mask);
 #endif /* kernelsAVX_h */

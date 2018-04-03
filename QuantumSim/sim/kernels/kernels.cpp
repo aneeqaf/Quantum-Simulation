@@ -256,6 +256,7 @@ Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
                             const idx_size gate_qubits,
                             const int num_qubits_amp,
                             const function& gate_func,
+                            const ZeroOptMask& zero_opt_mask,
                             const idx_size add)
 {
     constexpr idx_size num_indices = 4;
@@ -291,7 +292,8 @@ void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
                       cmplx* __restrict amp,
-                      const int num_qubits_amp)
+                      const int num_qubits_amp,
+                      const ZeroOptMask& zero_opt_mask)
 {
     const idx_size qubits = (1ull << gate1.qubits.back()) | (1ull << gate2.qubits.back());
 
@@ -299,16 +301,16 @@ Apply2MergedXY12Gates(Gate gate1,
     const Gate::Type g2t = (Gate::Type)gate2.ids.back();
 
     if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyXX12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyXX12Gate, zero_opt_mask);
 
     else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyXY12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyXY12Gate, zero_opt_mask);
 
     else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyYY12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyYY12Gate, zero_opt_mask);
 
     else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
-        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyYX12Gate);
+        Apply2MergedXY12GatesHelper(amp, qubits, num_qubits_amp, ApplyYX12Gate, zero_opt_mask);
 }
 
 __attribute__((always_inline)) inline int
@@ -365,11 +367,12 @@ __attribute__((always_inline)) inline idx_size
 XYRecursiveTransformHelper(cmplx* __restrict amp,
                            idx_size& X_bitmask,
                            idx_size& Y_bitmask,
-                           const int num_qubits)
+                           const int num_qubits,
+                           const ZeroOptMask& zero_opt_mask)
 {
     idx_size gates_bitmask = 0, i_count = 0;
     int gate_type = UpdateXYBitmask(X_bitmask, Y_bitmask, gates_bitmask, i_count);
-    ApplyMergedXYFT(amp, gates_bitmask, gate_type, num_qubits);
+    ApplyMergedXYFT(amp, gates_bitmask, gate_type, num_qubits, zero_opt_mask);
     return i_count;
 }
 
@@ -377,14 +380,15 @@ idx_size
 ApplyHighQXYGates(cmplx* __restrict amp,
                   idx_size& X_bitmask,
                   idx_size& Y_bitmask,
-                  const int num_qubits)
+                  const int num_qubits,
+                  const ZeroOptMask& zero_opt_mask)
 {
     int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask), Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
     idx_size k = min(Yunused_qubits, Xunused_qubits), i_count = 0;
 
     while ((k < kNUM_BRANCHES)) {
          if (X_bitmask || Y_bitmask)
-            i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits);
+            i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits, zero_opt_mask);
 
         Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
         Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
@@ -400,13 +404,14 @@ XYFastTransform(cmplx* __restrict amp,
                 idx_size Y_bitmask,
                 const int num_qubits,
                 const int num_threads,
+                const ZeroOptMask& zero_opt_mask,
                 const int th)
 {
     //base case
     if (num_qubits <= th)
-        return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
+        return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads, zero_opt_mask);
     
-    return XYFastTransformHighQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
+    return XYFastTransformHighQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads, zero_opt_mask);
 }
 
 idx_size
@@ -415,6 +420,7 @@ XYFastTransformIterative(cmplx* __restrict amp,
                          idx_size Y_bitmask,
                          const int num_qubits,
                          const int num_threads,
+                         const ZeroOptMask& zero_opt_mask,
                          const int th)
 {
     idx_size i_count = 0;
@@ -433,7 +439,7 @@ XYFastTransformIterative(cmplx* __restrict amp,
         
         #pragma omp parallel for schedule(guided) num_threads(num_threads)
         for (idx_size i = 0; i < num_iters ; ++i)
-            ApplyMergedXYFT(amp + (i * stride), gates_bitmask, gate_type, (int)(num_qubits - k));
+            ApplyMergedXYFT(amp + (i * stride), gates_bitmask, gate_type, (int)(num_qubits - k), zero_opt_mask);
         
         X_bitmask <<= k;
         Y_bitmask <<= k;
@@ -447,12 +453,13 @@ XYFastTransformHighQ(cmplx* __restrict amp,
                      idx_size X_bitmask,
                      idx_size Y_bitmask,
                      const int num_qubits,
-                     const int num_threads)
+                     const int num_threads,
+                     const ZeroOptMask& zero_opt_mask)
 {
     idx_size i_count = 0;
    
     if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1)
-        i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits);
+        i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits, zero_opt_mask);
     
     const int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
     const int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
@@ -468,7 +475,7 @@ XYFastTransformHighQ(cmplx* __restrict amp,
     #pragma omp parallel for schedule(guided) reduction(+:temp_i) num_threads(num_threads)
         for (idx_size i = 0; i < num_iters ; ++i)
             temp_i += XYFastTransformHighQ(amp + (i * stride), X_bitmask,
-                                           Y_bitmask, num_qubits - k, num_threads);
+                                           Y_bitmask, num_qubits - k, num_threads, zero_opt_mask);
         
         i_count += temp_i / num_iters;
     }
@@ -481,7 +488,8 @@ XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
                     const int num_qubits,
-                    const int num_threads)
+                    const int num_threads,
+                    const ZeroOptMask& zero_opt_mask)
 {
     idx_size i_count = 0;
     
@@ -498,7 +506,7 @@ XYFastTransformLowQ(cmplx* __restrict amp,
     
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size i = 0; i < num_gates; ++i)
-        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits);
+        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
 
     return i_count;
 

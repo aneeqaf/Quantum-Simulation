@@ -180,10 +180,10 @@ public:
     virtual double CalculateAverageInaccuracy(double norm) const = 0;
     virtual double CalculateMeanEntropy() const = 0;
     virtual double CalculateCrossEntropy(int range) const = 0;
-    virtual void Normalize() = 0;
     virtual double CountZeroAmpPercentage() const = 0;
     virtual idx_size GetNumAddends() const;
     
+    virtual void Normalize() = 0;
     virtual void ResetAmpVector() = 0;
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;

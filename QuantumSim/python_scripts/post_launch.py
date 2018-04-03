@@ -65,7 +65,7 @@ def main(cir_file, num_procs, num_batches, est_time, t_time,
 			exit()
 
 	os.system("./python_scripts/add_amps.py " + str(cir_file) + " " + str(num_idx))
-	
+
 	report_cmd = "./python_scripts/dist_sim_report_gen.py " + cir_file + " " + str(est_time)\
 	 + " --max_procs " + str(max_procs)
 	if test_fid:

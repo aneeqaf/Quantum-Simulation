@@ -267,6 +267,15 @@ GetGlobalFactorPower() const
         return sumOfTensors -> GetGlobalFactorPower();
 }
 
+idx_size AdaptiveStateVector::
+GetNumAddends() const
+{
+    if (full_state)
+        return 0;
+    else
+        return sumOfTensors -> GetNumAddends();
+}
+
 double AdaptiveStateVector::
 CalculateNormSquared()
 {
@@ -319,15 +328,6 @@ CalculateCrossEntropy(int range) const
         return full_state -> CalculateCrossEntropy(range);
     else
         return sumOfTensors -> CalculateCrossEntropy(range);
-}
-
-idx_size AdaptiveStateVector::
-GetNumAddends() const
-{
-    if (full_state)
-        return 0;
-    else
-        return sumOfTensors -> GetNumAddends();
 }
 
 void AdaptiveStateVector::

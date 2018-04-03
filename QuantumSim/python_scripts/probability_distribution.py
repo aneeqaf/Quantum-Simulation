@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,8 +14,8 @@ def densityplot(x_data, density_est, x_label, y_label, title, inputfile, qubits)
     plt.axvline(np.mean((x_data - 1)/pow(2, qubits)), color='red', linestyle='dashed', linewidth=2)
 
     for i, d in enumerate(density_est):
-    	ax.plot(x_data, d(x_data), lw = 2, label=inputfile[i].split("/")[2])
-    	plt.yscale('log')
+    	ax.plot(x_data, d(x_data), lw = 2, label=inputfile[i])
+    	# plt.yscale('log')
 
     ax.set_ylabel(y_label)
     ax.set_xlabel(x_label)
@@ -34,22 +36,24 @@ def main(title, input_files, qubits):
 		print(file)
 		with open(file, "r") as f:
 			lines = f.readlines()
-			arrs.append(np.loadtxt(lines, dtype=float))
+			arrs.append(np.loadtxt(lines, dtype=complex))
 
 	for arr in arrs:
+		norm_amps = np.linalg.norm(arr)
 		for i, a in enumerate(arr):
-			if int(a) < 1.0 and int(a) != 0:
-				arr[i] = log10(a)
+			arr[i] = ((arr[i] * arr[i].conjugate())/norm_amps) #* len(arr)#* pow(2, int(qubits))
+			if int(arr[i]) < 1.0 and int(arr[i]) != 0:
+				arr[i] = log10(arr[i])
 
 	density_est = []
 	
-	for arr in arrs:
+	for i, arr in enumerate(arrs):
 		density_est.append(gaussian_kde(arr))
 	# Control the 'smoothness'of the estimate. Higher values give
 	# smoother estimates.
-	# density_est.covariance_factor = lambda : .0001
-	# density_est._compute_covariance()
-	x_data = np.arange(0, 10, 1)
+		density_est[i].covariance_factor = lambda : 0.01
+		density_est[i]._compute_covariance()
+	x_data = np.arange(-5 , 5, 1) #np.linspace(-5,8,1000)
 
 	# Call the function to create plot
 	densityplot( x_data = x_data

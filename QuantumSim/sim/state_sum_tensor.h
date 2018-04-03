@@ -89,10 +89,10 @@ public:
     double CalculateCrossEntropyHCuts(int range) const;
     double CalculateMeanEntropy2Cuts() const;
     double CalculateCrossEntropy2Cuts(int range) const;
-    void Normalize();
     double CountZeroAmpPercentage() const;
+    
+    void Normalize();
     void ResetAmpVector();
-
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();

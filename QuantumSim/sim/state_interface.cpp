@@ -75,7 +75,7 @@ QubitPartition(int rows,
     const bitset<128> mask((1ull << (rows * cols)) - 1);
     bitset<128> all(0);
     for(auto& b : _blocks) {
-        b != mask;
+        b &= mask;
         if (b.count() == 0) {
             cerr << " Found an empty qubit block " << endl;
             exit(1);

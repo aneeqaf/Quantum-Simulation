@@ -527,6 +527,24 @@ GetStateBBitmask() const
     return qp.getBlockBitmask(1);
 }
 
+idx_size TensorProductStateVector::
+GetGlobalFactorPower() const
+{
+    if (partition_to_sim == 'a')
+        return state_a -> GetGlobalFactorPower();
+    else if (partition_to_sim == 'b')
+        return state_b -> GetGlobalFactorPower();
+    else
+        return state_a -> GetGlobalFactorPower() > state_b -> GetGlobalFactorPower() ?
+        state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
+}
+
+const QubitPartition& TensorProductStateVector::
+GetQp() const
+{
+    return qp;
+}
+
 double TensorProductStateVector::
 CalculateNormSquared()
 {
@@ -639,24 +657,6 @@ ApplyGlobalICounter()
          state_a -> ApplyGlobalICounter();
     if (partition_to_sim == 'b' || partition_to_sim == 'x')
         state_b -> ApplyGlobalICounter();
-}
-
-idx_size TensorProductStateVector::
-GetGlobalFactorPower() const
-{
-    if (partition_to_sim == 'a')
-        return state_a -> GetGlobalFactorPower();
-    else if (partition_to_sim == 'b')
-        return state_b -> GetGlobalFactorPower();
-    else
-        return state_a -> GetGlobalFactorPower() > state_b -> GetGlobalFactorPower() ?
-        state_a -> GetGlobalFactorPower() : state_b -> GetGlobalFactorPower();
-}
-
-const QubitPartition& TensorProductStateVector::
-GetQp() const
-{
-    return qp;
 }
 
 double TensorProductStateVector::

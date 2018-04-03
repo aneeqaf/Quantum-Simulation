@@ -10,8 +10,9 @@
 using namespace std;
 
 FullAmpStateVector::
-FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
-global_factor_power(0), global_i_counter(0), num_qubits(qubits)
+FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()),
+min_prob(numeric_limits<double>::max()), global_factor_power(0), global_i_counter(0),
+num_qubits(qubits), zero_opt_mask(num_qubits)
 {
     amp_size = 1ull << qubits;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
@@ -23,7 +24,7 @@ FullAmpStateVector::
 FullAmpStateVector(cmplx* a,
                    const idx_size size): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0), global_i_counter(0),
-num_qubits(__builtin_log2l(size))
+num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits)
 {
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
     for (idx_size i = 0; i < size; ++i)
@@ -31,7 +32,7 @@ num_qubits(__builtin_log2l(size))
 }
 
 FullAmpStateVector::
-FullAmpStateVector(const FullAmpStateVector& rhs): min_prob(rhs.min_prob), max_prob(rhs.max_prob),
+FullAmpStateVector(const FullAmpStateVector& rhs): zero_opt_mask(rhs.zero_opt_mask), min_prob(rhs.min_prob), max_prob(rhs.max_prob),
 amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
 global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits)
 {
@@ -81,7 +82,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
     
     if (num_qubits >= 4) {
 #ifdef Parallel
-        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads);
+        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads, zero_opt_mask);
 #else
         ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
 #endif
@@ -118,7 +119,14 @@ void FullAmpStateVector::
 ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 {
     /*0 : Z; 1 : 01; 2 : 10 */
-    ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks);
+    ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks, zero_opt_mask);
+
+    for (int q = 0; q < num_qubits; ++q)
+        if (xCZ_bitmasks[1] & (1ull << q))
+            SetEvenZeroPatternAtQubit(q);
+    for (int q = 0; q < num_qubits; ++q)
+        if (xCZ_bitmasks[2] & (1ull << q))
+            SetOddZeroPatternAtQubit(q);
 }
 
 void FullAmpStateVector::
@@ -158,7 +166,7 @@ ApplyMergedXYGate(const Gate& gate1,
     Time time;
     time.StartTime();
     
-    Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits);
+    Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits, zero_opt_mask);
     
     global_factor_power += 2;
     
@@ -207,7 +215,7 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     
     if (odd_Xi && odd_Yi) {
         global_factor_power += 2;
-        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, num_qubits);
+        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, num_qubits, zero_opt_mask);
     }
 }
 
@@ -391,8 +399,10 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     time.StartTime();
     if (X_bitmask_64 || Y_bitmask_64) {
         //Process low qubits first
-        global_i_counter += XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask, num_qubits, num_threads);
-        global_i_counter += XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask, num_qubits, num_threads);
+        global_i_counter += XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask,
+                                                num_qubits, num_threads, zero_opt_mask);
+        global_i_counter += XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask,
+                                            num_qubits, num_threads, zero_opt_mask);
     }
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
 }
@@ -408,6 +418,9 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
 {    
     Time time;
     time.StartTime();
+
+    for (int i = num_qubits - 1; i >= 0; --i)
+        if (X_bitmask[i] || Y_bitmask[i]) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
@@ -428,9 +441,11 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     if (loq_X_bitmask || loq_Y_bitmask)
         global_i_counter += ApplyBlockOfCZTAndLowQXYGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                              T_bitmasks_64, loq_X_bitmask >> th,
-                                                             loq_Y_bitmask >> th, num_threads, th);
+                                                             loq_Y_bitmask >> th, num_threads,th,
+                                                             zero_opt_mask);
     else
-        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads);
+        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64,
+                                        T_bitmasks_64, num_threads, zero_opt_mask);
     
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     
@@ -449,7 +464,8 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     
     time.StartTime();
     if (hiq_X_bitmask || hiq_Y_bitmask)
-        global_i_counter += XYFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, num_qubits, num_threads);
+        global_i_counter += XYFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask,
+                                                 num_qubits, num_threads, zero_opt_mask);
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
@@ -520,6 +536,36 @@ GetMemUsage() const
     return sizeof(cmplx) * amp_size;
 }
 
+idx_size FullAmpStateVector::
+GetSize() const
+{
+    return amp_size;
+}
+
+idx_size FullAmpStateVector::
+GetFullStateVectorSize() const
+{
+    return amp_size;
+}
+
+idx_size FullAmpStateVector::
+GetGlobalFactorPower() const
+{
+    return global_factor_power;
+}
+
+idx_size FullAmpStateVector::
+GetGlobalICounter() const
+{
+    return global_i_counter;
+}
+
+
+int FullAmpStateVector::
+GetNumQubits() const
+{
+    return num_qubits;
+}
 
 double FullAmpStateVector::
 CalculateNormSquared()
@@ -625,6 +671,19 @@ CalculateCrossEntropy(int range) const
     return -xe / num_ranges;
 }
 
+double FullAmpStateVector::
+CountZeroAmpPercentage() const
+{
+    idx_size zero_count = 0;
+    
+    for (idx_size i = 0; i < amp_size; ++i) {
+        if (amp[i] == cmplx(0,0))
+            ++zero_count;
+    }
+    
+    return double(zero_count)/double(amp_size) * 100;
+}
+
 void FullAmpStateVector::
 ResetAmpVector()
 {
@@ -637,6 +696,8 @@ ResetAmpVector()
     
     global_factor_power = 0;
     global_i_counter = 0;
+    
+    zero_opt_mask.reset();
 }
 
 void FullAmpStateVector::
@@ -658,37 +719,6 @@ void FullAmpStateVector::
 IncrementGlobalICounter()
 {
     ++global_i_counter;
-}
-
-idx_size FullAmpStateVector::
-GetSize() const
-{
-    return amp_size;
-}
-
-idx_size FullAmpStateVector::
-GetFullStateVectorSize() const
-{
-    return amp_size;
-}
-
-idx_size FullAmpStateVector::
-GetGlobalFactorPower() const
-{
-    return global_factor_power;
-}
-
-idx_size FullAmpStateVector::
-GetGlobalICounter() const
-{
-    return global_i_counter;
-}
-
-
-int FullAmpStateVector::
-GetNumQubits() const
-{
-    return num_qubits;
 }
 
 void FullAmpStateVector::
@@ -751,17 +781,22 @@ ApplyGlobalICounter()
     global_i_counter = 0;
 }
 
-double FullAmpStateVector::
-CountZeroAmpPercentage() const
+void FullAmpStateVector::
+SetOddZeroPatternAtQubit(int qubit)
 {
-    idx_size zero_count = 0;
-    
-    for (idx_size i = 0; i < amp_size; ++i) {
-        if (amp[i] == cmplx(0,0))
-            ++zero_count;
-    }
-    
-    return double(zero_count)/double(amp_size) * 100;
+    zero_opt_mask.SetOddBit(qubit);
+}
+
+void FullAmpStateVector::
+SetEvenZeroPatternAtQubit(int qubit)
+{
+    zero_opt_mask.SetEvenBit(qubit);
+}
+
+void FullAmpStateVector::
+UnsetZeroPatternAtQubit(int qubit)
+{
+    zero_opt_mask.SetNonZeroBit(qubit);
 }
 
 void FullAmpStateVector::

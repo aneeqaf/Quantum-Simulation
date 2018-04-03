@@ -32,3 +32,4 @@ python_scripts/__pycache__/dist_util.cpython-36.pyc
 rollright-1.4/
 profiling_data/
 benchmark/
+output/*

@@ -20,12 +20,13 @@ private:
     static idx_size* global_to_local_a;
     static idx_size* global_to_local_b;
     static idx_size num_requested_amps;
+    FullAmpStateVector* state_a;
+    FullAmpStateVector* state_b;
     
     void HandleCZApprox(const bitset<128>* __restrict CZ_bitmasks);
     
 public:
-    FullAmpStateVector* state_a;
-    FullAmpStateVector* state_b;
+    friend class SumOfTensorsProductsStateVector;
     
     int FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
                                       const bitset<128>* gate_bitmasks);
@@ -88,14 +89,14 @@ public:
     bitset<128> GetStateBBitmask() const;
     idx_size GetGlobalFactorPower() const;
     const QubitPartition& GetQp() const;
+    double CountZeroAmpPercentage() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    
     void Normalize();
-    double CountZeroAmpPercentage() const;
     void ResetAmpVector();
-
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();

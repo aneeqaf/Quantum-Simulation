@@ -23,7 +23,8 @@ private:
     idx_size global_factor_power;
     idx_size global_i_counter;
     int num_qubits;
-    
+    ZeroOptMask zero_opt_mask; //0 is most significant
+
     bitset<128> FormBitmask(const vector<int>& qubits);
     void TransferOddBitsFromHiQubitsBM(int& th,
                                        idx_size& hi_q_X_bitmask,
@@ -105,12 +106,15 @@ public:
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    double CountZeroAmpPercentage() const;
+
+    void SetOddZeroPatternAtQubit(int qubit);
+    void SetEvenZeroPatternAtQubit(int qubit);
+    void UnsetZeroPatternAtQubit(int qubit);
     void Normalize();
     void IncrementGlobalFactorPower();
     void IncrementGlobalICounter();
-    double CountZeroAmpPercentage() const;
     void ResetAmpVector();
-    
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
