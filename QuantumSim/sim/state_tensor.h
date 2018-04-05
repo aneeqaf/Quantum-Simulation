@@ -83,8 +83,7 @@ public:
     double GetMemUsage() const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
-    int GetStateANumQ() const;
-    int GetStateBNumQ() const;
+    int GetNumQInBlock(idx_size block) const;
     bitset<128> GetStateABitmask() const;
     bitset<128> GetStateBBitmask() const;
     idx_size GetGlobalFactorPower() const;

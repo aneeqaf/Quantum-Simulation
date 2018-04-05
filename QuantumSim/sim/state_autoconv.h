@@ -56,6 +56,7 @@ public:
     double GetMemUsage() const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
+    int GetNumQInBlock(idx_size block) const;
     idx_size GetGlobalFactorPower() const;
     idx_size GetNumAddends() const;
     double CountZeroAmpPercentage() const;

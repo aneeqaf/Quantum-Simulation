@@ -165,7 +165,7 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
     Time time;
     time.StartTime();
     
-    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    const idx_size num_q_a = tensor_addends[0] -> GetNumQInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
     for (idx_size i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
@@ -173,7 +173,7 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
     if (!(tensor_addends[0] -> FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks)))
         return -1;
     
-    const int modified_num_q_B = tensor_addends[0] -> GetStateBNumQ() - 1;
+    const int modified_num_q_B = tensor_addends[0] -> GetNumQInBlock(1) - 1;
     const ul prev_CZ_count = count_of_category.decomposed_CZ;
     
     for (idx_size i = 0; i < num_q_a; ++i) {
@@ -230,7 +230,7 @@ ApplyXCZGatesForDist(string& cz_bits,
     time.StartTime();
     
     const ul prev_CZ_count = count_of_category.decomposed_CZ;
-    const idx_size num_q_a = tensor_addends[0] -> GetStateANumQ();
+    const idx_size num_q_a = tensor_addends[0] -> GetNumQInBlock(0);
     bitset<128> xCZ_bitmasks_path0_D1D2[num_q_a], xCZ_bitmasks_path1_D3D4[num_q_a],
     xCZ_bitmasks_path0_D2D1[num_q_a], xCZ_bitmasks_path1_D4D3[num_q_a];
     for (idx_size i = 0; i < num_q_a; ++i) {
@@ -328,7 +328,7 @@ ApplyNonCGate(const int gate_qubit,
               const Gate::Type gate_type,
               const Gate& g)
 {
-    const int num_q_1 = tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ() - 1;
+    const int num_q_1 = tensor_addends[0] -> GetNumQInBlock(0) + tensor_addends[0] -> GetNumQInBlock(1) - 1;
     for (auto& t : tensor_addends)
         t -> ApplyNonCGate(num_q_1 - gate_qubit, gate_type, g);
 }
@@ -411,7 +411,7 @@ FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToStateAVX()
 {
     RescaleAndApplyGlobalICounter();
-    const int num_q_b = tensor_addends[0] -> GetStateBNumQ(), num_q_a = tensor_addends[0] -> GetStateANumQ(),
+    const int num_q_b = tensor_addends[0] -> GetNumQInBlock(1), num_q_a = tensor_addends[0] -> GetNumQInBlock(0),
     total_q = num_q_a  + num_q_b;
     const idx_size size = 1ull << total_q, a_size = 2 * (1ull << num_q_a), b_size = 2 * (1ull << num_q_b);
     
@@ -482,7 +482,7 @@ FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToState()
 {
     RescaleAndApplyGlobalICounter();
-    const int num_q_B = tensor_addends[0] -> GetStateBNumQ(), num_q_A = tensor_addends[0] -> GetStateANumQ(),
+    const int num_q_B = tensor_addends[0] -> GetNumQInBlock(1), num_q_A = tensor_addends[0] -> GetNumQInBlock(0),
     total_q = num_q_A  + num_q_B;
     const idx_size size = 1ull << total_q;
 //    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
@@ -583,6 +583,12 @@ GetSize() const
     return size;
 }
 
+int SumOfTensorsProductsStateVector::
+GetNumQInBlock(idx_size block) const
+{
+    return tensor_addends[0] -> GetNumQInBlock(block);
+}
+
 idx_size SumOfTensorsProductsStateVector::
 GetFullStateVectorSize() const
 {
@@ -597,18 +603,6 @@ GetGlobalFactorPower() const
         if (t -> GetGlobalFactorPower() > max)
             max = t -> GetGlobalFactorPower();
     return max;
-}
-
-int SumOfTensorsProductsStateVector::
-GetStateANumQ() const
-{
-    return tensor_addends[0] -> GetStateANumQ();
-}
-
-int SumOfTensorsProductsStateVector::
-GetStateBNumQ() const
-{
-  return tensor_addends[0] -> GetStateBNumQ();
 }
 
 Config::SimType SumOfTensorsProductsStateVector::
@@ -653,8 +647,8 @@ CalculateCrossEntropy(int range) const
 double SumOfTensorsProductsStateVector::
 CalculateMeanEntropyHCuts() const
 {
-    const idx_size a_size = 1ull << tensor_addends[0] -> GetStateANumQ(),
-    b_size = 1ull << tensor_addends[0] -> GetStateBNumQ();
+    const idx_size a_size = 1ull << tensor_addends[0] -> GetNumQInBlock(0),
+    b_size = 1ull << tensor_addends[0] -> GetNumQInBlock(1);
     long double entropy = 0.0;
     const idx_size num_ranges_a = a_size / 100, num_ranges_b = b_size / 10;
     
@@ -682,8 +676,8 @@ CalculateMeanEntropyHCuts() const
 double SumOfTensorsProductsStateVector::
 CalculateCrossEntropyHCuts(int range) const
 {
-    const idx_size a_size = 1ull << tensor_addends[0] -> GetStateANumQ(),
-    b_size = 1ull << tensor_addends[0] -> GetStateBNumQ();
+    const idx_size a_size = 1ull << tensor_addends[0] -> GetNumQInBlock(0),
+    b_size = 1ull << tensor_addends[0] -> GetNumQInBlock(1);
     double xe = 0.0, num_ranges_a = a_size / range, num_ranges_b = b_size / 10;
     
     for (idx_size n = 0; n < num_addends; ++n)
@@ -788,7 +782,7 @@ ApplyGlobalICounter()
 double SumOfTensorsProductsStateVector::
 CountZeroAmpPercentage() const
 {
-    // const idx_size total_size = 1ull << (tensor_addends[0] -> GetStateANumQ() + tensor_addends[0] -> GetStateBNumQ());
+    // const idx_size total_size = 1ull << (tensor_addends[0] -> GetNumQInBlock(0) + tensor_addends[0] -> GetNumQInBlock(1));
     // idx_size zero_count = 0;
     
 //    for (idx_size i = 0; i < total_size; ++i) {

@@ -504,15 +504,13 @@ GetFullStateVectorSize() const
 }
 
 int TensorProductStateVector::
-GetStateANumQ() const
+GetNumQInBlock(idx_size block) const
 {
-    return qp.getNumQubitsInBlock(0);
-}
-
-int TensorProductStateVector::
-GetStateBNumQ() const
-{
-    return qp.getNumQubitsInBlock(1);
+    if (block == 0)
+        return state_a -> GetNumQubits();
+    else if (block == 1)
+        return  state_b -> GetNumQubits();
+    else return NAN;
 }
 
 bitset<128> TensorProductStateVector::

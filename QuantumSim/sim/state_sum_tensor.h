@@ -78,9 +78,8 @@ public:
     idx_size GetNumAddends() const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
+    int GetNumQInBlock(idx_size block) const;
     idx_size GetGlobalFactorPower() const;
-    int GetStateANumQ() const;
-    int GetStateBNumQ() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;

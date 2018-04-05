@@ -491,25 +491,33 @@ XYFastTransformLowQ(cmplx* __restrict amp,
                     const int num_threads,
                     const ZeroOptMask& zero_opt_mask)
 {
+//    idx_size i_count = 0;
+//    
+//    idx_size num_gates = (__builtin_popcountll(X_bitmask) + __builtin_popcountll(Y_bitmask)) / 2;
+//    idx_size gate_bitmasks[num_gates];
+//    int gate_types [num_gates];
+//    memset(gate_bitmasks, 0, num_gates * sizeof(idx_size));
+//    memset(gate_bitmasks, 0, num_gates * sizeof(int));
+//    for (int i = 0; i < num_qubits; ++i) {
+//        if (X_bitmask || Y_bitmask)
+//            gate_types[i] = UpdateXYBitmask(X_bitmask, Y_bitmask, gate_bitmasks[i], i_count);
+//        else break;
+//    }
+//    
+////    #pragma omp parallel for schedule(guided) num_threads(num_threads)
+//    for (idx_size i = 0; i < num_gates; ++i)
+//        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
+//
+//    return i_count;
+
     idx_size i_count = 0;
     
-    idx_size num_gates = (__builtin_popcountll(X_bitmask) + __builtin_popcountll(Y_bitmask)) / 2;
-    idx_size gate_bitmasks[num_gates];
-    int gate_types [num_gates];
-    memset(gate_bitmasks, 0, num_gates * sizeof(idx_size));
-    memset(gate_bitmasks, 0, num_gates * sizeof(int));
     for (int i = 0; i < num_qubits; ++i) {
         if (X_bitmask || Y_bitmask)
-            gate_types[i] = UpdateXYBitmask(X_bitmask, Y_bitmask, gate_bitmasks[i], i_count);
+            i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits, zero_opt_mask);
         else break;
     }
-    
-    #pragma omp parallel for schedule(guided) num_threads(num_threads)
-    for (idx_size i = 0; i < num_gates; ++i)
-        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
-
     return i_count;
-
 }
 
 

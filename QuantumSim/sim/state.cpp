@@ -548,6 +548,12 @@ GetFullStateVectorSize() const
     return amp_size;
 }
 
+int FullAmpStateVector::
+GetNumQInBlock(idx_size block) const
+{
+    return num_qubits;
+}
+
 idx_size FullAmpStateVector::
 GetGlobalFactorPower() const
 {

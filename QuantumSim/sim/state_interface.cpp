@@ -228,7 +228,7 @@ IndexScatter(const bitset<128>& idx)
 void QubitPartition::RenumberLocalQubits() {
     for(auto& block : _local_to_global) {
         partition(block.begin(), block.end(), [&](int i) {
-            return _boundary_qubits[i]; });
+            return !_boundary_qubits[i]; });
         for(int i = 0; i < (int)block.size(); ++i) _global_to_local[block[i]] = i;
     }
 }

@@ -389,7 +389,8 @@ int main(int argc, char *argv[])
                                       (Config::SimType)sim_type, config.verbose);
         
         if (threshold == 0) {
-            int num_q = amp.GetStateANumQ() > amp.GetStateBNumQ() ? amp.GetStateBNumQ() : amp.GetStateANumQ();
+            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
+            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
             sim.SetThreshold(num_q/2);
         }
         
@@ -402,7 +403,8 @@ int main(int argc, char *argv[])
             amp.PopulateGlobalToLocalMap(config.indices);
         
         if (threshold == 0) {
-            int num_q = amp.GetStateANumQ() > amp.GetStateBNumQ() ? amp.GetStateBNumQ() : amp.GetStateANumQ();
+            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
+            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
             sim.SetThreshold(num_q/2);
         }
         

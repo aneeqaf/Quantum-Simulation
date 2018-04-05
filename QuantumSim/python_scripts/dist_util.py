@@ -280,10 +280,10 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	
 	num_procs = len(cz_bits_strings) if truncated == 0 else truncated
 
-	if t_time > 100:
-		proc_per_script = 1
-	else:
-		proc_per_script = int(num_procs/ num_batches);
+	# if t_time < 100:
+	# 	proc_per_script = 1
+	# else:
+	proc_per_script = int(num_procs/ num_batches);
 
 	proc_c = 0
 	if proc_per_script:

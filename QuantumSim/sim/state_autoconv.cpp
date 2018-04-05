@@ -77,7 +77,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
             
             //Add support for finding the cut type
 
-//            if (sumOfTensors -> GetStateANumQ() > 4 && sumOfTensors -> GetStateBNumQ() > 4
+//            if (sumOfTensors -> GetNumQInBlock(0) > 4 && sumOfTensors -> GetNumQInBlock(1) > 4
 //                && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
 //                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
 //            else
@@ -257,6 +257,14 @@ GetFullStateVectorSize() const
         return sumOfTensors -> GetFullStateVectorSize();
 }
 
+int AdaptiveStateVector::
+GetNumQInBlock(idx_size block) const
+{
+    if (full_state)
+        return full_state -> GetNumQInBlock(block);
+    else
+        return sumOfTensors -> GetNumQInBlock(block);
+}
 
 idx_size AdaptiveStateVector::
 GetGlobalFactorPower() const

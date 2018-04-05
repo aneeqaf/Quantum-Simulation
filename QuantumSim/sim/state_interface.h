@@ -175,6 +175,7 @@ public:
     virtual double GetMemUsage() const = 0;
     virtual idx_size GetSize() const = 0;
     virtual idx_size GetFullStateVectorSize() const = 0;
+    virtual int GetNumQInBlock(idx_size block) const = 0;
     virtual idx_size GetGlobalFactorPower() const = 0;
     virtual double CalculateNormSquared() = 0;
     virtual double CalculateAverageInaccuracy(double norm) const = 0;

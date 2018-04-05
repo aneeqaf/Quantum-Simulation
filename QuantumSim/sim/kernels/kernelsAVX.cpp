@@ -164,7 +164,9 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
             if (all_zeros && (!all_zeros_2 || !all_zeros_1)) all_zeros = false;
         }
 //        else {
-//            for (idx_size i = 2 * (gc0); i < 2 * (gc0 + 16) ; ++i) {
+//            cout << "Zero bm : " << zero_opt_mask.print() << endl;
+//            for (idx_size i = 2 * (gc0); i < 2 * (gc0 + 15) ; ++i) {
+//                cout << i << ":" << t_amp[i] << ",";
 //                assert(t_amp[i] == 0);
 //            }
 //        }
@@ -250,16 +252,17 @@ ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
         if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
-            bool all_zeros = ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+            bool all_zeros = false;ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                                    num_threads, block_begin, block_size, zero_opt_mask);
             
             if (!all_zeros)
-               i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
+                i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
                                               Lo_Y_bitmask, block_bits, num_threads, zero_opt_mask);
         }
 //        else {
+//            cout << "Zero bm : " << zero_opt_mask.print() << endl;
 //            for (idx_size i = offset_idx * block_size; i < (offset_idx * block_size) + block_size ; ++i) {
-//                assert(amp[i] == cmplx(0, 0));
+//                cout << t_amp[i] << ",";
 //            }
 //        }
    }
