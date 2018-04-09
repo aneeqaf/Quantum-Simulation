@@ -97,9 +97,10 @@ def main(cir_file, est_time, max_procs, test_fid):
 				break
 
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
-	avg_time_per_category = {'H':0.0, 'CZ & T & Low XY':0.0, 'xCZ':0.0, 'Single X':0.0, 'Single Y':0.0,\
+	avg_time_per_category = {'H':0.0, 'CZ & T & Low XY':0.0, 'xCZ':0.0, 'Single X & Y':0.0, \
 		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0, 'Storing amps':0.0,\
 		  'High XY':0.0}
+	
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
 	avg_time_per_process = 0.0
 	avg_user_time = 0.0
@@ -134,7 +135,7 @@ def main(cir_file, est_time, max_procs, test_fid):
 						amp['3/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
 					elif "amp[-3]" in line:
 						amp['-3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "Runtime" in line:
+					elif "Runtime (" in line:
 						num_CZ_paths += 1
 						time_r = line.split()[1]
 						time_r = time_r.replace("(", "")# re.findall("\d+\.\d+", line)
@@ -149,8 +150,7 @@ def main(cir_file, est_time, max_procs, test_fid):
 					elif "xCZ (" in line:
 						avg_time_per_category['xCZ'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Single X" in line:
-						avg_time_per_category['Single X'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-						avg_time_per_category['Single Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+						avg_time_per_category['Single X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Merged X & Y" in line:
 						avg_time_per_category['Merged X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "High XY" in line:
@@ -254,12 +254,12 @@ def main(cir_file, est_time, max_procs, test_fid):
 		str(round(max_elapsed_time, 3))+ " s (max)")
 	if avg_cpu_percent:
 		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_CZ_paths, 3)) + "% ")
-	if avg_cz_time:
-		print("\t\tAvg simulation runtime breakdown : \n\t\t\tPrefix : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
-			str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
-	if avg_dfs_time:
-		print("\t\t\tBranches : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
-			str(round(((avg_dfs_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
+	# if avg_cz_time:
+	# 	print("\t\tAvg simulation runtime breakdown : \n\t\t\tPrefix : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
+	# 		str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
+	# if avg_dfs_time:
+	# 	print("\t\t\tBranches : " + str(round(avg_dfs_time/num_batches, 6)) + " s = " +\
+			# str(round(((avg_dfs_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
 	if avg_residents:
 		print("\t\tAvg resident size : ", end="")
 		if avg_residents/num_batches >= pow(2, 30):
@@ -307,13 +307,11 @@ def main(cir_file, est_time, max_procs, test_fid):
 		 + str(round(avg_time_per_category['xCZ'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['xCZ'])/avg_time_per_process)*100, 3)) + "%")
 	
-	if avg_time_per_category['Single X']:
+	if avg_time_per_category['Single X & Y']:
 		print("\tSingle X (" + str(categories['Single X']) + ") & Y (" \
 			+ str(categories['Single Y']) + ")\t\t: " \
-			+ str(round((avg_time_per_category['Single X'] + \
-			avg_time_per_category['Single Y']), 3)) + " s  \t= " +\
-		str(round((((avg_time_per_category['Single X'] + \
-			avg_time_per_category['Single Y']))/avg_time_per_process)*100, 3)) + "%")
+			+ str(round(avg_time_per_category['Single X & Y'] , 3)) + " s  \t= " +\
+		str(round((avg_time_per_category['Single X & Y']/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Merged X & Y']:
 		print("\tMerged X & Y (" + str(categories['Merged X & Y']) + ")\t\t: "\

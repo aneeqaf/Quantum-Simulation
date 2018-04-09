@@ -527,7 +527,7 @@ void SequentialSimulation::
     
     auto& idx_print = config.indices;
     
-    for (idx_size i = 0; i < idx_print.size() - 5; ++i) {
+    for (idx_size i = 5; i < idx_print.size(); ++i) {
         amp_out << real(*(*config.mmap_obj)[i]);
         if (imag(*(*config.mmap_obj)[i]) < 0) amp_out << imag(*(*config.mmap_obj)[i]) << "j";
         else amp_out << "+" << imag(*(*config.mmap_obj)[i]) << "j";
@@ -626,10 +626,10 @@ PrintSystemReport() const
     cout << "Rollright ver 1.8 - a quantum circuit simulator\n";
     cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
-    char hostname[30] = {};
-    gethostname(hostname, 30);
-    cout << "Hostname : " << string(hostname) << "\n";
-    
+//    char hostname[30] = {};
+//    gethostname(hostname, 30);
+    cout << "Hostname : "; flush(cout);
+    system("uname -a");
     
     if (config.verbose != Config::Verbose::NCCV && config.verbose != Config::Verbose::NCC) {
 #ifdef __APPLE__
@@ -843,8 +843,8 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "Low-value qubits : " << amp.GetNumQInBlock(0) - config.th << " q\n";
     else {
         cout << "Low-value qubits : "
-        << (amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15) << " q + "
-        << (amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15) << " q\n";
+        << amp.GetNumQInBlock(0) - (amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15) << " q, "
+        << amp.GetNumQInBlock(1) - (amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15) << " q\n";
     }
     
     if (config.print_amp)
@@ -1075,28 +1075,28 @@ PrintSimReport(GenericQuantumState& amp,
         
         string H_s = "\tH (" + to_string(amp.count_of_category.H/factor1) +  ")";
         ss << H_s << setw(35 - (int)H_s.size()) << right << ": " << amp.time_by_category.H
-        << " s\t\t=  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
+        << " s\t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
             to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1) + ") & Low XY ("
             + to_string(amp.count_of_category.low_q_XY1_2/factor0) + ")";
             ss << CZ_T_s << setw(35 - (int)CZ_T_s.size()) << right << ": "
-            << amp.time_by_category.low_q_XY_CZT << " s\t\t=  "
+            << amp.time_by_category.low_q_XY_CZT << " s\t\t  =  "
             << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
         }
         
         if(amp.count_of_category.decomposed_CZ) {
             string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
             ss << CZ_s << setw(35 - (int)CZ_s.size()) << right << ": "
-            << amp.time_by_category.decomposed_CZ << " s\t\t=  "
+            << amp.time_by_category.decomposed_CZ << " s\t\t  =  "
             << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
         }
         if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
             string XY_s = "\tSingle X (" + to_string(amp.count_of_category.X1_2/factor0)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2/factor0) + ")";
             ss << XY_s << setw(35 - (int)XY_s.size()) << right << ": "
-            << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s\t\t=  "
+            << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s\t\t  =  "
             << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/(total_time)) * 100 << "%\n";
         }
         
@@ -1104,47 +1104,47 @@ PrintSimReport(GenericQuantumState& amp,
             string X_Y_s = "\tMerged X & Y ("
             + to_string(amp.count_of_category.merged_XY1_2/factor0) + ")";
             ss << X_Y_s << setw(35 - (int)X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
-            << " s\t\t=  " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
+            << " s\t\t  =  " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
         }
         
         if(amp.count_of_category.high_q_XY1_2) {
             string xy_s = "\tHigh XY (" + to_string(amp.count_of_category.high_q_XY1_2/factor0) + ")" ;
             ss << xy_s << setw(35 - (int)xy_s.size()) << right << ": "
-            << amp.time_by_category.high_q_XY1_2 << " s\t\t=  "
+            << amp.time_by_category.high_q_XY1_2 << " s\t\t  =  "
             << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";
         }
         
         if (amp.count_of_category.rescale) {
             string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale/factor1) + ")";
             ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
-            << " s\t\t=  " << (amp.time_by_category.rescale/(total_time)) * 100 << "%\n";
+            << " s\t\t  =  " << (amp.time_by_category.rescale/(total_time)) * 100 << "%\n";
         }
         
         if (amp.time_by_category.conversion) {
             string RP_s = "\tConversion ";
             ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.conversion<< " s\t\t=  "
+            << amp.time_by_category.conversion<< " s\t\t  =  "
             << (amp.time_by_category.conversion/(total_time)) * 100 << "%\n";
         }
         
         if (amp.time_by_category.copying) {
             string RP_s = "\tCopying (" + to_string(amp.count_of_category.copying) + ")";
             ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.copying << " s\t\t=  "
+            << amp.time_by_category.copying << " s\t\t  =  "
             << (amp.time_by_category.copying/(total_time)) * 100 << "%\n";
         }
         
         if(amp.time_by_category.norm && config.norm_depth) {
             string RP_n = "\tNorm ";
             ss <<  RP_n << setw(35 - (int)RP_n.size()) << right << ": "
-            << amp.time_by_category.norm << " s\t\t=  "
+            << amp.time_by_category.norm << " s\t\t  =  "
             << (amp.time_by_category.norm/(total_time)) * 100 << "%\n";
         }
         
         if(amp.time_by_category.amp_storage) {
             string RP_s = "\tStoring amps ";
             ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.amp_storage << " s\t\t=  "
+            << amp.time_by_category.amp_storage << " s\t\t  =  "
             << (amp.time_by_category.amp_storage/(total_time)) * 100 << "%\n";
         }
         

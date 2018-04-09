@@ -13,6 +13,7 @@ import errno
 import psutil
 from multiprocessing import cpu_count
 import numpy as np
+import random
 
 @click.command()
 @click.argument("circuit", nargs=1, required=True)
@@ -49,9 +50,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	if not num_batches:
 		num_batches = int(max_threads/num_threads);
 
-	if num_batches * num_threads > cpu_count():
-		print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.")
-		exit()
+	# if num_batches * num_threads > cpu_count():
+	# 	print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.")
+	# 	exit()
 
 	# If the entire state vector needs to be printed, specify this command.
 	# The value is the number of qubits in the circuit
@@ -101,7 +102,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
 
 	cz_bits_strings = []
-	num_bit_strings = (1 << int(proc_prefix_bits)) if not max_procs else max_procs
+	num_bit_strings = (1 << int(proc_prefix_bits)) 
 	for bit_comb in range(0, num_bit_strings, epsilon_sq):
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
@@ -111,15 +112,22 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		else:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
 
+	if max_procs or (approx and max_procs < approx):
+		random.shuffle(cz_bits_strings)
+		cz_bits_strings[:max_procs]
+		num_bit_strings = len(cz_bits_strings)
+
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, print_idxs, num_idx)
 	if approx:
 		command += " -a " + str(epsilon)
 	command += " --CZ_path "
 
+
+
 	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches
 
-	dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, cz_bits_strings, \
-		command, t_time, num_threads, mem, cut, ranges_bits, max_procs, approx)
+	num_batches = dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, \
+		cir_name, cz_bits_strings, command, t_time, num_threads, mem, cut, ranges_bits, max_procs, approx)
 
 	if test_fid:
 		if len(cz_bits_strings) > 2:

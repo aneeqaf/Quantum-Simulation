@@ -18,6 +18,7 @@ def main(cir_file, num_idx):
 	for filename in files:
 		if filename.endswith("_ascii.amps"):
 			full_filename = os.path.join(outdir, filename)
+			print(full_filename)
 			with open(full_filename, "r") as f:
 				lines = f.readlines()
 				temp = np.loadtxt(lines, dtype=complex)

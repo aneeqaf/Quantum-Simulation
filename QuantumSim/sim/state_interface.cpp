@@ -339,14 +339,15 @@ Project1QBitmask(bitset<128> gate_bitmask,
         const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
 
         const int global_q_idx = is_zero_least_sig ? num_q1 - q : q;
-//        cout << "Global idx : " << global_q_idx << " q : " << q << endl;
+        
         if (qp.globalToBlock(global_q_idx) == block_idx) {
             int local_q_idx = qp.globalToLocal(global_q_idx);
-            if (is_zero_least_sig)
+            if (is_zero_least_sig) {
                 local_q_idx = num_qb1 - local_q_idx;
+//            cout << "Global idx : " << global_q_idx << " q : " << q << endl;
+//             cout << "Local idx : " << local_q_idx <<  endl;
             
-//             cout << " Local idx : " << local_q_idx << " q : " << num_qb1 - local_q_idx << endl;
-            
+            }
             projected_bitmask |= 1ull << local_q_idx;
         }
 
@@ -367,7 +368,8 @@ ProjectCZBitmask(bitset<128> projected_bitmasks[],
     
     for (int i = 0; i < qp.getNumQubits(); ++i) {
         if ((qp.globalToBlock(i) == block_idx) && ((gate_bitmasks[i] & block_bitmask) != 0)) {
-            projected_bitmasks[qp.globalToLocal(i)] = Project1QBitmask(gate_bitmasks[i] & block_bitmask, qp, block_idx);
+            projected_bitmasks[qp.globalToLocal(i)] = Project1QBitmask(gate_bitmasks[i] & block_bitmask,
+                                                                       qp, block_idx);
             is_bitmask_all_0 = false;
         }
     }

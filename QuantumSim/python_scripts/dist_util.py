@@ -283,26 +283,26 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	# if t_time < 100:
 	# 	proc_per_script = 1
 	# else:
-	proc_per_script = int(num_procs/ num_batches);
+	proc_per_script = ceil(float(num_procs)/ float(num_batches));
 
-	proc_c = 0
+	batch_count= 0
 	if proc_per_script:
-		for i in range(int(num_batches - 1)):
-			proc_c += 1
-			with open(os.path.join(script_dir, "script_" + str(i) + ".sh"), "w") as script:
+		while (batch_count + 1) * proc_per_script < len(cz_bits_strings): 
+			with open(os.path.join(script_dir, "script_" + str(batch_count) + ".sh"), "w") as script:
 				script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
 					+ str(proc_per_script) + "\n\n")
-				start_idx = i * proc_per_script
+				start_idx = batch_count * proc_per_script
 				proc_count = 0
+				batch_count += 1
 				for j in range(start_idx, start_idx + proc_per_script):
 					proc_count += 1
 					script.write("START_TIME=$SECONDS\n")
 					if j < (start_idx + proc_per_script - 1):
-						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
-						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
+						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 					else:
-						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
+						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
 					script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
 					"echo \"\n" + str(proc_count)  + " out of " + str(proc_per_script) \
 					+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
@@ -310,31 +310,32 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	else:
 		proc_per_script = 1
 
-	with open(os.path.join(script_dir, "script_" + str(proc_c) + ".sh"), "w") as script:
-			start_idx = proc_c * proc_per_script
-			script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
-					+ str(num_procs - start_idx) + "\n\n")
-			proc_c += 1
-			proc_count = 0
-			for j in range(start_idx, num_procs):
-				proc_count += 1
-				script.write("START_TIME=$SECONDS\n")
-				if j < (num_procs - 1):
-					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
-					script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "\n")
-				else:
-					script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-					script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(proc_c) + "@\n")
-				script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
-						"echo \"\n" + str(proc_count)  + " out of " + str(num_procs - start_idx) \
-						+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
-						 + str(num_procs - start_idx - proc_count) + " processes to complete\n\"\n\n")
+	if batch_count * proc_per_script < len(cz_bits_strings):
+		with open(os.path.join(script_dir, "script_" + str(batch_count) + ".sh"), "w") as script:
+				start_idx = batch_count* proc_per_script
+				script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
+						+ str(num_procs - start_idx) + "\n\n")
+				batch_count+= 1
+				proc_count = 0
+				for j in range(start_idx, num_procs):
+					proc_count += 1
+					script.write("START_TIME=$SECONDS\n")
+					if j < (num_procs - 1):
+						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+					else:
+						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+					script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
+							"echo \"\n" + str(proc_count)  + " out of " + str(num_procs - start_idx) \
+							+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
+							 + str(num_procs - start_idx - proc_count) + " processes to complete\n\"\n\n")
 
 	os.system("chmod +x " + script_dir + "/*")
 
 	est_time =  round((float(t_time) * int(num_procs)) / int(num_batches), 3)
 	print ("\033[1m" + str(datetime.datetime.now()) + " : Launching " +  str(num_procs) + " " + cut + " simulations with " +\
-		str(num_batches) + " batches and with upto " + str(num_threads) + \
+		str(batch_count) + " batches and with upto " + str(num_threads) + \
 		" threads each.")
 	if est_time:
 		print("The distributed run is estimated to take " + str(round(float(est_time) \
@@ -380,11 +381,13 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 
 	# Launch the scripts and print the logs generated by the processes in each script into a file 
 	# in the log directory
-	for p in range(num_batches):
+	for p in range(batch_count):
 		print("./" + os.path.join(script_dir, "script_" + str(p) + ".sh") +\
 		  " > " + os.path.join(log_dir, "log_script_" + str(p))+ ".txt 2>&1 &")
-		os.system("./" + os.path.join(script_dir, "script_" + str(p) + ".sh") + \
-		  " > " + os.path.join(log_dir, "log_script_" + str(p)) + ".txt 2>&1 &")
+		# os.system("./" + os.path.join(script_dir, "script_" + str(p) + ".sh") + \
+		#   " > " + os.path.join(log_dir, "log_script_" + str(p)) + ".txt 2>&1 &")
+
+	return batch_count
 
 def CalculateFidelity(exact_amp_file, approx_amp_file):
 

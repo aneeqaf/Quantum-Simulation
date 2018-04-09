@@ -492,7 +492,7 @@ XYFastTransformLowQ(cmplx* __restrict amp,
                     const ZeroOptMask& zero_opt_mask)
 {
 //    idx_size i_count = 0;
-//    
+//
 //    idx_size num_gates = (__builtin_popcountll(X_bitmask) + __builtin_popcountll(Y_bitmask)) / 2;
 //    idx_size gate_bitmasks[num_gates];
 //    int gate_types [num_gates];
@@ -503,8 +503,8 @@ XYFastTransformLowQ(cmplx* __restrict amp,
 //            gate_types[i] = UpdateXYBitmask(X_bitmask, Y_bitmask, gate_bitmasks[i], i_count);
 //        else break;
 //    }
-//    
-////    #pragma omp parallel for schedule(guided) num_threads(num_threads)
+//
+//    #pragma omp parallel for schedule(guided) num_threads(num_threads)
 //    for (idx_size i = 0; i < num_gates; ++i)
 //        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
 //
