@@ -7,12 +7,12 @@ import re
 import shutil
 
 @click.command()
-@click.argument("script_file", nargs=1)
+@click.argument("script_dir", nargs=1)
 @click.argument("start_range", nargs=1)
 @click.argument("end_range", nargs=1)
-def main(script_file, start_range, end_range):
+def main(script_dir, start_range, end_range):
 
-	bindir = os.path.join("bin", script_file)
+	bindir = os.path.join("bin", script_dir)
 	files = os.listdir(bindir)
 	log_dir = os.path.join("output", "log")
 
@@ -24,7 +24,7 @@ def main(script_file, start_range, end_range):
 				raise
 
 	if os.path.isdir(log_dir):
-		log_dir = os.path.join(log_dir, script_file)
+		log_dir = os.path.join(log_dir, script_dir)
 		if not os.path.isdir(log_dir):
 			try:
 				os.makedirs(log_dir)

@@ -178,7 +178,7 @@ ReadIndices(const string& idx_infile)
     string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth)
     + "_" + to_string(cz_num_bits + czp_append_len) + "_" + to_string(num_threads);
     if (approx)
-        file_n += "_approx";
+        file_n += "_approx_" + to_string(approx_epsilon);
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".amps",
@@ -194,7 +194,7 @@ GenerateRandomIndices(const int seed,
     string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth)
     + "_" + to_string(cz_num_bits + czp_append_len) + "_" + to_string(num_threads);
     if (approx)
-        file_n += "_approx";
+        file_n += "_approx_" + to_string(approx_epsilon);
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     

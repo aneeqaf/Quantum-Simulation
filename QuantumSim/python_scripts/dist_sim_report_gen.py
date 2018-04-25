@@ -5,13 +5,15 @@ import os
 import click
 import re
 import dist_util
+from math import ceil
 
 @click.command()
 @click.argument("cir_file", nargs=1)
-@click.argument("est_time", nargs=1)
+@click.option("--est_time", nargs=1, required=False, default=0.0)
 @click.option("--max_procs", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
-def main(cir_file, est_time, max_procs, test_fid):
+@click.option("--cloud_services", nargs=1, required=False, is_flag=True)
+def main(cir_file, est_time, max_procs, test_fid, cloud_services):
 
 	log_dir = os.path.join("output", "log", cir_file)
 
@@ -32,16 +34,23 @@ def main(cir_file, est_time, max_procs, test_fid):
 	dfs_bits = 0
 	dfs = False
 	epsilon = 0
+	hardware_threads = 0
+	num_amps = 0
 
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
 		for line in first_file:
 			if "Qubits" in line:
 				qubits = int(line.split(":")[1].split()[0].replace(' ',''))
-				pass
+				
 			if "Max threads per process" in line:
 				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
-				pass
+				
+			if "Hardware threads" in line:
+				hardware_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
+
+			if "Requested num amps" in line:
+				num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 
 			if "xCZ path breakdown" in line:
 				print(line, end="")
@@ -192,35 +201,34 @@ def main(cir_file, est_time, max_procs, test_fid):
 						e_t = float(line.split()[0])
 						avg_elapsed_time += e_t
 						max_time += e_t
-						
-					if max_elapsed_time < max_time:
-							max_elapsed_time = max_time
+				if max_elapsed_time < max_time:
+						max_elapsed_time = max_time
 
 	# Fidelity calculations for approximation
 	fidelity = 0.0
 	if "_approx" in cir_file:
-		exact_dir = os.path.join("output", "amp_vectors", cir_file.replace("_approx", ""))
+		exact_dir = os.path.join("output", "amp_vectors", re.sub('_approx.*\d', "", cir_file))
 		approx_dir = os.path.join("output", "amp_vectors", cir_file)
 		exact_res_file= os.path.join(exact_dir, "result.amps")
 		approx_res_file = os.path.join(approx_dir, "result.amps")
-		model_dir = os.path.join("output", "misc", cir_file)
+		# model_dir = os.path.join("output", "misc", cir_file)
 
-		if not os.path.isdir(model_dir):
-			try:
-				os.makedirs(model_dir)
-			except OSError as e:
-				if e.errno != errno.EEXIST:
-					raise
-		model_file = os.path.join(model_dir, "model.txt")
+		# if not os.path.isdir(model_dir):
+		# 	try:
+		# 		os.makedirs(model_dir)
+		# 	except OSError as e:
+		# 		if e.errno != errno.EEXIST:
+		# 			raise
+		# model_file = os.path.join(model_dir, "model.txt")
 
 		if os.path.isfile(exact_res_file):
 			fidelity = dist_util.CalculateFidelity(exact_res_file, approx_res_file)
-			if os.path.isfile(model_file):
-				with open(model_file, "a") as file:
-					file.write(str(num_CZ_paths) + "," + str(fidelity) + "," + str(epsilon) + "\n")
-			else:
-				with open(model_file, "w") as file:
-					file.write(str(num_CZ_paths) + "," + str(fidelity) + "," + str(epsilon) + "\n")
+			# if os.path.isfile(model_file):
+			# 	with open(model_file, "a") as file:
+			# 		file.write(str(num_CZ_paths) + "," + str(fidelity) + "," + str(epsilon) + "\n")
+			# else:
+			# 	with open(model_file, "w") as file:
+			# 		file.write(str(num_CZ_paths) + "," + str(fidelity) + "," + str(epsilon) + "\n")
 
 
 		if test_fid:
@@ -233,19 +241,26 @@ def main(cir_file, est_time, max_procs, test_fid):
 				# 	fidelity = float("nan")
 	
 
+	num_machines = ceil((num_threads * num_batches)/hardware_threads)
 	# printing statistics onto reports				
-	print("\nDistributed simulation " , end="")
+	print("\nMulti-process simulation " , end="")
 	if max_procs and max_procs < (1 << cz_path_len):
 		print ("(truncated) ", end="")
 	print(": ", end="")
 
 	print("\n\t" + str(num_CZ_paths) + " processes (" + \
-		str(num_threads) + " threads each) in " + str(num_batches) + " batch(es)")
+		str(num_threads) + " threads each) in " + str(ceil(num_batches/num_machines)) + " batch(es) over "
+		+ str(num_machines) + " node(s)")
 	print("\t" + mem_line, end='')
 
 	if dfs:
 		mem_val *= 2
-	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit)
+	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit, end="")
+
+	if num_machines > 1:
+		print( " (" + str(round((mem_val * num_batches) / num_machines, 3)) + " " + unit + " per node)", end="")
+	print()
+
 	if float(est_time):
 		print("\tPredicted time : " + str(round(float(est_time), 3)) \
 			+ " +- " + str(round(float(est_time) * 0.3, 3)) + " s")
@@ -253,7 +268,8 @@ def main(cir_file, est_time, max_procs, test_fid):
 		+ " s \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
 		str(round(max_elapsed_time, 3))+ " s (max)")
 	if avg_cpu_percent:
-		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_CZ_paths, 3)) + "% ")
+		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_CZ_paths, 3)) + "% (" \
+			+ str(round((avg_cpu_percent/num_CZ_paths)/num_threads, 3)) + "% per thread)")
 	# if avg_cz_time:
 	# 	print("\t\tAvg simulation runtime breakdown : \n\t\t\tPrefix : " + str(round(avg_cz_time/num_batches, 6)) + " s = " +\
 	# 		str(round(((avg_cz_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
@@ -262,21 +278,25 @@ def main(cir_file, est_time, max_procs, test_fid):
 			# str(round(((avg_dfs_time/num_batches)/(avg_elapsed_time/num_batches)) * 100, 3)) + "%")
 	if avg_residents:
 		print("\t\tAvg resident size : ", end="")
-		if avg_residents/num_batches >= pow(2, 30):
-			print (str(round(avg_residents/(pow(2, 30) * num_batches), 3)) + " GiB")
-		elif avg_residents/num_batches >= pow(2, 20):
-			print (str(round(avg_residents/(pow(2, 20) * num_batches), 3)) + " MiB")
-		elif avg_residents/num_batches >= pow(2, 10):
-			print (str(round(avg_residents/(pow(2, 10) * num_batches), 3)) + " KiB")
+		if (avg_residents)/num_CZ_paths >= pow(2, 30):
+			print (str(round(avg_residents/(pow(2, 30) * num_CZ_paths), 3)) + " GiB")
+		elif (avg_residents)/num_CZ_paths >= pow(2, 20):
+			print (str(round(avg_residents/(pow(2, 20) * num_CZ_paths), 3)) + " MiB")
+		elif (avg_residents)/num_CZ_paths >= pow(2, 10):
+			print (str(round(avg_residents/(pow(2, 10) * num_CZ_paths), 3)) + " KiB")
 		else:
-			print (str(round(avg_residents/(num_batches), 3)) + " B")
+			print (str(round((avg_residents)/(num_CZ_paths), 3)) + " B")
 	if avg_major_pagefaults or avg_minor_pagefaults:
-		print("\t\tAvg page faults : " + str(round(avg_major_pagefaults/num_batches, 3)) + " (major), " \
-			+ str(round(avg_minor_pagefaults/num_batches, 3)) + " (minor)")
+		print("\t\tAvg page faults : " + str(round(avg_major_pagefaults/num_CZ_paths, 3)) + " (major), " \
+			+ str(round(avg_minor_pagefaults/num_CZ_paths, 3)) + " (minor)")
 
 	if fidelity != 0.0:
 		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
 			# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
+
+	if cloud_services:
+		print("\tBillable runtime : {:.3e}".format(max_elapsed_time * num_machines) \
+			+ " s ({:.3e}".format((max_elapsed_time * num_machines)/num_amps) + " s per amp)")
 
 	print("\namp[3]  \t= {:.6e}".format(amp['3']))
 	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))

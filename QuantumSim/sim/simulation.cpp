@@ -420,7 +420,7 @@ Phase2Simulation(GenericQuantumState& amp,
     idx_size num_CZ_paths = 1ull << config.dfs_length;
     for (idx_size i = 0; i < num_CZ_paths; ++i) {
         curr_gate = gate_i;
-        cz_path = bitset<1000>(i).to_string();
+        cz_path = bitset<100>(i).to_string();
         cz_path = cz_path.substr(cz_path.size() - config.dfs_length);
         
         copy_time.StartTime();
@@ -428,11 +428,13 @@ Phase2Simulation(GenericQuantumState& amp,
         amp.time_by_category.copying += copy_time.GetElapsedTime();
         ++amp.count_of_category.copying;
         
-        config.th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
+//        config.th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
+        config.th = amp.GetNumQInBlock(0) >> 1;
         string cz_path_copy = cz_path;
         temp_amp.partition_to_sim = 'a';
         SimulationLoop(temp_amp, circuit, cz_path, 0, gate_i);
-        config.th = amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15;
+//        config.th = amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15;
+        config.th = amp.GetNumQInBlock(1) >> 1;
         temp_amp.partition_to_sim = 'b';
         SimulationLoop(temp_amp, circuit, cz_path_copy, 0, gate_i);
         amp.partition_to_sim = 'x';
@@ -520,7 +522,7 @@ void SequentialSimulation::
     string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
     + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
     if (config.approx)
-        dir += "_approx";
+        dir += "_approx_" + to_string(config.approx_epsilon);
     string amp_outfile = dir + config.amp_outfile.substr(config.amp_outfile.find_last_of("/")) + "_ascii.amps";
     ofstream amp_out;
     amp_out.open(amp_outfile);
@@ -542,7 +544,7 @@ WriteAmpToASCIIFile(GenericQuantumState& amp) const
     string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
     + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
     if (config.approx)
-        dir += "_approx";
+        dir += "_approx_" + to_string(config.approx_epsilon);
     string command = "mkdir -p " + dir;
     system(command.c_str());
     auto time = to_string(clock());

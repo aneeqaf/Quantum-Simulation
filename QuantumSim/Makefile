@@ -8,7 +8,7 @@ INPUT := input/random_circuits_rollright
 TARGET := bin/rr
 LIBS = -lm -lstdc++
 INC = -I libs -I sim -I sim/kernels
-CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched -static\
+CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
 -fmodulo-sched-allow-regmoves -fsplit-ivs-in-unroller -ffast-math -fgcse-las -m64 -mavx -mavx2 -msse2avx \
 -march=core-avx-i -mtune=core-avx-i  -DRT -fopenmp -DParallel 
 # -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled -DFidelityDoubled
@@ -34,7 +34,7 @@ $(OBJECTS) $(BM): %.o: %.cpp %.h
 
 $(EXE): %.o: %.cpp
 	@echo "Building exe..."
-	$(CC) $(CFLAGS) $(INC) -static -c $< -o $@
+	$(CC) $(CFLAGS) $(INC) -c $< -o $@
 
 $(TARGETDIR): 
 	mkdir -p $(TARGETDIR)
@@ -48,7 +48,7 @@ $(INPUT):
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(TARGETDIR) $(OUTPUT) $(INPUT) $(EXE) $(OBJECTS) 
-	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -static -fopenmp -o $@
+	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -fopenmp -o $@
 
 clean:
 	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/rr bin/bm

@@ -13,6 +13,8 @@
 #include <sstream>
 #include <fstream>
 #include <getopt.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "simulation.h"
 #include "state.h"
@@ -216,6 +218,13 @@ int main(int argc, char *argv[])
                     exit(1);
                 }
                 input_filename = string(optarg);
+                
+                ifstream infile(string("input/random_circuits_google/" + input_filename).c_str());
+                if (!infile.good()) {
+                    cerr << "Please make sure the input file is in the directory input/random_circuits_google \n";
+                    exit(1);
+                }
+                
                 break;
             }
             case 'o': {
@@ -224,6 +233,7 @@ int main(int argc, char *argv[])
                     cerr << "Please specify what circuit to create first\n";
                     exit(1);
                 }
+                
                 out_file = string(optarg);
                 auto count_a = count(out_file.begin(), out_file.end(), '@');
                 if (count_a)
@@ -231,6 +241,7 @@ int main(int argc, char *argv[])
                 idx_size p = out_file.find("@");
                 if (p != string::npos)
                     out_file = out_file.substr(0, p);
+                
                 break;
             }
             case 'n': {
@@ -269,10 +280,6 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'x': {
-                if (argc < 2) {
-                    cerr << "Please enter filename\n";
-                    exit(1);
-                }
                 string idx_arg = string(optarg);
                 print_amp = true;
                 if (idx_arg.find(",") != string::npos) {
@@ -310,6 +317,26 @@ int main(int argc, char *argv[])
     if (!valid) {
         cerr << "\nInvalid command line options. Please specify either the input filename or circuit generation. Use -h for more info.\n\n";
         exit(1);
+    }
+    
+    if (!to_write && print_amp) {
+        cerr << "Please enter ouput filename to print file\n";
+        exit(1);
+    }
+    
+    if (to_write && print_amp) {
+        struct stat info;
+        
+        string pathname = string("output/amp_vectors");
+        if( stat( pathname.c_str(), &info ) != 0 ) {
+            cerr << pathname <<  " cannot be accessed\n";
+            exit(1);
+        }
+        else if(!(info.st_mode & S_IFDIR)) {
+            cerr << pathname << " is not a directory. Please make sure output/amp_vectors/ "
+            << " exists to print the output amps\n";
+            exit(1);
+        }
     }
     
     if (input_filename != "") {

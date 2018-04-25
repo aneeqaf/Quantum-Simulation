@@ -6,11 +6,11 @@ import click
 import numpy as np
 
 @click.command()
-@click.argument("cir_file", nargs=1)
+@click.argument("cir_dir", nargs=1)
 @click.argument("num_idx", nargs=1)
-def main(cir_file, num_idx):
+def main(cir_dir, num_idx):
 
-	outdir = os.path.join("output", "amp_vectors", cir_file)
+	outdir = os.path.join("output", "amp_vectors", cir_dir)
 	files = os.listdir(outdir)
 
 	amps = np.zeros(int(num_idx), dtype=complex)
@@ -23,7 +23,6 @@ def main(cir_file, num_idx):
 				lines = f.readlines()
 				temp = np.loadtxt(lines, dtype=complex)
 
-			# os.remove(full_filename)
 			for i, amp in enumerate(temp):
 				amps[i] += amp;
 
