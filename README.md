@@ -140,13 +140,13 @@ $ pip install psutil
 ```
 ### Running important scripts
 
-1. #### dist_sim.py
+1. ### dist_sim.py
 
 Launches the multiprocess simulation only if the simulations are being run on a single node. Only creates the bash scripts if the script is being run on multiple nodes in the `bin\<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or if performing approximate simulation `bin\<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`.
 
 Logs, amplitude files and scripts are outputted in the directory `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`  within the directory `log\`,  `amp_vectors\`,  or  `bin\` respectively.
 
-##### Important command line options
+#### Important command line options
 
 **Mandatory argument** : circuit filename
 
@@ -168,7 +168,7 @@ These options should be modified if default value is not desired:
 * **--approx** : the value of this option is the denominator of the fidelity; e.g For fidelity = 0.125 , --approx=8.
 * **--multiple_nodes**: this is a flag and must be specified if the simulation is going to be carried on multiple nodes. It prevents the launch of multiple batches on the same node, producing bash scripts instead.
 
-##### Example runs:
+#### Example runs:
 
 1. Runs a multiprocess simulation of a 30q circuit with depth 26 and 0.125 fidelity. Stores only a 100 amps in each run.
 ```shellsession
@@ -179,13 +179,13 @@ $ ./python_scripts/dist_sim.py inst_6_5_100_5 --num_idx=100 --depth=26 --approx=
 $ ./python_scripts/dist_sim.py inst_7_7_100_5 --num_idx=10000 --depth=41 --approx=100 --multiple_nodes --num_batches=100
 ```
 
-2. #### post_launch.py
+2. ### post_launch.py
 
 After the simulation has completed, use this script to add all the amplitudes of the different batches (the result is outputted in, `result.amps`) and then generate the multiprocess simulation report. The script also verifies whether each batch has succesfully completed.
 
 (dist_sim.py outputs the command line to be used for this script before exiting.)
 
-##### Important command line options
+#### Important command line options
 
 **Mandatory argument** :  `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
 
@@ -204,73 +204,73 @@ dist_sim.py prints the total number of processes  and batches on the terminal.
 * **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches )
 * **--cloud_services** : if a monetary value is associated with the simulation, set this flag.
 
-##### Example runs:
+#### Example runs:
 
 1. The command below would be run after the simulation of a 30q circuit, depth 26 with fidelity 0.125 is completed.
 ```shellsession
 $ ./python_scripts/post_launch.py inst_6_5_100_5_26_12_4_approx_8 --num_procs 512 --num_batches 15  --num_idx 1000
 ```
 
-3. #### execute_scripts.py
+3. ### execute_scripts.py
 
 This script is used to run bash scripts for batches within a range. The purpose of this is to launch simulations on multiple nodes.
 
-##### Important command line options
+#### Important command line options
 
 **Mandatory arguments** :
 * `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
 * Starting range of batches to be simulated on a node (inclusive).
 * Ending range of batches to be simulated on a node (exclusive).
 
-##### Example runs:
+#### Example runs:
 
 1. The command below would launch batches 10 to 14 for the simulation of a 30q circuit, depth 26 with fidelity 0.125.
 ```shellsession
 $ ./python_scripts/execute_scripts.py inst_6_5_100_5_26_12_4_approx_8 10 15
 ```
 
-4. #### resume_batches.py
+4. ### resume_batches.py
 
 This script is used to resume the simulation for batches that were stopped because of external issues like an instance on the cloud getting terminated.
 
 It is crucial to have the logs of a terminated batch to resume the simulations. In case the log of a batch has been lost, the simulation cannot be resumed.
 
-##### Important command line options
+#### Important command line options
 
 **Mandatory arguments** :
 * `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
 * Start of range of batches to be resumed (inclusive).
 * End of range of batches to be resumed (exclusive).
 
-##### Example runs:
+#### Example runs:
 
 1. The command below would resumed batches 10 to 14 for the simulation of a 30q circuit, depth 26 with fidelity 0.125.
 ```shellsession
 $ ./python_scripts/resume_batches.py inst_6_5_100_5_26_12_4_approx_8 10 15
 ```
 
-5. #### add_amps.py
+5. ### add_amps.py
 
 This script adds the amplitudes from all the batches. The result is output in the file `result.amps`  in the same directory.
 
-##### Important command line options
+#### Important command line options
 
 **Mandatory arguments** :
 * `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
 * Number of idxs
 
-##### Example runs:
+#### Example runs:
 
 1. The command below adds up all the amplitudes produced after the simulations of a  30q circuit, depth 26 with fidelity 0.125. `result.amps` would have a 1000 amps.
 ```shellsession
 $ ./python_scripts/add_amps.py inst_6_5_100_5_26_12_4_approx_8 1000
 ```
 
-6. #### dist_sim_report_gen.py
+6. ### dist_sim_report_gen.py
 
 Generates the reports after a simulation has been completed. Uses simulation logs of the batches.
 
-##### Important command line options
+#### Important command line options
 
 **Mandatory arguments** :  `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
 
@@ -280,7 +280,7 @@ Generates the reports after a simulation has been completed. Uses simulation log
 * **--cloud_services** : if a monetary value is associated with the simulation, set this flag.
 
 
-##### Example runs:
+#### Example runs:
 
 1. The command below prints the multiprocess simulation report after the simulations of a  30q circuit, depth 26 with fidelity 0.125.
 ```shellsession
