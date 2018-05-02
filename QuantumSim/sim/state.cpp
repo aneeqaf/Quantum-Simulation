@@ -26,7 +26,11 @@ FullAmpStateVector(cmplx* a,
 min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0), global_i_counter(0),
 num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits)
 {
-    posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
+    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
+        cerr << "Memory requirement exceeds availiable memory for aligned storage.";
+        free(amp);
+        exit(err);
+    }
     for (idx_size i = 0; i < size; ++i)
         amp[i] = a[i];
 }
@@ -36,7 +40,11 @@ FullAmpStateVector(const FullAmpStateVector& rhs): zero_opt_mask(rhs.zero_opt_ma
 amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
 global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits)
 {
-    posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
+    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
+        cerr << "Memory requirement exceeds availiable memory for aligned storage.";
+        free(amp);
+        exit(err);
+    }
     idx_size size = 2 * rhs.GetSize();
     
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
@@ -309,7 +317,7 @@ ApplyOddGates(idx_size& X_bitmask,
             --num_X_bits;
             global_factor_power += 2;
             time_by_category.X1_2 += time.GetElapsedTime();
-            if (sim_mode != Config::SimMode::Phase2)
+            if (book_keep)
                 ++count_of_category.X1_2;
         }
         else {
@@ -318,7 +326,7 @@ ApplyOddGates(idx_size& X_bitmask,
             --num_Y_bits;
             global_factor_power += 2;
             time_by_category.Y1_2 += time.GetElapsedTime();
-            if (sim_mode != Config::SimMode::Phase2)
+            if (book_keep)
                 ++count_of_category.Y1_2;
         }
     }
@@ -469,12 +477,31 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
-    if (sim_mode != Config::SimMode::Phase2) {
+    if (book_keep) {
         count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
         count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
     }
     
     return -1;
+}
+
+void FullAmpStateVector::
+CopyState(const FullAmpStateVector& rhs)
+{
+    global_factor_power = rhs.global_factor_power;
+    global_i_counter = rhs.global_i_counter;
+    zero_opt_mask = rhs.GetZeroOptMask();
+    
+    idx_size size = 2 * rhs.GetSize();
+    
+    float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+#pragma omp parallel for num_threads(num_threads)
+    for (idx_size i = 0; i < size; i+=8) {
+        const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
+        _mm256_store_ps(&t_amp[i], temp_amp);
+    }
 }
 
 cmplx FullAmpStateVector::
@@ -571,6 +598,12 @@ int FullAmpStateVector::
 GetNumQubits() const
 {
     return num_qubits;
+}
+
+ZeroOptMask FullAmpStateVector::
+GetZeroOptMask() const
+{
+    return zero_opt_mask;
 }
 
 double FullAmpStateVector::

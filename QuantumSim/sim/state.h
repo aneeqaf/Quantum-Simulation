@@ -89,6 +89,7 @@ public:
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);
+    void CopyState(const FullAmpStateVector& rhs);
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
@@ -97,6 +98,7 @@ public:
     double GetMaxProb();
     double GetAvgProb() const;
     double GetMemUsage() const;
+    ZeroOptMask GetZeroOptMask() const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
     int GetNumQInBlock(idx_size block) const;

@@ -12,7 +12,7 @@ Times GenericQuantumState::time_by_category({});
 Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
-Config::SimMode GenericQuantumState::sim_mode = Config::SimMode::Phase1;
+bool GenericQuantumState::book_keep = true;
 Config::SimType GenericQuantumState::sim_type = Config::SimType::FullState;
 idx_size GenericQuantumState::approx = 0;
 char GenericQuantumState::partition_to_sim = 'x';
@@ -29,7 +29,7 @@ ostream& operator<<(ostream& o, const vector<int>& v) {
 }
 
 GenericQuantumState::
-GenericQuantumState(int n_threads): amps_of_interest({}){
+GenericQuantumState(int n_threads){
     num_threads = n_threads;
 }
 

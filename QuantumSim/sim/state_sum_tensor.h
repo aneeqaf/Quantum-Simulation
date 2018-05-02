@@ -67,7 +67,8 @@ public:
     void UnpopulateGlobalToLocalMap();
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
-   
+    void CopyState(const SumOfTensorsProductsStateVector& rhs);
+
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     double GetMinProb();

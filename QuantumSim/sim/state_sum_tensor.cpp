@@ -126,14 +126,14 @@ HandlexCZApplication(string& cz_bits,
         else
             last_xCZ_idx = ApplyXCZGatesExact(CZ_bitmasks);
     }
-    else if (sim_mode != Config::SimMode::Phase2 &&
+    else if (book_keep &&
      (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
       sim_type == Config::SimType::Approx2011OWT)){
          data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
          data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
      }
     
-    if (sim_mode != Config::SimMode::Phase2) {
+    if (book_keep) {
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(GetNumAddends());
     }
@@ -183,7 +183,7 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
             const int q = first_half ? __builtin_ctzl(first_half)
             : second_half ? 63 + __builtin_ctzl(second_half) : 0;
             
-            if (sim_mode != Config::SimMode::Phase2)
+            if (book_keep)
                 ++count_of_category.decomposed_CZ;
             for (idx_size n = 0; n < num_addends; ++n) {
                 TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[n]);
@@ -201,7 +201,7 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
 
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-    if (sim_mode != Config::SimMode::Phase2) {
+    if (book_keep) {
         if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
             data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_V.push_back(0);
@@ -248,7 +248,7 @@ ApplyXCZGatesForDist(string& cz_bits,
       
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-    if (last_xCZ_idx && sim_mode != Config::SimMode::Phase2) {
+    if (last_xCZ_idx && book_keep) {
         if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
             data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
             data_per_cycles.xCZ_V.push_back(0);
@@ -298,7 +298,7 @@ FormGatesBitmaskXCZ(bool& terminate,
             const int q = first_half ? __builtin_ctzl(first_half)
             : second_half ? 63 +  __builtin_ctzl(second_half) : 0;
 
-            if (sim_mode != Config::SimMode::Phase2)
+            if (book_keep)
                 ++count_of_category.decomposed_CZ;
             if (cz_bits[0] == '0') {
                 if ((cz_bits.size() + prefix_size) % 2 == 0 || approx)
@@ -367,7 +367,7 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     for (auto& t : tensor_addends)
         t -> ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
     
-    if (sim_mode != Config::SimMode::Phase2) {
+    if (book_keep) {
         if (count_of_category.X1_2 - prev_X_count)
             count_of_category.X1_2 -= (num_addends - 1) * (count_of_category.X1_2 - prev_X_count)
             /(num_addends);
@@ -394,7 +394,7 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
             t -> ApplyLoXYAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask, CZ_bitmasks, T_bitmasks, th);
     }
     
-    if (sim_mode != Config::SimMode::Phase2) {
+    if (book_keep) {
         if (count_of_category.X1_2 - prev_X_count)
             count_of_category.X1_2 -= (num_addends - 1) * (count_of_category.X1_2 - prev_X_count)
             /(num_addends);
@@ -406,6 +406,14 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     return last_xCZ_idx;
 }
 
+void SumOfTensorsProductsStateVector::
+CopyState(const SumOfTensorsProductsStateVector& rhs)
+{
+    num_addends = rhs.GetNumAddends();
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CopyState(*rhs.tensor_addends[i]);
+}
 
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToStateAVX()

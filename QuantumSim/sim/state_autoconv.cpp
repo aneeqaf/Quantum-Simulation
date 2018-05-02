@@ -60,7 +60,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
 {
     int last_xCZ_idx = -1;
     if (full_state) {
-        if (sim_mode != Config::SimMode::Phase2) {
+        if (book_keep) {
             data_per_cycles.xCZ_H.push_back(0);
             data_per_cycles.xCZ_V.push_back(0);
             data_per_cycles.addends.push_back(0);
@@ -155,7 +155,7 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
 {
     int last_xCZ_idx = -1;
     if (full_state) {
-        if (sim_mode != Config::SimMode::Phase2) {
+        if (book_keep) {
             data_per_cycles.xCZ_H.push_back(0);
             data_per_cycles.xCZ_V.push_back(0);
             data_per_cycles.addends.push_back(0);
@@ -181,6 +181,21 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
         }
     }
     return last_xCZ_idx;
+}
+
+void AdaptiveStateVector::
+CopyState(const AdaptiveStateVector& rhs)
+{
+    if (rhs.full_state) {
+        full_state -> CopyState(*rhs.full_state);
+        sumOfTensors = nullptr;
+    }
+    else {
+        full_state = nullptr;
+        sumOfTensors -> CopyState(*(rhs.sumOfTensors));
+    }
+    
+    total_q = rhs.total_q;
 }
 
 cmplx AdaptiveStateVector::

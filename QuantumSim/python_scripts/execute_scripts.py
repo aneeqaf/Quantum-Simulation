@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Script for adding amplitudes from the output files of the simulator"""
+"""Script for launching bash scripts for batches within the specified range"""
 
 import os
 import click

@@ -8,7 +8,53 @@ import re
 import shutil
 import psutil
 import random
+import pip
+from distutils.version import LooseVersion, StrictVersion
 from math import ceil, sqrt
+
+def CheckInputFile(input_file):
+	if not os.path.isfile(os.path.join("input", "random_circuits_google", input_file)):
+		if not os.path.isfile(input_file):
+			print("Input file cannot be found")
+			exit()
+
+def EnvCompatibility():
+	for m in pip.get_installed_distributions():
+		if m.project_name == 'click':
+			if StrictVersion(m.version) < StrictVersion("6.7"):
+				print("Please upgrade your click module version to 6.7 or above.")
+				exit()
+		if m.project_name == 'psutil':
+			if StrictVersion(m.version) < StrictVersion("5.4.2"):
+				print("Please upgrade your psutil module version to 5.4.2 or above.")
+				exit()
+		if m.project_name == 'numpy':
+			if StrictVersion(m.version) < StrictVersion("1.14.0"):
+				print("Please upgrade your numpy module version to 1.14.0 or above.")
+				exit()
+
+	if not os.path.isdir("output"):
+		try:
+			os.makedirs(script_dir)
+		except OSError as e:
+			if e.errno != errno.EEXIST:
+				raise
+
+	log_dir = os.path.join("output", "log")
+	if not os.path.isdir(log_dir):
+		try:
+			os.makedirs(log_dir)
+		except OSError as e:
+			if e.errno != errno.EEXIST:
+				raise
+
+	amp_dir = os.path.join("output", "amp_vectors")
+	if not os.path.isdir(amp_dir):
+		try:
+			os.makedirs(amp_dir)
+		except OSError as e:
+			if e.errno != errno.EEXIST:
+				raise
 
 def FormatE(n):
     a = '%E' % n
@@ -114,7 +160,9 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 	dirpath = tempfile.mkdtemp()
 
 	# Horizontal trial run
-	print ("\033[1m" + "Performing a trial simulation run with a horizontal cut and length " + str(num_cz) + " CZ path " + "\033[0m")
+	print ("\033[1m" + "\nPerforming a trial simulation run with a horizontal cut and length " \
+		+ str(num_cz) + " CZ path, so expect the CZ path to be exhausted early.\n" + \
+		"This is to find the best cut with the least number of xCZ gates.\n"  + "\033[0m")
 	
 	start_timeH = time.time()
 
@@ -137,7 +185,9 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 	num_xCZH = CheckxCZGates(tempH_file) 
 
 	# Vertical trial run
-	print ("\033[1m" + "Performing a trial simulation run with a vertical cut and length " + str(num_cz) + " CZ path " + "\033[0m")
+	print ("\033[1m" + "\nPerforming a trial simulation run with a vertical cut and length " \
+		+ str(num_cz) + " CZ path, so expect the CZ path to be exhausted early.\n" + \
+		"This is to find the best cut with the least number of xCZ gates. " + "\033[0m")
 	
 	start_timeV = time.time()
 
@@ -162,6 +212,11 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 
 	num_xCZH, num_xCZV, H_time, V_time = ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
 
+	range_specified = False
+	if approx:
+		if ranges_bits != 0:
+			range_specified = True
+
 	cut = ""
 	command = ""
 	num_xCZ = 0
@@ -174,7 +229,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 			cut = "vertical-cut" 
 			command = commandV 
 			num_xCZ = num_xCZV 
-	elif float(H_time) != float(V_time):
+	elif H_time <= 1e-1 or V_time <= 1e-1:
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
 		command = commandH if (float(H_time) <= float(V_time)) else commandV
 		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV
@@ -195,12 +250,12 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 	if not proc_prefix_bits and not ranges_bits and not branch_bits:
 		branch_bits = ceil(num_xCZ / 3)
 		proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)
-		ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
-	elif approx: 
+		ranges_bits = num_xCZ - branch_bits - proc_prefix_bits 
+	elif approx and not ranges_bits: 
 		if proc_prefix_bits and not branch_bits:
-			branch_bits = num_xCZ - proc_prefix_bits
+			branch_bits = num_xCZ - proc_prefix_bits - ranges_bits
 		elif branch_bits and not proc_prefix_bits:
-			proc_prefix_bits = num_xCZ - proc_prefix_bits
+			proc_prefix_bits = num_xCZ - branch_bits - ranges_bits
 	elif not ranges_bits and not branch_bits:
 		temp_num_xCZ = num_xCZ - max(proc_prefix_bits, 0)
 		if temp_num_xCZ:
@@ -223,7 +278,6 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 	elif not proc_prefix_bits:
 		proc_prefix_bits = max(num_xCZ - branch_bits - ranges_bits, 0)
 
-	# Horizontal trial run
 	trial_time = 0.0
 	mem = 0.0
 	if trial:
@@ -258,6 +312,10 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 		print("\033[1m" + "Trial run took " + str (round(trial_time, 3)) +  " s \033[0m")
 		proc_prefix_bits, mem, branch_bits, ranges_bits = TrialRunEval(temp_file, proc_prefix_bits, \
 			start_time, end_time, ranges_bits, branch_bits)
+
+	if approx and not range_specified:
+		proc_prefix_bits += ranges_bits
+		ranges_bits = 0
 
 	return proc_prefix_bits, branch_bits, trial_time, mem, ranges_bits, cut, command_to_pass 
 
@@ -354,7 +412,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	est_time =  round((float(t_time) * int(num_procs)) / int(num_batches), 3)
 	print ("\033[1m" + str(datetime.datetime.now()) + " : Launching " +  str(num_procs) + " " + cut + " simulations with " +\
 		str(batch_count) + " batches and with upto " + str(num_threads) + \
-		" threads each.")
+		" threads each. The following processes will be launched in the background.")
 	if est_time:
 		print("The distributed run is estimated to take " + str(round(float(est_time) \
 			+ (0.3 * float(est_time)),3)) + " +- " + str(round(0.3 * float(est_time), 3)) + " s.")

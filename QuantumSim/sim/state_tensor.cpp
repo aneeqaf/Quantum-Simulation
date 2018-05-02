@@ -172,7 +172,7 @@ HandleCZApprox(const bitset<128> *CZ_bitmasks)
     else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
     else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
-             && sim_mode != Config::SimMode::Phase2){
+             && book_keep){
         idx_size count = CountXCZGates(CZ_bitmasks);
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
@@ -288,7 +288,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
             const idx_size second_half = __builtin_ctzl((xCZ_bitmask[i] >> 64).to_ulong());
             const int q = first_half ? __builtin_ctzl(first_half)
             : second_half ? 63 + __builtin_ctzl(second_half) : 0;
-            if (sim_mode != Config::SimMode::Phase2)
+            if (book_keep)
                 ++count_of_category.decomposed_CZ;
             ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, (int)i, modified_num_q_B - q);
             xCZ_bitmask[i][q] = 0;
@@ -297,7 +297,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-    if (sim_mode != Config::SimMode::Phase2 &&
+    if (book_keep &&
         (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
         data_per_cycles.memory.push_back(GetMemUsage());
         data_per_cycles.addends.push_back(1);
@@ -437,6 +437,13 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     }
     
     return -1;
+}
+
+void TensorProductStateVector::
+CopyState(const TensorProductStateVector& rhs)
+{
+    state_a -> CopyState(*rhs.state_a);
+    state_b -> CopyState(*rhs.state_b);
 }
 
 cmplx TensorProductStateVector::

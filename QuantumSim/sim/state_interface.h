@@ -124,11 +124,10 @@ public:
     static Counts count_of_category;
     static Times time_by_category;
     static int num_threads;
-    static Config::SimMode sim_mode;
     static Config::SimType sim_type;
     static idx_size approx;
-    vector<cmplx> amps_of_interest;
     static char partition_to_sim;
+    static bool book_keep;
     
     virtual int ApplyBlockOfDiagGates(string& cz_bits,
                                       idx_size prefix_size,
@@ -196,7 +195,7 @@ public:
     virtual void PrintProbabilities(const string& out_file,
                                     const int cycle_num)  = 0;
         
-    GenericQuantumState(): amps_of_interest({}){}
+    GenericQuantumState(){}
     GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };

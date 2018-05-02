@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Script for adding amplitudes from the output files of the simulator"""
+"""Script for resuming simulation for batches within the specified range incase a batch was
+stopped in the middle"""
 
 import os
 import click

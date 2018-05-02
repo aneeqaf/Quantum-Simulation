@@ -34,6 +34,7 @@ private:
     idx_size curr_gate;
     Config config;
     vector<double> norms_CZ_paths;
+    vector<cmplx> amps_of_interest;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
    
@@ -57,7 +58,8 @@ public:
                           const idx_size gate_i);
     void Phase1Simulation(GenericQuantumState& amp,
                           Circuit& circuit,
-                          string& cz_path);
+                          string cz_path,
+                          idx_size gate_i);
     bool SimulationLoop(GenericQuantumState& amp,
                         Circuit& circuit,
                         string& cz_path,

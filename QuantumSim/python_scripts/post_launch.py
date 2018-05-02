@@ -17,7 +17,6 @@ from math import ceil
 @click.option("--num_idx", nargs=1, required=True, default= 0)
 @click.option("--max_procs", nargs=1, required=False, default= 0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
-@click.option("--cloud_services", nargs=1, required=False, is_flag=True)
 def main(cir_dir, num_procs, num_batches, est_time, t_time,
  num_idx, max_procs, test_fid, cloud_services):
 
@@ -33,22 +32,20 @@ def main(cir_dir, num_procs, num_batches, est_time, t_time,
 	for i in range(num_batches):
 		log_files.append(os.path.join(log_dir, "log_script_" + str(i) + ".txt"))
 
-	# if not t_time:
-	# 	t_time = 5
-	# changing = True
-	# while changing:
-	# 	if t_time < 500:
-	# 		time.sleep(5 * float(t_time))
-	# 	else:
-	# 		time.sleep(2 * float(t_time))
-	# 		 # Put script to sleep for substantial changes to take place
-	# 	any_log_changed = False
-	# 	for i, lf in enumerate(log_files):
-	# 		if os.stat(lf).st_size > logs_prev_mem[i]:
-	# 			any_log_changed = True
-	# 			logs_prev_mem[i] = os.stat(lf).st_size
-	# 	if not any_log_changed:
-	# 		changing = False
+	changing = True
+	while changing:
+		if t_time < 500:
+			time.sleep(5 * float(t_time))
+		else:
+			time.sleep(2 * float(t_time))
+			 # Put script to sleep for substantial changes to take place
+		any_log_changed = False
+		for i, lf in enumerate(log_files):
+			if os.stat(lf).st_size > logs_prev_mem[i]:
+				any_log_changed = True
+				logs_prev_mem[i] = os.stat(lf).st_size
+		if not any_log_changed:
+			changing = False
 
 	# Check logs for completion
 	for i in range(int(num_batches - 1)):
@@ -71,8 +68,6 @@ def main(cir_dir, num_procs, num_batches, est_time, t_time,
 
 	report_cmd = "./python_scripts/dist_sim_report_gen.py " + cir_dir + " --est_time " + str(est_time)\
 	 + " --max_procs " + str(max_procs)
-	if cloud_services:
-		report_cmd += " --cloud_services"
 	if test_fid:
 		report_cmd += " --test_fid"
 	print(report_cmd)

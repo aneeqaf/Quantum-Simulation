@@ -72,6 +72,7 @@ public:
                                    int th);
     void PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
+    void CopyState(const TensorProductStateVector& rhs);
 
     cmplx operator[](bitset<128> i);
     cmplx GetAmpFromGlobalState(const idx_size a,

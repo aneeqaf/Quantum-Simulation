@@ -219,11 +219,21 @@ int main(int argc, char *argv[])
                 }
                 input_filename = string(optarg);
                 
-                ifstream infile(string("input/random_circuits_google/" + input_filename).c_str());
-                if (!infile.good()) {
-                    cerr << "Please make sure the input file is in the directory input/random_circuits_google \n";
-                    exit(1);
+                googleInput = CheckIfGoogleFile(input_filename);
+                if (!googleInput)
+                    rollrightInput = CheckIfRollRightFile(input_filename);
+                if (!googleInput && !rollrightInput) {
+                    ifstream infile(string(input_filename).c_str());
+                    if (!infile.good()) {
+                        cerr << "Cannot find circuit file.\n";
+                        exit(1);
+                    }
+                    else googleInput = true;
                 }
+                else if (googleInput)
+                    input_filename = "input/random_circuits_google/" + input_filename;
+                else if (rollrightInput)
+                    input_filename = "input/random_circuits_rollright/" + input_filename;
                 
                 break;
             }
@@ -332,21 +342,8 @@ int main(int argc, char *argv[])
             cerr << pathname <<  " cannot be accessed\n";
             exit(1);
         }
-        else if(!(info.st_mode & S_IFDIR)) {
-            cerr << pathname << " is not a directory. Please make sure output/amp_vectors/ "
-            << " exists to print the output amps\n";
-            exit(1);
-        }
-    }
-    
-    if (input_filename != "") {
-        googleInput = CheckIfGoogleFile(input_filename);
-        if (!googleInput)
-            rollrightInput = CheckIfRollRightFile(input_filename);
-        if (!googleInput && !rollrightInput) {
-            cerr << "Input file not found\n";
-            exit(1);
-        }
+        else if(!(info.st_mode & S_IFDIR))
+            system(string("mkdir -p " + pathname).c_str());
     }
     
     Circuit cir;
@@ -355,12 +352,12 @@ int main(int argc, char *argv[])
         idx_size size = 0;
         //write a function for printing google files.
         if (rollrightInput) {
-            cir.ReadCustomInputFiles("input/random_circuits_rollright/" + input_filename, amp_v, size);
+            cir.ReadCustomInputFiles(input_filename, amp_v, size);
             delete [] amp_v;
             amp_v = nullptr;
         }
         else
-            cir.ReadGoogleCircuitFile("input/random_circuits_google/" + input_filename, depth);
+            cir.ReadGoogleCircuitFile(input_filename, depth);
     }
     else if(create) {
         for (idx_size i = 0; i < num_qubits.size(); ++i){
@@ -379,7 +376,10 @@ int main(int argc, char *argv[])
         else sim_type = 0;
     }
     
-    Config config(1ull << cir.GetNumQubits(), input_filename ,"output/probabilities/" + out_file,
+    idx_size input_filename_pos = input_filename.find_last_of('/') != string::npos ?
+    input_filename.find_last_of('/') + 1 : 0;
+    Config config(1ull << cir.GetNumQubits(), input_filename.substr(input_filename_pos) ,
+                  "output/probabilities/" + out_file,
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
                   cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx, (Config::SimType) sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads);

@@ -12,8 +12,7 @@ from math import ceil
 @click.option("--est_time", nargs=1, required=False, default=0.0)
 @click.option("--max_procs", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
-@click.option("--cloud_services", nargs=1, required=False, is_flag=True)
-def main(cir_file, est_time, max_procs, test_fid, cloud_services):
+def main(cir_file, est_time, max_procs, test_fid):
 
 	log_dir = os.path.join("output", "log", cir_file)
 
@@ -253,8 +252,10 @@ def main(cir_file, est_time, max_procs, test_fid, cloud_services):
 		+ str(num_machines) + " node(s)")
 	print("\t" + mem_line, end='')
 
-	if dfs:
-		mem_val *= 2
+	if dfs and cz_path_ranges:
+		mem_val *= 3
+	elif cz_path_ranges or dfs:
+		mem_val += mem_val  
 	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit, end="")
 
 	if num_machines > 1:
@@ -294,9 +295,8 @@ def main(cir_file, est_time, max_procs, test_fid, cloud_services):
 		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
 			# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
 
-	if cloud_services:
-		print("\tBillable runtime : {:.3e}".format(max_elapsed_time * num_machines) \
-			+ " s ({:.3e}".format((max_elapsed_time * num_machines)/num_amps) + " s per amp)")
+	print("\tBillable runtime : {:.3e}".format(max_elapsed_time * num_machines) \
+		+ " s ({:.3e}".format((max_elapsed_time * num_machines)/num_amps) + " s per amp)")
 
 	print("\namp[3]  \t= {:.6e}".format(amp['3']))
 	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))
