@@ -12,11 +12,16 @@ Rollright prints many details about its hardware and software environment, as we
 
 Rollright supports multithreaded execution, however the number of threads requested must be carefully balanced against the number of parallel processes launched.
 
+Rollright was developed in c++17 and uses g++7.
+
 **Important: depth 41 is 1 + 40, where 1 accounts for cycle 0 of H gates.**
 
 ## Running the Simulator
 
 ### Command line options
+
+**Mandatory argument** : You must either specify the input file (-i).
+
 * **--CZ_path, -c**
 	* CZ path is usually specified for distributed simulation.
 	* CZ path has four components, the last two of which are optional.
@@ -68,23 +73,10 @@ Rollright supports multithreaded execution, however the number of threads reques
 	(3) Default 
 	```
 
-**Mandatory argument** : You must either specify the input file (-i).
-
 ### Directory requirements
 
 * All google circuit files must be in `input\random_circuits_google`.
 * The following directories should be present  : `output\amp_vectors` , `output\log` and `bin`.
-
-### Building a binary
-
-* The simulator needs c++17 and g++-7 to build successfully.
-* The provided Makefile takes care of creating new directories if needed.
-* Preprocessor macros specified in the Makefile can be modified for specific simulation types.
-
-Navigate to the working directory (QuantumSim)
-```shellsession
-$ make all
-```
 
 ### Quick runs
 
@@ -121,170 +113,4 @@ $ ./bin/rr -i inst_6_5_100_5 -s 0 -b 15
 ```shellsession
 $ ./bin/rr -i inst_6_5_100_5 -d 16 --num_threads 4 --sim_type 0 --idx 7,20 --CZ_path 8,0,2,2 --outfile output_1@
 ```
-
-## Python Scripts
-
-The directory requirements outlined in, 'Running the Simulator'  section must be followed.
-
-### Getting started
-
-If you do not already have python3, please install it. Use the commands below to install the python3 virtual environment, developer tools, and required libraries.
-```shellsession
-$ sudo apt-get install build-essential libssl-dev libffi-dev python3-dev
-$ sudo apt-get install -y python3-venv
-$ python3 -m venv env
-$ source env/bin/activate # Use everytime to activate the virtual env
-$ pip install click
-$ pip install numpy
-$ pip install psutil
-```
-### Running important scripts
-
-1. #### dist_sim.py
-
-Launches the multiprocess simulation only if the simulations are being run on a single node. Only creates the bash scripts if the script is being run on multiple nodes in the `bin\<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or if performing approximate simulation `bin\<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`.
-
-Logs, amplitude files and scripts are outputted in the directory `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`  within the directory `log\`,  `amp_vectors\`,  or  `bin\` respectively.
-
-##### Important command line options
-
-**Mandatory argument** : circuit filename
-
-**Optional arguments** with functionality similar to that described in, 'Running the Simulator'  section:
-By default the script chooses optimal or near optimal choices for each of the options below:
-* **--depth**
-* **--v_cut**
-* **--h_cut**
-* **--proc_prefix_bits**
-* **--ranges_bits** : for approximation this is by default set to zero
-* **--branch_bits**
-* **--num_batches**
-
-These options should be modified if default value is not desired:
-* **--num_threads**: default = 4
-* **--num_idx**: default = 1000
-* **--trial** : this is a flag and if specified then a single trial run is performed. Not recommended for simulations with long processes. Default is false.
-* **--max_procs** : this is to be used for trial batches to get a good estimate of how long a single process will take when multiple processes are running in parallel. The value should ideally be set to number of expected batches. Default value is 0.
-* **--approx** : the value of this option is the denominator of the fidelity; e.g For fidelity = 0.125 , --approx=8.
-* **--multiple_nodes**: this is a flag and must be specified if the simulation is going to be carried on multiple nodes. It prevents the launch of multiple batches on the same node, producing bash scripts instead.
-
-##### Example runs:
-
-1. Runs a multiprocess simulation of a 30q circuit with depth 26 and 0.125 fidelity. Stores only a 100 amps in each run.
-```shellsession
-$ ./python_scripts/dist_sim.py inst_6_5_100_5 --num_idx=100 --depth=26 --approx=8
-```
-2. Produces 100 bash scripts in the directory `bin\inst_7_7_100_5_41_<prefix_bits>_4`. Does not launch simulations.
-```shellsession
-$ ./python_scripts/dist_sim.py inst_7_7_100_5 --num_idx=10000 --depth=41 --approx=100 --multiple_nodes --num_batches=100
-```
-
-2. #### post_launch.py
-
-After the simulation has completed, use this script to add all the amplitudes of the different batches (the result is outputted in, `result.amps`) and then generate the multiprocess simulation report. The script also verifies whether each batch has succesfully completed.
-
-(dist_sim.py outputs the command line to be used for this script before exiting.)
-
-##### Important command line options
-
-**Mandatory argument** :  `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
-
-prefix_bits = proc_prefix_bits + ranges_bits
-
-**Required options**
-
-* **--num_procs** : total number of processes in the simulation.
-* **--num_batches** :  total number of batches in the simulation.
-* **--num_idx** : same as the value set in dist_sim.py.
-
-dist_sim.py prints the total number of processes  and batches on the terminal.
-
-**Optional options**
-
-* **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches )
-* **--cloud_services** : if a monetary value is associated with the simulation, set this flag.
-
-##### Example runs:
-
-1. The command below would be run after the simulation of a 30q circuit, depth 26 with fidelity 0.125 is completed.
-```shellsession
-$ ./python_scripts/post_launch.py inst_6_5_100_5_26_12_4_approx_8 --num_procs 512 --num_batches 15  --num_idx 1000
-```
-
-3. #### execute_scripts.py
-
-This script is used to run bash scripts for batches within a range. The purpose of this is to launch simulations on multiple nodes.
-
-##### Important command line options
-
-**Mandatory arguments** :
-* `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
-* Starting range of batches to be simulated on a node (inclusive).
-* Ending range of batches to be simulated on a node (exclusive).
-
-##### Example runs:
-
-1. The command below would launch batches 10 to 14 for the simulation of a 30q circuit, depth 26 with fidelity 0.125.
-```shellsession
-$ ./python_scripts/execute_scripts.py inst_6_5_100_5_26_12_4_approx_8 10 15
-```
-
-4. #### resume_batches.py
-
-This script is used to resume the simulation for batches that were stopped because of external issues like an instance on the cloud getting terminated.
-
-It is crucial to have the logs of a terminated batch to resume the simulations. In case the log of a batch has been lost, the simulation cannot be resumed.
-
-##### Important command line options
-
-**Mandatory arguments** :
-* `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
-* Start of range of batches to be resumed (inclusive).
-* End of range of batches to be resumed (exclusive).
-
-##### Example runs:
-
-1. The command below would resumed batches 10 to 14 for the simulation of a 30q circuit, depth 26 with fidelity 0.125.
-```shellsession
-$ ./python_scripts/resume_batches.py inst_6_5_100_5_26_12_4_approx_8 10 15
-```
-
-5. #### add_amps.py
-
-This script adds the amplitudes from all the batches. The result is output in the file `result.amps`  in the same directory.
-
-##### Important command line options
-
-**Mandatory arguments** :
-* `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
-* Number of idxs
-
-##### Example runs:
-
-1. The command below adds up all the amplitudes produced after the simulations of a  30q circuit, depth 26 with fidelity 0.125. `result.amps` would have a 1000 amps.
-```shellsession
-$ ./python_scripts/add_amps.py inst_6_5_100_5_26_12_4_approx_8 1000
-```
-
-6. #### dist_sim_report_gen.py
-
-Generates the reports after a simulation has been completed. Uses simulation logs of the batches.
-
-##### Important command line options
-
-**Mandatory arguments** :  `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
-
-**Optional arguments**
-
-* **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches )
-* **--cloud_services** : if a monetary value is associated with the simulation, set this flag.
-
-
-##### Example runs:
-
-1. The command below prints the multiprocess simulation report after the simulations of a  30q circuit, depth 26 with fidelity 0.125.
-```shellsession
-$ ./python_scripts/dist_sim_report_gen.py inst_6_5_100_5_26_12_4_approx_8
-```
-
 

@@ -490,7 +490,7 @@ CopyState(const FullAmpStateVector& rhs)
 {
     global_factor_power = rhs.global_factor_power;
     global_i_counter = rhs.global_i_counter;
-    zero_opt_mask = rhs.GetZeroOptMask();
+    zero_opt_mask = rhs.zero_opt_mask;
     
     idx_size size = 2 * rhs.GetSize();
     

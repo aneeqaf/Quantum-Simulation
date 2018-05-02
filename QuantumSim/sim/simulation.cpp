@@ -106,14 +106,14 @@ Simulate(GenericQuantumState& amp,
         num_bits = config.cz_num_bits ? config.czp_append_len : config.norm_depth;
         Time copy_time;
     
+        copy_time.StartTime();
+        SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
+        amp.time_by_category.copying += copy_time.GetElapsedTime();
+        ++amp.count_of_category.copying;
+        
         for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
             cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
-
-//            amp.ResetAmpVector();
-            copy_time.StartTime();
-            SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
-            amp.time_by_category.copying += copy_time.GetElapsedTime();
-            ++amp.count_of_category.copying;
+            
             Phase1Simulation(temp_amp, circuit, cz_path, gate_num);
 
             auto& idx = config.indices;
@@ -128,6 +128,13 @@ Simulate(GenericQuantumState& amp,
             if (config.norm_perc)
                 norms_CZ_paths[cz_p] = sqrt(temp_amp.CalculateNormSquared());
             amp.book_keep = false;
+            
+            if ((cz_p + 1) < cz_paths_ex) {
+                copy_time.StartTime();
+                temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
+                amp.time_by_category.copying += copy_time.GetElapsedTime();
+                ++amp.count_of_category.copying;
+            }
         }
     }
     else if (config.cz_num_bits) {
@@ -248,16 +255,16 @@ Phase2Simulation(GenericQuantumState& amp,
     amp.RescaleAndApplyGlobalICounter();
     
     Time copy_time;
+    copy_time.StartTime();
+    SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
+    amp.time_by_category.copying += copy_time.GetElapsedTime();
+    ++amp.count_of_category.copying;
+    
     string cz_path = "-";
     idx_size num_CZ_paths = 1ull << config.dfs_length;
     for (idx_size i = 0; i < num_CZ_paths; ++i) {
         cz_path = bitset<100>(i).to_string();
         cz_path = cz_path.substr(cz_path.size() - config.dfs_length);
-        
-        copy_time.StartTime();
-        SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
-        amp.time_by_category.copying += copy_time.GetElapsedTime();
-        ++amp.count_of_category.copying;
         
         //        config.th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
         config.th = amp.GetNumQInBlock(0) >> 1;
@@ -280,6 +287,13 @@ Phase2Simulation(GenericQuantumState& amp,
         
         config.curr_mode = Config::SimMode::Phase2;
         amp.book_keep = false;
+        
+        if ((i + 1) < num_CZ_paths) {
+            copy_time.StartTime();
+            temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
+            amp.time_by_category.copying += copy_time.GetElapsedTime();
+            ++amp.count_of_category.copying;
+        }
     }
     
     dfs_time += phase2_time.GetElapsedTime();

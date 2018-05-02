@@ -295,8 +295,8 @@ def main(cir_file, est_time, max_procs, test_fid):
 		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
 			# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
 
-	print("\tBillable runtime : {:.3e}".format(max_elapsed_time * num_machines) \
-		+ " s ({:.3e}".format((max_elapsed_time * num_machines)/num_amps) + " s per amp)")
+	print("\tBillable runtime : {:.3e}".format((max_elapsed_time * num_machines)/3600) \
+		+ " hrs ({:.3e}".format(((max_elapsed_time * num_machines)/num_amps)/3600) + " hrs per amp)")
 
 	print("\namp[3]  \t= {:.6e}".format(amp['3']))
 	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))

@@ -229,7 +229,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 			cut = "vertical-cut" 
 			command = commandV 
 			num_xCZ = num_xCZV 
-	elif H_time <= 1e-1 or V_time <= 1e-1:
+	elif H_time > 1e-1 or V_time > 1e-1:
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
 		command = commandH if (float(H_time) <= float(V_time)) else commandV
 		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV

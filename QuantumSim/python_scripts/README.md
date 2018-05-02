@@ -57,6 +57,8 @@ Options for controlling CZ path:
 * **--proc_prefix_bits** : this defines the number of processes to be launched
 * **--ranges_bits** : this is an extension to --proc_prefix_bits and elongates the time taken by a single process. It also avoids simulation of repeated pattern of CZ paths. For approximation this is by default set to zero. 
 * **--branch_bits** : this defines the number of CZ gates to simulate in DFS.
+**NOTE 6p + 6r + 6d** :
+6p means each process gets a 6-bit ID, 6r means each process extends this ID with 6 additional bits in all possible ways, and 6b means that each 12-bit prefix is branched into 2^6 branches (starting from a checkpoint state that is saved and reused)
 
 These options should be modified if default value is not desired:
 * **--approx** : the value of this option is the denominator of the fidelity; e.g For fidelity = 0.125 , --approx=8. This acts as an epsilon for choosing CZ paths when performing approximate simulation.
@@ -168,6 +170,8 @@ $ ./python_scripts/add_amps.py inst_6_5_100_5_26_12_4_approx_8 1000
 6. #### dist_sim_report_gen.py
 
 Generates the reports after a simulation has been completed. Uses simulation logs of the batches.
+
+When generating a report for approximate simulation, this script checks if the corresponding exact simulation has been performed. If it finds the resultant amplitudes of the exact simulation, it then calculates the fidelity and reports it.
 
 ##### Important command line options
 

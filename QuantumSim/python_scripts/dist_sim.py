@@ -36,12 +36,11 @@ from math import sqrt, floor, ceil
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
-@click.option("--cloud_services", nargs=1, required=False, is_flag=True)
 @click.option("--multiple_nodes", nargs=1, required=False, is_flag=True)
 @click.option("--cont_cz_paths", nargs=1, required=False, is_flag=True)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
- approx, test_fid, cloud_services, multiple_nodes, cont_cz_paths):
+ approx, test_fid, multiple_nodes, cont_cz_paths):
 
 	dist_util.CheckInputFile(circuit)
 
@@ -156,8 +155,6 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	post_launch_cmd = "./python_scripts/post_launch.py " + str(cir_name) + " --num_procs " + str(num_procs) + \
 		" --num_batches " + str(num_batches) + " --t_time " + str(t_time) + \
 		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs)
-	if cloud_services:
-		post_launch_cmd += " --cloud_services"
 	if test_fid:
 		post_launch_cmd += " --test_fid"
 	print(post_launch_cmd + " > " + str(log_dir) + "/final_report 2>&1 &")

@@ -18,7 +18,7 @@ from math import ceil
 @click.option("--max_procs", nargs=1, required=False, default= 0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 def main(cir_dir, num_procs, num_batches, est_time, t_time,
- num_idx, max_procs, test_fid, cloud_services):
+ num_idx, max_procs, test_fid):
 
 	# TODO: fix proc_per_script
 	proc_per_script = ceil(float(num_procs)/ float(num_batches)) if num_procs > 1 else 1
