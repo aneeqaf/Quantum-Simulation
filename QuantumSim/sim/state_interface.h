@@ -73,12 +73,15 @@ public:
     
     QubitPartition(const Cuts cut_type,
                    int total_qubits,
+                   bool row_major = true,
                    int cut = 0);
     
     QubitPartition(int rows, int cols, const vector<bitset<128>>& blocks);
     
     string print(int verb = 3) const;
     
+    int GetRows() const { return _rows; }
+    int GetColumns() const { return _cols; }
     int getNumQubits() const { return _rows * _cols; }
     int getNumBlocks() const { return static_cast<int>(_blocks.size()); }
     int getNumQubitsInBlock(int i) const { return (int)_blocks[i].count(); }

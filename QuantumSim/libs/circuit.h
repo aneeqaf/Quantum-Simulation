@@ -38,7 +38,8 @@ public:
     
     void GroupAlternateCycles();
     void GroupSimilarGates();
-    int MovexCZGates(const QubitPartition& bitmasks);
+    int MovexCZGates(const QubitPartition& bitmasks,
+                     const bool nearest_neigbors = true);
     int ComputeNumberOfHighValuedQubits(int num_qubits);
     void ReadGoogleCircuitFile(const string& input_file,
                                const int depth);

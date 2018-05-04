@@ -72,11 +72,11 @@ Simulate(GenericQuantumState& amp,
         config.sim_type == Config::SimType::Approx1CutH || config.sim_type == Config::SimType::ApproxCZPathH2011;
         
         QubitPartition qp = H_sims ?
-        QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.hcut) :
-        QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.vcut) ;
+        QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.row_major, config.hcut) :
+        QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.row_major, config.vcut) ;
 //        qp.RenumberLocalQubits();
         
-        xCZ_gate_count = circuit.MovexCZGates(qp);
+        xCZ_gate_count = circuit.MovexCZGates(qp, config.nearest_neighbors);
     }
     
     if (config.verbose)
@@ -680,7 +680,7 @@ void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 1.8 - a quantum circuit simulator\n";
+    cout << "Rollright ver 1.9 - a quantum circuit simulator\n";
     cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
 //    char hostname[30] = {};

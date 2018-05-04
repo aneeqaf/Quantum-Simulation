@@ -81,6 +81,8 @@ public:
     bool print_idx;
     bool ascii;
     bool approx;
+    bool nearest_neighbors;
+    bool row_major;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -93,8 +95,8 @@ public:
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
     cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), czp_append_len(0), cz_num_bits(0),
     dfs_length(0), depth(26), th(0), num_threads(1),
-    vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), approx(true),
-    sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
+    vcut(0), hcut(0), google(true), print_amp(false), print_idx(false), ascii(false), approx(true), nearest_neighbors(true),
+    row_major(true), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
     Config(const idx_size amp_size,
            const string ifile,
            const string pfile,
@@ -119,7 +121,9 @@ public:
            const int d = 26,
            const int t = 0,
            const int n_threads = 1,
-           const bool google = true);
+           const bool google = true,
+           const bool near_neighbors = true,
+           const bool row_maj = true);
     Config(const Config& rhs);
     Config& operator=(const Config& rhs);
     ~Config();

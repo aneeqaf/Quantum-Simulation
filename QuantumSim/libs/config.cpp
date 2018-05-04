@@ -141,10 +141,13 @@ Config(const idx_size amp_size,
        const int d,
        const int t,
        const int n_threads,
-       const bool google) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
+       const bool google,
+       const bool near_neighbors,
+       const bool row_maj) : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
 misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), czp_append_len(cz_append_l),
 cz_num_bits(cz_len), approx_epsilon(epsilon), dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc),
-google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx), sim_type(sim), verbose(v), curr_mode(Phase1)
+google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx), sim_type(sim), verbose(v),
+curr_mode(Phase1), nearest_neighbors(near_neighbors), row_major(row_maj)
 {
     if (!print_amp)
         mmap_obj = new MMapContent();
@@ -246,6 +249,8 @@ Config(const Config& rhs)
     else mmap_obj = new MMapContent();
     ascii = rhs.ascii;
     approx = rhs.approx;
+    nearest_neighbors = rhs.nearest_neighbors;
+    row_major = rhs.row_major;
 }
 
 Config& Config::
@@ -279,6 +284,8 @@ operator=(const Config& rhs)
     mmap_obj = rhs.mmap_obj;
     ascii = rhs.ascii;
     approx = rhs.approx;
+    nearest_neighbors = rhs.nearest_neighbors;
+    row_major = rhs.row_major;
     if (print_amp) swap(mmap_obj, temp.mmap_obj);
     else mmap_obj = new MMapContent();
     return *this;

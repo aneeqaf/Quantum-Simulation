@@ -75,17 +75,31 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 
 	return print_opt
 
-def BuildDistCommand(command, sim_type, num_threads, num_highq, h_cut = 0, v_cut = 0):
+def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_major ,\
+ 					depth , no_nearest_neighbors, h_cut = 0, v_cut = 0):
 	if h_cut:
-		return command + " --num_threads " + str(num_threads) + " --sim_type " \
+		command += " --num_threads " + str(num_threads) + " --sim_type " \
 		+ str(sim_type) + " --hcut " + str(h_cut) + " --high_value_q " + str(num_highq)
 	elif v_cut:
-		return command + " --num_threads " + str(num_threads) + " --sim_type " \
+	   command += " --num_threads " + str(num_threads) + " --sim_type " \
 		+ str(sim_type) + " --vcut " + str(v_cut) + " --high_value_q " + str(num_highq)
 	else:
-		return command + " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type) \
+	    command += " --num_threads " + str(num_threads) + " --sim_type " + str(sim_type) \
 		+ " --high_value_q " + str(num_highq)
 	
+	if approx:
+		command += " --approx " + str(fid)
+
+	if depth:
+		command += " --depth " + str(depth)
+
+	if col_major:
+		command += " --grid_type c"
+
+	if no_nearest_neighbors:
+		command += " --no_nearest_neighbors"
+
+	return command
 
 def TrialRunEval(report_file, num_CZ, start_time, end_time, app_cz_len = 0, dfs_len = 0):
 	rep_time = "" #re.compile(r'(?<=Runtime)\w+')
@@ -229,7 +243,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 			cut = "vertical-cut" 
 			command = commandV 
 			num_xCZ = num_xCZV 
-	elif H_time > 1e-1 or V_time > 1e-1:
+	elif H_time > 1 or V_time > 1:
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
 		command = commandH if (float(H_time) <= float(V_time)) else commandV
 		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV

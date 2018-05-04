@@ -24,6 +24,7 @@ from math import sqrt, floor, ceil
 @click.option("--proc_prefix_bits", required=False, nargs=1, default=0)
 @click.option("--ranges_bits", nargs=1, required=False, default=0)
 @click.option("--branch_bits", nargs=1, required=False, default=0)
+@click.option("--column_major", nargs=1, required=False, is_flag=True)
 @click.option("--num_batches", nargs=1, required=False, default=0)
 @click.option("--num_threads", nargs=1, required=False, default=4)
 @click.option("--num_highq", nargs=1, required=False, default=0)
@@ -38,9 +39,10 @@ from math import sqrt, floor, ceil
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--multiple_nodes", nargs=1, required=False, is_flag=True)
 @click.option("--cont_cz_paths", nargs=1, required=False, is_flag=True)
+@click.option("--no_nearest_neighbors", nargs=1, required=False, is_flag=True)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
- approx, test_fid, multiple_nodes, cont_cz_paths):
+ approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors):
 
 	dist_util.CheckInputFile(circuit)
 
@@ -48,9 +50,6 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	max_threads = cpu_count()
 	binary = "./bin/rr "
 	command = binary + "-i " + circuit 
-
-	if depth:
-		command += " -d " + str(depth)
 
 	if not num_batches:
 		num_batches = int(max_threads/num_threads);
@@ -75,8 +74,10 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		cir_name = file_name[0] + "_" + str(depth) + "_"
 	# os.makedirs(cir_dir)
 
-	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, h_cut = h_cut) 
-	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, v_cut = v_cut) 
+	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
+	depth, no_nearest_neighbors, h_cut = h_cut) 
+	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, approx, column_major,
+	depth, no_nearest_neighbors, v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
@@ -125,8 +126,6 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		num_bit_strings = len(cz_bits_strings)
 
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, print_idxs, num_idx)
-	if approx:
-		command += " -a " + str(fid)
 	command += " --CZ_path "
 
 	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches

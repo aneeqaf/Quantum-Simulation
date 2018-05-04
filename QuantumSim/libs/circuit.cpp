@@ -134,7 +134,8 @@ GroupSimilarGates()
 }
 
 int Circuit::
-MovexCZGates(const QubitPartition& qp)
+MovexCZGates(const QubitPartition& qp,
+             const bool nearest_neigbors)
 {
     int total_xCZ_count = 0, count_CZ = 0;
     int num_q_1 = qp.getNumQubits() - 1;
@@ -146,6 +147,18 @@ MovexCZGates(const QubitPartition& qp)
              for (; j < gates.size() && gates[j].ids.back() == Gate::Type::Z; ++j) {
                  ++count_CZ;
                  int q0 = num_q_1 - gates[j].qubits.front(), q1 = num_q_1 - gates[j].qubits.back();
+                 
+                 if (nearest_neigbors) {
+                     int x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
+                     x1 = q1 % qp.GetColumns(), y1 = q1 / qp.GetColumns();
+                     
+                     if (!((x0 == x1 && (y0 + 1 == y1 || y0 - 1 == y1))
+                           || ((x0 + 1 == x1 || x0 - 1 == x1) && (y0 == y1)))) {
+                         cerr << "\n\n2 qubit gates are not acting on nearest neighbors.\n";
+                         exit(1);
+                     }
+                 }
+                 
                  if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) 
                     swap(gates[i + count_xCZ++], gates[j]);
              }

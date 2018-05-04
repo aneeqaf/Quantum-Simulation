@@ -82,6 +82,7 @@ public:
                         const Config::SimType type,
                         const int hcut = 0,
                         const int vcut = 0,
+                        const bool row_major = true,
                         const int verb = 3);
     AdaptiveStateVector(const AdaptiveStateVector& rhs);
     AdaptiveStateVector& operator=(const AdaptiveStateVector& rhs);

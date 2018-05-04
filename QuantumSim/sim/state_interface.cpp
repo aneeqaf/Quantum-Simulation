@@ -101,11 +101,15 @@ QubitPartition(int rows,
 QubitPartition::
 QubitPartition(const Cuts cut_type,
                int total_qubits,
+               bool row_major,
                int cut)
 {
-    const int y_axis = FindDivisor(total_qubits),
+    int y_axis = FindDivisor(total_qubits),
     x_axis = total_qubits/y_axis,
     num_q_1 = total_qubits - 1;
+    
+    if (!row_major)
+        swap(y_axis, x_axis);
     
     if (cut_type == QubitPartition::Cuts::Horizontal) {
         const int block_bits = cut ? (cut * x_axis) : (ceil(y_axis/2.0)  * x_axis);

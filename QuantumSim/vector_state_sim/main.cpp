@@ -93,13 +93,15 @@ int main(int argc, char *argv[])
         { "hcut",    required_argument,       nullptr, '_' },
         { "verbose",    required_argument,       nullptr, 'v' },
         { "CZ_path",    required_argument,       nullptr, 'c' },
-        { "norm_est",    required_argument,       nullptr, 'n' },
+        { "norm_est",    required_argument,       nullptr, 'e' },
+        { "grid_type",    required_argument,       nullptr, 'm' },
+        { "no_nearest_neighbors",    no_argument,       nullptr, 'n' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
-    print_idx = false, valid = false, ascii = false, approx = false;
+    print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0;
@@ -113,7 +115,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:n:h", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:n:h:e:m:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -171,6 +173,20 @@ int main(int argc, char *argv[])
             case 'd': {
                 string s_d = string(optarg);
                 depth = stoi(s_d);
+                break;
+            }
+            case 'e': {
+                if (cz_len) {
+                    cerr << "Please specify either norm estimation or CZ_path simulation.\n";
+                    exit(1);
+                }
+                string n_str = string(optarg);
+                if (n_str.find(",") == string::npos) {
+                    cerr << "Missing argument in the norm estimation mode\n";
+                    exit(1);
+                }
+                norm_perc = stof(n_str.substr(0, n_str.find(",")));
+                norm_depth = stoi(n_str.substr(n_str.find(",") + 1));
                 break;
             }
             case 'q': {
@@ -237,6 +253,21 @@ int main(int argc, char *argv[])
                 
                 break;
             }
+            case 'm': {
+                string grid_type = string(optarg);
+                
+                if (grid_type == "c" || grid_type == "column_major")
+                    row_major = false;
+                else if (!(grid_type == "r" || grid_type == "row_major")) {
+                    cerr << "Incorrect grid type. Please choose between \"r\" (row_major) or \"c\" (column_major).\n";
+                    exit(1);
+                }
+                break;
+            }
+            case 'n': {
+                nearest_neighbors = false;
+                break;
+            }
             case 'o': {
                 to_write = true;
                 if (!valid) {
@@ -252,20 +283,6 @@ int main(int argc, char *argv[])
                 if (p != string::npos)
                     out_file = out_file.substr(0, p);
                 
-                break;
-            }
-            case 'n': {
-                if (cz_len) {
-                    cerr << "Please specify either norm estimation or CZ_path simulation.\n";
-                    exit(1);
-                }
-                string n_str = string(optarg);
-                if (n_str.find(",") == string::npos) {
-                    cerr << "Missing argument in the norm estimation mode\n";
-                    exit(1);
-                }
-                norm_perc = stof(n_str.substr(0, n_str.find(",")));
-                norm_depth = stoi(n_str.substr(n_str.find(",") + 1));
                 break;
             }
             case 's': {
@@ -381,8 +398,9 @@ int main(int argc, char *argv[])
     Config config(1ull << cir.GetNumQubits(), input_filename.substr(input_filename_pos) ,
                   "output/probabilities/" + out_file,
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
-                  cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx, (Config::SimType) sim_type, verbose, vcut, hcut, depth,
-                  threshold, num_threads);
+                  cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx,
+                  (Config::SimType)sim_type, verbose, vcut, hcut, depth,
+                  threshold, num_threads, true, nearest_neighbors, row_major);
     
     if (print_amp) {
         if (seed != -1)
@@ -407,13 +425,13 @@ int main(int argc, char *argv[])
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Horizontal, hcut, vcut,
-                                      (Config::SimType)sim_type, config.verbose);
+                                      (Config::SimType)sim_type, row_major, config.verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
-                                      (Config::SimType)sim_type, config.verbose);
+                                      (Config::SimType)sim_type, row_major, config.verbose);
         
         if (threshold == 0) {
             int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
@@ -425,7 +443,7 @@ int main(int argc, char *argv[])
     }
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
-                                             hcut, vcut, config.verbose);
+                                             hcut, vcut, row_major, config.verbose);
         if (!config.indices.empty())
             amp.PopulateGlobalToLocalMap(config.indices);
         
@@ -441,7 +459,7 @@ int main(int argc, char *argv[])
     }
     else {
         AdaptiveStateVector amp(cir.GetNumQubits(),
-                                (Config::SimType)sim_type, hcut, vcut, config.verbose);
+                                (Config::SimType)sim_type, hcut, vcut, row_major, config.verbose);
         sim.Simulate(amp, cir);
     }
     return 0;

@@ -13,6 +13,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                 const Config::SimType type,
                                 const int hcut,
                                 const int vcut,
+                                const bool row_major,
                                 const int verb): num_addends(1)
 {
     sim_type = type;
@@ -24,6 +25,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               hcut,
                                                               vcut,
                                                               sim_type,
+                                                              row_major,
                                                               verb));
     else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV
              || type == Config::SimType::ApproxCZPathV2011)
@@ -32,6 +34,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               hcut,
                                                               vcut,
                                                               sim_type,
+                                                              row_major,
                                                               verb));
     else if (sim_type == Config::SimType::Approx2011OWT || sim_type == Config::SimType::Approx_i11iOWT) {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
@@ -39,12 +42,14 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               hcut,
                                                               vcut,
                                                               sim_type,
+                                                              row_major,
                                                               verb));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               QubitPartition::Cuts::Vertical,
                                                               hcut,
                                                               vcut,
                                                               sim_type,
+                                                              row_major,
                                                               verb));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
@@ -56,12 +61,14 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               hcut,
                                                               vcut,
                                                               Config::SimType::LosslessH,
+                                                              row_major,
                                                               verb));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               QubitPartition::Cuts::Vertical,
                                                               hcut,
                                                               vcut,
                                                               Config::SimType::LosslessV,
+                                                              row_major,
                                                               verb));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();

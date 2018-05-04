@@ -31,8 +31,11 @@ Rollright was developed in c++17 and uses g++7.
 	* Initially, simulations consumes the process prefix and subsequent CZ bits from the specified range. Then, a branching simulation is performed for specified number of bits. 
 	* Defines the CZ path for CZ gates that cross partitions for distributed simulation.
 * **--depth, -d** 
-	* Must be followed by an integer to specify the number of cycles to simulate
+	* Must be followed by an integer to specify the number of cycles to simulate.
 	* The default setting simulates all cycles specified in the input.
+* **--grid_type, -m**
+        * Must be followed by a string specifying the type of 2D circuit : "c" or "column_major", "r" or "row_major".
+        * Default is row major.
 * **--hcut, -_**
 	* Must be followed by an integer that specifies one side of a horizontal cut in a circuit.
 	* The program calculates the size of the other partition given number of qubits in the first partition.
@@ -47,6 +50,8 @@ Rollright was developed in c++17 and uses g++7.
 	* Optionally, end the two integers argument with a '+' to print the generated indices to a file.
 	* The program prints the values of the amplitudes in the specified indices to a file in `output\amp_vectors\<dirname pertaining to circuit>\<filename>.amps` or `output\amp_vectors\<filename>.amps`. `<filename>` can be specified using the -o option. Providing a `<filename>` is recommended for distributed simulation to simplify recollection of files for computations. 
 	* Generated indices are printed in `output\amp_vectors\<dirname>\<filename>.idx` or `output\amp_vectors\<filename>.idx`
+* **--no_nearest_neighbors, -n**
+        * If specified then the simulator does not check to make sure all two qubits gates are acting on nearest neighbors.
 * **--num_threads, -t**
 	* Must be followed by an integer.
 	* Sets a maximum limit on the number of threads to be used 

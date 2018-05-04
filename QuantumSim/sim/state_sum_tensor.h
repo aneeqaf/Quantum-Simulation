@@ -107,6 +107,7 @@ public:
                                     const Config::SimType type,
                                     const int hcut = 0,
                                     const int vcut = 0,
+                                    const bool row_major = true,
                                     const int verb = 3);
     SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs);
     SumOfTensorsProductsStateVector& operator=(const SumOfTensorsProductsStateVector& rhs);
