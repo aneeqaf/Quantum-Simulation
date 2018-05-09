@@ -388,7 +388,8 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
 }
 
 void Circuit::
-CreateQuiddProScript(const string& out_file)
+CreateQuiddProScript(const string& out_file,
+                     int layers_last_H)
 {
     ofstream file;
     file.open(out_file);
@@ -472,6 +473,14 @@ CreateQuiddProScript(const string& out_file)
         }
         else {
             file << "state = op0 * state";
+        }
+    }
+    if (layers_last_H && gates.back().ids.back() != Gate::Type::Hadamard) {
+        for (int j = 0; j < layers_last_H; ++j) {        
+            for (int i = 0; i < qubits; ++i) {
+                file << ";\nop0 = cu_gate(hadamard(1), \"x" << i + 1 << "\" ," << qubits
+                << ");\nstate = op0 * state";
+            }
         }
     }
 }

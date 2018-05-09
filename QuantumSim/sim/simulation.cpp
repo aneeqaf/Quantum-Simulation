@@ -420,13 +420,21 @@ SimulationLoop(GenericQuantumState &amp,
                 idx_size prev_i_XY = i;
                 bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
                 bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                bool last_cycle = false;
+                
+                if ((config.last_layers_H && i == size)
+                    || (i < size && circuit.GetGateFromIndex(i).ids.back() == Gate::Type::Hadamard)) {
+                    last_cycle = true;
+                    config.last_layers_H--;
+                }
 
                 int last_xCZ_idx = -1;
                 if (X_bitmask != 0 || Y_bitmask != 0)
-                    last_xCZ_idx = amp.ApplyLoXYAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask,
-                                                                 CZ_bitmasks, T_bitmasks, config.th);
+                    last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask,
+                                                                 CZ_bitmasks, T_bitmasks, config.th, last_cycle);
                 else
-                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks, T_bitmasks);
+                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks, T_bitmasks, last_cycle);
+                
                 terminate = last_xCZ_idx != -1 ? true : false;
                 
                 if (amp.book_keep) {
@@ -454,6 +462,9 @@ SimulationLoop(GenericQuantumState &amp,
                     return terminate;
                 }
                 
+                if (last_cycle)
+                    i += circuit.GetNumQubits();
+            
                 --i;
                 
                 CZ_T_top_time += CZT_time.GetElapsedTime();
@@ -489,7 +500,7 @@ SimulationLoop(GenericQuantumState &amp,
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 
                 cycle_time.StartTime();
-                amp.ApplyHGateOnAllAmps();
+                amp.ApplyHGateOnAllAmps(i != 0);
                 if (config.curr_mode != Config::SimMode::Phase2)
                     amp.count_of_category.H += circuit.GetNumQubits();
                 i += total_circuit_qubits - 1;
@@ -517,6 +528,11 @@ SimulationLoop(GenericQuantumState &amp,
         }
     }
     
+    while (config.last_layers_H) {
+        amp.ApplyHGateOnAllAmps(true);
+        --config.last_layers_H;
+    }
+    
     curr_gate = circuit.GetTotalNumGates();
     return terminate;
 }
@@ -527,7 +543,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
@@ -1130,7 +1146,7 @@ PrintSimReport(GenericQuantumState& amp,
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "\tH (" + to_string(amp.count_of_category.H) +  ")";
+        string H_s = "\tH (" + to_string(amp.count_of_category.H/factor1) +  ")";
         ss << H_s << setw(35 - (int)H_s.size()) << right << ": " << amp.time_by_category.H
         << " s\t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 

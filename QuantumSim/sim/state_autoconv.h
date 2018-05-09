@@ -22,11 +22,12 @@ public:
     int ApplyBlockOfDiagGates(string& cz_bits,
                               idx_size prefix_size,
                                const bitset<128>* __restrict CZ_bitmasks,
-                               const bitset<128>  T_bitmasks[2]);
+                               const bitset<128>  T_bitmasks[2],
+                              const bool last_cycle = false);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
                        const Gate& g = {});
-    void ApplyHGateOnAllAmps();
+    void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
     void ApplyCGate(const int num_controls,
                     const vector<int>& gate_qubits,
                     const Gate& g,
@@ -40,13 +41,14 @@ public:
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
                                    int th);
-    int ApplyLoXYAndCZTInSamePass(string& cz_bits,
+    int ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                                    idx_size prefix_size,
                                    bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
                                    const bitset<128>* __restrict CZ_bitmasks,
                                    const bitset<128> T_bitmasks[2],
-                                   int th);
+                                   int th,
+                                  bool last_cycle = false);
     void CopyState(const AdaptiveStateVector& rhs);
     
     cmplx operator[](bitset<128> i);

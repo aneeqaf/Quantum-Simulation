@@ -93,6 +93,21 @@ const __m256 knegZ[4] = {{0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
 //}
 
 __attribute__((always_inline)) inline void
+ApplyHGateAVX(cmplx* __restrict amp,
+            const idx_size* indices /*2*/)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    
+    __m256 t0 = _mm256_add_ps(a0, a1);
+    __m256 t1 = _mm256_sub_ps(a0, a1);
+    
+    _mm256_store_ps(&t_amp[2*indices[0]], t0);
+    _mm256_store_ps(&t_amp[2*indices[1]], t1);
+}
+
+__attribute__((always_inline)) inline void
 ApplyX12GateAVX(cmplx* __restrict amp,
                 const idx_size* indices /*2*/)
 {
@@ -149,6 +164,32 @@ ApplyY12GateAVX(cmplx* __restrict amp,
     
     _mm256_store_ps(&t_amp[2*indices[0]], a0);
     _mm256_store_ps(&t_amp[2*indices[1]], a1);
+}
+
+__attribute__((always_inline)) inline void
+ApplyHHGateAVX(cmplx* __restrict amp,
+               const idx_size* indices /*4*/)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
+    __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+    
+    const __m256 t0 = _mm256_add_ps(a0, a3);
+    const __m256 t1 = _mm256_sub_ps(a0, a3);
+    const __m256 t2 = _mm256_add_ps(a1, a2);
+    const __m256 t3 = _mm256_sub_ps(a1, a2);
+    
+    a0 = _mm256_sub_ps(t0, t2);
+    a1 = _mm256_add_ps(t1, t3);
+    a2 = _mm256_sub_ps(t1, t3);
+    a3 = _mm256_add_ps(t0, t2);
+    
+    _mm256_store_ps(&t_amp[2*indices[0]], a3);
+    _mm256_store_ps(&t_amp[2*indices[1]], a2);
+    _mm256_store_ps(&t_amp[2*indices[2]], a1);
+    _mm256_store_ps(&t_amp[2*indices[3]], a0);
 }
 
 __attribute__((always_inline)) inline void
@@ -354,16 +395,21 @@ XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
                     const int num_qubits,
-                    const int num_threads,
-                    const ZeroOptMask& zero_opt_mask);
+                    const int num_threads);
 
 idx_size
-XYFastTransformHighQ(cmplx* __restrict amp,
+XYHFastTransformHighQ(cmplx* __restrict amp,
                      idx_size X_bitmask,
                      idx_size Y_bitmask,
                      const int num_qubits,
                      const int num_threads,
-                     const ZeroOptMask& zero_opt_mask);
+                     const ZeroOptMask& zero_opt_mask,
+                     const bool last_cycle = false);
+
+void ApplyHGates(cmplx* __restrict amp,
+                 int num_qubits,
+                 int num_threads,
+                 idx_size gate_bm);
 
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
@@ -380,13 +426,15 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const ZeroOptMask& zero_opt_mask);
 
 idx_size
-ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
+ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                  const int num_qubits_amp,
                                  const idx_size* __restrict CZ_bitmasks,
                                  const idx_size* __restrict T_bitmasks,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
+                                  const idx_size Lo_H_bitmask,
                                  const int num_threads,
                                  const int num_high_qubits,
-                                 const ZeroOptMask& zero_opt_mask);
+                                 const ZeroOptMask& zero_opt_mask,
+                                  const bool last_cycle = false);
 #endif /* kernelsAVX_h */

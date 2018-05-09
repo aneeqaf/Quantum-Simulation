@@ -15,7 +15,11 @@ min_prob(numeric_limits<double>::max()), global_factor_power(0), global_i_counte
 num_qubits(qubits), zero_opt_mask(num_qubits)
 {
     amp_size = 1ull << qubits;
-    posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
+    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
+        cerr << "Memory requirement exceeds availiable memory for aligned storage.";
+        free(amp);
+        exit(err);
+    }
     memset(amp, 0, amp_size * sizeof(amp));
     amp[0] = 1;
 }
@@ -78,7 +82,8 @@ int FullAmpStateVector::
 ApplyBlockOfDiagGates(string& cz_bits,
                       idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128>  T_bitmasks[2])
+                      const bitset<128>  T_bitmasks[2],
+                      const bool last_cycle)
 {
     Time time;
     time.StartTime();
@@ -88,17 +93,26 @@ ApplyBlockOfDiagGates(string& cz_bits,
     for (int i = 0; i < num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
+    int bits_for_H = num_qubits < 12 ? num_qubits : (num_qubits - 12);
+    
     if (num_qubits >= 4) {
-#ifdef Parallel
-        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads, zero_opt_mask);
-#else
-        ApplyBlockOfCZTGatesAVXSeq(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
-#endif
+        ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
+                                          T_bitmasks_64, 0, 0, ((1ull << bits_for_H) - 1), num_threads, 12,
+                                          zero_opt_mask, last_cycle);
+//        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads, zero_opt_mask);
     }
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
     
+    if (last_cycle) {
+        ApplyHGates(amp, num_qubits, num_threads,
+                    (((1ull << num_qubits) - 1) & ~((1ull << bits_for_H) - 1)) >> bits_for_H);
+    }
+    
     time_by_category.CZ_T += time.GetElapsedTime();
+    
+    if (last_cycle)
+        global_factor_power += num_qubits;
     
     return -1;
 }
@@ -138,20 +152,23 @@ ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 }
 
 void FullAmpStateVector::
-ApplyHGateOnAllAmps()
+ApplyHGateOnAllAmps(bool not_cycle_0)
 {
     Time time;
     time.StartTime();
     
-    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
-    
-    #pragma omp parallel for num_threads(num_threads)
-    for (idx_size i = 0; i < amp_size; i += 4) {
-        __m256 t = _mm256_load_ps(t_amp + (2 * i));
-        t = _mm256_or_ps(t, re_ones);
-        _mm256_store_ps(t_amp + (2 * i), t);
+    if (!not_cycle_0) {
+        float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+        constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
+        
+        #pragma omp parallel for num_threads(num_threads)
+        for (idx_size i = 0; i < amp_size; i += 4) {
+            __m256 t = _mm256_load_ps(t_amp + (2 * i));
+            t = _mm256_or_ps(t, re_ones);
+            _mm256_store_ps(t_amp + (2 * i), t);
+        }
     }
+    else ApplyHGates(amp, num_qubits, num_threads, (1ull << num_qubits) - 1);
     
     global_factor_power += num_qubits;
     
@@ -174,7 +191,7 @@ ApplyMergedXYGate(const Gate& gate1,
     Time time;
     time.StartTime();
     
-    Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits, zero_opt_mask);
+    Apply2MergedXY12Gates(gate1, gate2, amp, num_qubits);
     
     global_factor_power += 2;
     
@@ -223,7 +240,7 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     
     if (odd_Xi && odd_Yi) {
         global_factor_power += 2;
-        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, num_qubits, zero_opt_mask);
+        Apply2MergedXY12Gates(all_gates[odd_Xi], all_gates[odd_Yi], amp, num_qubits);
     }
 }
 
@@ -312,7 +329,7 @@ ApplyOddGates(idx_size& X_bitmask,
     
     if (!(X_q == 1000 && Y_q == 1000)) {
         if (X_q < Y_q) {
-            Apply1QXYGates(amp, X_q, num_qubits, Gate::Type::X_1_2, num_threads);
+            Apply1QXYHGates(amp, X_q, num_qubits, Gate::Type::X_1_2, num_threads);
             X_bitmask ^= 1ull << X_q;
             --num_X_bits;
             global_factor_power += 2;
@@ -321,7 +338,7 @@ ApplyOddGates(idx_size& X_bitmask,
                 ++count_of_category.X1_2;
         }
         else {
-            Apply1QXYGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
+            Apply1QXYHGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
             Y_bitmask ^= 1ull << Y_q;
             --num_Y_bits;
             global_factor_power += 2;
@@ -406,23 +423,24 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     
     time.StartTime();
     if (X_bitmask_64 || Y_bitmask_64) {
-        //Process low qubits first
+        //Process low qubits first,
         global_i_counter += XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask,
-                                                num_qubits, num_threads, zero_opt_mask);
+                                                num_qubits, num_threads);
         global_i_counter += XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask,
-                                            num_qubits, num_threads, zero_opt_mask);
+                                            num_qubits, num_threads, zero_opt_mask, th);
     }
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
 }
 
 int FullAmpStateVector::
-ApplyLoXYAndCZTInSamePass(string& cz_bits,
+ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                           idx_size prefix_size,
                           bitset<128> X_bitmask,
                           bitset<128> Y_bitmask,
                           const bitset<128>* __restrict CZ_bitmasks,
                           const bitset<128> T_bitmasks[2],
-                          int th)
+                          int th,
+                          bool last_cycle)
 {    
     Time time;
     time.StartTime();
@@ -437,6 +455,8 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     idx_size hiq_Y_bitmask = Y_bitmask_64 & ((1ull << th) - 1);
     idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
     idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
+    idx_size hiq_H_bitmask = (1ull << th) - 1;
+    idx_size loq_H_bitmask = ((1ull << num_qubits) - 1) & ~((1ull << th) - 1);
     int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask);
     int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
     
@@ -445,15 +465,13 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
     
     pair<int, int> odd_bit_low_XY = GetMostSigOddBit(loq_X_bitmask, loq_Y_bitmask,
                                                      num_lo_X_bits, num_lo_Y_bits);
+   
+    loq_H_bitmask ^= odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first;
     
-    if (loq_X_bitmask || loq_Y_bitmask)
-        global_i_counter += ApplyBlockOfCZTAndLowQXYGatesAVX(amp, num_qubits, CZ_bitmasks_64,
-                                                             T_bitmasks_64, loq_X_bitmask >> th,
-                                                             loq_Y_bitmask >> th, num_threads,th,
-                                                             zero_opt_mask);
-    else
-        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64,
-                                        T_bitmasks_64, num_threads, zero_opt_mask);
+    global_i_counter += ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
+                                                         T_bitmasks_64, loq_X_bitmask >> th,
+                                                         loq_Y_bitmask >> th, loq_H_bitmask >> th, num_threads,th,
+                                                         zero_opt_mask, last_cycle);
     
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     
@@ -471,12 +489,23 @@ ApplyLoXYAndCZTInSamePass(string& cz_bits,
         ApplyOddGates(hiq_X_bitmask, hiq_Y_bitmask, num_hi_X_bits, num_hi_Y_bits);
     
     time.StartTime();
-    if (hiq_X_bitmask || hiq_Y_bitmask)
-        global_i_counter += XYFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask,
-                                                 num_qubits, num_threads, zero_opt_mask);
+    if (hiq_X_bitmask || hiq_Y_bitmask) {
+        hiq_H_bitmask ^= (hiq_X_bitmask | hiq_Y_bitmask) ^ (odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first);
+        global_i_counter += XYHFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask,
+                                                 num_qubits, num_threads, zero_opt_mask,
+                                                 last_cycle);
+    }
+    
+    if (last_cycle && hiq_H_bitmask)
+        ApplyHGates(amp, num_qubits, num_threads, hiq_H_bitmask);
+    
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
+    
+    if (last_cycle)
+        global_factor_power += num_qubits;
+    
     if (book_keep) {
         count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
         count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;

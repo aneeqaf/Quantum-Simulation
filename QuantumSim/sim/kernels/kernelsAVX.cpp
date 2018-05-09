@@ -228,15 +228,17 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
 }
 
 idx_size
-ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
+ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                  const int num_qubits_amp,
                                  const idx_size* __restrict CZ_bitmasks,
                                  const idx_size* __restrict T_bitmasks,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
+                                  const idx_size Lo_H_bitmask,
                                  const int num_threads,
                                  const int num_high_qubits,
-                                 const ZeroOptMask& zero_opt_mask)
+                                 const ZeroOptMask& zero_opt_mask,
+                                 const bool last_cycle)
 {
     const idx_size amp_size = (1ull << num_qubits_amp),
     block_size = amp_size > (1u << (num_qubits_amp - num_high_qubits))
@@ -252,12 +254,20 @@ ApplyBlockOfCZTAndLowQXYGatesAVX(cmplx* __restrict amp,
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
         if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
-            bool all_zeros = false;ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
-                                                   num_threads, block_begin, block_size, zero_opt_mask);
+            bool all_zeros = false;
+            ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+                                  num_threads, block_begin, block_size, zero_opt_mask);
+
+            if (!all_zeros) {
+               if  (Lo_X_bitmask || Lo_Y_bitmask)
+                   i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
+                                              Lo_Y_bitmask, block_bits, num_threads);
+                
+                if (last_cycle)
+                    ApplyHGates(amp + (offset_idx * block_size), block_bits, num_threads, Lo_H_bitmask);
+            }
             
-            if (!all_zeros)
-                i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
-                                              Lo_Y_bitmask, block_bits, num_threads, zero_opt_mask);
+            
         }
 //        else {
 //            cout << "Zero bm : " << zero_opt_mask.print() << endl;

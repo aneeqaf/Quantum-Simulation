@@ -50,7 +50,8 @@ public:
                              int clock_cycles);
     void WriteGeneratedCircuitFile(const string& out_file,
                                    const idx_size size_q);
-    void CreateQuiddProScript(const string& out_file);
+    void CreateQuiddProScript(const string& out_file,
+                              int layers_last_H = 0);
     
     int GetNumQubits() const;
     idx_size GetTotalNumGates() const;

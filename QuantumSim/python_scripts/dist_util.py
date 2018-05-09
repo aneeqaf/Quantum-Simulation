@@ -76,7 +76,7 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 	return print_opt
 
 def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_major ,\
- 					depth , no_nearest_neighbors, h_cut = 0, v_cut = 0):
+ 					depth , no_nearest_neighbors, layers_Hgates_b4_meas, h_cut = 0, v_cut = 0):
 	if h_cut:
 		command += " --num_threads " + str(num_threads) + " --sim_type " \
 		+ str(sim_type) + " --hcut " + str(h_cut) + " --high_value_q " + str(num_highq)
@@ -88,7 +88,7 @@ def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_majo
 		+ " --high_value_q " + str(num_highq)
 	
 	if approx:
-		command += " --approx " + str(fid)
+		command += " --approx " + str(approx)
 
 	if depth:
 		command += " --depth " + str(depth)
@@ -98,6 +98,9 @@ def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_majo
 
 	if no_nearest_neighbors:
 		command += " --no_nearest_neighbors"
+
+	if layers_Hgates_b4_meas:
+		command += " --layers_Hgates_b4_meas " + str(layers_Hgates_b4_meas)
 
 	return command
 
@@ -243,7 +246,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 			cut = "vertical-cut" 
 			command = commandV 
 			num_xCZ = num_xCZV 
-	elif H_time > 1 or V_time > 1:
+	elif num_xCZV == num_xCZH:
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
 		command = commandH if (float(H_time) <= float(V_time)) else commandV
 		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV

@@ -13,6 +13,19 @@
 using namespace std;
 
 __attribute__((always_inline)) inline void
+ApplyHGate(cmplx* __restrict amp,
+             const idx_size* indices)
+{
+    cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))
+        return;
+    
+    amp[indices[0]] = temp_amp[0] + temp_amp[1];
+    amp[indices[1]] = temp_amp[0] - temp_amp[1];
+}
+
+__attribute__((always_inline)) inline void
 ApplyX12Gate(cmplx* __restrict amp,
               const idx_size* indices)
 {
@@ -36,6 +49,27 @@ ApplyY12Gate(cmplx* __restrict amp,
     
     amp[indices[0]] = (temp_amp[0]*Y12[0][0]) + (temp_amp[1]*Y12[0][1]);
     amp[indices[1]] = (temp_amp[0]*Y12[1][0]) + (temp_amp[1]*Y12[1][1]);
+}
+
+__attribute__((always_inline)) inline void
+ApplyHHGate(cmplx* __restrict amp,
+            const idx_size* indices /*4*/)
+{
+    const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
+    
+    if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
+        && amp[indices[2]] == cmplx(0,0) && amp[indices[3]] == cmplx(0,0))
+        return;
+    
+    const auto t0 = a[0] + a[3];
+    const auto t1 = a[0] - a[3];
+    const auto t2 = a[1] + a[2];
+    const auto t3 = a[1] - a[2];
+    
+    amp[indices[0]] = t0 + t2;
+    amp[indices[1]] = t1 - t3;
+    amp[indices[2]] = t1 + t3;
+    amp[indices[3]] = t0 - t2;
 }
               
 __attribute__((always_inline)) inline void
@@ -196,35 +230,34 @@ ApplyGateOnAmps(cmplx* __restrict amp,
 
 template<typename function>
 void
-Apply2MergedXY12GatesHelper(cmplx* __restrict amp,
-                            const idx_size gate_qubits,
-                            const int num_qubits_amp,
-                            const function& gate_func,
-                            const ZeroOptMask& zero_opt_mask,
-                            const idx_size add = 1);
+Apply2MergedGatesHelper(cmplx* __restrict amp,
+                        const idx_size gate_qubits,
+                        const int num_qubits_amp,
+                        const function& gate_func,
+                        const idx_size add = 1);
 
-__attribute__((always_inline)) inline void
+__attribute__((always_inline)) inline bool
 ApplyMergedXYFT(cmplx* __restrict amp,
                 const idx_size gates_bitmask,
                 const int gate_type,
-                const int num_qubits,
-                const ZeroOptMask& zero_opt_mask)
+                const int num_qubits)
 {
-    void (*XYApplicationFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12Gate, ApplyXY12Gate,
+    static void (*XYApplicationFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12Gate, ApplyXY12Gate,
         ApplyYY12Gate, ApplyYX12Gate};
-    void (*XYApplicationAVXFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12GateAVX, ApplyXY12GateAVX,
+    static void (*XYApplicationAVXFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12GateAVX, ApplyXY12GateAVX,
         ApplyYY12GateAVX, ApplyYX12GateAVX};
 
     bool AVX = (__builtin_ctzl(gates_bitmask) < num_qubits - 1
                 && __builtin_ctzl(gates_bitmask ^ (1ull << __builtin_ctzl(gates_bitmask))) < num_qubits - 2);
     
     if (AVX)
-        Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits,
-                                    XYApplicationAVXFuncs[gate_type], zero_opt_mask, 4);
+        Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
+                                XYApplicationAVXFuncs[gate_type], 4);
     else
-        Apply2MergedXY12GatesHelper(amp, gates_bitmask, num_qubits,
-                                    XYApplicationFuncs[gate_type], zero_opt_mask, 1);
+        Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
+                                XYApplicationFuncs[gate_type], 1);
 
+    return AVX;
 }
 
 void
@@ -273,7 +306,7 @@ ApplyCZDecomposition(cmplx* __restrict amp,
                      const Gate::Type gate_type);
 
 void
-Apply1QXYGates(cmplx* __restrict amp,
+Apply1QXYHGates(cmplx* __restrict amp,
                const int q,
                const int num_qubits,
                const Gate::Type gate_type,
@@ -283,8 +316,7 @@ void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
                       cmplx* __restrict amp,
-                      const int num_qubits_amp,
-                      const ZeroOptMask& zero_opt_mask);
+                      const int num_qubits_amp);
 
 idx_size
 XYFastTransformIterative(cmplx* __restrict amp,
@@ -298,8 +330,7 @@ idx_size
 ApplyHighQXYGates(cmplx* __restrict amp,
                   idx_size& X_bitmask,
                   idx_size& Y_bitmask,
-                  const int num_qubits,
-                  const ZeroOptMask& zero_opt_mask);
+                  const int num_qubits);
 
 idx_size
 XYFastTransform(cmplx* __restrict amp,
@@ -308,6 +339,6 @@ XYFastTransform(cmplx* __restrict amp,
                 const int num_qubits,
                 const int num_threads,
                 const ZeroOptMask& zero_opt_mask,
-                const int th = 16);
+                const int th);
 
 #endif /* kernels_h */

@@ -96,6 +96,7 @@ int main(int argc, char *argv[])
         { "norm_est",    required_argument,       nullptr, 'e' },
         { "grid_type",    required_argument,       nullptr, 'm' },
         { "no_nearest_neighbors",    no_argument,       nullptr, 'n' },
+        { "layers_Hgates_b4_meas",    required_argument,       nullptr, 'H' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
@@ -104,7 +105,7 @@ int main(int argc, char *argv[])
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0;
+    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0;
     float norm_perc = 0;
     idx_size cz_path = 0, epsilon = 0;
     int sim_type = -1;
@@ -115,7 +116,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:n:h:e:m:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -208,6 +209,10 @@ int main(int argc, char *argv[])
                     num_qubits.push_back(numQ);
                     num_gates.push_back(numG);
                 }
+                break;
+            }
+            case 'H': {
+                layers_H_gates = stoi(string(optarg));
                 break;
             }
             case 'h':{
@@ -383,7 +388,7 @@ int main(int argc, char *argv[])
             if(to_write && num_qubits[0] <= 20) {
                 cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file +
                                               to_string(i) + ".txt", cir.GetNumQubits());
-                cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro");
+                cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro", layers_H_gates);
             }
         }
     }
@@ -400,7 +405,7 @@ int main(int argc, char *argv[])
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
                   cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx,
                   (Config::SimType)sim_type, verbose, vcut, hcut, depth,
-                  threshold, num_threads, true, nearest_neighbors, row_major);
+                  threshold, num_threads, true, nearest_neighbors, row_major, layers_H_gates);
     
     if (print_amp) {
         if (seed != -1)
@@ -417,7 +422,7 @@ int main(int argc, char *argv[])
     if (sim_type == Config::FullState) {
         FullAmpStateVector amp(cir.GetNumQubits());
         if (threshold == 0)
-            sim.SetThreshold(cir.ComputeNumberOfHighValuedQubits(cir.GetNumQubits()));
+            sim.SetThreshold(cir.GetNumQubits()/2);
         
         sim.Simulate(amp, cir);
     }
@@ -433,11 +438,11 @@ int main(int argc, char *argv[])
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, config.verbose);
         
-        if (threshold == 0) {
-            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
-            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
-            sim.SetThreshold(num_q/2);
-        }
+//        if (threshold == 0) {
+//            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
+//            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
+//            sim.SetThreshold(num_q/2);
+//        }
         
         sim.Simulate(amp, cir);
     }
@@ -447,11 +452,11 @@ int main(int argc, char *argv[])
         if (!config.indices.empty())
             amp.PopulateGlobalToLocalMap(config.indices);
         
-        if (threshold == 0) {
-            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
-            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
-            sim.SetThreshold(num_q/2);
-        }
+//        if (threshold == 0) {
+//            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
+//            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
+//            sim.SetThreshold(num_q/2);
+//        }
         
         sim.Simulate(amp, cir);
         if (!config.indices.empty())
