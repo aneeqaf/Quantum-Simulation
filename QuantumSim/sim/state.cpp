@@ -93,7 +93,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
     for (int i = 0; i < num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
-    int bits_for_H = num_qubits < 12 ? num_qubits : (num_qubits - 12);
+    int bits_for_H = num_qubits < 12 ? num_qubits : 12;
     
     if (num_qubits >= 4) {
         ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,

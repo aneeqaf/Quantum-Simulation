@@ -107,13 +107,17 @@ void SequentialSimulation::
 NoCheckpointWithRanges(GenericQuantumState& amp,
                        Circuit& circuit)
 {
+    amps_of_interest.resize(config.indices.size(), 0);
+    
     config.cz_path <<= config.czp_append_len;
     idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
-    num_bits = config.cz_num_bits ? config.cz_num_bits + config.czp_append_len : config.norm_depth;
-
+    total_bits = config.cz_num_bits ? config.cz_num_bits + config.czp_append_len : config.norm_depth;
+    
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
-        string cz_path = bitset<128>(config.cz_path + cz_p).to_string().substr(128 - num_bits);
+        string cz_path = bitset<128>(config.cz_path + cz_p).to_string();
+        cz_path = cz_path.substr(cz_path.size() - total_bits);
         
+        amp.ResetAmpVector();
         Phase1Simulation(amp, circuit, cz_path, 0);
         
         auto& idx = config.indices;
@@ -127,7 +131,6 @@ NoCheckpointWithRanges(GenericQuantumState& amp,
         
         if (config.norm_perc)
             norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
-        amp.book_keep = false;
     }
 }
 
@@ -1274,7 +1277,7 @@ PrintSimReport(GenericQuantumState& amp,
         factor1 = (1ull << config.czp_append_len) * (1ull << config.dfs_length);
           
         ss << "\t\t\t\t\t\t\t\t  ----\n";
-        ss << "\tTotal \t\t\t\t\t\t\t\tval   " << sum_percen << "%\n";
+        ss << "\tTotal \t\t\t\t\t\t\t\t  " << sum_percen << "%\n";
         
         ss << "\nAverage time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
         
