@@ -74,7 +74,8 @@ public:
     QubitPartition(const Cuts cut_type,
                    int total_qubits,
                    bool row_major = true,
-                   int cut = 0);
+                   int cut = 0,
+                   bool first_part_small = false);
     
     QubitPartition(int rows, int cols, const vector<bitset<128>>& blocks);
     
@@ -128,7 +129,6 @@ public:
     static Times time_by_category;
     static int num_threads;
     static Config::SimType sim_type;
-    static idx_size approx;
     static char partition_to_sim;
     static bool book_keep;
     

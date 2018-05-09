@@ -14,7 +14,6 @@ vector<string> GenericQuantumState::log({});
 Data GenericQuantumState::data_per_cycles({});
 bool GenericQuantumState::book_keep = true;
 Config::SimType GenericQuantumState::sim_type = Config::SimType::FullState;
-idx_size GenericQuantumState::approx = 0;
 char GenericQuantumState::partition_to_sim = 'x';
 
 #ifdef Parallel
@@ -102,7 +101,8 @@ QubitPartition::
 QubitPartition(const Cuts cut_type,
                int total_qubits,
                bool row_major,
-               int cut)
+               int cut,
+               bool first_part_small)
 {
     int y_axis = FindDivisor(total_qubits),
     x_axis = total_qubits/y_axis,
@@ -112,7 +112,10 @@ QubitPartition(const Cuts cut_type,
         swap(y_axis, x_axis);
     
     if (cut_type == QubitPartition::Cuts::Horizontal) {
-        const int block_bits = cut ? (cut * x_axis) : (ceil(y_axis/2.0)  * x_axis);
+        int right_cut = cut ? cut : (first_part_small ? y_axis - ceil(y_axis/2.0) : ceil(y_axis/2.0));
+        if ((cut > y_axis - cut) && first_part_small)
+            right_cut = y_axis - cut;
+        const int block_bits = right_cut * x_axis;
         
 //        if (!cut)
 //            (*this) = QubitPartition(y_axis, x_axis);
@@ -124,8 +127,9 @@ QubitPartition(const Cuts cut_type,
 //        }
     }
     else {
-        const int v_cut = !cut ? ceil(x_axis/2.0) : cut;
-        
+        int v_cut = cut ? cut : (first_part_small ? x_axis - ceil(x_axis/2.0) : ceil(x_axis/2.0));
+        if ((v_cut > x_axis - v_cut) && first_part_small)
+            v_cut = x_axis - v_cut;
 //        if(!v_cut)
 //           (*this) = QubitPartition(x_axis, y_axis);
 //        else {

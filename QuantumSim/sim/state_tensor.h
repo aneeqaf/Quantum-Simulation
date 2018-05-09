@@ -115,6 +115,7 @@ public:
                              const int vcut = 0,
                              const Config::SimType sim = Config::LosslessH,
                              const bool row_major = true,
+                             const bool first_part_small = false,
                              const int verb = 3);
     TensorProductStateVector(const TensorProductStateVector& rhs) ;
     TensorProductStateVector& operator=(const TensorProductStateVector& rhs) = delete;

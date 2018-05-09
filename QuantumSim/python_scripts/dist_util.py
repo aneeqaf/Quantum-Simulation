@@ -174,6 +174,43 @@ def CheckxCZGates(report_file):
 				num_xCZ = int(re.sub('[^0-9]', '', temp)) 
 	return num_xCZ
 
+def ChooseBetterCut(num_xCZ1, num_xCZ2, time1, time2, command1, command2):
+	command = ""
+	num_xCZ = 0
+	time = 0.0
+	if num_xCZ1 == num_xCZ2:
+		command = command1 if (float(time1) <= float(time2)) else command2
+		num_xCZ = num_xCZ1 if (float(time1) <= float(time2)) else num_xCZ2
+		time = time1 if (float(time1) <= float(time2)) else time2
+	else:
+		command = command1 if (num_xCZ2 >= num_xCZ1) else command2
+		num_xCZ = num_xCZ1 if (num_xCZ2 >= num_xCZ1) else num_xCZ2
+		time = time1 if (num_xCZ2 >= num_xCZ1) else time2
+
+	return command, num_xCZ, time
+
+def ExecuteSingleTrialRun(num_cz, command):
+	dirpath = tempfile.mkdtemp()
+	temp_file = os.path.join(dirpath, "phase1_rep.txt")
+	
+	start_time = time.time()
+
+	cz_p = ""
+	for i in range(int(num_cz)):
+		cz_p += str(i % 2);
+	
+	command_temp = command + " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) 
+
+	print("/usr/bin/time " + command_temp + " > " + str(temp_file) + " 2>&1")
+	os.system("/usr/bin/time " + command_temp + " > " + str(temp_file) + " 2>&1")
+	os.system("cat " + temp_file)
+
+	end_time = time.time()
+	time_elapsed = round(end_time - start_time, 3)
+	num_xCZ = CheckxCZGates(temp_file) 
+
+	return command, num_xCZ, time_elapsed
+
 def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 
 	num_cz = 1 if not num_cz else num_cz
@@ -184,54 +221,54 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 	print ("\033[1m" + "\nPerforming a trial simulation run with a horizontal cut and length " \
 		+ str(num_cz) + " CZ path, so expect the CZ path to be exhausted early.\n" + \
 		"This is to find the best cut with the least number of xCZ gates.\n"  + "\033[0m")
+
+	print("\033[1m" + "1st horizontal trial run" + "\033[0m\n")
+
+	commandH1, num_xCZH1, timeH1 = ExecuteSingleTrialRun(num_cz, commandH)
 	
-	start_timeH = time.time()
-
-	tempH_file = os.path.join(dirpath, "H_phase1_rep.txt")
-
-	cz_p = ""
-	for i in range(int(num_cz)):
-		cz_p += str(i % 2);
-	
-	commandH += " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + " > " + str(tempH_file) + " 2>&1"
-
-	print("/usr/bin/time " + commandH)
-	os.system("/usr/bin/time " + commandH)
-	os.system("cat " + tempH_file)
-
-	end_timeH = time.time()
-
 	# Horizontal trial run evaluation
-	print("\033[1m" + "Horizontal trial run took " + str (round(end_timeH - start_timeH, 3)) +  " s \033[0m")
-	num_xCZH = CheckxCZGates(tempH_file) 
+	print("\033[1m" + "1st horizontal trial run took " + str (timeH1) + " s \033[0m\n\n")
+
+	print("\033[1m" + "2nd horizontal trial run" + "\033[0m\n")
+
+	commandH2, num_xCZH2, timeH2 = ExecuteSingleTrialRun(num_cz, commandH + " --first_partition_smaller")
+	
+	# Horizontal trial run evaluation
+	print("\033[1m" + "2nd horizontal trial run took " + str (timeH2) + " s \033[0m\n\n")
+
+	commandH, num_xCZH, timeH = ChooseBetterCut(num_xCZH1, num_xCZH2, timeH1, timeH2, commandH1, commandH2)
 
 	# Vertical trial run
 	print ("\033[1m" + "\nPerforming a trial simulation run with a vertical cut and length " \
 		+ str(num_cz) + " CZ path, so expect the CZ path to be exhausted early.\n" + \
-		"This is to find the best cut with the least number of xCZ gates. " + "\033[0m")
+		"This is to find the best cut with the least number of xCZ gates.\n " + "\033[0m")
+
+	print("\033[1m" + "1st vertical trial run" + "\033[0m\n")
+
+	commandV1, num_xCZV1, timeV1 = ExecuteSingleTrialRun(num_cz, commandV)
 	
-	start_timeV = time.time()
+	# Horizontal trial run evaluation
+	print("\033[1m" + "1st vertical trial run took " + str (timeV1) + " s \033[0m\n\n")
 
-	tempV_file = os.path.join(dirpath, "V_phase1_rep.txt")
+	print("\033[1m" + "2nd vertical trial run" + "\033[0m\n")
+
+	commandV2, num_xCZV2, timeV2 = ExecuteSingleTrialRun(num_cz, commandV + " --first_partition_smaller")
 	
-	commandV += " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + " > " + str(tempV_file) + " 2>&1"
+	# Horizontal trial run evaluation
+	print("\033[1m" + "2nd vertical trial run took " + str (timeV2) + " s \033[0m\n\n")
 
-	print("/usr/bin/time " + commandV) 
-	os.system("/usr/bin/time " + commandV)
-	os.system("cat " + tempV_file)
+	commandV, num_xCZV, timeV = ChooseBetterCut(num_xCZV1, num_xCZV2, timeV1, timeV2, commandV1, commandV2)
 
-	end_timeV = time.time()
-
-	# Vertical trial run evaluation
-	print("\033[1m" + "Vertical trial run took " + str (round(end_timeV - start_timeV, 3)) + " s \033[0m")
-	num_xCZV = CheckxCZGates(tempV_file)
-
-	return num_xCZH, num_xCZV, (end_timeH - start_timeH), (end_timeV - start_timeV)
+	return num_xCZH, num_xCZV, timeH, timeV, commandH, commandV
 
 def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branch_bits = 0, trial=True, \
 	v_cut = 0, h_cut = 0, approx=False):
 
-	num_xCZH, num_xCZV, H_time, V_time = ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
+	num_xCZH, num_xCZV, H_time, V_time, commandH, commandV = \
+	ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
+
+	print(commandH)
+	print(commandV)
 
 	range_specified = False
 	if approx:
@@ -252,12 +289,10 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 			num_xCZ = num_xCZV 
 	elif num_xCZV == num_xCZH:
 		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
-		command = commandH if (float(H_time) <= float(V_time)) else commandV
-		num_xCZ = num_xCZH if (float(H_time) <= float(V_time)) else num_xCZV
 	else:
 		cut = "horizontal-cut" if (num_xCZV >= num_xCZH) else "vertical-cut"
-		command = commandH if (num_xCZV >= num_xCZH) else commandV
-		num_xCZ = num_xCZH if (num_xCZV >= num_xCZH) else num_xCZV
+	
+	command, num_xCZ, _ = ChooseBetterCut(num_xCZV, num_xCZH, V_time, H_time, commandV, commandH)
 
 	dirpath = tempfile.mkdtemp()
 	command_to_pass = command

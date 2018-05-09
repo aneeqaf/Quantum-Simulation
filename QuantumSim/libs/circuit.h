@@ -60,6 +60,7 @@ public:
     int GateIndexForCycle(int cycle_num) const;
     Gate& GetGateFromIndex(idx_size i);
     const vector<Gate>& GetGates() const;
+    int GetCycleNumForGateIdx(idx_size gate_idx) const;
     
     Circuit();
     Circuit(const Circuit& rhs);

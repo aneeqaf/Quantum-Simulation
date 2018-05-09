@@ -39,6 +39,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
+		requested_amps_line = ""
 		for line in first_file:
 			if "Qubits" in line:
 				qubits = int(line.split(":")[1].split()[0].replace(' ',''))
@@ -51,6 +52,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 
 			if "Requested num amps" in line:
 				num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
+				requested_amps_line = line
 
 			if "xCZ path breakdown" in line:
 				print(line, end="")
@@ -71,6 +73,10 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 			if "fidelity" in line:
 				epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
 				print(line,  end='')
+			if "xCZ cycle breakdown" in line:
+				print(line, end="")
+				if requested_amps_line != "":
+					print(requested_amps_line, end="")
 			elif "State representation size" not in line and print_line:
 				print(line,  end='')
 			elif "State representation size" in line:
@@ -80,8 +86,6 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				unit = mem_usage.split(" ")[2].replace(' ','')
 				print_line = False
 			elif "High-value qubits" in line:
-				print(line, end="")
-			elif "Requested num" in line:
 				print(line, end="")
 			elif "H (" in line and "CZ & T" not in line:
 				categories['H'] = int(line.split()[1].replace("(","").replace(")",""))

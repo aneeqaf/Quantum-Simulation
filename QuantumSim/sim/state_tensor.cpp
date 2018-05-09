@@ -19,9 +19,10 @@ TensorProductStateVector(const int qubits,
                          const int vcut,
                          const Config::SimType sim,
                          const bool row_major,
+                         const bool first_part_small,
                          const int verb):
-qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubits, row_major, hcut)
-         : QubitPartition(cut_type, qubits, row_major, vcut))
+qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubits, row_major, hcut, first_part_small)
+         : QubitPartition(cut_type, qubits, row_major, vcut, first_part_small))
 {
     sim_type = sim;
     static int count_h = 0, count_v = 0;

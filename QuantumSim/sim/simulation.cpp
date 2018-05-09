@@ -13,7 +13,7 @@ SequentialSimulation::
 SequentialSimulation(const Config& c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0), config(c)
 {
     if (config.norm_depth) {
-        idx_size num_norms = config.norm_depth ? 1ull << config.norm_depth : 1ull << config.czp_append_len;
+        idx_size num_norms = config.norm_depth ? 1ull << config.norm_depth : 1ull << config.ranges_bits;
         norms_CZ_paths.resize(num_norms, 0);
     }
 }
@@ -56,7 +56,7 @@ void SequentialSimulation::
 CheckpointWithRanges(GenericQuantumState& amp,
                      Circuit& circuit)
 {
-    string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.cz_num_bits);
+    string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.proc_prefix_bits);
     config.th = amp.GetNumQInBlock(0) >> 1;
     amp.partition_to_sim = 'a';
     string cz_path_copy = cz_path;
@@ -67,8 +67,10 @@ CheckpointWithRanges(GenericQuantumState& amp,
     amp.partition_to_sim = 'x';
     idx_size gate_num = curr_gate;
     
-    idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
-    num_bits = config.cz_num_bits ? config.czp_append_len : config.norm_depth;
+    amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
+    
+    idx_size cz_paths_ex = config.proc_prefix_bits ? 1ull << config.ranges_bits : 1ull << config.norm_depth,
+    num_bits = config.proc_prefix_bits ? config.ranges_bits : config.norm_depth;
     
     Time copy_time;
     copy_time.StartTime();
@@ -109,9 +111,9 @@ NoCheckpointWithRanges(GenericQuantumState& amp,
 {
     amps_of_interest.resize(config.indices.size(), 0);
     
-    config.cz_path <<= config.czp_append_len;
-    idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
-    total_bits = config.cz_num_bits ? config.cz_num_bits + config.czp_append_len : config.norm_depth;
+    config.cz_path <<= config.ranges_bits;
+    idx_size cz_paths_ex = config.proc_prefix_bits ? 1ull << config.ranges_bits : 1ull << config.norm_depth,
+    total_bits = config.proc_prefix_bits ? config.proc_prefix_bits + config.ranges_bits : config.norm_depth;
     
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
         string cz_path = bitset<128>(config.cz_path + cz_p).to_string();
@@ -138,9 +140,9 @@ void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
-    if (config.approx && config.approx_epsilon)
-        amp.approx = config.cz_num_bits + ceil(log2(config.approx_epsilon));
-        
+//    if (config.approx && config.approx_epsilon)
+//        amp.approx = config.proc_prefix_bits + ceil(log2(config.approx_epsilon));
+//        
     PopulateBenchmarkMap();
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -154,8 +156,10 @@ Simulate(GenericQuantumState& amp,
         config.sim_type == Config::SimType::Approx1CutH || config.sim_type == Config::SimType::ApproxCZPathH2011;
         
         QubitPartition qp = H_sims ?
-        QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(), config.row_major, config.hcut) :
-        QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.row_major, config.vcut) ;
+        QubitPartition(QubitPartition::Cuts::Horizontal, circuit.GetNumQubits(),
+                       config.row_major, config.hcut, config.first_part_smaller) :
+        QubitPartition(QubitPartition::Cuts::Vertical, circuit.GetNumQubits(), config.row_major,
+                       config.vcut, config.first_part_smaller) ;
 //        qp.RenumberLocalQubits();
         
         xCZ_gate_count = circuit.MovexCZGates(qp, config.nearest_neighbors);
@@ -170,14 +174,14 @@ Simulate(GenericQuantumState& amp,
     time.StartTime();
     amps_of_interest.resize(config.indices.size(), 0);
     string cz_path = "-";
-    if (config.czp_append_len || config.norm_perc) {
+    if (config.ranges_bits || config.norm_perc) {
         if (config.store_checkpoint_range)
             CheckpointWithRanges(amp, circuit);
         else
             NoCheckpointWithRanges(amp, circuit);
     }
-    else if (config.cz_num_bits) {
-        cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.cz_num_bits);
+    else if (config.proc_prefix_bits) {
+        cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.proc_prefix_bits);
         Phase1Simulation(amp, circuit, cz_path, curr_gate);
                 
         auto& idx = config.indices;
@@ -209,7 +213,6 @@ Simulate(GenericQuantumState& amp,
         amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
     }
 
-    cout << endl;
     total_time += time.GetElapsedTime() - XE_time;
     
     ReportingAfterSim(amp, circuit);
@@ -245,8 +248,18 @@ Phase1Simulation(GenericQuantumState& amp,
     
     phase1_time += cz_path_time.GetElapsedTime();
     
-    if (terminate && config.dfs_length != 0)
+    if (exec == 1) {
+        if (config.ranges_bits != 0)
+            amp.count_of_category.cycle_r = circuit.GetCycleNumForGateIdx(curr_gate);
+        else if (config.proc_prefix_bits != 0)
+            amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
+    }
+    
+    if (terminate && config.dfs_length != 0) {
         Phase2Simulation(amp, circuit, curr_gate);
+        if (exec == 1)
+            amp.count_of_category.cycle_d = circuit.GetCycleNumForGateIdx(curr_gate);
+    }
     else if (!terminate &&  config.dfs_length != 0)
         config.dfs_length = 0;
     else if (exec == 1) {
@@ -381,12 +394,8 @@ SimulationLoop(GenericQuantumState &amp,
            current_gate.ids.back() == Gate::Type::T) {
 
             double cycle_elapsed_t = time.GetElapsedTime();
-            for (int c = 0; c < (int)circuit.GetNumCycles(); ++c) {
-                if (i < (idx_size)circuit.GateIndexForCycle(c)) {
-                    current_cycle = c;
-                    break;
-                }
-            }
+            current_cycle = circuit.GetCycleNumForGateIdx(i);
+            
             if (config.curr_mode != Config::SimMode::Phase2)
                 amp.data_per_cycles.cycles.push_back(current_cycle);
             
@@ -463,7 +472,7 @@ SimulationLoop(GenericQuantumState &amp,
                     last_cycle = true;
                     last_layers_of_H--;
                     if (amp.book_keep)
-                        amp.count_of_category.H += circuit.GetNumQubits();
+                        amp.count_of_category.H_merged += circuit.GetNumQubits();
                 }
 
                 int last_xCZ_idx = -1;
@@ -584,7 +593,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-    amp.PrintStateVector();
+//    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config.prob_outfile, circuit.GetNumCycles() - 1);
@@ -617,7 +626,7 @@ ReportingAfterSim(GenericQuantumState& amp,
     }
     
     if (config.print_amp) {
-      if (config.cz_num_bits) {
+      if (config.proc_prefix_bits) {
         if (!config.ascii)
             config.mmap_obj -> WriteToDisk();
         else
@@ -632,7 +641,7 @@ void SequentialSimulation::
  WriteMmapToASCIIFile() const
 {
     string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
-    + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
+    + "_" + to_string(config.proc_prefix_bits + config.ranges_bits) + "_" + to_string(config.num_threads);
     if (config.approx)
         dir += "_approx_" + to_string(config.approx_epsilon);
     string amp_outfile = dir + config.amp_outfile.substr(config.amp_outfile.find_last_of("/")) + "_ascii.amps";
@@ -654,7 +663,7 @@ void SequentialSimulation::
 WriteAmpToASCIIFile(GenericQuantumState& amp) const
 {
     string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
-    + "_" + to_string(config.cz_num_bits + config.czp_append_len) + "_" + to_string(config.num_threads);
+    + "_" + to_string(config.proc_prefix_bits + config.ranges_bits) + "_" + to_string(config.num_threads);
     if (config.approx)
         dir += "_approx_" + to_string(config.approx_epsilon);
     string command = "mkdir -p " + dir;
@@ -840,10 +849,10 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     if (config.approx) {
         approx_type << "Requested end-to-end circuit fidelity: " << setprecision(3)
         << 1.0/float(config.approx_epsilon) << "\nApproximation type : ";
-        if (config.czp_append_len == 0)
+        if (config.ranges_bits == 0)
             approx_type << "pruned xCZ branches";
         if (config.sim_type == Config::SimType::ApproxCZPathH2011 || config.sim_type == Config::SimType::ApproxCZPathV2011) {
-            if (config.czp_append_len == 0)
+            if (config.ranges_bits == 0)
                 approx_type << " / ";
             approx_type << "Approx2011";
         }
@@ -861,7 +870,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "sum of tensor products / single cut\n";
         cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ gates)\n";
         cout << approx_type.str();
-        if (config.cz_num_bits)
+        if (config.proc_prefix_bits)
             cout << "Simulating xCZ gates : using projection-based branches\n";
         else
             cout << "Simulating xCZ gates : exactly\n";
@@ -872,7 +881,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "sum of tensor products / single cut\n";
         cout << amp.log[log_count++] << " (" << xCZ_gates <<" xCZ gates)\n";
         cout << approx_type.str();
-        if (config.cz_num_bits)
+        if (config.proc_prefix_bits)
             cout << "Simulating xCZ gates : using projection-based branches\n";
         else
             cout << "Simulating xCZ gates : exactly\n";    }
@@ -925,19 +934,19 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         
     }
     
-    if (config.cz_num_bits) {
-        cout << "xCZ path breakdown : " << config.cz_num_bits << "p" ;
-        if (config.czp_append_len)
-            cout << " + " << config.czp_append_len << "r";
+    if (config.proc_prefix_bits) {
+        cout << "xCZ path breakdown : " << config.proc_prefix_bits << "p" ;
+        if (config.ranges_bits)
+            cout << " + " << config.ranges_bits << "r";
         if (config.dfs_length)
             cout << " + " << config.dfs_length << "b";
         cout << "\n";
-        if (config.czp_append_len) {
+        if (config.ranges_bits) {
             cout << "xCZ paths: ";
             
-            const int total_bits = config.cz_num_bits + config.czp_append_len + config.dfs_length;
-            const idx_size czb_v = config.cz_path << (config.czp_append_len + config.dfs_length);
-            const idx_size cze_v = czb_v + (1ull << (config.czp_append_len + config.dfs_length)) - 1;
+            const int total_bits = config.proc_prefix_bits + config.ranges_bits + config.dfs_length;
+            const idx_size czb_v = config.cz_path << (config.ranges_bits + config.dfs_length);
+            const idx_size cze_v = czb_v + (1ull << (config.ranges_bits + config.dfs_length)) - 1;
             const string czb = bitset<128>(czb_v).to_string();
             const string cze = bitset<128>(cze_v).to_string();
             cout << "[" << czb.substr(czb.size() - total_bits) << " (" << czb_v << "), "
@@ -945,8 +954,8 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         }
         else {
             const string czp = bitset<128>(config.cz_path).to_string();
-            cout << "CZ path : " << czp.substr(czp.size() - config.cz_num_bits)
-            << " (" << config.cz_num_bits << ")";
+            cout << "CZ path : " << czp.substr(czp.size() - config.proc_prefix_bits)
+            << " (" << config.proc_prefix_bits << ")";
         }
         
         cout << "\n";
@@ -978,6 +987,21 @@ PrintSimReport(GenericQuantumState& amp,
         amp.Normalize();
     
     idx_size temp_amp_size = amp.GetFullStateVectorSize();
+    
+    if (config.proc_prefix_bits) {
+        cout << "xCZ cycle breakdown : ";
+        if (amp.count_of_category.cycle_p)
+            cout << amp.count_of_category.cycle_p << " (p)";
+        if (amp.count_of_category.cycle_r && amp.count_of_category.cycle_p == 0 )
+            cout << amp.count_of_category.cycle_r << " (p & r)";
+        else if (amp.count_of_category.cycle_r )
+            cout << " + " << amp.count_of_category.cycle_r << " (r)";
+        if (amp.count_of_category.cycle_d)
+            cout << " + " << amp.count_of_category.cycle_d << " (d)";
+        cout << "\n";
+    }
+    
+    cout << "\n";
     
     {
         ostringstream ss (ostringstream::ate);
@@ -1043,7 +1067,7 @@ PrintSimReport(GenericQuantumState& amp,
         cout << ss.str();
     }
     
-    if (!config.cz_num_bits) {
+    if (!config.proc_prefix_bits) {
         
         string key = config.infile + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
@@ -1183,22 +1207,22 @@ PrintSimReport(GenericQuantumState& amp,
     {
         int width = 40;
         double sum_percen = (amp.time_by_category.H/total_time) * 100;
-        idx_size factor1 = config.cz_num_bits ?  2 : 1;
+        idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "\tH (" + to_string((amp.count_of_category.H/factor1)/(config.last_layers_H + 1)) +  ")";
+        string H_s = "\tH (" + to_string(amp.count_of_category.H/factor1) +  ")";
         ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.H
-        << " s \t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
+        << " s  \t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
             to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1) + "), Low XY ("
             + to_string(amp.count_of_category.low_q_XY1_2) + ") & H ("
-            + to_string((amp.count_of_category.H/factor1) - circuit.GetNumQubits()) +  ")";
+            + to_string(amp.count_of_category.H_merged/factor1) +  ")";
             ss << CZ_T_s << setw(width - (int)CZ_T_s.size()) << right << ": "
-            << amp.time_by_category.low_q_XY_CZT << " s \t\t  =  "
+            << amp.time_by_category.low_q_XY_CZT << " s  \t\t  =  "
             << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100;
         }
@@ -1206,7 +1230,7 @@ PrintSimReport(GenericQuantumState& amp,
         if(amp.count_of_category.decomposed_CZ) {
             string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
             ss << CZ_s << setw(width - (int)CZ_s.size()) << right << ": "
-            << amp.time_by_category.decomposed_CZ << " s \t\t  =  "
+            << amp.time_by_category.decomposed_CZ << " s  \t\t  =  "
             << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.decomposed_CZ/(total_time)) * 100;
         }
@@ -1214,7 +1238,7 @@ PrintSimReport(GenericQuantumState& amp,
             string XY_s = "\tSingle X (" + to_string(amp.count_of_category.X1_2)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2) + ")";
             ss << XY_s << setw(width - (int)XY_s.size()) << right << ": "
-            << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s \t\t  =  "
+            << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s  \t\t  =  "
             << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/(total_time)) * 100 << "%\n";
             sum_percen += ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/(total_time)) * 100;
         }
@@ -1223,14 +1247,14 @@ PrintSimReport(GenericQuantumState& amp,
             string X_Y_s = "\tMerged X & Y ("
             + to_string(amp.count_of_category.merged_XY1_2) + ")";
             ss << X_Y_s << setw(width - (int)X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
-            << " s \t\t  =  " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
+            << " s  \t\t  =  " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.merged_XY1_2/(total_time)) * 100;
         }
         
         if(amp.count_of_category.high_q_XY1_2) {
             string xy_s = "\tHigh XY (" + to_string(amp.count_of_category.high_q_XY1_2) + ")" ;
             ss << xy_s << setw(width - (int)xy_s.size()) << right << ": "
-            << amp.time_by_category.high_q_XY1_2 << " s \t\t  =  "
+            << amp.time_by_category.high_q_XY1_2 << " s  \t\t  =  "
             << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.high_q_XY1_2/(total_time)) * 100;
         }
@@ -1245,7 +1269,7 @@ PrintSimReport(GenericQuantumState& amp,
         if (amp.time_by_category.conversion) {
             string RP_s = "\tConversion ";
             ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.conversion<< " s \t\t  =  "
+            << amp.time_by_category.conversion<< " s  \t\t  =  "
             << (amp.time_by_category.conversion/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.conversion/(total_time)) * 100;
         }
@@ -1253,7 +1277,7 @@ PrintSimReport(GenericQuantumState& amp,
         if (amp.time_by_category.copying) {
             string RP_s = "\tCopying (" + to_string(amp.count_of_category.copying) + ")";
             ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.copying << " s \t\t  =  "
+            << amp.time_by_category.copying << " s  \t\t  =  "
             << (amp.time_by_category.copying/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.copying/(total_time)) * 100;
         }
@@ -1261,7 +1285,7 @@ PrintSimReport(GenericQuantumState& amp,
         if(amp.time_by_category.norm && config.norm_depth) {
             string RP_n = "\tNorm ";
             ss <<  RP_n << setw(width - (int)RP_n.size()) << right << ": "
-            << amp.time_by_category.norm << " s \t\t  =  "
+            << amp.time_by_category.norm << " s  \t\t  =  "
             << (amp.time_by_category.norm/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.norm/(total_time)) * 100;
         }
@@ -1269,19 +1293,19 @@ PrintSimReport(GenericQuantumState& amp,
         if(amp.time_by_category.amp_storage) {
             string RP_s = "\tStoring amps ";
             ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.amp_storage << " s \t\t  =  "
+            << amp.time_by_category.amp_storage << " s  \t\t  =  "
             << (amp.time_by_category.amp_storage/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.amp_storage/(total_time)) * 100;
         }
         
-        factor1 = (1ull << config.czp_append_len) * (1ull << config.dfs_length);
+        factor1 = (1ull << config.ranges_bits) * (1ull << config.dfs_length);
           
-        ss << "\t\t\t\t\t\t\t\t  ----\n";
-        ss << "\tTotal \t\t\t\t\t\t\t\t  " << sum_percen << "%\n";
+        ss << "\t\t\t\t\t\t\t\t\t    -------\n";
+        ss << "\tTotal \t\t\t\t\t\t\t\t    " << sum_percen << "%\n";
         
         ss << "\nAverage time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
         
-        if (config.cz_num_bits) {
+        if (config.proc_prefix_bits) {
             ss << "Simulation runtime breakdown : \n\tPrefix : " << phase1_time << " s = "
              << (phase1_time/(total_time)) * 100 << "%\n";
         }

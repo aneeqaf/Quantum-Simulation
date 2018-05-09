@@ -37,7 +37,7 @@ GetTGatesCount(idx_size* gate_counts /*8*/,
 //    cout << endl;
 }
 
-__attribute__((always_inline)) inline bool
+__attribute__((always_inline)) inline void
 FirstGroupOf8GatesHelper(float* __restrict t_amp,
                          const idx_size * gate_counts /*8*/,
                          const idx_size* __restrict gray_codes /*8*/)
@@ -69,11 +69,9 @@ FirstGroupOf8GatesHelper(float* __restrict t_amp,
     
     _mm256_store_ps(&t_amp[2 * gray_codes[0]], first_set);
     _mm256_store_ps(&t_amp[2 * gray_codes[7]], second_set);
-    
-    return false;
 }
 
-__attribute__((always_inline)) inline bool
+__attribute__((always_inline)) inline void
 SecondGroupOf8GatesHelper(float* __restrict t_amp,
                           const idx_size * gate_counts /*8*/,
                           const idx_size* __restrict gray_codes /*8*/)
@@ -106,11 +104,9 @@ SecondGroupOf8GatesHelper(float* __restrict t_amp,
     
     _mm256_store_ps(&t_amp[2 * gray_codes[7]], first_set);
     _mm256_store_ps(&t_amp[2 * gray_codes[0]], second_set);
-    
-    return false;
 }
 
-__attribute__((always_inline)) inline bool
+__attribute__((always_inline)) inline void
 ApplyCZTGatesInABlock(float* __restrict t_amp,
                        const int num_qubits_amp,
                        const idx_size* __restrict CZ_bitmasks,
@@ -121,7 +117,6 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
                        const ZeroOptMask& zero_opt_mask)
 {
     const idx_size block_end = block_begin + block_size;
-    bool all_zeros = true;
     
     // Before starting a block compute `negate_Z`
     bool negate_Z = false;
@@ -149,7 +144,7 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
             
             idx_size Tgate_count_1[8] = {0};
             GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
-            bool all_zeros_1 = FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
+            FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
             prev_gc = gc_first[7];
             
             gc0 = (count + 8) ^ ((count + 8) >> 1);
@@ -158,10 +153,8 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
             
             idx_size Tgate_count_2[8] = {0};
             GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
-            bool all_zeros_2 = FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
+            FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
             prev_gc = gc_second[7];
-            
-            if (all_zeros && (!all_zeros_2 || !all_zeros_1)) all_zeros = false;
         }
 //        else {
 //            cout << "Zero bm : " << zero_opt_mask.print() << endl;
@@ -171,7 +164,6 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
 //            }
 //        }
     }
-    return all_zeros;
 }
 
 void
@@ -179,16 +171,27 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_qubits_amp,
                                 const idx_size* __restrict CZ_bitmasks,
                                 const idx_size* __restrict T_bitmasks /*2*/,
+                                const idx_size Lo_H_bitmask,
                                 const int num_threads,
                                 const ZeroOptMask& zero_opt_mask)
 {
-    const idx_size amp_size = (1ull << num_qubits_amp), block_size = amp_size > (1u << 12) ? (1u << 12) : amp_size;
+    const idx_size amp_size = 1ull << num_qubits_amp,
+    block_size = 1ull << num_qubits_amp/2;
+    const int block_bits = num_qubits_amp/2;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
-    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size)
-        ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks, num_threads,
-                              block_begin, block_size, zero_opt_mask);
+    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
+        idx_size num_iters = block_begin/block_size;
+        idx_size offset_idx = num_iters ^ (num_iters >> 1);
+        
+        if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
+            ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+                                                   num_threads, block_begin, block_size, zero_opt_mask);
+            if (Lo_H_bitmask != 0)
+                ApplyHGates(amp + (offset_idx * block_size), block_bits, num_threads, Lo_H_bitmask);
+        }
+    }
 }
 
 void
@@ -201,7 +204,6 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     bool negate_Z = false;
     idx_size prev_gc = 0;
-    bool all_zeros = true;
 
     for (idx_size count = 0; count + 15 < amp_size ; count+=16) {
         
@@ -211,7 +213,7 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
         
         idx_size Tgate_count_1[8] = {0};
         GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
-        bool all_zeros_1 = FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
+        FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
         prev_gc = gc_first[7];
         
         gc0 = (count + 8) ^ ((count + 8) >> 1);
@@ -220,10 +222,8 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
         
         idx_size Tgate_count_2[8] = {0};
         GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
-        bool all_zeros_2 = FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
+        FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
         prev_gc = gc_second[7];
-        
-        if (all_zeros && (!all_zeros_2 || !all_zeros_1)) all_zeros = false;
     }
 }
 
@@ -243,7 +243,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
     const int bits_for_blk = Lo_X_bitmask == 0 && Lo_Y_bitmask == 0
     ? num_high_qubits : num_qubits_amp - num_high_qubits;
     const idx_size amp_size = (1ull << num_qubits_amp);
-    const idx_size block_size = amp_size > (1u << bits_for_blk) ? (1u << bits_for_blk) : amp_size;
+    const idx_size block_size = amp_size > (1ull << bits_for_blk) ? (1ull << bits_for_blk) : amp_size;
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits_amp;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
@@ -255,18 +255,15 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
         if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
-            bool all_zeros = false;
             ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                   num_threads, block_begin, block_size, zero_opt_mask);
 
-            if (!all_zeros) {
-               if  (Lo_X_bitmask || Lo_Y_bitmask)
+            if  (Lo_X_bitmask || Lo_Y_bitmask)
                    i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
                                               Lo_Y_bitmask, block_bits, num_threads);
                 
-                if (last_cycle)
-                    ApplyHGates(amp + (offset_idx * block_size), block_bits, num_threads, Lo_H_bitmask);
-            }
+            if (last_cycle)
+                ApplyHGates(amp + (offset_idx * block_size), block_bits, num_threads, Lo_H_bitmask);
         }
 //        else {
 //            cout << "Zero bm : " << zero_opt_mask.print() << endl;

@@ -16,7 +16,19 @@ num_qubits(qubits), zero_opt_mask(num_qubits)
 {
     amp_size = 1ull << qubits;
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
-        cerr << "Memory requirement exceeds availiable memory for aligned storage.";
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30)) {
+            cerr << memory / (1 << 30) << " GiB \n";
+        }
+        else if (memory >= (1 << 20)) {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10)) {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
         free(amp);
         exit(err);
     }
@@ -31,7 +43,19 @@ min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0),
 num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits)
 {
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
-        cerr << "Memory requirement exceeds availiable memory for aligned storage.";
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30)) {
+            cerr << memory / (1 << 30) << " GiB \n";
+        }
+        else if (memory >= (1 << 20)) {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10)) {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
         free(amp);
         exit(err);
     }
@@ -45,7 +69,19 @@ amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
 global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits)
 {
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
-        cerr << "Memory requirement exceeds availiable memory for aligned storage.";
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30)) {
+            cerr << memory / (1 << 30) << " GiB \n";
+        }
+        else if (memory >= (1 << 20)) {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10)) {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
         free(amp);
         exit(err);
     }
@@ -88,32 +124,33 @@ ApplyBlockOfDiagGates(string& cz_bits,
     Time time;
     time.StartTime();
     
+    if (last_cycle)
+        for (int i = num_qubits - 1; i >= 0; --i)
+            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    
+    idx_size H_bitmask = 0;
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
     for (int i = 0; i < num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
-    int bits_for_H = num_qubits < 12 ? num_qubits : 12;
+    if (last_cycle)
+        H_bitmask = (1ull << num_qubits/2) - 1;
     
-    if (num_qubits >= 4) {
-        ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
-                                          T_bitmasks_64, 0, 0, ((1ull << bits_for_H) - 1), num_threads, 12,
-                                          zero_opt_mask, last_cycle);
-//        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, num_threads, zero_opt_mask);
-    }
+    if (num_qubits >= 8)
+        ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, H_bitmask,
+                                        num_threads, zero_opt_mask);
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
     
     if (last_cycle) {
         ApplyHGates(amp, num_qubits, num_threads,
-                    (((1ull << num_qubits) - 1) & ~((1ull << bits_for_H) - 1)) >> bits_for_H);
+                    (((1ull << num_qubits) - 1) & ~((1ull << num_qubits/2) - 1)) >> num_qubits/2);
+        global_factor_power += num_qubits;
     }
     
     time_by_category.CZ_T += time.GetElapsedTime();
-    
-    if (last_cycle)
-        global_factor_power += num_qubits;
-    
+   
     return -1;
 }
 
@@ -446,7 +483,7 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     time.StartTime();
 
     for (int i = num_qubits - 1; i >= 0; --i)
-        if (X_bitmask[i] || Y_bitmask[i]) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+        if (X_bitmask[i] || Y_bitmask[i] || last_cycle) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};

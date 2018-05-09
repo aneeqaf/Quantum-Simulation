@@ -68,8 +68,8 @@ public:
     idx_size approx_epsilon;
     float norm_perc;
     int norm_depth;
-    int czp_append_len;
-    int cz_num_bits;
+    int ranges_bits;
+    int proc_prefix_bits;
     int dfs_length;
     int depth;
     int th;
@@ -85,6 +85,7 @@ public:
     bool row_major;
     int last_layers_H;
     bool store_checkpoint_range;
+    bool first_part_smaller;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -95,10 +96,10 @@ public:
                                const idx_size amp_size);
     
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
-    cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), czp_append_len(0), cz_num_bits(0),
+    cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
     dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false),
     print_idx(false), ascii(false), approx(true), nearest_neighbors(true), row_major(true), last_layers_H(0),
-    store_checkpoint_range(true), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
+    store_checkpoint_range(true), first_part_smaller(false), sim_type(FullState), verbose(Default), curr_mode(Phase1) {}
     Config(const idx_size amp_size,
            const string ifile,
            const string pfile,
@@ -108,7 +109,7 @@ public:
            const float norm_p,
            const int norm_d,
            const idx_size cz_p,
-           const int cz_append_len,
+           const int ranges_bits,
            const int cz_len,
            const int dfs,
            const idx_size epsilon = 0,
@@ -127,7 +128,8 @@ public:
            const bool near_neighbors = true,
            const bool row_maj = true,
            const int layers_last_H = 0,
-           const bool checkpoint_r = true);
+           const bool checkpoint_r = true,
+           const bool first_part_small = false);
     Config(const Config& rhs);
     Config& operator=(const Config& rhs);
     ~Config();

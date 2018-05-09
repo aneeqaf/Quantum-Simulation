@@ -98,13 +98,14 @@ int main(int argc, char *argv[])
         { "no_nearest_neighbors",    no_argument,       nullptr, 'n' },
         { "layers_Hgates_b4_meas",    required_argument,       nullptr, 'H' },
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
+        { "first_partition_smaller",    no_argument,       nullptr, 'f' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true;
+    store_checkpoint_range = true, first_partition_smaller = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0;
@@ -118,7 +119,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:p", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pf", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -190,6 +191,10 @@ int main(int argc, char *argv[])
                 }
                 norm_perc = stof(n_str.substr(0, n_str.find(",")));
                 norm_depth = stoi(n_str.substr(n_str.find(",") + 1));
+                break;
+            }
+            case 'f': {
+                first_partition_smaller = true;
                 break;
             }
             case 'g': {
@@ -412,7 +417,7 @@ int main(int argc, char *argv[])
                   cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx,
                   (Config::SimType)sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads, true, nearest_neighbors, row_major,
-                  layers_H_gates, store_checkpoint_range);
+                  layers_H_gates, store_checkpoint_range, first_partition_smaller);
     
     if (print_amp) {
         if (seed != -1)
@@ -437,13 +442,15 @@ int main(int argc, char *argv[])
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Horizontal, hcut, vcut,
-                                      (Config::SimType)sim_type, row_major, config.verbose);
+                                      (Config::SimType)sim_type, row_major, first_partition_smaller,
+                                      config.verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
-                                      (Config::SimType)sim_type, row_major, config.verbose);
+                                      (Config::SimType)sim_type, row_major, first_partition_smaller,
+                                      config.verbose);
         
 //        if (threshold == 0) {
 //            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
@@ -455,7 +462,8 @@ int main(int argc, char *argv[])
     }
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
-                                             hcut, vcut, row_major, config.verbose);
+                                             hcut, vcut, row_major, first_partition_smaller,
+                                             config.verbose);
         if (!config.indices.empty())
             amp.PopulateGlobalToLocalMap(config.indices);
         
@@ -471,7 +479,8 @@ int main(int argc, char *argv[])
     }
     else {
         AdaptiveStateVector amp(cir.GetNumQubits(),
-                                (Config::SimType)sim_type, hcut, vcut, row_major, config.verbose);
+                                (Config::SimType)sim_type, hcut, vcut, row_major, first_partition_smaller,
+                                config.verbose);
         sim.Simulate(amp, cir);
     }
     return 0;

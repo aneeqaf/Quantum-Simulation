@@ -422,6 +422,7 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_qubits_amp,
                                 const idx_size* __restrict CZ_bitmasks,
                                 const idx_size* __restrict T_bitmasks,
+                                const idx_size Lo_H_bitmask,
                                 const int num_threads,
                                 const ZeroOptMask& zero_opt_mask);
 

@@ -14,6 +14,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                 const int hcut,
                                 const int vcut,
                                 const bool row_major,
+                                const bool first_part_small,
                                 const int verb): num_addends(1)
 {
     sim_type = type;
@@ -26,6 +27,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               vcut,
                                                               sim_type,
                                                               row_major,
+                                                              first_part_small,
                                                               verb));
     else if (type == Config::SimType::LosslessV || type == Config::SimType::Approx1CutV
              || type == Config::SimType::ApproxCZPathV2011)
@@ -35,6 +37,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               vcut,
                                                               sim_type,
                                                               row_major,
+                                                              first_part_small,
                                                               verb));
     else if (sim_type == Config::SimType::Approx2011OWT || sim_type == Config::SimType::Approx_i11iOWT) {
         tensor_addends.push_back(new TensorProductStateVector(qubits,
@@ -43,6 +46,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               vcut,
                                                               sim_type,
                                                               row_major,
+                                                              first_part_small,
                                                               verb));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               QubitPartition::Cuts::Vertical,
@@ -50,6 +54,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               vcut,
                                                               sim_type,
                                                               row_major,
+                                                              first_part_small,
                                                               verb));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
@@ -62,6 +67,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               vcut,
                                                               Config::SimType::LosslessH,
                                                               row_major,
+                                                              first_part_small,
                                                               verb));
         tensor_addends.push_back(new TensorProductStateVector(qubits,
                                                               QubitPartition::Cuts::Vertical,
@@ -69,6 +75,7 @@ SumOfTensorsProductsStateVector(const int qubits,
                                                               vcut,
                                                               Config::SimType::LosslessV,
                                                               row_major,
+                                                              first_part_small,
                                                               verb));
         tensor_addends[0] -> state_a -> IncrementGlobalFactorPower();
         tensor_addends[1] -> state_a -> IncrementGlobalFactorPower();
@@ -308,17 +315,31 @@ FormGatesBitmaskXCZ(bool& terminate,
 
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
-            if (cz_bits[0] == '0') {
-                if ((cz_bits.size() + prefix_size) % 2 == 0 || approx)
+            if (tensor_addends[0] -> GetNumQInBlock(0) < tensor_addends[0] -> GetNumQInBlock(1)) {
+                if (cz_bits[0] == '0')
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
                 else
+                    xCZ_bitmasks_path1_D3D4[i][q] = 1;
+            }
+            else if (tensor_addends[0] -> GetNumQInBlock(0) > tensor_addends[0] -> GetNumQInBlock(1)) {
+                if (cz_bits[0] == '0')
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
+                else
+                   xCZ_bitmasks_path1_D4D3[i][q] = 1;
             }
             else {
-                if ((cz_bits.size() + prefix_size) % 2 == 0 || approx)
-                    xCZ_bitmasks_path1_D3D4[i][q] = 1;
-                else
-                    xCZ_bitmasks_path1_D4D3[i][q] = 1;
+                if (cz_bits[0] == '0') {
+                    if ((cz_bits.size() + prefix_size) % 2 == 0)
+                        xCZ_bitmasks_path0_D1D2[i][q] = 1;
+                    else
+                        xCZ_bitmasks_path0_D2D1[i][q] = 1;
+                }
+                else {
+                    if ((cz_bits.size() + prefix_size) % 2 == 0)
+                        xCZ_bitmasks_path1_D3D4[i][q] = 1;
+                    else
+                        xCZ_bitmasks_path1_D4D3[i][q] = 1;
+                }
             }
             
             cz_bits.erase(0, 1);

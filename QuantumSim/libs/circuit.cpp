@@ -755,3 +755,13 @@ GetGates() const
 {
     return gates;
 }
+
+int Circuit::
+GetCycleNumForGateIdx(idx_size gate_idx) const
+{
+    for (int c = 0; c < (int)clock_cycles.size(); ++c) {
+        if (gate_idx < (idx_size)GateIndexForCycle(c))
+            return c;
+    }
+    return (int)clock_cycles.size();
+}

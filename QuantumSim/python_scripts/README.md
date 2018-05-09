@@ -49,7 +49,7 @@ By default the script chooses optimal or near optimal choices for each of the op
 * **--depth** : cicuit depth to simulate
 * **--num_batches**
 
-Options for controlling cut size: 
+Options for controlling cut size: The script chooses the best cut among the most even horizontal and vertical cuts.
 * **--h_cut** : in a 2D circuit, this is the size of one side of a cut across the y-axis
 * **--v_cut** : in a 2D circuit, this is the size of one side of a cut down the x-axis
 
@@ -63,6 +63,8 @@ Options for controlling CZ path:
 These options should be modified if default value is not desired:
 * **--approx** : the value of this option is the denominator of the fidelity; e.g For fidelity = 0.125 , --approx=8. This acts as an epsilon for choosing CZ paths when performing approximate simulation.
 * **--column_major** : this is flag. If specified then the grid for the 2D circuit is column major. The default value is row major.
+* **--layers_hgates_b4_meas** : this option takes in a value for the number of layers of H gates at the end of the requested number of cycles. This is to facilitate simulation of layers of H gates at the end of the requested number of cycles without having to generate specific circuit files for this purpose. Default is zero. Do not use this option if the circuit file already has the required layer of H gates.
+* **--no_checkpoint_with_ranges** : this is a flag to prevent checkpointing the state vector for the process prefix bits before ranges begin. Default is false.
 * **--multiple_nodes**: this is a flag and must be specified if the simulation is going to be carried on multiple nodes. It prevents the script from launching multiple simulation batches on the same node and instead only produces the bash scripts needed for the simulations.
 * **--max_procs** : this is used for trial batches to get a good estimate of how long a single process will take when multiple processes are running in parallel. The value should ideally be set to the number of expected batches. Default value is 0. This option only launches the specified number of processes. Do not use this flag if you want to launch the entire simulation. 
 * **--no_nearest_neighbors**: this is a flag and if specified then the simulator does not check to make sure all 2 qubit gates are acting on nearest neighbors.
