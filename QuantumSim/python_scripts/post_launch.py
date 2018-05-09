@@ -17,8 +17,9 @@ from math import ceil
 @click.option("--num_idx", nargs=1, required=True, default= 0)
 @click.option("--max_procs", nargs=1, required=False, default= 0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
+@click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
 def main(cir_dir, num_procs, num_batches, est_time, t_time,
- num_idx, max_procs, test_fid):
+ num_idx, max_procs, test_fid, no_checkpoint_with_ranges):
 
 	# TODO: fix proc_per_script
 	proc_per_script = ceil(float(num_procs)/ float(num_batches)) if num_procs > 1 else 1
@@ -70,6 +71,8 @@ def main(cir_dir, num_procs, num_batches, est_time, t_time,
 	 + " --max_procs " + str(max_procs)
 	if test_fid:
 		report_cmd += " --test_fid"
+	if no_checkpoint_with_ranges:
+		report_cmd += " --no_checkpoint_with_ranges"
 	print(report_cmd)
 	os.system(report_cmd)
 

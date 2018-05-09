@@ -41,10 +41,11 @@ from math import sqrt, floor, ceil
 @click.option("--cont_cz_paths", nargs=1, required=False, is_flag=True)
 @click.option("--no_nearest_neighbors", nargs=1, required=False, is_flag=True)
 @click.option("--layers_hgates_b4_meas", nargs=1, required=False, default=0)
+@click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
  approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
- layers_hgates_b4_meas):
+ layers_hgates_b4_meas, no_checkpoint_with_ranges):
 
 	dist_util.CheckInputFile(circuit)
 
@@ -77,9 +78,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	# os.makedirs(cir_dir)
 
 	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
-	depth, no_nearest_neighbors, layers_hgates_b4_meas, h_cut = h_cut) 
+	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, h_cut = h_cut) 
 	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, approx, column_major,
-	depth, no_nearest_neighbors, layers_hgates_b4_meas, v_cut = v_cut) 
+	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
@@ -158,6 +159,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		" --num_idx " + str(num_idx) + " --max_procs " + str(max_procs)
 	if test_fid:
 		post_launch_cmd += " --test_fid"
+	if no_checkpoint_with_ranges:
+		post_launch_cmd += " --no_checkpoint_with_ranges"
 	print(post_launch_cmd + " > " + str(log_dir) + "/final_report 2>&1 &")
 	if trial:
 		os.system(post_launch_cmd)

@@ -53,6 +53,85 @@ SetThreshold(int th)
 }
 
 void SequentialSimulation::
+CheckpointWithRanges(GenericQuantumState& amp,
+                     Circuit& circuit)
+{
+    string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.cz_num_bits);
+    config.th = amp.GetNumQInBlock(0) >> 1;
+    amp.partition_to_sim = 'a';
+    string cz_path_copy = cz_path;
+    SimulationLoop(amp, circuit, cz_path, config.dfs_length, 0);
+    config.th = amp.GetNumQInBlock(1) >> 1;
+    amp.partition_to_sim = 'b';
+    SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length, 0);
+    amp.partition_to_sim = 'x';
+    idx_size gate_num = curr_gate;
+    
+    idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
+    num_bits = config.cz_num_bits ? config.czp_append_len : config.norm_depth;
+    
+    Time copy_time;
+    copy_time.StartTime();
+    SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
+    amp.time_by_category.copying += copy_time.GetElapsedTime();
+    ++amp.count_of_category.copying;
+    
+    for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
+        cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
+        
+        Phase1Simulation(temp_amp, circuit, cz_path, gate_num);
+        
+        auto& idx = config.indices;
+        if (config.dfs_length == 0) {
+            Time amp_st_time;
+            amp_st_time.StartTime();
+            for(idx_size i = 0; i < idx.size(); ++i)
+                amps_of_interest[i] += temp_amp.GetGlobalAmpAtInterestingIdx(i);
+            temp_amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+        }
+        
+        if (config.norm_perc)
+            norms_CZ_paths[cz_p] = sqrt(temp_amp.CalculateNormSquared());
+        amp.book_keep = false;
+        
+        if ((cz_p + 1) < cz_paths_ex) {
+            copy_time.StartTime();
+            temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
+            amp.time_by_category.copying += copy_time.GetElapsedTime();
+            ++amp.count_of_category.copying;
+        }
+    }
+}
+
+void SequentialSimulation::
+NoCheckpointWithRanges(GenericQuantumState& amp,
+                       Circuit& circuit)
+{
+    config.cz_path <<= config.czp_append_len;
+    idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
+    num_bits = config.cz_num_bits ? config.cz_num_bits + config.czp_append_len : config.norm_depth;
+
+    for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
+        string cz_path = bitset<128>(config.cz_path + cz_p).to_string().substr(128 - num_bits);
+        
+        Phase1Simulation(amp, circuit, cz_path, 0);
+        
+        auto& idx = config.indices;
+        if (config.dfs_length == 0) {
+            Time amp_st_time;
+            amp_st_time.StartTime();
+            for(idx_size i = 0; i < idx.size(); ++i)
+                amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
+            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+        }
+        
+        if (config.norm_perc)
+            norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
+        amp.book_keep = false;
+    }
+}
+
+void SequentialSimulation::
 Simulate(GenericQuantumState& amp,
          Circuit& circuit)
 {
@@ -86,60 +165,15 @@ Simulate(GenericQuantumState& amp,
     
     Time time;
     time.StartTime();
+    amps_of_interest.resize(config.indices.size(), 0);
     string cz_path = "-";
     if (config.czp_append_len || config.norm_perc) {
-        amps_of_interest.resize(config.indices.size(), 0);
-       
-        cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.cz_num_bits);
-        config.th = amp.GetNumQInBlock(0) >> 1;
-        amp.partition_to_sim = 'a';
-        string cz_path_copy = cz_path;
-        SimulationLoop(amp, circuit, cz_path, config.dfs_length, 0);
-        config.th = amp.GetNumQInBlock(1) >> 1;
-        amp.partition_to_sim = 'b';
-        SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length, 0);
-        amp.partition_to_sim = 'x';
-        idx_size gate_num = curr_gate;
-    
-//        config.cz_path <<= config.czp_append_len;
-        idx_size cz_paths_ex = config.cz_num_bits ? 1ull << config.czp_append_len : 1ull << config.norm_depth,
-        num_bits = config.cz_num_bits ? config.czp_append_len : config.norm_depth;
-        Time copy_time;
-    
-        copy_time.StartTime();
-        SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
-        amp.time_by_category.copying += copy_time.GetElapsedTime();
-        ++amp.count_of_category.copying;
-        
-        for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
-            cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
-            
-            Phase1Simulation(temp_amp, circuit, cz_path, gate_num);
-
-            auto& idx = config.indices;
-            if (config.dfs_length == 0) {
-                Time amp_st_time;
-                amp_st_time.StartTime();
-                for(idx_size i = 0; i < idx.size(); ++i)
-                    amps_of_interest[i] += temp_amp.GetGlobalAmpAtInterestingIdx(i);
-                temp_amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
-            }
-            
-            if (config.norm_perc)
-                norms_CZ_paths[cz_p] = sqrt(temp_amp.CalculateNormSquared());
-            amp.book_keep = false;
-            
-            if ((cz_p + 1) < cz_paths_ex) {
-                copy_time.StartTime();
-                temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
-                amp.time_by_category.copying += copy_time.GetElapsedTime();
-                ++amp.count_of_category.copying;
-            }
-        }
+        if (config.store_checkpoint_range)
+            CheckpointWithRanges(amp, circuit);
+        else
+            NoCheckpointWithRanges(amp, circuit);
     }
     else if (config.cz_num_bits) {
-        amps_of_interest.resize(config.indices.size(), 0);
-        
         cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.cz_num_bits);
         Phase1Simulation(amp, circuit, cz_path, curr_gate);
                 
@@ -158,7 +192,6 @@ Simulate(GenericQuantumState& amp,
         if (config.print_amp) {
             Time amp_st_time;
             amp_st_time.StartTime();
-            amps_of_interest.resize(config.indices.size(), 0);
             for(idx_size i = 0; i < idx.size(); ++i)
                 amps_of_interest[i] += amp[idx[i]];
             amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
@@ -203,7 +236,6 @@ Phase1Simulation(GenericQuantumState& amp,
         amp.partition_to_sim = 'b';
         SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length, gate_i);
         amp.partition_to_sim = 'x';
-        //        terminate = SimulationLoop(amp, circuit, cz_path, config.dfs_length);
     }
     else
         SimulationLoop(amp, circuit, cz_path, config.dfs_length);
@@ -323,6 +355,7 @@ SimulationLoop(GenericQuantumState &amp,
     int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
     auto gates = circuit.GetGates();
     bool terminate = false;
+    int last_layers_of_H = config.last_layers_H;
     
     Time time, cycle_time;
     idx_size i = gate_i;
@@ -425,7 +458,9 @@ SimulationLoop(GenericQuantumState &amp,
                 if ((config.last_layers_H && i == size)
                     || (i < size && circuit.GetGateFromIndex(i).ids.back() == Gate::Type::Hadamard)) {
                     last_cycle = true;
-                    config.last_layers_H--;
+                    last_layers_of_H--;
+                    if (amp.book_keep)
+                        amp.count_of_category.H += circuit.GetNumQubits();
                 }
 
                 int last_xCZ_idx = -1;
@@ -433,7 +468,8 @@ SimulationLoop(GenericQuantumState &amp,
                     last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask,
                                                                  CZ_bitmasks, T_bitmasks, config.th, last_cycle);
                 else
-                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks, T_bitmasks, last_cycle);
+                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks,
+                                                             T_bitmasks, last_cycle);
                 
                 terminate = last_xCZ_idx != -1 ? true : false;
                 
@@ -489,7 +525,7 @@ SimulationLoop(GenericQuantumState &amp,
                     bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config.th);
                     
-                    if (config.curr_mode != Config::SimMode::Phase2) {
+                    if (amp.book_keep) {
                         amp.count_of_category.merged_XY1_2 += i - prev_i;
                         amp.data_per_cycles.XY_gates.push_back(i - prev_i);
                     }
@@ -501,7 +537,7 @@ SimulationLoop(GenericQuantumState &amp,
                 
                 cycle_time.StartTime();
                 amp.ApplyHGateOnAllAmps(i != 0);
-                if (config.curr_mode != Config::SimMode::Phase2)
+                if (amp.book_keep)
                     amp.count_of_category.H += circuit.GetNumQubits();
                 i += total_circuit_qubits - 1;
             }
@@ -512,7 +548,7 @@ SimulationLoop(GenericQuantumState &amp,
                                   (Gate::Type)current_gate.ids.back(),  current_gate);
                 double xy_single_elapsed_t = single_xy_time.GetElapsedTime();
                 
-                if (config.curr_mode != Config::SimMode::Phase2)
+                if (amp.book_keep)
                     amp.data_per_cycles.XY_gates.push_back(1);
                 if (current_gate.ids.back() == Gate::Type::X_1_2) {
                     ++amp.count_of_category.X1_2;
@@ -528,9 +564,11 @@ SimulationLoop(GenericQuantumState &amp,
         }
     }
     
-    while (config.last_layers_H) {
+    while (last_layers_of_H) {
         amp.ApplyHGateOnAllAmps(true);
-        --config.last_layers_H;
+        --last_layers_of_H;
+        if (amp.book_keep)
+            amp.count_of_category.H += circuit.GetNumQubits();
     }
     
     curr_gate = circuit.GetTotalNumGates();
@@ -1140,38 +1178,40 @@ PrintSimReport(GenericQuantumState& amp,
     }
 
     {
+        int width = 40;
         double sum_percen = (amp.time_by_category.H/total_time) * 100;
         idx_size factor1 = config.cz_num_bits ?  2 : 1;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "\tH (" + to_string(amp.count_of_category.H/factor1) +  ")";
-        ss << H_s << setw(35 - (int)H_s.size()) << right << ": " << amp.time_by_category.H
-        << " s\t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
+        string H_s = "\tH (" + to_string((amp.count_of_category.H/factor1)/(config.last_layers_H + 1)) +  ")";
+        ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.H
+        << " s \t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
-            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1) + ") & Low XY ("
-            + to_string(amp.count_of_category.low_q_XY1_2) + ")";
-            ss << CZ_T_s << setw(35 - (int)CZ_T_s.size()) << right << ": "
-            << amp.time_by_category.low_q_XY_CZT << " s\t\t  =  "
+            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1) + "), Low XY ("
+            + to_string(amp.count_of_category.low_q_XY1_2) + ") & H ("
+            + to_string((amp.count_of_category.H/factor1) - circuit.GetNumQubits()) +  ")";
+            ss << CZ_T_s << setw(width - (int)CZ_T_s.size()) << right << ": "
+            << amp.time_by_category.low_q_XY_CZT << " s \t\t  =  "
             << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100;
         }
         
         if(amp.count_of_category.decomposed_CZ) {
             string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
-            ss << CZ_s << setw(35 - (int)CZ_s.size()) << right << ": "
-            << amp.time_by_category.decomposed_CZ << " s\t\t  =  "
+            ss << CZ_s << setw(width - (int)CZ_s.size()) << right << ": "
+            << amp.time_by_category.decomposed_CZ << " s \t\t  =  "
             << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.decomposed_CZ/(total_time)) * 100;
         }
         if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
             string XY_s = "\tSingle X (" + to_string(amp.count_of_category.X1_2)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2) + ")";
-            ss << XY_s << setw(35 - (int)XY_s.size()) << right << ": "
-            << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s\t\t  =  "
+            ss << XY_s << setw(width - (int)XY_s.size()) << right << ": "
+            << (amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2) << " s \t\t  =  "
             << ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/(total_time)) * 100 << "%\n";
             sum_percen += ((amp.time_by_category.X1_2 +  amp.time_by_category.Y1_2)/(total_time)) * 100;
         }
@@ -1179,54 +1219,54 @@ PrintSimReport(GenericQuantumState& amp,
         if (amp.count_of_category.merged_XY1_2) {
             string X_Y_s = "\tMerged X & Y ("
             + to_string(amp.count_of_category.merged_XY1_2) + ")";
-            ss << X_Y_s << setw(35 - (int)X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
-            << " s\t\t  =  " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
+            ss << X_Y_s << setw(width - (int)X_Y_s.size()) << right << ": " << amp.time_by_category.merged_XY1_2
+            << " s \t\t  =  " << (amp.time_by_category.merged_XY1_2/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.merged_XY1_2/(total_time)) * 100;
         }
         
         if(amp.count_of_category.high_q_XY1_2) {
             string xy_s = "\tHigh XY (" + to_string(amp.count_of_category.high_q_XY1_2) + ")" ;
-            ss << xy_s << setw(35 - (int)xy_s.size()) << right << ": "
-            << amp.time_by_category.high_q_XY1_2 << " s\t\t  =  "
+            ss << xy_s << setw(width - (int)xy_s.size()) << right << ": "
+            << amp.time_by_category.high_q_XY1_2 << " s \t\t  =  "
             << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.high_q_XY1_2/(total_time)) * 100;
         }
         
         if (amp.count_of_category.rescale) {
             string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale/factor1) + ")";
-            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
+            ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
             << " s\t\t  =  " << (amp.time_by_category.rescale/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.rescale/(total_time)) * 100;
         }
         
         if (amp.time_by_category.conversion) {
             string RP_s = "\tConversion ";
-            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.conversion<< " s\t\t  =  "
+            ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
+            << amp.time_by_category.conversion<< " s \t\t  =  "
             << (amp.time_by_category.conversion/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.conversion/(total_time)) * 100;
         }
         
         if (amp.time_by_category.copying) {
             string RP_s = "\tCopying (" + to_string(amp.count_of_category.copying) + ")";
-            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.copying << " s\t\t  =  "
+            ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
+            << amp.time_by_category.copying << " s \t\t  =  "
             << (amp.time_by_category.copying/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.copying/(total_time)) * 100;
         }
         
         if(amp.time_by_category.norm && config.norm_depth) {
             string RP_n = "\tNorm ";
-            ss <<  RP_n << setw(35 - (int)RP_n.size()) << right << ": "
-            << amp.time_by_category.norm << " s\t\t  =  "
+            ss <<  RP_n << setw(width - (int)RP_n.size()) << right << ": "
+            << amp.time_by_category.norm << " s \t\t  =  "
             << (amp.time_by_category.norm/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.norm/(total_time)) * 100;
         }
         
         if(amp.time_by_category.amp_storage) {
             string RP_s = "\tStoring amps ";
-            ss <<  RP_s << setw(35 - (int)RP_s.size()) << right << ": "
-            << amp.time_by_category.amp_storage << " s\t\t  =  "
+            ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
+            << amp.time_by_category.amp_storage << " s \t\t  =  "
             << (amp.time_by_category.amp_storage/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.amp_storage/(total_time)) * 100;
         }
@@ -1234,7 +1274,7 @@ PrintSimReport(GenericQuantumState& amp,
         factor1 = (1ull << config.czp_append_len) * (1ull << config.dfs_length);
           
         ss << "\t\t\t\t\t\t\t\t  ----\n";
-        ss << "\tTotal \t\t\t\t\t\t\t   " << sum_percen << "%\n";
+        ss << "\tTotal \t\t\t\t\t\t\t\tval   " << sum_percen << "%\n";
         
         ss << "\nAverage time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
         

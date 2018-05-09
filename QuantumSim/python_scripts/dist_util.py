@@ -76,7 +76,8 @@ def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
 	return print_opt
 
 def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_major ,\
- 					depth , no_nearest_neighbors, layers_Hgates_b4_meas, h_cut = 0, v_cut = 0):
+ 					depth , no_nearest_neighbors, layers_Hgates_b4_meas,\
+ 					no_checkpoint_with_ranges, h_cut = 0, v_cut = 0):
 	if h_cut:
 		command += " --num_threads " + str(num_threads) + " --sim_type " \
 		+ str(sim_type) + " --hcut " + str(h_cut) + " --high_value_q " + str(num_highq)
@@ -101,6 +102,9 @@ def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_majo
 
 	if layers_Hgates_b4_meas:
 		command += " --layers_Hgates_b4_meas " + str(layers_Hgates_b4_meas)
+
+	if no_checkpoint_with_ranges:
+		command += " --no_checkpoint_ranges"
 
 	return command
 

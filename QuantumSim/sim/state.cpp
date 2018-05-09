@@ -470,8 +470,8 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     
     global_i_counter += ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                          T_bitmasks_64, loq_X_bitmask >> th,
-                                                         loq_Y_bitmask >> th, loq_H_bitmask >> th, num_threads,th,
-                                                         zero_opt_mask, last_cycle);
+                                                         loq_Y_bitmask >> th, loq_H_bitmask >> th,
+                                                          num_threads,th, zero_opt_mask, last_cycle);
     
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     

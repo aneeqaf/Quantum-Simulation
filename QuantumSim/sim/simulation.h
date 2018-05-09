@@ -39,6 +39,10 @@ private:
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
    
     void PopulateBenchmarkMap();
+    void CheckpointWithRanges(GenericQuantumState& amp,
+                              Circuit& circuit);
+    void NoCheckpointWithRanges(GenericQuantumState& amp,
+                                Circuit& circuit);
    
 public:
     void SetThreshold(int th);
