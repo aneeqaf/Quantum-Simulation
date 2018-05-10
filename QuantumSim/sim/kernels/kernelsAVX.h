@@ -17,6 +17,7 @@
 #include <complex>
 #include <cstring>
 #include <ctime>
+#include <cmath>
 #include <functional>
 #include <immintrin.h>
 #include <iomanip>

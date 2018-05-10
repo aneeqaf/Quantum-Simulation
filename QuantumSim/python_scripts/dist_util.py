@@ -264,35 +264,32 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branch_bits = 0, trial=True, \
 	v_cut = 0, h_cut = 0, approx=False):
 
-	num_xCZH, num_xCZV, H_time, V_time, commandH, commandV = \
-	ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
+	cut = ""
+	command = ""
+	num_xCZ = 0
+	if h_cut or v_cut:
+		num_cz = 1 if not proc_prefix_bits else proc_prefix_bits
+		if h_cut:
+			command, num_xCZ, _ = ExecuteSingleTrialRun(num_cz, commandH)
+			cut = "horizontal-cut" 
+		elif v_cut:
+			command, num_xCZ, _ = ExecuteSingleTrialRun(num_cz, commandV)
+			cut = "vertical-cut" 
+	else:
+		num_xCZH, num_xCZV, H_time, V_time, commandH, commandV = \
+		ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
 
-	print(commandH)
-	print(commandV)
+		if num_xCZV == num_xCZH:
+			cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
+		else:
+			cut = "horizontal-cut" if (num_xCZV >= num_xCZH) else "vertical-cut"
+
+		command, num_xCZ, _ = ChooseBetterCut(num_xCZV, num_xCZH, V_time, H_time, commandV, commandH)
 
 	range_specified = False
 	if approx:
 		if ranges_bits != 0:
 			range_specified = True
-
-	cut = ""
-	command = ""
-	num_xCZ = 0
-	if h_cut or v_cut:
-		if h_cut:
-			cut = "horizontal-cut" 
-			command = commandH 
-			num_xCZ = num_xCZH 
-		elif v_cut:
-			cut = "vertical-cut" 
-			command = commandV 
-			num_xCZ = num_xCZV 
-	elif num_xCZV == num_xCZH:
-		cut = "horizontal-cut" if (float(H_time) <= float(V_time)) else "vertical-cut"
-	else:
-		cut = "horizontal-cut" if (num_xCZV >= num_xCZH) else "vertical-cut"
-	
-	command, num_xCZ, _ = ChooseBetterCut(num_xCZV, num_xCZH, V_time, H_time, commandV, commandH)
 
 	dirpath = tempfile.mkdtemp()
 	command_to_pass = command

@@ -26,7 +26,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	unit = "B"
 	qubits = 0
 	print_line = True
-	categories = {'H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0, 'H_last':0,\
+	categories = {'H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0, 'H_lo':0, 'H_hi':0,\
 	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0, 'High XY': 0 , 'Low XY': 0}
 	num_threads = 0
 	cz_path_len = 0
@@ -72,8 +72,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 					dfs = True
 			if "fidelity" in line:
 				epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
-				print(line,  end='')
-			if "xCZ cycle breakdown" in line:
+			if "Cycle breakdown" in line:
 				print(line, end="")
 				if requested_amps_line != "":
 					print(requested_amps_line, end="")
@@ -87,12 +86,12 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				print_line = False
 			elif "High-value qubits" in line:
 				print(line, end="")
-			elif "H (" in line and "CZ & T" not in line:
+			elif "H (" in line and "&" not in line:
 				categories['H'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "CZ & T" in line:
 				categories['CZ & T'] = int(line.split()[3].replace("(","").replace(")","").replace(",", ""))
-				categories['Low XY'] = int(line.split()[6].replace("(","").replace(")",""))
-				categories['H_last'] = int(line.split()[9].replace("(","").replace(")",""))
+				categories['Low XY'] = int(line.split()[8].replace("(","").replace(")",""))
+				categories['H_lo'] = int(line.split()[11].replace("(","").replace(")",""))
 			elif "xCZ (" in line:
 				categories['xCZ'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "Single X" in line:
@@ -101,7 +100,8 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 			elif "Merged X & Y" in line:
 				categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
 			elif "High XY" in line:
-				categories['High XY'] = int(line.split()[2].replace("(","").replace(")",""))
+				categories['High XY'] = int(line.split()[4].replace("(","").replace(")",""))
+				categories['H_hi'] = int(line.split()[7].replace("(","").replace(")",""))
 			elif "Rescaling passes" in line:
 				categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
 			elif "Copying" in line:
@@ -324,8 +324,8 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 		str(round(((avg_time_per_category['H'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['CZ & T, Low XY & H']:
-		print("\tCZ & T (" + str(categories['CZ & T']) + "), Low XY (" + str(categories['Low XY']) 
-			+ ") & H (" + str(categories['H_last']) +  ")\t: " \
+		print("\tCZ & T (" + str(categories['CZ & T']) + "), Low X & Y (" + str(categories['Low XY']) 
+			+ ") & H (" + str(categories['H_lo']) +  ")\t: " \
 			+ str(round(avg_time_per_category['CZ & T, Low XY & H'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['CZ & T, Low XY & H'])/avg_time_per_process)*100, 3)) + "%")
 	
@@ -346,7 +346,8 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 		str(round(((avg_time_per_category['Merged X & Y'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['High XY']:
-		print("\tHigh XY (" + str(categories['High XY']) + ")\t\t\t\t: "\
+		print("\tHigh X & Y (" + str(categories['High XY']) \
+			+ ") & H (" + str(categories['H_hi']) +  ")\t\t: "\
 		 + str(round(avg_time_per_category['High XY'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['High XY'])/avg_time_per_process)*100, 3)) + "%")
 

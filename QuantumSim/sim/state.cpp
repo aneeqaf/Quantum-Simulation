@@ -135,22 +135,32 @@ ApplyBlockOfDiagGates(string& cz_bits,
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
     if (last_cycle)
-        H_bitmask = (1ull << num_qubits/2) - 1;
+        H_bitmask = (1ull << int(ceil((float)num_qubits/2.0))) - 1;
     
-    if (num_qubits >= 8)
+    if (num_qubits > 8)
         ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64, H_bitmask,
                                         num_threads, zero_opt_mask);
     else
         ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64);
     
-    if (last_cycle) {
-        ApplyHGates(amp, num_qubits, num_threads,
-                    (((1ull << num_qubits) - 1) & ~((1ull << num_qubits/2) - 1)) >> num_qubits/2);
-        global_factor_power += num_qubits;
-    }
-    
     time_by_category.CZ_T += time.GetElapsedTime();
-   
+    
+    if (last_cycle) {
+        time.StartTime();
+        int shift = num_qubits - ceil((float)num_qubits/2.0);
+        ApplyHGates(amp, num_qubits, num_threads,
+                    (((1ull << num_qubits) - 1)
+                     & ~((1ull << int(ceil((float)num_qubits/2.0) - 1)))) >> shift);
+        time_by_category.H += time.GetElapsedTime();
+        global_factor_power += num_qubits;
+        
+        if (book_keep) {
+            int lo_H = __builtin_popcountll(H_bitmask);
+            count_of_category.H_merged_lo += lo_H;
+            count_of_category.H += num_qubits - lo_H;
+        }
+    }
+ 
     return -1;
 }
 
@@ -206,6 +216,9 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
         }
     }
     else ApplyHGates(amp, num_qubits, num_threads, (1ull << num_qubits) - 1);
+    
+    if (book_keep)
+        count_of_category.H += num_qubits;
     
     global_factor_power += num_qubits;
     
@@ -532,11 +545,13 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                                                  num_qubits, num_threads, zero_opt_mask,
                                                  last_cycle);
     }
-    
-    if (last_cycle && hiq_H_bitmask)
-        ApplyHGates(amp, num_qubits, num_threads, hiq_H_bitmask);
-    
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
+    
+    if (last_cycle && hiq_H_bitmask) {
+        time.StartTime();
+        ApplyHGates(amp, num_qubits, num_threads, hiq_H_bitmask);
+        time_by_category.H += time.GetElapsedTime();
+    }
     
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
     
@@ -546,6 +561,12 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     if (book_keep) {
         count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
         count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
+        
+        if (last_cycle) {
+            count_of_category.H_merged_lo += __builtin_popcountll(loq_H_bitmask);
+            count_of_category.H_merged_hi += num_hi_Y_bits + num_hi_X_bits;
+            count_of_category.H += hiq_H_bitmask;
+        }
     }
     
     return -1;

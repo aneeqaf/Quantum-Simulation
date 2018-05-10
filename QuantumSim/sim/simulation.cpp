@@ -196,13 +196,11 @@ Simulate(GenericQuantumState& amp,
     else {
         Phase1Simulation(amp, circuit, cz_path, curr_gate);
         auto& idx = config.indices;
-        if (config.print_amp) {
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            for(idx_size i = 0; i < idx.size(); ++i)
-                amps_of_interest[i] += amp[idx[i]];
-            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
-        }
+        Time amp_st_time;
+        amp_st_time.StartTime();
+        for(idx_size i = 0; i < idx.size(); ++i)
+            amps_of_interest[i] += amp[idx[i]];
+        amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
     }
     
     if (config.print_amp) {
@@ -470,9 +468,8 @@ SimulationLoop(GenericQuantumState &amp,
                 if ((config.last_layers_H && i == size)
                     || (i < size && circuit.GetGateFromIndex(i).ids.back() == Gate::Type::Hadamard)) {
                     last_cycle = true;
-                    last_layers_of_H--;
-                    if (amp.book_keep)
-                        amp.count_of_category.H_merged += circuit.GetNumQubits();
+                    if (config.last_layers_H)
+                        last_layers_of_H--;
                 }
 
                 int last_xCZ_idx = -1;
@@ -549,8 +546,6 @@ SimulationLoop(GenericQuantumState &amp,
                 
                 cycle_time.StartTime();
                 amp.ApplyHGateOnAllAmps(i != 0);
-                if (amp.book_keep)
-                    amp.count_of_category.H += circuit.GetNumQubits();
                 i += total_circuit_qubits - 1;
             }
             else {
@@ -579,8 +574,6 @@ SimulationLoop(GenericQuantumState &amp,
     while (last_layers_of_H) {
         amp.ApplyHGateOnAllAmps(true);
         --last_layers_of_H;
-        if (amp.book_keep)
-            amp.count_of_category.H += circuit.GetNumQubits();
     }
     
     curr_gate = circuit.GetTotalNumGates();
@@ -746,7 +739,7 @@ void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 1.9 - a quantum circuit simulator\n";
+    cout << "Rollright ver 2.0 - a quantum circuit simulator\n";
     cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
 //    char hostname[30] = {};
@@ -849,7 +842,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     if (config.approx) {
         approx_type << "Requested end-to-end circuit fidelity: " << setprecision(3)
         << 1.0/float(config.approx_epsilon) << "\nApproximation type : ";
-        if (config.ranges_bits == 0)
+        if (config.proc_prefix_bits)
             approx_type << "pruned xCZ branches";
         if (config.sim_type == Config::SimType::ApproxCZPathH2011 || config.sim_type == Config::SimType::ApproxCZPathV2011) {
             if (config.ranges_bits == 0)
@@ -989,15 +982,15 @@ PrintSimReport(GenericQuantumState& amp,
     idx_size temp_amp_size = amp.GetFullStateVectorSize();
     
     if (config.proc_prefix_bits) {
-        cout << "xCZ cycle breakdown : ";
+        cout << "Cycle breakdown : ";
         if (amp.count_of_category.cycle_p)
-            cout << amp.count_of_category.cycle_p << " (p)";
+            cout << amp.count_of_category.cycle_p << "p";
         if (amp.count_of_category.cycle_r && amp.count_of_category.cycle_p == 0 )
-            cout << amp.count_of_category.cycle_r << " (p & r)";
+            cout << amp.count_of_category.cycle_r << "p & r";
         else if (amp.count_of_category.cycle_r )
-            cout << " + " << amp.count_of_category.cycle_r << " (r)";
+            cout << " + " << amp.count_of_category.cycle_r << "r";
         if (amp.count_of_category.cycle_d)
-            cout << " + " << amp.count_of_category.cycle_d << " (d)";
+            cout << " + " << amp.count_of_category.cycle_d << "b";
         cout << "\n";
     }
     
@@ -1205,22 +1198,22 @@ PrintSimReport(GenericQuantumState& amp,
     }
 
     {
-        int width = 40;
+        int width = 43;
         double sum_percen = (amp.time_by_category.H/total_time) * 100;
         idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "\tH (" + to_string(amp.count_of_category.H/factor1) +  ")";
+        string H_s = "\tH (" + to_string(amp.count_of_category.H) +  ")";
         ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.H
         << " s  \t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
-            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1) + "), Low XY ("
-            + to_string(amp.count_of_category.low_q_XY1_2) + ") & H ("
-            + to_string(amp.count_of_category.H_merged/factor1) +  ")";
+            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1)
+            + "), Low X & Y (" + to_string(amp.count_of_category.low_q_XY1_2) + ") & H ("
+            + to_string(amp.count_of_category.H_merged_lo) +  ")";
             ss << CZ_T_s << setw(width - (int)CZ_T_s.size()) << right << ": "
             << amp.time_by_category.low_q_XY_CZT << " s  \t\t  =  "
             << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
@@ -1252,7 +1245,8 @@ PrintSimReport(GenericQuantumState& amp,
         }
         
         if(amp.count_of_category.high_q_XY1_2) {
-            string xy_s = "\tHigh XY (" + to_string(amp.count_of_category.high_q_XY1_2) + ")" ;
+            string xy_s = "\tHigh X & Y (" + to_string(amp.count_of_category.high_q_XY1_2) +
+            ") & H (" + to_string(amp.count_of_category.H_merged_hi) +  ")";
             ss << xy_s << setw(width - (int)xy_s.size()) << right << ": "
             << amp.time_by_category.high_q_XY1_2 << " s  \t\t  =  "
             << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";
