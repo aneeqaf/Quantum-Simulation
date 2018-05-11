@@ -405,12 +405,13 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
                      const int num_qubits,
                      const int num_threads,
                      const ZeroOptMask& zero_opt_mask,
+                     const bool zero_block = false,
                      const bool last_cycle = false);
 
-void ApplyHGates(cmplx* __restrict amp,
-                 int num_qubits,
-                 int num_threads,
-                 idx_size gate_bm);
+void ApplyHGatesIteratively(cmplx* __restrict amp,
+                            int num_qubits,
+                            int num_threads,
+                            idx_size gate_bm);
 
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,

@@ -55,7 +55,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				requested_amps_line = line
 
 			if "xCZ path breakdown" in line:
-				print(line, end="")
+				print(line.replace('\n',""), end=" (")
 				cz_path_t = line.split(":")[1]
 				# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
 				cz_path = cz_path_t.split("+")
@@ -73,7 +73,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 			if "fidelity" in line:
 				epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
 			if "Cycle breakdown" in line:
-				print(line, end="")
+				print(line.replace('C', 'c').replace('\n',")"))
 				if requested_amps_line != "":
 					print(requested_amps_line, end="")
 			elif "State representation size" not in line and print_line:
@@ -99,7 +99,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				categories['Single Y'] = int(line.split()[5].replace("(","").replace(")",""))
 			elif "Merged X & Y" in line:
 				categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
-			elif "High XY" in line:
+			elif "High X & Y" in line:
 				categories['High XY'] = int(line.split()[4].replace("(","").replace(")",""))
 				categories['H_hi'] = int(line.split()[7].replace("(","").replace(")",""))
 			elif "Rescaling passes" in line:
@@ -157,7 +157,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 						# else:
 						# 	time_r = re.findall("\d+", line)
 						# 	avg_time_per_process += float(time_r)
-					elif "H (" in line and "CZ & T" not in line:
+					elif "H (" in line and "&" not in line:
 						avg_time_per_category['H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "CZ & T" in line:
 						avg_time_per_category['CZ & T, Low XY & H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
@@ -167,7 +167,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 						avg_time_per_category['Single X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Merged X & Y" in line:
 						avg_time_per_category['Merged X & Y'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					elif "High XY" in line:
+					elif "High X & Y" in line:
 						avg_time_per_category['High XY'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Rescaling passes" in line:
 						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
@@ -320,19 +320,19 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	print("Avg runtime (" + str(round(avg_time_per_process, 3)) + " s total) per process by category ")
 	if avg_time_per_category['H']:
 		print("\tH ("+ str(categories['H']) + ") \t\t\t\t\t: " \
-			+ str(round(avg_time_per_category['H'], 3)) + " s  \t= " +\
+			+ str(round(avg_time_per_category['H'], 5)) + " s  \t= " +\
 		str(round(((avg_time_per_category['H'])/avg_time_per_process)*100, 3)) + "%")
+
+	if avg_time_per_category['xCZ']:
+		print("\txCZ (" + str(categories['xCZ']) + ") \t\t\t\t: "\
+		 + str(round(avg_time_per_category['xCZ'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['xCZ'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['CZ & T, Low XY & H']:
 		print("\tCZ & T (" + str(categories['CZ & T']) + "), Low X & Y (" + str(categories['Low XY']) 
 			+ ") & H (" + str(categories['H_lo']) +  ")\t: " \
 			+ str(round(avg_time_per_category['CZ & T, Low XY & H'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['CZ & T, Low XY & H'])/avg_time_per_process)*100, 3)) + "%")
-	
-	if avg_time_per_category['xCZ']:
-		print("\txCZ (" + str(categories['xCZ']) + ") \t\t\t\t: "\
-		 + str(round(avg_time_per_category['xCZ'], 3)) + " s  \t= " +\
-		str(round(((avg_time_per_category['xCZ'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Single X & Y']:
 		print("\tSingle X (" + str(categories['Single X']) + ") & Y (" \
@@ -347,7 +347,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	
 	if avg_time_per_category['High XY']:
 		print("\tHigh X & Y (" + str(categories['High XY']) \
-			+ ") & H (" + str(categories['H_hi']) +  ")\t\t: "\
+			+ ") & H (" + str(categories['H_hi']) +  ")     \t\t: "\
 		 + str(round(avg_time_per_category['High XY'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['High XY'])/avg_time_per_process)*100, 3)) + "%")
 
@@ -388,7 +388,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 			str(round(avg_CPU_uti_per_p/num_CZ_paths, 3)) + " % ")
 
 	if max_procs != 0:
-		print("\033[1m\nThe estimated time for the complete run is " \
+		print("\033[1m\nThe estimated time for all the processes is " \
 			+ str(round((avg_elapsed_time/(max_procs)) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
 
 	print("\n¯\_(ツ)_/¯ \n")

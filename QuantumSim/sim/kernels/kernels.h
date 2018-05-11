@@ -341,4 +341,9 @@ XYFastTransform(cmplx* __restrict amp,
                 const ZeroOptMask& zero_opt_mask,
                 const int th);
 
+void ApplyHGatesRecursively(cmplx* __restrict amp,
+                            int num_qubits,
+                            int num_threads,
+                            idx_size gate_bm);
+
 #endif /* kernels_h */

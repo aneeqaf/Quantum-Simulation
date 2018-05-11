@@ -413,7 +413,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	# 	proc_per_script = 1
 	# else:
 	proc_per_script = ceil(float(num_procs)/ float(num_batches));
-
+	
 	batch_count= 0
 	if proc_per_script:
 		while (batch_count + 1) * proc_per_script < len(cz_bits_strings): 

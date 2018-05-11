@@ -58,7 +58,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		num_batches = int(max_threads/num_threads);
 
 	if not multiple_nodes and num_batches * num_threads > cpu_count():
-		print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.")
+		print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.\033[0m")
 		exit()
 
 	# If the entire state vector needs to be printed, specify this command.
@@ -68,13 +68,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 			for q in range(1 << int(print_all)):
 				f.write(str(q) + "\n")
 
-	# Perform a trial run to choose better cut
-	d_idx = [pos for pos, char in enumerate(command) if char in "-d"][-1]
-	file_name = re.findall(r'\binst\w+', command)
-	cir_name = "test10.txt_0_"
-
-	if len(file_name):
-		cir_name = file_name[0] + "_" + str(depth) + "_"
+	cir_name = circuit + "_" + str(depth) + "_"
 	# os.makedirs(cir_dir)
 
 	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
@@ -91,6 +85,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	if t_time > 100 and max_procs:
 		max_procs = num_batches
 
+	cir_name += str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
+
 	if approx:
 		fid = approx
 		if not cont_cz_paths:
@@ -98,13 +94,12 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		if cont_cz_paths:
 			num_bit_strings = ceil(num_bit_strings / approx)
 
+		cir_name += "_approx_" + str(approx)
+
 	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
 		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
 		max_procs = 0
-
-	cir_name += str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
-	if approx:
-		cir_name += "_approx_" + str(approx)
+		
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
 
 	if os.path.isdir(cir_dir):
@@ -123,9 +118,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		else:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
 
-	if max_procs or (approx and max_procs < approx):
+	if max_procs or (max_procs and approx and max_procs < approx):
 		random.shuffle(cz_bits_strings)
-		cz_bits_strings[:max_procs]
+		cz_bits_strings = cz_bits_strings[:max_procs]
 		num_bit_strings = len(cz_bits_strings)
 
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, print_idxs, num_idx)

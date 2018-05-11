@@ -33,6 +33,9 @@ Rollright was developed in c++17 and uses g++7.
 * **--depth, -d** 
 	* Must be followed by an integer to specify the number of cycles to simulate.
 	* The default setting simulates all cycles specified in the input.
+* **--first_partition_smaller, -f**
+        * This is a flag and if specified it chooses a cut where the first partition is smaller than the second.
+        * The default behavior is that the first partition is bigger than the second.
 * **--grid_type, -m**
         * Must be followed by a string specifying the type of 2D circuit : "c" or "column_major", "r" or "row_major".
         * Default is row major.
@@ -50,6 +53,14 @@ Rollright was developed in c++17 and uses g++7.
 	* Optionally, end the two integers argument with a '+' to print the generated indices to a file.
 	* The program prints the values of the amplitudes in the specified indices to a file in `output\amp_vectors\<dirname pertaining to circuit>\<filename>.amps` or `output\amp_vectors\<filename>.amps`. `<filename>` can be specified using the -o option. Providing a `<filename>` is recommended for distributed simulation to simplify recollection of files for computations. 
 	* Generated indices are printed in `output\amp_vectors\<dirname>\<filename>.idx` or `output\amp_vectors\<filename>.idx`
+* **--layers_Hgates_b4_meas, -H**
+        * Must be followed by the number of layers of H gates to add at the specified depth.
+        * Default is zero.
+        * Don't need to specify this flag if the circuit file already has the required layer of H gates.
+* **--no_checkpoint_ranges, -p**
+        * This is a flag and if specified, the state vector after simulation of the process prefix bits is not saved.
+        * Default is false.
+        * The purpose of this flag is to save memory with possible deprecation in performance.
 * **--no_nearest_neighbors, -n**
         * If specified then the simulator does not check to make sure all two qubits gates are acting on nearest neighbors.
 * **--num_threads, -t**

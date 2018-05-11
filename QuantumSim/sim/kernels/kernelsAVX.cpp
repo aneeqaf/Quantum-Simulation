@@ -189,7 +189,8 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
             ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                                    num_threads, block_begin, block_size, zero_opt_mask);
             if (Lo_H_bitmask != 0)
-                ApplyHGates(amp + (offset_idx * block_size), block_bits, num_threads, Lo_H_bitmask);
+                ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
+                                       num_threads, Lo_H_bitmask);
         }
     }
 }
@@ -263,7 +264,8 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                               Lo_Y_bitmask, block_bits, num_threads);
                 
             if (last_cycle)
-                ApplyHGates(amp + (offset_idx * block_size), block_bits, num_threads, Lo_H_bitmask);
+                ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
+                                       num_threads, Lo_H_bitmask);
         }
 //        else {
 //            cout << "Zero bm : " << zero_opt_mask.print() << endl;

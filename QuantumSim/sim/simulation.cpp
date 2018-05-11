@@ -23,6 +23,8 @@ PopulateBenchmarkMap()
 {
     benchmark["inst_5_5_100_5_26"] = {cmplx(-1.131e-05,-7.93622e-06), cmplx(8.75183e-05,5.33763e-05),
         cmplx(1.07944e-05,4.87672e-05), cmplx(0.000104529,-0.000158536), cmplx(5.64697e-05,-0.000154015)};
+    benchmark["inst_5_5_100_5_27"] = {cmplx(3.33539e-05,1.10289e-05), cmplx(-6.26463e-05,-5.86281e-05),
+        cmplx(0.000114191,0.000189693), cmplx(0.000108496,-6.67671e-05), cmplx(-0.000189895,-5.00576e-05)};
     benchmark["inst_5_5_100_5_101"] = {cmplx(4.87169e-07,-0.000124961), cmplx(-3.05764e-05,-0.000204519),
         cmplx(-6.19013e-05,-8.43196e-05), cmplx(-0.00016258,-1.55531e-05), cmplx(-0.000111381,0.000135595)};
     benchmark["inst_6_5_100_5_26"] = {cmplx(-6.54596e-06,-2.83312e-05), cmplx(9.81011e-06,-1.3834e-05),
@@ -378,11 +380,8 @@ SimulationLoop(GenericQuantumState &amp,
         if (amp.GetGlobalFactorPower() > 100) {
             Time rescale_time;
             rescale_time.StartTime();
-            
-            if (config.curr_mode != Config::SimMode::Phase2)
-                ++amp.count_of_category.rescale;
+            ++amp.count_of_category.rescale;
             amp.Rescale();
-            
             amp.time_by_category.rescale += rescale_time.GetElapsedTime();
         }
         
@@ -739,7 +738,7 @@ void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 2.0 - a quantum circuit simulator\n";
+    cout << "Rollright ver 2.1 - a quantum circuit simulator\n";
     cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
 //    char hostname[30] = {};
@@ -988,9 +987,12 @@ PrintSimReport(GenericQuantumState& amp,
         if (amp.count_of_category.cycle_r && amp.count_of_category.cycle_p == 0 )
             cout << amp.count_of_category.cycle_r << "p & r";
         else if (amp.count_of_category.cycle_r )
-            cout << " + " << amp.count_of_category.cycle_r << "r";
-        if (amp.count_of_category.cycle_d)
-            cout << " + " << amp.count_of_category.cycle_d << "b";
+            cout << " + " << amp.count_of_category.cycle_r - amp.count_of_category.cycle_p << "r";
+        if (amp.count_of_category.cycle_d && amp.count_of_category.cycle_r)
+            cout << " + " << amp.count_of_category.cycle_d - amp.count_of_category.cycle_r << "b";
+        else if (amp.count_of_category.cycle_d)
+            cout << " + " << amp.count_of_category.cycle_d - amp.count_of_category.cycle_p << "b";
+            
         cout << "\n";
     }
     
@@ -1209,6 +1211,14 @@ PrintSimReport(GenericQuantumState& amp,
         ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.H
         << " s  \t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
 
+        if(amp.count_of_category.decomposed_CZ) {
+            string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
+            ss << CZ_s << setw(width - (int)CZ_s.size()) << right << ": "
+            << amp.time_by_category.decomposed_CZ << " s  \t\t  =  "
+            << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
+            sum_percen += (amp.time_by_category.decomposed_CZ/(total_time)) * 100;
+        }
+        
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
             to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1)
@@ -1220,13 +1230,6 @@ PrintSimReport(GenericQuantumState& amp,
             sum_percen += (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100;
         }
         
-        if(amp.count_of_category.decomposed_CZ) {
-            string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
-            ss << CZ_s << setw(width - (int)CZ_s.size()) << right << ": "
-            << amp.time_by_category.decomposed_CZ << " s  \t\t  =  "
-            << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
-            sum_percen += (amp.time_by_category.decomposed_CZ/(total_time)) * 100;
-        }
         if (amp.count_of_category.X1_2 || amp.count_of_category.Y1_2) {
             string XY_s = "\tSingle X (" + to_string(amp.count_of_category.X1_2)
             + ") & Y (" + to_string(amp.count_of_category.Y1_2) + ")";
