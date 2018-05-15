@@ -580,6 +580,38 @@ void ApplyHGatesRecursively(cmplx* __restrict amp,
     }
 }
 
+//void ApplyHGatesRecursively(cmplx* __restrict amp,
+//                            int num_qubits,
+//                            int num_threads,
+//                            int current_q)
+//{
+//    if (current_q >= num_qubits) return;
+//   
+//    int q1 = 0;
+//    int q2 = 1;
+//    idx_size gates_bitmask = (1ull << q1) | (1ull << q2);
+//    
+//    if (q1 > num_qubits - 1)
+//        Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
+//                                ApplyHHGateAVX, 4);
+//    else
+//        Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
+//                                ApplyHHGate, 1);
+//
+//    const int k = current_q + 2;
+//    
+//    if (k != kRT) {
+//        const idx_size num_iters = 1ull << k;
+//        const idx_size stride = (1ull << num_qubits)/num_iters;
+//        
+//#pragma omp parallel for schedule(guided) num_threads(num_threads)
+//        for (idx_size i = 0; i < num_iters ; ++i)
+//            ApplyHGatesRecursively(amp + (i * stride), num_qubits - k, num_threads,
+//                                   k);
+//        
+//    }
+//}
+
 void ApplyHGatesIteratively(cmplx* __restrict amp,
                              int num_qubits,
                              int num_threads,

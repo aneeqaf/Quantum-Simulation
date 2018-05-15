@@ -1201,15 +1201,22 @@ PrintSimReport(GenericQuantumState& amp,
 
     {
         int width = 43;
-        double sum_percen = (amp.time_by_category.H/total_time) * 100;
+        double sum_percen = (amp.time_by_category.initial_H/total_time) * 100;
         idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
         
-        string H_s = "\tH (" + to_string(amp.count_of_category.H) +  ")";
-        ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.H
-        << " s  \t\t  =  " << (amp.time_by_category.H/total_time) * 100 << "%\n";
+        string H_s = "\tInitial H (" + to_string(amp.count_of_category.initial_H) +  ")";
+        ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.initial_H
+        << " s  \t\t  =  " << (amp.time_by_category.initial_H/total_time) * 100 << "%\n";
+        
+        if (amp.count_of_category.last_H) {
+            string H_s = "\tLast H (" + to_string(amp.count_of_category.last_H) +  ")";
+            ss << H_s << setw(width - (int)H_s.size()) << right << ": " << amp.time_by_category.last_H
+            << " s  \t\t  =  " << (amp.time_by_category.last_H/total_time) * 100 << "%\n";
+            sum_percen = (amp.time_by_category.last_H/total_time) * 100;
+        }
 
         if(amp.count_of_category.decomposed_CZ) {
             string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
@@ -1222,8 +1229,10 @@ PrintSimReport(GenericQuantumState& amp,
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
             to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1)
-            + "), Low X & Y (" + to_string(amp.count_of_category.low_q_XY1_2) + ") & H ("
-            + to_string(amp.count_of_category.H_merged_lo) +  ")";
+            + "), Low X & Y (" + to_string(amp.count_of_category.low_q_XY1_2) + ")";
+            if (amp.count_of_category.H_merged_lo)
+                CZ_T_s += " & H (" + to_string(amp.count_of_category.H_merged_lo) +  ")";
+            
             ss << CZ_T_s << setw(width - (int)CZ_T_s.size()) << right << ": "
             << amp.time_by_category.low_q_XY_CZT << " s  \t\t  =  "
             << (amp.time_by_category.low_q_XY_CZT/(total_time)) * 100 << "%\n";
@@ -1248,8 +1257,9 @@ PrintSimReport(GenericQuantumState& amp,
         }
         
         if(amp.count_of_category.high_q_XY1_2) {
-            string xy_s = "\tHigh X & Y (" + to_string(amp.count_of_category.high_q_XY1_2) +
-            ") & H (" + to_string(amp.count_of_category.H_merged_hi) +  ")";
+            string xy_s = "\tHigh X & Y (" + to_string(amp.count_of_category.high_q_XY1_2) + ")";
+            if (amp.count_of_category.H_merged_hi)
+                xy_s += " & H (" + to_string(amp.count_of_category.H_merged_hi) +  ")";
             ss << xy_s << setw(width - (int)xy_s.size()) << right << ": "
             << amp.time_by_category.high_q_XY1_2 << " s  \t\t  =  "
             << (amp.time_by_category.high_q_XY1_2/(total_time)) * 100 << "%\n";

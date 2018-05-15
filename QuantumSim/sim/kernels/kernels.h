@@ -346,4 +346,9 @@ void ApplyHGatesRecursively(cmplx* __restrict amp,
                             int num_threads,
                             idx_size gate_bm);
 
+//void ApplyHGatesRecursively(cmplx* __restrict amp,
+//                            int num_qubits,
+//                            int num_threads,
+//                            int current_q);
+
 #endif /* kernels_h */

@@ -135,10 +135,12 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
     
     //Use `negate_Z` to enable a Gray-code optimized loop.
     for (idx_size count = block_begin; count + 15 < block_end ; count+=16) {
+        idx_size num_iters = count/16;
+        idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
-        idx_size gc0 = count ^ (count >> 1);
-        if (zero_opt_mask.CheckIfBlockIsNotZero(gc0, 16)) {
+        if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * 16, 16)) {
         
+            idx_size gc0 = count ^ (count >> 1);
             idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
             const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
             

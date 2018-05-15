@@ -26,7 +26,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	unit = "B"
 	qubits = 0
 	print_line = True
-	categories = {'H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0, 'H_lo':0, 'H_hi':0,\
+	categories = {'I_H':0, 'L_H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0, 'H_lo':0, 'H_hi':0,\
 	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0, 'High XY': 0 , 'Low XY': 0}
 	num_threads = 0
 	cz_path_len = 0
@@ -86,12 +86,17 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				print_line = False
 			elif "High-value qubits" in line:
 				print(line, end="")
-			elif "H (" in line and "&" not in line:
-				categories['H'] = int(line.split()[1].replace("(","").replace(")",""))
+			elif "Initial H" in line :
+				categories['I_H'] = int(line.split()[2].replace("(","").replace(")",""))
+			elif "Last H" in line :
+				categories['L_H'] = int(line.split()[2].replace("(","").replace(")",""))
 			elif "CZ & T" in line:
 				categories['CZ & T'] = int(line.split()[3].replace("(","").replace(")","").replace(",", ""))
 				categories['Low XY'] = int(line.split()[8].replace("(","").replace(")",""))
-				categories['H_lo'] = int(line.split()[11].replace("(","").replace(")",""))
+				try:
+					categories['H_lo'] = int(line.split()[11].replace("(","").replace(")",""))
+				except:
+					categories['H_lo'] = 0
 			elif "xCZ (" in line:
 				categories['xCZ'] = int(line.split()[1].replace("(","").replace(")",""))
 			elif "Single X" in line:
@@ -101,7 +106,10 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
 			elif "High X & Y" in line:
 				categories['High XY'] = int(line.split()[4].replace("(","").replace(")",""))
-				categories['H_hi'] = int(line.split()[7].replace("(","").replace(")",""))
+				try:
+					categories['H_hi'] = int(line.split()[7].replace("(","").replace(")",""))
+				except:
+					categories['H_hi'] = 0
 			elif "Rescaling passes" in line:
 				categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
 			elif "Copying" in line:
@@ -111,7 +119,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				break
 
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
-	avg_time_per_category = {'H':0.0, 'CZ & T, Low XY & H':0.0, 'xCZ':0.0, 'Single X & Y':0.0, \
+	avg_time_per_category = {'I_H':0.0, 'L_H':0.0, 'CZ & T, Low XY & H':0.0, 'xCZ':0.0, 'Single X & Y':0.0, \
 		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0, 'Storing amps':0.0,\
 		  'High XY':0.0}
 	
@@ -157,8 +165,10 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 						# else:
 						# 	time_r = re.findall("\d+", line)
 						# 	avg_time_per_process += float(time_r)
-					elif "H (" in line and "&" not in line:
-						avg_time_per_category['H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Initial H" in line :
+						avg_time_per_category['I_H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Last H" in line :
+						avg_time_per_category['L_H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "CZ & T" in line:
 						avg_time_per_category['CZ & T, Low XY & H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "xCZ (" in line:
@@ -318,10 +328,15 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 		avg_time_per_category[key] = val/num_CZ_paths
 
 	print("Avg runtime (" + str(round(avg_time_per_process, 3)) + " s total) per process by category ")
-	if avg_time_per_category['H']:
-		print("\tH ("+ str(categories['H']) + ") \t\t\t\t\t: " \
-			+ str(round(avg_time_per_category['H'], 5)) + " s  \t= " +\
-		str(round(((avg_time_per_category['H'])/avg_time_per_process)*100, 3)) + "%")
+	if avg_time_per_category['I_H']:
+		print("\tInitial H ("+ str(categories['I_H']) + ") \t\t\t\t: " \
+			+ str(round(avg_time_per_category['I_H'], 5)) + " s  \t= " +\
+		str(round(((avg_time_per_category['I_H'])/avg_time_per_process)*100, 3)) + "%")
+
+	if avg_time_per_category['L_H']:
+		print("\tLast H ("+ str(categories['L_H']) + ") \t\t\t\t: " \
+			+ str(round(avg_time_per_category['L_H'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['L_H'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['xCZ']:
 		print("\txCZ (" + str(categories['xCZ']) + ") \t\t\t\t: "\
@@ -330,8 +345,12 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	
 	if avg_time_per_category['CZ & T, Low XY & H']:
 		print("\tCZ & T (" + str(categories['CZ & T']) + "), Low X & Y (" + str(categories['Low XY']) 
-			+ ") & H (" + str(categories['H_lo']) +  ")\t: " \
-			+ str(round(avg_time_per_category['CZ & T, Low XY & H'], 3)) + " s  \t= " +\
+			+ ")" , end="")
+		if categories['H_lo']:
+			print (" & H (" + str(categories['H_lo']) +  ")\t: ", end ="")
+		else:
+			print ("\t\t: ", end ="")
+		print ( str(round(avg_time_per_category['CZ & T, Low XY & H'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['CZ & T, Low XY & H'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['Single X & Y']:
@@ -346,9 +365,12 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 		str(round(((avg_time_per_category['Merged X & Y'])/avg_time_per_process)*100, 3)) + "%")
 	
 	if avg_time_per_category['High XY']:
-		print("\tHigh X & Y (" + str(categories['High XY']) \
-			+ ") & H (" + str(categories['H_hi']) +  ")     \t\t: "\
-		 + str(round(avg_time_per_category['High XY'], 3)) + " s  \t= " +\
+		print("\tHigh X & Y (" + str(categories['High XY']) + ")" , end="")
+		if categories['H_hi']:
+			print (" & H (" + str(categories['H_hi']) +  ")  \t\t: ", end ="")
+		else:
+			print ("   \t\t\t: " , end="")
+		print (str(round(avg_time_per_category['High XY'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['High XY'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Rescaling passes']:

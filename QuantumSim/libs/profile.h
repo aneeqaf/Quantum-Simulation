@@ -12,7 +12,8 @@
 using ul = unsigned long;
 
 typedef struct TimesByCategory{
-    double H;
+    double initial_H;
+    double last_H;
     double X1_2;
     double Y1_2;
     double merged_XY1_2;
@@ -26,12 +27,13 @@ typedef struct TimesByCategory{
     double low_q_XY_CZT;
     double high_q_XY1_2;
     
-    TimesByCategory(): H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), copying(0), norm(0), amp_storage(0), low_q_XY_CZT(0), high_q_XY1_2(0) {}
+    TimesByCategory(): initial_H(0), last_H(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), copying(0), norm(0), amp_storage(0), low_q_XY_CZT(0), high_q_XY1_2(0) {}
 }Times;
 
 
 typedef struct CountOfCategory{
-    ul H;
+    ul initial_H;
+    ul last_H;
     ul H_merged_lo;
     ul H_merged_hi;
     ul X1_2;
@@ -49,7 +51,7 @@ typedef struct CountOfCategory{
     int cycle_r;
     int cycle_d;
     
-    CountOfCategory(): H(0), H_merged_lo(0), H_merged_hi(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0), low_q_XY1_2(0), high_q_XY1_2(0),
+    CountOfCategory(): initial_H(0), last_H(0), H_merged_lo(0), H_merged_hi(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0), low_q_XY1_2(0), high_q_XY1_2(0),
         cycle_p(0), cycle_r(0), cycle_d(0){}
 }Counts;
 
