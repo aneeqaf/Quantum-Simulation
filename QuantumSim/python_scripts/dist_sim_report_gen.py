@@ -36,6 +36,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	epsilon = 0
 	hardware_threads = 0
 	num_amps = 0
+	num_layers_stats = ""
 
 	#Copy the initial content of seq run onto the report
 	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
@@ -55,7 +56,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				requested_amps_line = line
 
 			if "xCZ path breakdown" in line:
-				print(line.replace('\n',""), end=" (")
+				print(line, end="")
 				cz_path_t = line.split(":")[1]
 				# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
 				cz_path = cz_path_t.split("+")
@@ -73,7 +74,9 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 			if "fidelity" in line:
 				epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
 			if "Cycle breakdown" in line:
-				print(line.replace('C', 'c').replace('\n',")"))
+				print("\t" + line, end="")
+			if "Layers breakdown" in line:
+				print("\t" + line, end="")
 				if requested_amps_line != "":
 					print(requested_amps_line, end="")
 			elif "State representation size" not in line and print_line:
@@ -84,6 +87,12 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
 				unit = mem_usage.split(" ")[2].replace(' ','')
 				print_line = False
+			elif "Number of layers simulated" in line:
+				num_layers_stats += line
+			elif "CZ & T" in line and "(" not in line:
+				num_layers_stats += "\t" + line
+			elif "X & Y" in line and "(" not in line:
+				num_layers_stats += "\t" + line
 			elif "High-value qubits" in line:
 				print(line, end="")
 			elif "Initial H" in line :
@@ -139,6 +148,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	avg_major_pagefaults = 0.0
 	avg_minor_pagefaults = 0.0
 	avg_time_per_gate = 0.0
+	avg_mmap_time = 0.0
 
 	# Calculating other statistics for the report 
 	for script_log in scripts:
@@ -169,7 +179,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 						avg_time_per_category['I_H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Last H" in line :
 						avg_time_per_category['L_H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					elif "CZ & T" in line:
+					elif "CZ & T (" in line:
 						avg_time_per_category['CZ & T, Low XY & H'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "xCZ (" in line:
 						avg_time_per_category['xCZ'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
@@ -185,10 +195,12 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 						avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Storing amps" in line:
 						avg_time_per_category['Storing amps'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					elif "Prefix " in line:
+					elif "Prefix" in line:
 						avg_cz_time += float(line.split(":")[1].split()[0])
-					elif "Branches " in line:
+					elif "Branches" in line:
 						avg_dfs_time += float(line.split(":")[1].split()[0])
+					elif "Memory mapping" in line:
+						avg_mmap_time += float(line.split(":")[1].split()[0])
 					elif "Average time per gate" in line:
 						avg_time_per_gate += float(line.split(":")[1].split()[0])
 					elif "elapsed" in line:
@@ -255,7 +267,6 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 				# if test_fid > 1e-3:
 				# 	fidelity = float("nan")
 	
-
 	num_machines = ceil((num_threads * num_batches)/hardware_threads)
 	# printing statistics onto reports				
 	print("\nMulti-process simulation " , end="")
@@ -314,7 +325,10 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	print("\tBillable runtime : {:.3e}".format((max_elapsed_time * num_machines)/3600) \
 		+ " hrs ({:.3e}".format(((max_elapsed_time * num_machines)/num_amps)/3600) + " hrs per amp)")
 
-	print("\namp[3]  \t= {:.6e}".format(amp['3']))
+	if num_layers_stats != "":
+		print("\t" + num_layers_stats)
+
+	print("amp[3]  \t= {:.6e}".format(amp['3']))
 	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))
 	print("amp[1/2]\t= {:.6e}".format(amp['1/2']))
 	print("amp[3/4]\t= {:.6e}".format(amp['3/4']))
@@ -400,11 +414,14 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	print("Avg time per gate : " + str(round(avg_time_per_gate/num_CZ_paths, 6)) + " s")	
 	if avg_cz_time:
 		print("Simulation per process runtime breakdown : ")
-		print ("\tPrefix : " + str(round(avg_cz_time, 3)) + " s = " +\
+		print ("\tPrefix\t\t : " + str(round(avg_cz_time, 3)) + " s = " +\
 		str(round((avg_cz_time/avg_time_per_process) * 100, 3)) + "%")
 	if avg_dfs_time:
-		print("\tBranches : " + str(round(avg_dfs_time, 3)) + " s = " +\
+		print("\tBranches\t : " + str(round(avg_dfs_time, 3)) + " s = " +\
 			str(round((avg_dfs_time/avg_time_per_process) * 100, 3)) + "%")
+	if avg_mmap_time >= 1e-2:
+		print("\tMemory mapping\t : " + str(round(avg_mmap_time, 3)) + " s = " +\
+			str(round((avg_mmap_time/avg_time_per_process) * 100, 3)) + "%")	
 	if avg_CPU_uti_per_p:
 		print("Avg CPU utilization per process : " + \
 			str(round(avg_CPU_uti_per_p/num_CZ_paths, 3)) + " % ")

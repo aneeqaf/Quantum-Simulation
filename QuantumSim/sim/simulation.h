@@ -30,8 +30,8 @@ private:
     
     static unordered_map<string, array<cmplx, 5>> benchmark;
     ostringstream log;
-    double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time;
-    idx_size curr_gate;
+    double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time, mmap_time;
+    idx_size curr_gate, num_layers;
     Config config;
     vector<double> norms_CZ_paths;
     vector<cmplx> amps_of_interest;

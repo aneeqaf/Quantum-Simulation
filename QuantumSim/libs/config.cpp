@@ -151,7 +151,7 @@ Config(const idx_size amp_size,
 misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l),
 proc_prefix_bits(cz_len), approx_epsilon(epsilon), dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc),
 hcut(hc), google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx), sim_type(sim),
-verbose(v), curr_mode(Phase1), nearest_neighbors(near_neighbors), row_major(row_maj),
+verbose(v), curr_mode(ProcPrefix), nearest_neighbors(near_neighbors), row_major(row_maj),
 last_layers_H(layers_last_H), store_checkpoint_range(store_r), first_part_smaller(first_part_small)
 {
     if (!print_amp)

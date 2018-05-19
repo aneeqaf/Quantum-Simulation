@@ -10,7 +10,8 @@
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
-SequentialSimulation(const Config& c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0), config(c)
+SequentialSimulation(const Config& c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0), config(c),
+mmap_time(0), num_layers(0)
 {
     if (config.norm_depth) {
         idx_size num_norms = config.norm_depth ? 1ull << config.norm_depth : 1ull << config.ranges_bits;
@@ -80,6 +81,9 @@ CheckpointWithRanges(GenericQuantumState& amp,
     amp.time_by_category.copying += copy_time.GetElapsedTime();
     ++amp.count_of_category.copying;
     
+    if (config.ranges_bits)
+        config.curr_mode = Config::SimMode::Ranges;
+    
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
         cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
         
@@ -97,6 +101,8 @@ CheckpointWithRanges(GenericQuantumState& amp,
         if (config.norm_perc)
             norms_CZ_paths[cz_p] = sqrt(temp_amp.CalculateNormSquared());
         amp.book_keep = false;
+        
+        config.curr_mode = Config::SimMode::Ranges;
         
         if ((cz_p + 1) < cz_paths_ex) {
             copy_time.StartTime();
@@ -117,6 +123,9 @@ NoCheckpointWithRanges(GenericQuantumState& amp,
     idx_size cz_paths_ex = config.proc_prefix_bits ? 1ull << config.ranges_bits : 1ull << config.norm_depth,
     total_bits = config.proc_prefix_bits ? config.proc_prefix_bits + config.ranges_bits : config.norm_depth;
     
+    if (config.ranges_bits)
+        config.curr_mode = Config::SimMode::Ranges;
+    
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
         string cz_path = bitset<128>(config.cz_path + cz_p).to_string();
         cz_path = cz_path.substr(cz_path.size() - total_bits);
@@ -130,9 +139,13 @@ NoCheckpointWithRanges(GenericQuantumState& amp,
             amp_st_time.StartTime();
             for(idx_size i = 0; i < idx.size(); ++i)
                 amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+            double time_storage = amp_st_time.GetElapsedTime();
+            amp.time_by_category.amp_storage += time_storage;
+            phase1_time += time_storage;
         }
         
+        config.curr_mode = Config::SimMode::Ranges;
+
         if (config.norm_perc)
             norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
     }
@@ -210,7 +223,9 @@ Simulate(GenericQuantumState& amp,
         amp_st_time.StartTime();
         for (idx_size i = 0; i < config.indices.size(); ++i)
             *(*config.mmap_obj)[i] += amps_of_interest[i];
-        amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+        double storage_time = amp_st_time.GetElapsedTime();
+        amp.time_by_category.amp_storage += storage_time;
+        mmap_time += storage_time;
     }
 
     total_time += time.GetElapsedTime() - XE_time;
@@ -231,7 +246,7 @@ Phase1Simulation(GenericQuantumState& amp,
     
     bool terminate = false;
     
-    if (cz_path != "-") {
+    if (cz_path != "-" && cz_path != "") {
 //        config.th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
         config.th = amp.GetNumQInBlock(0) >> 1;
         amp.partition_to_sim = 'a';
@@ -243,7 +258,7 @@ Phase1Simulation(GenericQuantumState& amp,
         SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length, gate_i);
         amp.partition_to_sim = 'x';
     }
-    else
+    else if (cz_path != "")
         SimulationLoop(amp, circuit, cz_path, config.dfs_length);
     
     phase1_time += cz_path_time.GetElapsedTime();
@@ -307,7 +322,8 @@ Phase2Simulation(GenericQuantumState& amp,
     SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
     amp.time_by_category.copying += copy_time.GetElapsedTime();
     ++amp.count_of_category.copying;
-    
+    config.curr_mode = Config::SimMode::Branch;
+
     string cz_path = "-";
     idx_size num_CZ_paths = 1ull << config.dfs_length;
     for (idx_size i = 0; i < num_CZ_paths; ++i) {
@@ -333,7 +349,6 @@ Phase2Simulation(GenericQuantumState& amp,
             amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
         }
         
-        config.curr_mode = Config::SimMode::Phase2;
         amp.book_keep = false;
         
         if ((i + 1) < num_CZ_paths) {
@@ -346,7 +361,6 @@ Phase2Simulation(GenericQuantumState& amp,
     
     dfs_time += phase2_time.GetElapsedTime();
     
-    config.curr_mode = Config::SimMode::Phase1;
     if (exec == 1) {
         if (!cz_path.size()) {
             if (circuit.GetTotalNumGates() != curr_gate)
@@ -377,6 +391,15 @@ SimulationLoop(GenericQuantumState &amp,
     idx_size i = gate_i;
     for (; i < size; ++i) {
         
+        if (amp.book_keep)
+            ++num_layers;
+        if (config.curr_mode == Config::SimMode::ProcPrefix)
+            ++amp.count_of_category.proc_prefix_layers;
+        else if (config.curr_mode == Config::SimMode::Ranges)
+            ++amp.count_of_category.ranges_layers;
+        else if (config.curr_mode == Config::SimMode::Branch)
+            ++amp.count_of_category.branch_layers;
+        
         if (amp.GetGlobalFactorPower() > 100) {
             Time rescale_time;
             rescale_time.StartTime();
@@ -393,10 +416,10 @@ SimulationLoop(GenericQuantumState &amp,
             double cycle_elapsed_t = time.GetElapsedTime();
             current_cycle = circuit.GetCycleNumForGateIdx(i);
             
-            if (config.curr_mode != Config::SimMode::Phase2)
+            if (amp.book_keep)
                 amp.data_per_cycles.cycles.push_back(current_cycle);
             
-            if (config.curr_mode != Config::SimMode::Phase2) {
+            if (amp.book_keep) {
 #ifdef CosineSimilarityDoubled
                 Time misc_time;
                 misc_time.StartTime();
@@ -428,7 +451,7 @@ SimulationLoop(GenericQuantumState &amp,
                 
                 double cross_entropy = 0;
                 
-                if (config.verbose == 4 && config.curr_mode == Config::SimMode::Phase1) {
+                if (config.verbose == 4 && amp.book_keep) {
                     Time misc_time;
                     misc_time.StartTime();
                     cross_entropy = amp.CalculateCrossEntropy(10);
@@ -472,12 +495,17 @@ SimulationLoop(GenericQuantumState &amp,
                 }
 
                 int last_xCZ_idx = -1;
-                if (X_bitmask != 0 || Y_bitmask != 0)
+                if (X_bitmask != 0 || Y_bitmask != 0) {
                     last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask,
                                                                  CZ_bitmasks, T_bitmasks, config.th, last_cycle);
-                else
+                    ++amp.count_of_category.CZT_layers;
+                    ++amp.count_of_category.XY_layers;
+                }
+                else {
                     last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks,
                                                              T_bitmasks, last_cycle);
+                    ++amp.count_of_category.CZT_layers;
+                }
                 
                 terminate = last_xCZ_idx != -1 ? true : false;
                 
@@ -537,6 +565,8 @@ SimulationLoop(GenericQuantumState &amp,
                         amp.count_of_category.merged_XY1_2 += i - prev_i;
                         amp.data_per_cycles.XY_gates.push_back(i - prev_i);
                     }
+                    ++amp.count_of_category.XY_layers;
+
                     --i;
 
                     X_Y_top_time += XY_time.GetElapsedTime();
@@ -995,6 +1025,19 @@ PrintSimReport(GenericQuantumState& amp,
             
         cout << "\n";
     }
+    if (config.proc_prefix_bits) {
+        cout << "Layers breakdown : ";
+        if (amp.count_of_category.proc_prefix_layers)
+            cout << amp.count_of_category.proc_prefix_layers / 2 << "p";
+        if (amp.count_of_category.cycle_r && amp.count_of_category.cycle_p == 0)
+            cout << amp.count_of_category.ranges_layers / 2 << "p & r";
+        else if (amp.count_of_category.cycle_r )
+            cout << " + " << amp.count_of_category.ranges_layers / 2 << "r";
+        if (amp.count_of_category.cycle_d)
+            cout << " + " << amp.count_of_category.branch_layers / 2 << "b";
+        
+        cout << "\n";
+    }
     
     cout << "\n";
     
@@ -1198,11 +1241,15 @@ PrintSimReport(GenericQuantumState& amp,
             cout << "\n";
         }
     }
+    
+    idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
+    cout << "Number of layers simulated : ";
+    cout << "\n\tCZ & T : " << amp.count_of_category.CZT_layers/factor1 << "\n" ;
+    cout << "\tX & Y  : " << amp.count_of_category.XY_layers/factor1 << "\n\n" ;
 
     {
         int width = 43;
         double sum_percen = (amp.time_by_category.initial_H/total_time) * 100;
-        idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
         ss << "Runtime (" << total_time << " s total) by category \n";
@@ -1313,15 +1360,20 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "\nAverage time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
         
         if (config.proc_prefix_bits) {
-            ss << "Simulation runtime breakdown : \n\tPrefix : " << phase1_time << " s = "
+            ss << "Simulation runtime breakdown : \n\tPrefix    \t\t : " << phase1_time << " s = "
              << (phase1_time/(total_time)) * 100 << "%\n";
         }
         if (config.dfs_length != 0) {
-            ss << "\tBranches : " << dfs_time << " s = "
+            ss << "\tBranches  \t\t : " << dfs_time << " s = "
             << (dfs_time/(total_time)) * 100 << "%\n";
+        }
+        if (mmap_time != 0) {
+            ss << "\tMemory mapping : " << mmap_time << " s = "
+            << (mmap_time/(total_time)) * 100 << "%\n";
         }
         cout << ss.str() << "\n";
     }
+    
     
 //    if (config.verbose == Config::Verbose::Cycles) {
 //        cout << log.str() << "\n";

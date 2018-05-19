@@ -50,9 +50,16 @@ typedef struct CountOfCategory{
     int cycle_p;
     int cycle_r;
     int cycle_d;
+    int CZT_layers;
+    int XY_layers;
+    int proc_prefix_layers;
+    int ranges_layers;
+    int branch_layers;
     
-    CountOfCategory(): initial_H(0), last_H(0), H_merged_lo(0), H_merged_hi(0), X1_2(0), Y1_2(0), merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0), copying(0), low_q_XY1_2(0), high_q_XY1_2(0),
-        cycle_p(0), cycle_r(0), cycle_d(0){}
+    CountOfCategory(): initial_H(0), last_H(0), H_merged_lo(0), H_merged_hi(0), X1_2(0), Y1_2(0),
+    merged_XY1_2(0), CZ_T(0), decomposed_CZ(0), rescale(0), conversion(0), xCZ_not_applied(0),
+    copying(0), low_q_XY1_2(0), high_q_XY1_2(0), cycle_p(0), cycle_r(0), cycle_d(0),
+    CZT_layers(0), XY_layers(0), proc_prefix_layers(0), ranges_layers(0), branch_layers(0) {}
 }Counts;
 
 class Time {
