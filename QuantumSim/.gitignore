@@ -38,5 +38,6 @@ google/
 table2.pdf
 table2.xlsx
 ~$table2.xlsx
+fide_graph.xlsx
 rr
 QuantumSim/python_scripts/__pycache__/*

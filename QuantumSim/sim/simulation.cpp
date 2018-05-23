@@ -59,6 +59,8 @@ void SequentialSimulation::
 CheckpointWithRanges(GenericQuantumState& amp,
                      Circuit& circuit)
 {
+    Time time;
+    time.StartTime();
     string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.proc_prefix_bits);
     config.th = amp.GetNumQInBlock(0) >> 1;
     amp.partition_to_sim = 'a';
@@ -84,6 +86,8 @@ CheckpointWithRanges(GenericQuantumState& amp,
     if (config.ranges_bits)
         config.curr_mode = Config::SimMode::Ranges;
     
+    phase1_time += time.GetElapsedTime();
+    
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
         cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
         
@@ -95,7 +99,9 @@ CheckpointWithRanges(GenericQuantumState& amp,
             amp_st_time.StartTime();
             for(idx_size i = 0; i < idx.size(); ++i)
                 amps_of_interest[i] += temp_amp.GetGlobalAmpAtInterestingIdx(i);
-            temp_amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+            double time_storage = amp_st_time.GetElapsedTime();
+            amp.time_by_category.amp_storage += time_storage;
+            phase1_time += time_storage;
         }
         
         if (config.norm_perc)
@@ -107,7 +113,9 @@ CheckpointWithRanges(GenericQuantumState& amp,
         if ((cz_p + 1) < cz_paths_ex) {
             copy_time.StartTime();
             temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
-            amp.time_by_category.copying += copy_time.GetElapsedTime();
+            double time_copying = copy_time.GetElapsedTime();
+            amp.time_by_category.copying += time_copying;
+            phase1_time += time_copying;
             ++amp.count_of_category.copying;
         }
     }
@@ -205,8 +213,9 @@ Simulate(GenericQuantumState& amp,
             amp_st_time.StartTime();
             for(idx_size i = 0; i < idx.size(); ++i)
                 amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
-        }
+            double storage_time = amp_st_time.GetElapsedTime();
+            amp.time_by_category.amp_storage += storage_time;
+            mmap_time += storage_time;        }
     }
     else {
         Phase1Simulation(amp, circuit, cz_path, curr_gate);
@@ -261,19 +270,18 @@ Phase1Simulation(GenericQuantumState& amp,
     else if (cz_path != "")
         SimulationLoop(amp, circuit, cz_path, config.dfs_length);
     
-    phase1_time += cz_path_time.GetElapsedTime();
-    
     if (exec == 1) {
         if (config.ranges_bits != 0)
             amp.count_of_category.cycle_r = circuit.GetCycleNumForGateIdx(curr_gate);
         else if (config.proc_prefix_bits != 0)
             amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
     }
-    
+    phase1_time += cz_path_time.GetElapsedTime();
+
     if (terminate && config.dfs_length != 0) {
         Phase2Simulation(amp, circuit, curr_gate);
         if (exec == 1)
-            amp.count_of_category.cycle_d = circuit.GetCycleNumForGateIdx(curr_gate);
+            amp.count_of_category.cycle_d = circuit.GetCycleNumForGateIdx(curr_gate) + config.last_layers_H;
     }
     else if (!terminate &&  config.dfs_length != 0)
         config.dfs_length = 0;
@@ -492,6 +500,7 @@ SimulationLoop(GenericQuantumState &amp,
                     last_cycle = true;
                     if (config.last_layers_H)
                         last_layers_of_H--;
+                    ++amp.count_of_category.H_layers;
                 }
 
                 int last_xCZ_idx = -1;
@@ -573,6 +582,7 @@ SimulationLoop(GenericQuantumState &amp,
                 }
             else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 
+                ++amp.count_of_category.H_layers;
                 cycle_time.StartTime();
                 amp.ApplyHGateOnAllAmps(i != 0);
                 i += total_circuit_qubits - 1;
@@ -601,6 +611,7 @@ SimulationLoop(GenericQuantumState &amp,
     }
     
     while (last_layers_of_H) {
+        ++amp.count_of_category.H_layers;
         amp.ApplyHGateOnAllAmps(true);
         --last_layers_of_H;
     }
@@ -862,7 +873,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     
     cout << "Qubits : " << circuit.GetNumQubits() << "  ";
     cout << "Gates : " << circuit.GetTotalNumGates() << "  ";
-    cout << "Cycles : " << circuit.GetNumCycles() << "\n";
+    cout << "Cycles : " << circuit.GetNumCycles() + config.last_layers_H << "\n";
     
     if (!amp.log.empty())
         cout << amp.log[amp.log.size() - 1]<< "\n";
@@ -956,6 +967,14 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         
     }
     
+    if (config.sim_type == Config::SimType::FullState)
+        cout << "Low-value qubits : " << amp.GetNumQInBlock(0) - config.th << " q\n";
+    else {
+        cout << "Low-value qubits : "
+        << amp.GetNumQInBlock(0) - (amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15) << " q, "
+        << amp.GetNumQInBlock(1) - (amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15) << " q\n";
+    }
+    
     if (config.proc_prefix_bits) {
         cout << "xCZ path breakdown : " << config.proc_prefix_bits << "p" ;
         if (config.ranges_bits)
@@ -983,17 +1002,6 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         cout << "\n";
         config.verbose = Config::Verbose::NCC;
     }
-    
-    if (config.sim_type == Config::SimType::FullState)
-        cout << "Low-value qubits : " << amp.GetNumQInBlock(0) - config.th << " q\n";
-    else {
-        cout << "Low-value qubits : "
-        << amp.GetNumQInBlock(0) - (amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15) << " q, "
-        << amp.GetNumQInBlock(1) - (amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15) << " q\n";
-    }
-    
-    if (config.print_amp)
-        cout << "Requested num amps : " << config.indices.size() - 5 << "\n";
     
 //    else
 //       cout << "None\n";
@@ -1025,6 +1033,16 @@ PrintSimReport(GenericQuantumState& amp,
             
         cout << "\n";
     }
+    
+    idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
+    cout << "Layers simulated :";
+    cout << " H (" << amp.count_of_category.H_layers/factor1 << "), " ;
+    cout << "CZ & T (" << amp.count_of_category.CZT_layers/factor1 << "), " ;
+    if (amp.count_of_category.last_H)
+        cout << "X & Y & H (" << amp.count_of_category.XY_layers/factor1 << ")\n" ;
+    else
+        cout << "X & Y (" << amp.count_of_category.XY_layers/factor1 << ")\n" ;
+
     if (config.proc_prefix_bits) {
         cout << "Layers breakdown : ";
         if (amp.count_of_category.proc_prefix_layers)
@@ -1038,6 +1056,8 @@ PrintSimReport(GenericQuantumState& amp,
         
         cout << "\n";
     }
+    if (config.print_amp)
+        cout << "Requested num amps : " << config.indices.size() - 5 << "\n";
     
     cout << "\n";
     
@@ -1242,11 +1262,6 @@ PrintSimReport(GenericQuantumState& amp,
         }
     }
     
-    idx_size factor1 = config.proc_prefix_bits ?  2 : 1;
-    cout << "Number of layers simulated : ";
-    cout << "\n\tCZ & T : " << amp.count_of_category.CZT_layers/factor1 << "\n" ;
-    cout << "\tX & Y  : " << amp.count_of_category.XY_layers/factor1 << "\n\n" ;
-
     {
         int width = 43;
         double sum_percen = (amp.time_by_category.initial_H/total_time) * 100;
@@ -1368,7 +1383,7 @@ PrintSimReport(GenericQuantumState& amp,
             << (dfs_time/(total_time)) * 100 << "%\n";
         }
         if (mmap_time != 0) {
-            ss << "\tMemory mapping : " << mmap_time << " s = "
+            ss << "\tMemory mapped I/O : " << mmap_time << " s = "
             << (mmap_time/(total_time)) * 100 << "%\n";
         }
         cout << ss.str() << "\n";

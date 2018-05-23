@@ -7,7 +7,7 @@ import tempfile
 import time
 import re
 import shutil
-import datetime
+import time
 import dist_util
 import errno
 import psutil
@@ -42,10 +42,11 @@ from math import sqrt, floor, ceil
 @click.option("--no_nearest_neighbors", nargs=1, required=False, is_flag=True)
 @click.option("--layers_hgates_b4_meas", nargs=1, required=False, default=0)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
+@click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
  approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
- layers_hgates_b4_meas, no_checkpoint_with_ranges):
+ layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only):
 
 	dist_util.CheckInputFile(circuit)
 
@@ -101,7 +102,6 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		max_procs = 0
 		
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
-
 	if os.path.isdir(cir_dir):
 		shutil.rmtree(cir_dir, ignore_errors=True)
 	
@@ -130,7 +130,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	num_batches = dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, \
 	 cz_bits_strings, command, t_time, num_threads, mem, cut, ranges_bits, max_procs, approx, \
-	 multiple_nodes)
+	 multiple_nodes, binary_vectors_only)
 
 	if test_fid:
 		if len(cz_bits_strings) > 2:
@@ -156,7 +156,13 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		post_launch_cmd += " --test_fid"
 	if no_checkpoint_with_ranges:
 		post_launch_cmd += " --no_checkpoint_with_ranges"
-	print(post_launch_cmd + " > " + str(log_dir) + "/final_report 2>&1 &")
+	if binary_vectors_only:
+		post_launch_cmd += " --binary_vectors_only"
+	if multiple_nodes:
+		post_launch_cmd += " --not_final_amps"
+
+	post_launch_cmd += " > " + str(log_dir) + "/final_report" + str(time.clock()) + ".rep 2>&1 &"
+	print(post_launch_cmd)
 	if trial:
 		os.system(post_launch_cmd)
 

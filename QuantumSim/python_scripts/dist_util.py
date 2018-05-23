@@ -388,7 +388,7 @@ def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulati
 
 def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings, \
 	command, t_time, num_threads, mem, cut, app_cz_len = 0, truncated = 0, approx = False, \
-	multiple_nodes=False):
+	multiple_nodes=False, binary_vectors_only=False):
 
 	# Generating scripts for each parallel run
 	print("\033[1m" + "Generating scripts for execution" + "\033[0m\n")
@@ -426,7 +426,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				for j in range(start_idx, start_idx + proc_per_script):
 					proc_count += 1
 					script.write("START_TIME=$SECONDS\n")
-					if j < (start_idx + proc_per_script - 1):
+					if j < (start_idx + proc_per_script - 1) or binary_vectors_only:
 						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 					else:
@@ -449,7 +449,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				for j in range(start_idx, num_procs):
 					proc_count += 1
 					script.write("START_TIME=$SECONDS\n")
-					if j < (num_procs - 1):
+					if j < (num_procs - 1) or binary_vectors_only:
 						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 					else:

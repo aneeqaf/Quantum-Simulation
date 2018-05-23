@@ -18,8 +18,11 @@ from math import ceil
 @click.option("--max_procs", nargs=1, required=False, default= 0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
+@click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
+@click.option("--not_final_amps", nargs=1, required=False, is_flag=True)
 def main(cir_dir, num_procs, num_batches, est_time, t_time,
- num_idx, max_procs, test_fid, no_checkpoint_with_ranges):
+ num_idx, max_procs, test_fid, no_checkpoint_with_ranges, 
+ binary_vectors_only, not_final_amps):
 
 	# TODO: fix proc_per_script
 	proc_per_script = ceil(float(num_procs)/ float(num_batches)) if num_procs > 1 else 1
@@ -42,9 +45,13 @@ def main(cir_dir, num_procs, num_batches, est_time, t_time,
 			 # Put script to sleep for substantial changes to take place
 		any_log_changed = False
 		for i, lf in enumerate(log_files):
-			if os.stat(lf).st_size > logs_prev_mem[i]:
-				any_log_changed = True
-				logs_prev_mem[i] = os.stat(lf).st_size
+			try:
+				if os.stat(lf).st_size > logs_prev_mem[i]:
+					any_log_changed = True
+					logs_prev_mem[i] = os.stat(lf).st_size
+			except:
+				print ("Expected log " + str(i) + " not found")
+				exit()
 		if not any_log_changed:
 			changing = False
 
@@ -65,7 +72,13 @@ def main(cir_dir, num_procs, num_batches, est_time, t_time,
 			print ("The simulations in script_" + str(num_batches - 1) + " did not complete")
 			exit()
 
-	os.system("./python_scripts/add_amps.py " + str(cir_dir) + " " + str(num_idx))
+	add_amps_cmd = "./python_scripts/add_amps.py " + str(cir_dir) + " " + str(num_idx)
+	if binary_vectors_only:
+		add_amps_cmd += " --binary_vectors_only"
+	if not_final_amps:
+		add_amps_cmd += " --not_final_amps"		
+	print(add_amps_cmd) 
+	os.system(add_amps_cmd)
 
 	report_cmd = "./python_scripts/dist_sim_report_gen.py " + cir_dir + " --est_time " + str(est_time)\
 	 + " --max_procs " + str(max_procs)

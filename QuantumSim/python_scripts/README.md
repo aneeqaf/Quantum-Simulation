@@ -62,6 +62,7 @@ Options for controlling CZ path:
 
 These options should be modified if default value is not desired:
 * **--approx** : the value of this option is the denominator of the fidelity; e.g For fidelity = 0.125 , --approx=8. This acts as an epsilon for choosing CZ paths when performing approximate simulation.
+* **--binary_vectors_only** : this is a flag. Use it when the final amplitude vector of a batch is desired in binary format instead of the ASCII format. The default is ASCII. 
 * **--column_major** : this is flag. If specified then the grid for the 2D circuit is column major. The default value is row major.
 * **--layers_hgates_b4_meas** : this option takes in a value for the number of layers of H gates at the end of the requested number of cycles. This is to facilitate simulation of layers of H gates at the end of the requested number of cycles without having to generate specific circuit files for this purpose. Default is zero. Do not use this option if the circuit file already has the required layer of H gates.
 * **--no_checkpoint_with_ranges** : this is a flag to prevent checkpointing the state vector for the process prefix bits before ranges begin. Default is false.
@@ -108,6 +109,8 @@ dist_sim.py prints the total number of processes and batches on the terminal.
 **Optional options**
 
 * **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches)
+* **--binary_vectors_only** : this is a flag. Use it when the final amplitude vector of a batch is in binary format instead of the ASCII format. The default is set to false. The script passes the flag to the add_amps.py script. 
+* **--not_final_amps** : this is a flag. Use it when the amplitude vector that is produced by adding all the amplitude vectors in the specified directory is not the final amplitude vector. This flag is passed to the add_amps.py script.
 
 ##### Example runs:
 
@@ -164,6 +167,11 @@ This script adds the amplitudes from all the batches. The result is output in th
 * `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
 * Number of idxs
 
+**Optional options**
+
+* **--binary_vectors_only** : this is a flag. Must be set when the final amplitude vector of a batch is in binary format instead of the ASCII format. The default is set to false. The final resultant amplitude vector produced by the script is in ASCII. 
+* **--not_final_amps** : this is a flag. Use it when the amplitude vector that is produced by adding all the amplitude vectors in the specified directory is not the final amplitude vector. This flag then creates resultant amplitude files with unique names so when the resultant amplitude files are transferred to a single node, there is no name collision. 
+
 ##### Example runs:
 
 1. The command below adds up all the amplitudes produced after the simulations of a  30q circuit, depth 26 with fidelity 0.125. `result.amps` would have a 1000 amps.
@@ -192,4 +200,27 @@ When generating a report for approximate simulation, this script checks if the c
 $ ./python_scripts/dist_sim_report_gen.py inst_6_5_100_5_26_12_4_approx_8
 ```
 
+
+7. #### multinode_report_gen.py
+
+Generates the reports after a multinode simulation has been completed. Uses multiprocess simulation reports of each node to generate a final report. **Expects all multiprocess simulation reports to end with the extension .rep**
+
+The main purpose of this script is to allow the user to transfer only the multiprocess simulation report from each node involved in the multinode simulation onto a single node. It eliminates the need to transfer hefty simulation logs from each node to another.
+
+When generating a report for approximate simulation, this script checks if the corresponding exact simulation has been performed. If it finds the resultant amplitudes of the exact simulation, it then calculates the fidelity and reports it.
+
+##### Important command line options
+
+**Mandatory arguments** :  `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
+
+**Optional options**
+
+* **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches )
+
+##### Example runs:
+
+1. The command below prints the multiprocess simulation report after the simulations of a  30q circuit, depth 26 with fidelity 0.125.
+```shellsession
+$ ./python_scripts/multinode_report_gen.py inst_6_5_100_5_26_12_4_approx_8
+```
 
