@@ -40,93 +40,98 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	layers_breakdown = ""
 	low_val_q_line = ""
 
+	scripts = os.listdir(log_dir)
+
 	#Copy the initial content of seq run onto the report
-	with open(os.path.join(log_dir, "log_script_0.txt"), "r") as first_file:
-		requested_amps_line = ""
-		for line in first_file:
-			if "Qubits" in line:
-				qubits = int(line.split(":")[1].split()[0].replace(' ',''))
-				
-			if "Max threads per process" in line:
-				num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
-				
-			if "Hardware threads" in line:
-				hardware_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
+	for script_log in scripts:
+		if script_log.endswith(".txt"):
+			with open(os.path.join(log_dir, script_log), "r") as first_file:
+				requested_amps_line = ""
+				for line in first_file:
+					if "Qubits" in line:
+						qubits = int(line.split(":")[1].split()[0].replace(' ',''))
+						
+					if "Max threads per process" in line:
+						num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
+						
+					if "Hardware threads" in line:
+						hardware_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 
-			if "xCZ path breakdown" in line:
-				print(line.replace('\n',""), end=" (")
-				cz_path_t = line.split(":")[1]
-				# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
-				cz_path = cz_path_t.split("+")
-				if len(cz_path) >= 1:
-					cz_path_len = int(re.sub('[^0-9]', '', cz_path[0])) 
-				if len(cz_path) > 1:
-					if "r" in cz_path[1]:
-						cz_path_ranges = int(re.sub('[^0-9]', '', cz_path[1]))
-				if len(cz_path) > 2: 
-					dfs_bits = int(re.sub('[^0-9]', '', cz_path[2]))
-				print_line = False
+					if "xCZ path breakdown" in line:
+						print(line.replace('\n',""), end=" (")
+						cz_path_t = line.split(":")[1]
+						# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
+						cz_path = cz_path_t.split("+")
+						if len(cz_path) >= 1:
+							cz_path_len = int(re.sub('[^0-9]', '', cz_path[0])) 
+						if len(cz_path) > 1:
+							if "r" in cz_path[1]:
+								cz_path_ranges = int(re.sub('[^0-9]', '', cz_path[1]))
+						if len(cz_path) > 2: 
+							dfs_bits = int(re.sub('[^0-9]', '', cz_path[2]))
+						print_line = False
 
-				if len(cz_path) == 3 :
-					dfs = True
-			if "fidelity" in line:
-				epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
-			if "Cycle breakdown" in line:
-				print(line.replace('C', 'c').replace('\n',")"))
-				if low_val_q_line != "":
-					print(low_val_q_line, end="")
-			if "Layers breakdown" in line:
-				layers_breakdown += line
-			elif "Low-value qubits" in line:
-				low_val_q_line = line
-			elif "Requested num amps" in line:
-				num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
-				print(line,  end='')
-			elif "State representation size" not in line and print_line:
-				print(line,  end='')
-			elif "State representation size" in line:
-				mem_line = line
-				mem_usage = line.split(":")[1].replace('\n', '')
-				mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
-				unit = mem_usage.split(" ")[2].replace(' ','')
-				print_line = False
-			elif "Layers simulated" in line:
-				num_layers_stats += line.replace("\n", "")
-			# elif "CZ & T" in line and "(" not in line:
-			# 	num_layers_stats += "\t" + line
-			# elif "X & Y" in line and "(" not in line:
-			# 	num_layers_stats += "\t" + line
-			elif "Initial H" in line :
-				categories['I_H'] = int(line.split()[2].replace("(","").replace(")",""))
-			elif "Last H" in line :
-				categories['L_H'] = int(line.split()[2].replace("(","").replace(")",""))
-			elif "CZ & T" in line:
-				categories['CZ & T'] = int(line.split()[3].replace("(","").replace(")","").replace(",", ""))
-				categories['Low XY'] = int(line.split()[8].replace("(","").replace(")",""))
-				try:
-					categories['H_lo'] = int(line.split()[11].replace("(","").replace(")",""))
-				except:
-					categories['H_lo'] = 0
-			elif "xCZ (" in line:
-				categories['xCZ'] = int(line.split()[1].replace("(","").replace(")",""))
-			elif "Single X" in line:
-				categories['Single X'] = int(line.split()[2].replace("(","").replace(")",""))
-				categories['Single Y'] = int(line.split()[5].replace("(","").replace(")",""))
-			elif "Merged X & Y" in line:
-				categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
-			elif "High X & Y" in line:
-				categories['High XY'] = int(line.split()[4].replace("(","").replace(")",""))
-				try:
-					categories['H_hi'] = int(line.split()[7].replace("(","").replace(")",""))
-				except:
-					categories['H_hi'] = 0
-			elif "Rescaling passes" in line:
-				categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
-			elif "Copying" in line:
-				categories['Copying'] = int(line.split()[1].replace("(","").replace(")",""))
-			
-			elif "¯\_(ツ)_/¯ " in line:
-				break
+						if len(cz_path) == 3 :
+							dfs = True
+					if "fidelity" in line:
+						epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
+					if "Cycle breakdown" in line:
+						print(line.replace('C', 'c').replace('\n',")"))
+						if low_val_q_line != "":
+							print(low_val_q_line, end="")
+					if "Layers breakdown" in line:
+						layers_breakdown += line
+					elif "Low-value qubits" in line:
+						low_val_q_line = line
+					elif "Requested num amps" in line:
+						num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
+						print(line,  end='')
+					elif "State representation size" not in line and print_line:
+						print(line,  end='')
+					elif "State representation size" in line:
+						mem_line = line
+						mem_usage = line.split(":")[1].replace('\n', '')
+						mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
+						unit = mem_usage.split(" ")[2].replace(' ','')
+						print_line = False
+					elif "Layers simulated" in line:
+						num_layers_stats += line.replace("\n", "")
+					# elif "CZ & T" in line and "(" not in line:
+					# 	num_layers_stats += "\t" + line
+					# elif "X & Y" in line and "(" not in line:
+					# 	num_layers_stats += "\t" + line
+					elif "Initial H" in line :
+						categories['I_H'] = int(line.split()[2].replace("(","").replace(")",""))
+					elif "Last H" in line :
+						categories['L_H'] = int(line.split()[2].replace("(","").replace(")",""))
+					elif "CZ & T" in line:
+						categories['CZ & T'] = int(line.split()[3].replace("(","").replace(")","").replace(",", ""))
+						categories['Low XY'] = int(line.split()[8].replace("(","").replace(")",""))
+						try:
+							categories['H_lo'] = int(line.split()[11].replace("(","").replace(")",""))
+						except:
+							categories['H_lo'] = 0
+					elif "xCZ (" in line:
+						categories['xCZ'] = int(line.split()[1].replace("(","").replace(")",""))
+					elif "Single X" in line:
+						categories['Single X'] = int(line.split()[2].replace("(","").replace(")",""))
+						categories['Single Y'] = int(line.split()[5].replace("(","").replace(")",""))
+					elif "Merged X & Y" in line:
+						categories['Merged X & Y'] = int(line.split()[4].replace("(","").replace(")",""))
+					elif "High X & Y" in line:
+						categories['High XY'] = int(line.split()[4].replace("(","").replace(")",""))
+						try:
+							categories['H_hi'] = int(line.split()[7].replace("(","").replace(")",""))
+						except:
+							categories['H_hi'] = 0
+					elif "Rescaling passes" in line:
+						categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
+					elif "Copying" in line:
+						categories['Copying'] = int(line.split()[1].replace("(","").replace(")",""))
+					
+					elif "¯\_(ツ)_/¯ " in line:
+						break
+			break
 
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
 	avg_time_per_category = {'I_H':0.0, 'L_H':0.0, 'CZ & T, Low XY & H':0.0, 'xCZ':0.0, 'Single X & Y':0.0, \
@@ -142,7 +147,6 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	avg_elapsed_time = 0.0
 	max_elapsed_time = 0.0
 	avg_CPU_uti_per_p = 0.0
-	scripts = os.listdir(log_dir)
 	avg_dfs_time = 0.0
 	avg_cz_time = 0.0
 	avg_residents = 0.0

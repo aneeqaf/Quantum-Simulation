@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
     store_checkpoint_range = true, first_partition_smaller = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
-    int numQ = 0, numG = 0, threshold = 0, depth = 26, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
+    int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0;
     float norm_perc = 0;
     idx_size cz_path = 0, epsilon = 0;
@@ -385,12 +385,14 @@ int main(int argc, char *argv[])
         idx_size size = 0;
         //write a function for printing google files.
         if (rollrightInput) {
-            cir.ReadCustomInputFiles(input_filename, amp_v, size);
+            cir.ReadCustomInputFiles(amp_v, size, input_filename, layers_H_gates);
             delete [] amp_v;
             amp_v = nullptr;
         }
-        else
-            cir.ReadGoogleCircuitFile(input_filename, depth);
+        else {
+            cir.ReadGoogleCircuitFile(input_filename, depth, layers_H_gates);
+            depth = (int)cir.GetNumCycles();
+        }
     }
     else if(create) {
         for (idx_size i = 0; i < num_qubits.size(); ++i){
@@ -406,6 +408,8 @@ int main(int argc, char *argv[])
     
     if (sim_type == -1) {
         if (cir.GetNumQubits() <= 32) sim_type = 5;
+        else if (hcut != 0) sim_type = 0;
+        else if (vcut != 0) sim_type = 1;
         else sim_type = 0;
     }
     

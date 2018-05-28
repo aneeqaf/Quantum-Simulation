@@ -134,8 +134,9 @@ public:
     
     virtual int ApplyBlockOfDiagGates(string& cz_bits,
                                       idx_size prefix_size,
-                                       const bitset<128>* __restrict CZ_bitmasks,
-                                       const bitset<128> T_bitmasks[2],
+                                      const bitset<128>* __restrict CZ_bitmasks,
+                                      const bitset<128> T_bitmasks[2],
+                                      const bitset<128>& H_bitmask,
                                       const bool last_cycle = false) = 0;
     virtual void ApplyNonCGate(const int gate_qubit,
                                const Gate::Type gate_type,
@@ -156,13 +157,14 @@ public:
                                            int th) = 0;
     virtual int ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                                            idx_size prefix_size,
-                                           bitset<128> X_bitmask,
-                                           bitset<128> Y_bitmask,
+                                           const bitset<128>& X_bitmask,
+                                           const bitset<128>& Y_bitmask,
+                                           const bitset<128>& H_bitmask,
                                            const bitset<128>* __restrict CZ_bitmasks,
                                            const bitset<128> T_bitmasks[2],
                                            int th,
-                                          bool last_cycle = false) = 0;
-    virtual bitset<128> FormXYGatesBitmask(idx_size& gate_i,
+                                           bool last_cycle = false) = 0;
+    virtual bitset<128> FormXYHGatesBitmask(idx_size& gate_i,
                                         const vector<Gate>& all_gates,
                                         const Gate::Type gate_type);
     virtual void FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks,

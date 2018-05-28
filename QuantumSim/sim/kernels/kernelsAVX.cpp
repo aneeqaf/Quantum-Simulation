@@ -177,7 +177,7 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_threads,
                                 const ZeroOptMask& zero_opt_mask)
 {
-    const int block_bits = ceil((float)num_qubits_amp/2.0);
+    const int block_bits = num_qubits_amp >= 8 ? ceil((float)num_qubits_amp/2.0) : num_qubits_amp;
     const idx_size amp_size = 1ull << num_qubits_amp;
     const idx_size block_size = 1ull << block_bits;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);

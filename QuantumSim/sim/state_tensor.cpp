@@ -194,6 +194,7 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2],
+                      const bitset<128>& H_bitmask,
                       const bool last_cycle)
 {
     
@@ -212,11 +213,13 @@ ApplyBlockOfDiagGates(string& cz_bits,
         bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks);
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
-        
+        bitset<128> stateA_Hbitmask = Project1QBitmask(H_bitmask, qp, 0, true);
+
         time_by_category.CZ_T += time.GetElapsedTime();
         
-        if (applyCZ_a || T_bitmasks_a[0] != 0)
-            state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a, last_cycle);
+        if (applyCZ_a || T_bitmasks_a[0] != 0 || stateA_Hbitmask != 0)
+            state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a,
+                                             stateA_Hbitmask, last_cycle);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         Time time;
@@ -231,11 +234,13 @@ ApplyBlockOfDiagGates(string& cz_bits,
         bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks);
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
-        
+        bitset<128> stateB_Hbitmask = Project1QBitmask(H_bitmask, qp, 1, true);
+
         time_by_category.CZ_T += time.GetElapsedTime();
 
-        if (applyCZ_b || T_bitmasks_b[0] != 0)
-            state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b, last_cycle);
+        if (applyCZ_b || T_bitmasks_b[0] != 0 || stateB_Hbitmask != 0)
+            state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b,
+                                             stateB_Hbitmask, last_cycle);
     }
 //    state_a -> PrintStateVector() ; cout << endl;
 //    state_b -> PrintStateVector() ; cout << endl;
@@ -395,19 +400,21 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 
 int TensorProductStateVector::
 ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                          idx_size prefix_size,
-                          bitset<128> X_bitmask,
-                          bitset<128> Y_bitmask,
-                          const bitset<128>* __restrict CZ_bitmasks,
-                          const bitset<128> T_bitmasks[2],
-                          int th,
-                          bool last_cycle)
+                           idx_size prefix_size,
+                           const bitset<128>& X_bitmask,
+                           const bitset<128>& Y_bitmask,
+                           const bitset<128>& H_bitmask,
+                           const bitset<128>* __restrict CZ_bitmasks,
+                           const bitset<128> T_bitmasks[2],
+                           int th,
+                           bool last_cycle)
 {
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
 
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, qp, 0, true);
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, qp, 0, true);
+        bitset<128> stateA_Hbitmask = Project1QBitmask(H_bitmask, qp, 0, true);
         
         bitset<128> CZ_bitmasks_a[num_q_a];
         bitset<128> T_bitmasks_a[2] = {0};
@@ -419,12 +426,13 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
         
-        state_a -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateA_Xbitmask, stateA_Ybitmask,
+        state_a -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateA_Xbitmask, stateA_Ybitmask, stateA_Hbitmask,
                                              CZ_bitmasks_a, T_bitmasks_a, th, last_cycle);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
         bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, qp, 1, true);
+        bitset<128> stateB_Hbitmask = Project1QBitmask(H_bitmask, qp, 1, true);
         
         bitset<128> CZ_bitmasks_b[num_q_b];
         bitset<128> T_bitmasks_b[2] = {0};
@@ -436,7 +444,7 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
         
-        state_b -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateB_Xbitmask, stateB_Ybitmask,
+        state_b -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateB_Xbitmask, stateB_Ybitmask, stateB_Hbitmask,
                                             CZ_bitmasks_b, T_bitmasks_b, th, last_cycle);
     }
     

@@ -25,8 +25,9 @@ private:
 public:
     int ApplyBlockOfDiagGates(string& cz_bits,
                               idx_size prefix_size,
-                               const bitset<128>* __restrict CZ_bitmasks,
-                               const bitset<128> T_bitmasks[2],
+                              const bitset<128>* __restrict CZ_bitmasks,
+                              const bitset<128> T_bitmasks[2],
+                              const bitset<128>& H_bitmask,
                               const bool last_cycle);
     inline int ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks);
     inline int ApplyXCZGatesForDist(string& cz_bits,
@@ -59,8 +60,9 @@ public:
                                    int th);
     int ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                                    idx_size prefix_size,
-                                   bitset<128> X_bitmask,
-                                   bitset<128> Y_bitmask,
+                                   const bitset<128>& X_bitmask,
+                                   const bitset<128>& Y_bitmask,
+                                   const bitset<128>& H_bitmask,
                                    const bitset<128>* __restrict CZ_bitmasks,
                                    const bitset<128> T_bitmasks[2],
                                    int th,

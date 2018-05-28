@@ -12,22 +12,22 @@ import time
 @click.argument("num_idx", nargs=1)
 @click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
 @click.option("--not_final_amps", nargs=1, required=False, is_flag=True)
-def main(cir_dir, num_idx, binary_vectors_only, not_final_amps):
+@click.option("--add_partial_res_amps", nargs=1, required=False, is_flag=True)
+def main(cir_dir, num_idx, binary_vectors_only, not_final_amps, add_partial_res_amps):
 
 	outdir = os.path.join("output", "amp_vectors", cir_dir)
 	files = os.listdir(outdir)
 
-	amps = np.zeros(1, dtype=complex)
-	if binary_vectors_only:
-		amps = np.zeros(int(num_idx) + 5, dtype=complex)
-	else: 
-		amps = np.zeros(int(num_idx), dtype=complex)
-
+	amps = np.zeros(int(num_idx) + 5, dtype=complex)
+	
 	for filename in files:
 		if filename.endswith("_ascii.amps") or binary_vectors_only or "result" in filename:
 			if binary_vectors_only and (filename.endswith("_ascii.amps")
 			 or "result" in filename):
 				continue
+			if add_partial_res_amps and "result" not in filename:
+				continue
+
 			full_filename = os.path.join(outdir, filename)
 			print(full_filename)
 
@@ -43,8 +43,7 @@ def main(cir_dir, num_idx, binary_vectors_only, not_final_amps):
 					lines = f.readlines()
 					temp = np.loadtxt(lines, dtype=complex)
 
-			for i, amp in enumerate(temp):
-				amps[i] += amp;
+			amps += temp;
 
 	results_file = "result" + ".amps"
 	if not_final_amps:

@@ -21,6 +21,7 @@ To launch a multiprocess simulation, the order of running scripts is the followi
 	1. dist_sim.py
 	2. execute_scripts.py (**ONLY** for multinode simulation)
 	3. post_launch.py 
+	4. post_multinode_sim.py (**ONLY** for multinode simulation)
 
 Please refer to the section below to see how each of these scripts work.
 
@@ -111,6 +112,7 @@ dist_sim.py prints the total number of processes and batches on the terminal.
 * **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches)
 * **--binary_vectors_only** : this is a flag. Use it when the final amplitude vector of a batch is in binary format instead of the ASCII format. The default is set to false. The script passes the flag to the add_amps.py script. 
 * **--not_final_amps** : this is a flag. Use it when the amplitude vector that is produced by adding all the amplitude vectors in the specified directory is not the final amplitude vector. This flag is passed to the add_amps.py script.
+* **batch_range** : this option takes in two arguments, starting index (inclusive) and last index (exclusive) of the batches being executed on a node. The default is 0 to number of batches. 
 
 ##### Example runs:
 
@@ -161,6 +163,8 @@ $ ./python_scripts/resume_batches.py inst_6_5_100_5_26_12_4_approx_8 10 15
 
 This script adds the amplitudes from all the batches. The result is output in the file `result.amps`  in the same directory.
 
+The final resultant amplitude file is always called “result.amps”
+
 ##### Important command line options
 
 **Mandatory arguments** :
@@ -171,6 +175,7 @@ This script adds the amplitudes from all the batches. The result is output in th
 
 * **--binary_vectors_only** : this is a flag. Must be set when the final amplitude vector of a batch is in binary format instead of the ASCII format. The default is set to false. The final resultant amplitude vector produced by the script is in ASCII. 
 * **--not_final_amps** : this is a flag. Use it when the amplitude vector that is produced by adding all the amplitude vectors in the specified directory is not the final amplitude vector. This flag then creates resultant amplitude files with unique names so when the resultant amplitude files are transferred to a single node, there is no name collision. 
+* **--add_partial_res_amps** : this is a flag that tells the script to only add the amplitude vector files that have `result` in their filenames. This is useful for multinode simulation to add the partial-resultant amplitude vectors from each node. Default is false.
 
 ##### Example runs:
 
@@ -224,3 +229,27 @@ When generating a report for approximate simulation, this script checks if the c
 $ ./python_scripts/multinode_report_gen.py inst_6_5_100_5_26_12_4_approx_8
 ```
 
+8. #### post_multinode_sim.py
+
+This script is responsible for producing the final amplitude vector and the final multinode simulation report.
+
+After performing a multinode simulation, transfer all the partial-resultant amplitude vector files and intermediate multi-process simulation reports to a single node in their designated directories (output/(amp_vectors or log)/<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>). All partial-resultant amplitude vector files must have `result` in their filename and all intermediate multi-process simulation reports must have `.rep` extension. Note this naming convention is taken care of if you use the command lines as dictated by the dist_sim.py script.
+
+(In the case of multinode simulation, dist_sim.py prints instructions on how to use this.)
+
+##### Important command line options
+
+**Mandatory arguments** :
+* `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>` or `<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>`
+* Number of idxs
+
+**Optional options**
+
+* **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches )
+
+##### Example runs:
+
+1. The command below produces the final amplitude vector and the final multinode simulation report for he simulation of 25q, depth 28 circuit. 
+```shellsession
+$ ./python_scripts/post_multinode_sim.py inst_5_5_100_5_28_10_4 --num_idx 1000 --max_procs 0
+```

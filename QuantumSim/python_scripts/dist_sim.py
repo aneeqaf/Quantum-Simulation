@@ -18,7 +18,7 @@ from math import sqrt, floor, ceil
 
 @click.command()
 @click.argument("circuit", nargs=1, required=True)
-@click.option("--depth", nargs=1, required=False, default=26)
+@click.option("--depth", nargs=1, required=False, default=0)
 @click.option("--v_cut", nargs=1, required=False, default=0)
 @click.option("--h_cut", nargs=1, required=False, default=0)
 @click.option("--proc_prefix_bits", required=False, nargs=1, default=0)
@@ -69,7 +69,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 			for q in range(1 << int(print_all)):
 				f.write(str(q) + "\n")
 
-	cir_name = circuit + "_" + str(depth) + "_"
+	# cir_name = circuit + "_" + str(depth) + "_"
 	# os.makedirs(cir_dir)
 
 	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
@@ -77,7 +77,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, approx, column_major,
 	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, v_cut = v_cut) 
 		
-	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command = \
+	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command, depth = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
 		ranges_bits, branch_bits, trial, v_cut, h_cut, approx)
 
@@ -86,7 +86,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	if t_time > 100 and max_procs:
 		max_procs = num_batches
 
-	cir_name += str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
+	cir_name = circuit + "_" + str(depth) + "_" + \
+	str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
 
 	if approx:
 		fid = approx
@@ -144,8 +145,11 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	# up the amps from the batches and generating the report.
 	print("\033[1m" + "\nPlease use the following command after all the processes have ended to " + \
 		"check whether all the simulations have successfully completed; add all the amplitudes vectors; and " + \
-		"produce the multiprocess simulation report. If performing a multinode simulation, " + \
-		"please transfer all the logs to a single node and use the command." + "\033[0m")
+		"produce the multiprocess simulation report." + "\033[0m")
+
+	if multiple_nodes:
+		print("\033[1m" + "Please add the batch ranges that are executed on a node to the post_launch.py command" +\
+		 "\033[0m")
 
 	num_procs = len(cz_bits_strings) if not max_procs else max_procs 
 	log_dir = os.path.join("output", "log", cir_name)
@@ -160,11 +164,30 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		post_launch_cmd += " --binary_vectors_only"
 	if multiple_nodes:
 		post_launch_cmd += " --not_final_amps"
+		post_launch_cmd += "\033[1m --batch_range <inclusive start, exclusive end> \033[0m"
 
 	post_launch_cmd += " > " + str(log_dir) + "/final_report" + str(time.clock()) + ".rep 2>&1 &"
 	print(post_launch_cmd)
 	if trial:
 		os.system(post_launch_cmd)
+
+	if multiple_nodes:
+		print("\033[1m" + "\nPlease use the following command once your multinode simulation has completed." +\
+		" The script will add all the partial resultant amplitudes and generate the final report " +\
+		"from the intermediate multiprocess simulations reports. Make sure that you transfer all files " + \
+		"to their designated directories " + \
+		"(output/(amp_vectors or log)/<circuit_filename>_<depth>_<prefix_bits>_<num_threads>_approx_<eps>), " +\
+		"all intermediate multiprocess simulations reports should end "  +\
+		"in '.rep' and all partial resultant amplitude vector files should have 'result' in ther filenames." + \
+		" Apart from the transfer, the post_launch.py command above should take care of the naming conventions required.\n" +\
+		"\033[0m")
+
+		post_multinode_sim_cmd = "./python_scripts/post_multinode_sim.py "  + str(cir_name) +\
+		 " --num_idx " + str(num_idx) + " --max_procs " + str(max_procs)
+		if test_fid:
+			post_multinode_sim_cmd += " --test_fid"
+	
+		print(post_multinode_sim_cmd + "\n\n")
 
 
 if __name__ == "__main__":

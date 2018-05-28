@@ -33,17 +33,23 @@ GenericQuantumState(int n_threads){
 }
 
 bitset<128> GenericQuantumState::
-FormXYGatesBitmask(idx_size& gate_i,
+FormXYHGatesBitmask(idx_size& gate_i,
                   const vector<Gate>& all_gates,
                   const Gate::Type gate_type)
 {
-    vector<int> cluster_qubits = FormBlockOfXYHGates(gate_i, gate_type, all_gates);
+//    vector<int> cluster_qubits = FormBlockOfXYHGates(gate_i, gate_type, all_gates);
     
     bitset<128> bitmask = 0;
-    
-    for (idx_size i = 0; i < cluster_qubits.size(); ++i)
-        bitmask[cluster_qubits[i]] = 1;
-    
+    for(;gate_i < all_gates.size(); ++gate_i) {
+        const auto& gt = all_gates[gate_i];
+        
+        if(gt.ids.back() == gate_type)
+            bitmask[gt.qubits.back()] = 1;
+        else break;
+    }
+//    for (idx_size i = 0; i < cluster_qubits.size(); ++i)
+//        bitmask[cluster_qubits[i]] = 1;
+//
     return bitmask;
 }
 
@@ -247,6 +253,7 @@ QubitPartition::print(int verb) const {
     if (verb == 0)
         return "";
     
+    int qubits = getNumQubits();
     stringstream s;
     s << "Qubit grid " << _rows << "x" << _cols << " with "
     << getNumBlocks() << " blocks " << endl;
@@ -256,7 +263,7 @@ QubitPartition::print(int verb) const {
             s << "    ";
             for (int j = 0; j < _cols; ++j)
                 s << setw(2) << i + j
-                <<  char(_global_to_block[i + j] + 94) << "  ";
+                <<  char(_global_to_block[qubits - (i + j) - 1] + 94) << "  ";
             s << "\n";
         }
     }
@@ -352,9 +359,6 @@ Project1QBitmask(bitset<128> gate_bitmask,
             int local_q_idx = qp.globalToLocal(global_q_idx);
             if (is_zero_least_sig) {
                 local_q_idx = num_qb1 - local_q_idx;
-//            cout << "Global idx : " << global_q_idx << " q : " << q << endl;
-//             cout << "Local idx : " << local_q_idx <<  endl;
-            
             }
             projected_bitmask |= 1ull << local_q_idx;
         }

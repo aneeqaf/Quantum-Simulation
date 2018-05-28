@@ -83,21 +83,27 @@ void Circuit::
 GroupSimilarGates()
 {
     idx_size last_CZ = 0, last_T = 0, last_X = 0, last_Y = 0;
-    bool saw_CZ = false, saw_T = false, saw_X = false, saw_Y = false;
+    bool saw_CZ = false, saw_T = false, saw_X = false, saw_Y = false, saw_H = false;
     idx_size g_i = (idx_size)qubits;
     
     for (idx_size j = qubits; j < gates.size()
          && (g_i + last_Y + last_X + last_T + last_CZ) < gates.size(); ++j) {
         
         if (gates[j].ids.back() == Gate::Type::Z) {
-            if(saw_Y || saw_X) {
+            if(saw_Y || saw_X || saw_H) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
-                saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false;
+                saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false; saw_H = false;
             }
             saw_CZ = true;
-            if (saw_T || saw_X || saw_Y)
-                swap(gates[j], gates[g_i + last_CZ]);
+            if (saw_T || saw_X || saw_Y || saw_H) {
+                if (!saw_H)
+                    swap(gates[j], gates[g_i + last_CZ]);
+                else {
+                    gates.insert(gates.begin() + g_i + last_CZ, gates[j]);
+                    gates.erase(gates.begin() + j + 1);
+                }
+            }
             
             ++last_CZ;
         }
@@ -105,28 +111,47 @@ GroupSimilarGates()
             if(saw_Y || saw_X) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
-                saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false;
+                saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false; saw_H = false;
             }
             saw_T = true;
-            if (saw_CZ || saw_X || saw_Y)
-                swap(gates[g_i + last_T + last_CZ], gates[j]);
+            if (saw_CZ || saw_X || saw_Y || saw_H) {
+                if (!saw_H)
+                   swap(gates[g_i + last_T + last_CZ], gates[j]);
+                else {
+                    gates.insert(gates.begin() + g_i + last_T + last_CZ, gates[j]);
+                    gates.erase(gates.begin() + j + 1);
+                }
+            }
             
             ++last_T;
         }
         else if (gates[j].ids.back() == Gate::Type::X_1_2) {
             saw_X = true;
-            if (saw_T || saw_CZ || saw_Y)
-                swap(gates[g_i + last_X + last_T + last_CZ], gates[j]);
+            if (saw_T || saw_CZ || saw_Y || saw_H) {
+                if (!saw_H)
+                    swap(gates[g_i + last_X + last_T + last_CZ], gates[j]);
+                else {
+                    gates.insert(gates.begin() + g_i + last_X + last_T + last_CZ, gates[j]);
+                    gates.erase(gates.begin() + j + 1);
+                }
+            }
             
             ++last_X;
         }
         else if (gates[j].ids.back() == Gate::Type::Y_1_2) {
             saw_Y = true;
-            if (saw_T || saw_X || saw_CZ)
-                swap(gates[g_i + last_Y + last_X + last_T + last_CZ], gates[j]);
+            if (saw_T || saw_X || saw_CZ || saw_H) {
+                if (!saw_H)
+                    swap(gates[g_i + last_Y + last_X + last_T + last_CZ], gates[j]);
+                else {
+                    gates.insert(gates.begin() + g_i + last_X + last_T + last_CZ + last_Y, gates[j]);
+                    gates.erase(gates.begin() + j + 1);
+                }
+            }
             
             ++last_Y;
         }
+        else if (gates[j].ids.back() == Gate::Type::Hadamard) saw_H = true;
     }
 #ifdef PrintG
     PrintGates();
@@ -134,11 +159,17 @@ GroupSimilarGates()
 }
 
 int Circuit::
-MovexCZGates(const QubitPartition& qp,
+MovexCZGates(idx_size proc_prefix_bits,
+             idx_size range_bits,
+             idx_size branch_bits,
+             const QubitPartition& qp,
              const bool nearest_neigbors)
 {
     int total_xCZ_count = 0, count_CZ = 0;
     int num_q_1 = qp.getNumQubits() - 1;
+    idx_size curr_bit_counter = proc_prefix_bits;
+    bool transition_cycle = false, last_cycle = false;
+    int curr_path = 0;
   
     for (idx_size i = qubits; i < gates.size(); ++i) {
          if (gates[i].ids.back() == Gate::Type::Z) {
@@ -159,9 +190,26 @@ MovexCZGates(const QubitPartition& qp,
                      }
                  }
                  
-                 if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) 
-                    swap(gates[i + count_xCZ++], gates[j]);
+                 if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) {
+                     if (curr_bit_counter == 0 && !last_cycle) {
+                         if (curr_path == 0) {
+                             curr_bit_counter = range_bits;
+                             curr_path = 1;
+                         }
+                         else if (curr_path == 1) {
+                             curr_bit_counter = branch_bits;
+                             curr_path = 2;
+                         }
+                         else if (curr_path == 2)
+                             last_cycle = true;
+                         transition_cycle = true;
+                     }
+                     swap(gates[i + count_xCZ++], gates[j]);
+                     if (!last_cycle)
+                         --curr_bit_counter;
+                 }
              }
+             
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,
                   [](Gate& g1, Gate& g2){ return g1.qubits.front() < g2.qubits.front();});
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,
@@ -171,12 +219,88 @@ MovexCZGates(const QubitPartition& qp,
                         else
                             return false;
                   });
+             
+             if (transition_cycle && count_xCZ) {
+                 idx_size xCZ_counter = count_xCZ, move_count = 0;
+                 vector<int> xCZ_q;
+                 for (idx_size k = i + count_xCZ - 1; xCZ_counter != 0; --k) {
+                     xCZ_q.push_back(gates[k].qubits.front());
+                     xCZ_q.push_back(gates[k].qubits.back());
+                     swap(gates[k], gates[j - 1 - move_count++]);
+                     --xCZ_counter;
+                 }
+                 idx_size last_CZ = j - 1;
+                 idx_size next_CZ = last_CZ;
+            
+                 for (idx_size k = j; k < gates.size() && gates[k].ids.back() != Gate::Type::Z; ++k)
+                     ++next_CZ;
+                 
+                 idx_size T_gates_idx = 0;
+                 for (; i < gates.size(); ++i) {
+                     idx_size XYH_count = 0;
+                     move_count = 0;
+                     if (gates[i].ids.back() == Gate::Type::T && T_gates_idx == 0)
+                         T_gates_idx = i;
+                     
+                     if (gates[i].ids.back() == Gate::Type::X_1_2 || gates[i].ids.back() == Gate::Type::Y_1_2 ||
+                         gates[i].ids.back() == Gate::Type::Hadamard) {
+                         for (j = i; j < gates.size() && gates[j].ids.back() != Gate::Type::Z; ++j) {
+                             for (int k = 0; k < xCZ_q.size(); ++k) {
+                                 if (gates[j].qubits.back() == xCZ_q[k]) {
+                                     if (j < (next_CZ - move_count)) {
+                                         swap(gates[next_CZ - move_count++], gates[j]);
+                                        --j;
+                                     }
+                                     else
+                                         XYH_count = next_CZ - j + 1;
+                                     break;
+                                 }
+                             }
+                             if (XYH_count != 0) break;
+                         }
+                         for (int k = 0; k < count_xCZ
+                              && gates[next_CZ - XYH_count - k].ids.back() != Gate::Type::Z ; ++k)
+                             swap(gates[last_CZ - k], gates[next_CZ - XYH_count - k]);
+                         
+                         if (T_gates_idx != 0) {
+                             for (int k = 0; gates[T_gates_idx + k].ids.back() == Gate::Type::T ; ++k)
+                                 swap(gates[last_CZ - count_xCZ + k + 1], gates[T_gates_idx + k]);
+                         }
+                         
+                         break;
+                     }
+                 }
+                 transition_cycle = false;
+                 j = next_CZ - 1;
+            }
+             
              i = j;
              total_xCZ_count += count_xCZ;
          }
     }
-//    cout << "The circuit has " << total_xCZ_count << " xCZ gates\n";
-//    cout << "The circuit has " << count_CZ << " CZ gates\n";
+    
+    GroupSimilarGates();
+    int c = 0;
+    for (auto& g : gates) {
+        ++c;
+        cout << c << " " ;
+        if(g.ids.back() == Gate::Type::Z) {
+            cout << "CZ ";
+            cout << g.qubits.front() << " " << g.qubits.back() << "\n";
+        }
+        else {
+            if (g.ids.back() == Gate::Type::X_1_2)
+                cout << "X ";
+            else if (g.ids.back() == Gate::Type::Y_1_2)
+                cout << "Y ";
+            else if (g.ids.back() == Gate::Type::T)
+                cout << "T ";
+            else if (g.ids.back() == Gate::Type::Hadamard)
+                cout << "H ";
+            cout << g.qubits.back() << "\n";
+        }
+    }
+    cout << "\n\n";
     return total_xCZ_count;
 }
 
@@ -551,9 +675,10 @@ WriteGeneratedCircuitFile(const string& out_file,
 
 //TO DO:add support for clock ccyles
 void Circuit::
-ReadCustomInputFiles(const string& input_file,
-                     cmplx*& amp,
-                     idx_size& size)
+ReadCustomInputFiles(cmplx*& amp,
+                     idx_size& size,
+                     const string& input_file,
+                     const int add_layer_H)
 {
     google = true;
     ifstream file;
@@ -653,11 +778,21 @@ ReadCustomInputFiles(const string& input_file,
         }
         gates.push_back(g);
     }
+    
+    if (add_layer_H != 0) {
+        for (int i = 0; i < add_layer_H; ++i) {
+            for (int q = 0; q < qubits; ++q)  {
+                gates.push_back(create_hadamard());
+                gates[gates.size() - 1].qubits.push_back(q);
+            }
+        }
+    }
 }
 
 void Circuit::
 ReadGoogleCircuitFile(const string& input_file,
-                      const int depth)
+                      const int depth,
+                      const int add_layer_H)
 {
     google = true;
     ifstream file;
@@ -709,6 +844,15 @@ ReadGoogleCircuitFile(const string& input_file,
         }
     }
     clock_cycles.push_back(gates.size());
+    if (add_layer_H != 0) {
+        for (int i = 0; i < add_layer_H; ++i) {
+            for (int q = 0; q < qubits; ++q)  {
+                gates.push_back(create_hadamard());
+                gates[gates.size() - 1].qubits.push_back(q);
+            }
+            clock_cycles.push_back(gates.size());
+        }
+    }
 }
 
 int Circuit::

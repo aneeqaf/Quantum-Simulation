@@ -160,13 +160,14 @@ ApplyBlockOfDiagGates(string& cz_bits,
                       idx_size prefix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2],
+                      const bitset<128>& H_bitmask,
                       const bool last_cycle)
 {
     int last_xCZ_idx = HandlexCZApplication(cz_bits, prefix_size, CZ_bitmasks);
     
     if (last_xCZ_idx == -1) {
         for (auto& t : tensor_addends)
-            t -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks, last_cycle);
+            t -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks, H_bitmask, last_cycle);
     }
     
     return last_xCZ_idx;
@@ -408,20 +409,21 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 
 int SumOfTensorsProductsStateVector::
 ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                          idx_size prefix_size,
-                          bitset<128> X_bitmask,
-                          bitset<128> Y_bitmask,
-                          const bitset<128>* __restrict CZ_bitmasks,
-                          const bitset<128> T_bitmasks[2],
-                          int th,
-                          bool last_cycle)
+                           idx_size prefix_size,
+                           const bitset<128>& X_bitmask,
+                           const bitset<128>& Y_bitmask,
+                           const bitset<128>& H_bitmask,
+                           const bitset<128>* __restrict CZ_bitmasks,
+                           const bitset<128> T_bitmasks[2],
+                           int th,
+                           bool last_cycle)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
     int last_xCZ_idx = HandlexCZApplication(cz_bits, prefix_size, CZ_bitmasks);
     
     if (last_xCZ_idx == -1) {
         for (auto& t : tensor_addends)
-            t -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask,
+            t -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask, H_bitmask,
                                             CZ_bitmasks, T_bitmasks, th, last_cycle);
     }
     

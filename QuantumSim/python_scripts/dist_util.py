@@ -165,14 +165,17 @@ def TrialRunEval(report_file, num_CZ, start_time, end_time, app_cz_len = 0, dfs_
 
 		return int(num_CZ), mem_val, dfs_len, int(app_cz_len)
 
-def CheckxCZGates(report_file):
+def CheckxCZGatesAndDepth(report_file):
 	num_xCZ = 0
+	depth = 0
 	with open(report_file, "r") as file:
 		for line in file:
 			if "Cut" in line:
 				temp = line.split(":")[1].split("(")[1]
 				num_xCZ = int(re.sub('[^0-9]', '', temp)) 
-	return num_xCZ
+			elif "Cycles" in line:
+				depth = int(line.split()[8])
+	return num_xCZ, depth
 
 def ChooseBetterCut(num_xCZ1, num_xCZ2, time1, time2, command1, command2):
 	command = ""
@@ -207,9 +210,9 @@ def ExecuteSingleTrialRun(num_cz, command):
 
 	end_time = time.time()
 	time_elapsed = round(end_time - start_time, 3)
-	num_xCZ = CheckxCZGates(temp_file) 
+	num_xCZ, depth = CheckxCZGatesAndDepth(temp_file) 
 
-	return command, num_xCZ, time_elapsed
+	return command, num_xCZ, time_elapsed, depth
 
 def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 
@@ -224,14 +227,14 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 
 	print("\033[1m" + "1st horizontal trial run" + "\033[0m\n")
 
-	commandH1, num_xCZH1, timeH1 = ExecuteSingleTrialRun(num_cz, commandH)
+	commandH1, num_xCZH1, timeH1, depth = ExecuteSingleTrialRun(num_cz, commandH)
 	
 	# Horizontal trial run evaluation
 	print("\033[1m" + "1st horizontal trial run took " + str (timeH1) + " s \033[0m\n\n")
 
 	print("\033[1m" + "2nd horizontal trial run" + "\033[0m\n")
 
-	commandH2, num_xCZH2, timeH2 = ExecuteSingleTrialRun(num_cz, commandH + " --first_partition_smaller")
+	commandH2, num_xCZH2, timeH2, depth = ExecuteSingleTrialRun(num_cz, commandH + " --first_partition_smaller")
 	
 	# Horizontal trial run evaluation
 	print("\033[1m" + "2nd horizontal trial run took " + str (timeH2) + " s \033[0m\n\n")
@@ -245,21 +248,21 @@ def ChooseSimCutBasedOnNumxCZ(commandH, commandV, num_cz):
 
 	print("\033[1m" + "1st vertical trial run" + "\033[0m\n")
 
-	commandV1, num_xCZV1, timeV1 = ExecuteSingleTrialRun(num_cz, commandV)
+	commandV1, num_xCZV1, timeV1, depth = ExecuteSingleTrialRun(num_cz, commandV)
 	
 	# Horizontal trial run evaluation
 	print("\033[1m" + "1st vertical trial run took " + str (timeV1) + " s \033[0m\n\n")
 
 	print("\033[1m" + "2nd vertical trial run" + "\033[0m\n")
 
-	commandV2, num_xCZV2, timeV2 = ExecuteSingleTrialRun(num_cz, commandV + " --first_partition_smaller")
+	commandV2, num_xCZV2, timeV2, depth = ExecuteSingleTrialRun(num_cz, commandV + " --first_partition_smaller")
 	
 	# Horizontal trial run evaluation
 	print("\033[1m" + "2nd vertical trial run took " + str (timeV2) + " s \033[0m\n\n")
 
 	commandV, num_xCZV, timeV = ChooseBetterCut(num_xCZV1, num_xCZV2, timeV1, timeV2, commandV1, commandV2)
 
-	return num_xCZH, num_xCZV, timeH, timeV, commandH, commandV
+	return num_xCZH, num_xCZV, timeH, timeV, commandH, commandV, depth
 
 def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branch_bits = 0, trial=True, \
 	v_cut = 0, h_cut = 0, approx=False):
@@ -267,16 +270,17 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 	cut = ""
 	command = ""
 	num_xCZ = 0
+	depth = 0
 	if h_cut or v_cut:
 		num_cz = 1 if not proc_prefix_bits else proc_prefix_bits
 		if h_cut:
-			command, num_xCZ, _ = ExecuteSingleTrialRun(num_cz, commandH)
+			command, num_xCZ, _, depth = ExecuteSingleTrialRun(num_cz, commandH)
 			cut = "horizontal-cut" 
 		elif v_cut:
-			command, num_xCZ, _ = ExecuteSingleTrialRun(num_cz, commandV)
+			command, num_xCZ, _, depth = ExecuteSingleTrialRun(num_cz, commandV)
 			cut = "vertical-cut" 
 	else:
-		num_xCZH, num_xCZV, H_time, V_time, commandH, commandV = \
+		num_xCZH, num_xCZV, H_time, V_time, commandH, commandV, depth = \
 		ChooseSimCutBasedOnNumxCZ(commandH, commandV, proc_prefix_bits)
 
 		if num_xCZV == num_xCZH:
@@ -370,7 +374,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 		proc_prefix_bits += ranges_bits
 		ranges_bits = 0
 
-	return proc_prefix_bits, branch_bits, trial_time, mem, ranges_bits, cut, command_to_pass 
+	return proc_prefix_bits, branch_bits, trial_time, mem, ranges_bits, cut, command_to_pass, depth
 
 def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulation"):
 
@@ -420,9 +424,9 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 			with open(os.path.join(script_dir, "script_" + str(batch_count) + ".sh"), "w") as script:
 				script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
 					+ str(proc_per_script) + "\n\n")
+				script.write(": ${SECONDS:?SECONDS=0}\n\n")
 				start_idx = batch_count * proc_per_script
 				proc_count = 0
-				batch_count += 1
 				for j in range(start_idx, start_idx + proc_per_script):
 					proc_count += 1
 					script.write("START_TIME=$SECONDS\n")
@@ -436,6 +440,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 					"echo \"\n" + str(proc_count)  + " out of " + str(proc_per_script) \
 					+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
 						 + str(proc_per_script - proc_count) + " processes to complete\n\"\n\n")
+				batch_count += 1
 	else:
 		proc_per_script = 1
 
@@ -444,11 +449,11 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				start_idx = batch_count* proc_per_script
 				script.write("#!/bin/bash\nset -e\nexport OMP_DISPLAY_ENV=true\n\nPROCS=" \
 						+ str(num_procs - start_idx) + "\n\n")
-				batch_count+= 1
+				script.write(": ${SECONDS?SECONDS=0}\n\n")
 				proc_count = 0
 				for j in range(start_idx, num_procs):
 					proc_count += 1
-					script.write("START_TIME=$SECONDS\n")
+					script.write("START_TIME=SECONDS\n")
 					if j < (num_procs - 1) or binary_vectors_only:
 						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
@@ -459,6 +464,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 							"echo \"\n" + str(proc_count)  + " out of " + str(num_procs - start_idx) \
 							+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
 							 + str(num_procs - start_idx - proc_count) + " processes to complete\n\"\n\n")
+				batch_count += 1
 
 	os.system("chmod +x " + script_dir + "/*")
 

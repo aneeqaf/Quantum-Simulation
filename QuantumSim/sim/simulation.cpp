@@ -185,7 +185,8 @@ Simulate(GenericQuantumState& amp,
                        config.vcut, config.first_part_smaller) ;
 //        qp.RenumberLocalQubits();
         
-        xCZ_gate_count = circuit.MovexCZGates(qp, config.nearest_neighbors);
+        xCZ_gate_count = circuit.MovexCZGates(config.proc_prefix_bits, config.ranges_bits, config.dfs_length,
+                                              qp, config.nearest_neighbors);
     }
     
     if (config.verbose)
@@ -281,7 +282,7 @@ Phase1Simulation(GenericQuantumState& amp,
     if (terminate && config.dfs_length != 0) {
         Phase2Simulation(amp, circuit, curr_gate);
         if (exec == 1)
-            amp.count_of_category.cycle_d = circuit.GetCycleNumForGateIdx(curr_gate) + config.last_layers_H;
+            amp.count_of_category.cycle_d = circuit.GetCycleNumForGateIdx(curr_gate);
     }
     else if (!terminate &&  config.dfs_length != 0)
         config.dfs_length = 0;
@@ -491,13 +492,14 @@ SimulationLoop(GenericQuantumState &amp,
                 bitset<128> CZ_bitmasks[total_circuit_qubits];
                 amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
                 idx_size prev_i_XY = i;
-                bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
-                bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                bitset<128> X_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::X_1_2);
+                bitset<128> Y_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                bitset<128> H_bitmask = 0;
                 bool last_cycle = false;
                 
-                if ((config.last_layers_H && i == size)
-                    || (i < size && circuit.GetGateFromIndex(i).ids.back() == Gate::Type::Hadamard)) {
+                if (i < size && circuit.GetGateFromIndex(i).ids.back() == Gate::Type::Hadamard) {
                     last_cycle = true;
+                    H_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Hadamard);
                     if (config.last_layers_H)
                         last_layers_of_H--;
                     ++amp.count_of_category.H_layers;
@@ -505,14 +507,14 @@ SimulationLoop(GenericQuantumState &amp,
 
                 int last_xCZ_idx = -1;
                 if (X_bitmask != 0 || Y_bitmask != 0) {
-                    last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask,
+                    last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask, H_bitmask,
                                                                  CZ_bitmasks, T_bitmasks, config.th, last_cycle);
                     ++amp.count_of_category.CZT_layers;
                     ++amp.count_of_category.XY_layers;
                 }
                 else {
                     last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks,
-                                                             T_bitmasks, last_cycle);
+                                                             T_bitmasks, H_bitmask, last_cycle);
                     ++amp.count_of_category.CZT_layers;
                 }
                 
@@ -543,9 +545,6 @@ SimulationLoop(GenericQuantumState &amp,
                     return terminate;
                 }
                 
-                if (last_cycle)
-                    i += circuit.GetNumQubits();
-            
                 --i;
                 
                 CZ_T_top_time += CZT_time.GetElapsedTime();
@@ -561,13 +560,14 @@ SimulationLoop(GenericQuantumState &amp,
                  current_gate.ids.back() == Gate::Type::Y_1_2) &&
                 (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
                  circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
+                    cout << "BAD!\n\n";
                     Time XY_time;
                     XY_time.StartTime();
                     
                     idx_size prev_i = i;
                     
-                    bitset<128> X_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::X_1_2);
-                    bitset<128> Y_bitmask = amp.FormXYGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                    bitset<128> X_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::X_1_2);
+                    bitset<128> Y_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Y_1_2);
                     amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config.th);
                     
                     if (amp.book_keep) {
@@ -660,8 +660,8 @@ ReportingAfterSim(GenericQuantumState& amp,
     
     if (config.print_amp) {
       if (config.proc_prefix_bits) {
-        if (!config.ascii)
-            config.mmap_obj -> WriteToDisk();
+          if (!config.ascii) 
+              config.mmap_obj -> WriteToDisk();
         else
             WriteMmapToASCIIFile();
       }
@@ -682,8 +682,8 @@ void SequentialSimulation::
     amp_out.open(amp_outfile);
     
     auto& idx_print = config.indices;
-    
-    for (idx_size i = 5; i < idx_print.size(); ++i) {
+   
+    for (idx_size i = 0; i < idx_print.size(); ++i) {
         amp_out << real(*(*config.mmap_obj)[i]);
         if (imag(*(*config.mmap_obj)[i]) < 0) amp_out << imag(*(*config.mmap_obj)[i]) << "j";
         else amp_out << "+" << imag(*(*config.mmap_obj)[i]) << "j";
@@ -705,10 +705,10 @@ WriteAmpToASCIIFile(GenericQuantumState& amp) const
     string amp_outfile = dir + config.amp_outfile.substr(config.amp_outfile.find_last_of("/"))  + ".amps";
     ofstream amp_out;
     amp_out.open(amp_outfile);
-    
+   
     auto& idx_print = config.indices;
     
-    for (idx_size i = 5; i < idx_print.size(); ++i) {
+    for (idx_size i = 0; i < idx_print.size(); ++i) {
         amp_out << real(amp[idx_print[i]]);
         if (imag(amp[idx_print[i]]) < 0) amp_out << imag(amp[idx_print[i]]) << "j";
         else amp_out << "+" << imag(amp[idx_print[i]]) << "j";
@@ -779,7 +779,7 @@ void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 2.1 - a quantum circuit simulator\n";
+    cout << "Rollright ver 2.2 - a quantum circuit simulator\n";
     cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
 //    char hostname[30] = {};
@@ -873,7 +873,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     
     cout << "Qubits : " << circuit.GetNumQubits() << "  ";
     cout << "Gates : " << circuit.GetTotalNumGates() << "  ";
-    cout << "Cycles : " << circuit.GetNumCycles() + config.last_layers_H << "\n";
+    cout << "Cycles : " << circuit.GetNumCycles() << "\n";
     
     if (!amp.log.empty())
         cout << amp.log[amp.log.size() - 1]<< "\n";

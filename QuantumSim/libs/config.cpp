@@ -210,13 +210,19 @@ GenerateRandomIndices(const int seed,
         indices.push_back(rand() % amp_size);
     
     if (print_idx) {
-        string idx_outfile = file_n + "/" + amp_outfile + ".idx";
-        ofstream idx_out;
-
+        string dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
+        + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);
+        if (approx)
+            dir += "_approx_" + to_string(approx_epsilon);
+        string idx_outfile = dir + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".idx";
+        ofstream  idx_out;
         idx_out.open(idx_outfile);
-
-        for (idx_size i = 5; i < indices.size(); ++i)
+        
+        auto& idx_print = indices;
+        
+        for (idx_size i = 0; i < idx_print.size(); ++i)
             idx_out << indices[i].to_ullong() << "\n";
+        idx_out.close();
     }
 
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/"))  + ".amps",
