@@ -125,14 +125,14 @@ ApplyBlockOfDiagGates(string& cz_bits,
     Time time, time1;
     time.StartTime();
     
-    if (last_cycle)
-        for (int i = num_qubits - 1; i >= 0; --i)
-            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
-    
+//    if (last_cycle)
+//        for (int i = num_qubits - 1; i >= 0; --i)
+//            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+//
     int th = ceil((float)num_qubits/2.0);
     idx_size H_bitmask_64 = H_bitmask.to_ulong();
-    idx_size hiH_bitmask = (H_bitmask_64 & ((1ull << (num_qubits - th)) - 1));
-    idx_size loH_bitmask = H_bitmask_64 & ~((1ull << (num_qubits - th)) - 1);
+    idx_size hiH_bitmask = last_cycle ? (H_bitmask_64 & ((1ull << (num_qubits - th)) - 1)) : 0;
+    idx_size loH_bitmask = last_cycle ? H_bitmask_64 & ~((1ull << (num_qubits - th)) - 1) : 0;
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
     bool CZ_app = false;
@@ -142,6 +142,10 @@ ApplyBlockOfDiagGates(string& cz_bits,
     }
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     int single_H = 0;
+    
+    for (int i = num_qubits - 1; i >= 0; --i)
+        if (loH_bitmask & (1ull << i))
+            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     
     if (last_cycle) {
         global_factor_power +=  __builtin_popcountll(loH_bitmask) +  __builtin_popcountll(hiH_bitmask);
@@ -169,7 +173,11 @@ ApplyBlockOfDiagGates(string& cz_bits,
     
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     
-    if (last_cycle) {
+    for (int i = num_qubits - 1; i >= 0; --i)
+        if (hiH_bitmask & (1ull << i))
+            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    
+    if (last_cycle && hiH_bitmask) {
         time1.StartTime();
         
         if (__builtin_popcountll(hiH_bitmask) % 2 != 0) {
@@ -531,9 +539,9 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     Time time;
     time.StartTime();
 
-    for (int i = num_qubits - 1; i >= 0; --i)
-        if (X_bitmask[i] || Y_bitmask[i] || last_cycle) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
-    
+//    for (int i = num_qubits - 1; i >= 0; --i)
+//        if (X_bitmask[i] || Y_bitmask[i] || last_cycle) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong(),
@@ -542,34 +550,39 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     idx_size hiq_Y_bitmask = Y_bitmask_64 & ((1ull << th) - 1);
     idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
     idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
-    idx_size hiq_H_bitmask = H_bitmask_64 & (1ull << th) - 1;
-    idx_size loq_H_bitmask = H_bitmask_64 & ~((1ull << th) - 1);
+    idx_size hiq_H_bitmask = last_cycle ? H_bitmask_64 & (1ull << th) - 1 : 0;
+    idx_size loq_H_bitmask = last_cycle ? H_bitmask_64 & ~((1ull << th) - 1) : 0;
     int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask);
     int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
     int single_H = 0;
     
-    if (last_cycle)
-        global_factor_power += __builtin_popcountll(loq_H_bitmask) +  __builtin_popcountll(hiq_H_bitmask);
+    for (int i = num_qubits - 1; i >= 0; --i)
+        if (X_bitmask[i] || Y_bitmask[i] || (loq_H_bitmask & (1ull << i)))
+            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     
     for (int i = 0; i < num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
     pair<int, int> odd_bit_low_XY = GetMostSigOddBit(loq_X_bitmask, loq_Y_bitmask,
                                                      num_lo_X_bits, num_lo_Y_bits);
-    
-    idx_size odd_bit_low = odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first;
-    loq_H_bitmask ^= odd_bit_low;
-    hiq_H_bitmask |= odd_bit_low;
-    if (last_cycle && __builtin_popcountll(loq_H_bitmask) % 2 != 0) {
-        idx_size odd_H_bit = 1ull << __builtin_ctzl(loq_H_bitmask);
-        hiq_H_bitmask |= odd_H_bit;
-        loq_H_bitmask ^= odd_H_bit;
+    if (last_cycle) {
+        global_factor_power += __builtin_popcountll(H_bitmask_64);
+
+        idx_size odd_bit_low = odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first;
+        loq_H_bitmask ^= odd_bit_low;
+        hiq_H_bitmask |= odd_bit_low;
+        
+        if (__builtin_popcountll(loq_H_bitmask) % 2 != 0) {
+            idx_size odd_H_bit = 1ull << __builtin_ctzl(loq_H_bitmask);
+            hiq_H_bitmask |= odd_H_bit;
+            loq_H_bitmask ^= odd_H_bit;
+        }
     }
     
     global_i_counter += ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                          T_bitmasks_64, loq_X_bitmask >> th,
                                                          loq_Y_bitmask >> th, loq_H_bitmask >> th,
-                                                          num_threads,th, zero_opt_mask, last_cycle);
+                                                          num_threads,th, zero_opt_mask);
     
     int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
     if (odd_bit_low_XY.second == 0) {
@@ -591,12 +604,17 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         if (book_keep && last_cycle)
             count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
 
-        hiq_H_bitmask ^= (hiq_X_bitmask | hiq_Y_bitmask);
-        global_i_counter += XYHFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask,
+        global_i_counter += XYHFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
                                                  num_qubits, num_threads, zero_opt_mask,
-                                                 false, last_cycle);
+                                                 false);
+        hiq_H_bitmask ^= (hiq_X_bitmask | hiq_Y_bitmask);
+
     }
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
+    
+    for (int i = num_qubits - 1; i >= 0; --i)
+        if (hiq_H_bitmask & (1ull << i))
+            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     
     if (last_cycle && hiq_H_bitmask) {
         time.StartTime();
@@ -609,7 +627,7 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         ApplyHGatesRecursively(amp, num_qubits, num_threads, hiq_H_bitmask);
         time_by_category.last_H += time.GetElapsedTime();
     }
-    
+
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
     
     if (book_keep) {

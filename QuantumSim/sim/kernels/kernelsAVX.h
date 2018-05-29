@@ -400,13 +400,13 @@ XYFastTransformLowQ(cmplx* __restrict amp,
 
 idx_size
 XYHFastTransformHighQ(cmplx* __restrict amp,
-                     idx_size X_bitmask,
-                     idx_size Y_bitmask,
-                     const int num_qubits,
-                     const int num_threads,
-                     const ZeroOptMask& zero_opt_mask,
-                     const bool zero_block = false,
-                     const bool last_cycle = false);
+                      idx_size X_bitmask,
+                      idx_size Y_bitmask,
+                      idx_size H_bitmask,
+                      const int num_qubits,
+                      const int num_threads,
+                      const ZeroOptMask& zero_opt_mask,
+                      const bool zero_block = false);
 
 void ApplyHGatesIteratively(cmplx* __restrict amp,
                             int num_qubits,
@@ -438,6 +438,5 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                   const idx_size Lo_H_bitmask,
                                  const int num_threads,
                                  const int num_high_qubits,
-                                 const ZeroOptMask& zero_opt_mask,
-                                  const bool last_cycle = false);
+                                 const ZeroOptMask& zero_opt_mask);
 #endif /* kernelsAVX_h */

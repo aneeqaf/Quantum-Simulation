@@ -32,7 +32,7 @@ from math import sqrt, floor, ceil
 @click.option("--idx_seed", nargs=1, required=False, default=7)
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--num_idx", nargs=1, required=False, default=1000)
-@click.option("--print_idxs", nargs=1, required=False, default=-1)
+@click.option("--print_idxs", nargs=1, required=False, is_flag=True)
 @click.option("--print_all", nargs=1, required=False, default=-1)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
@@ -124,14 +124,13 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		cz_bits_strings = cz_bits_strings[:max_procs]
 		num_bit_strings = len(cz_bits_strings)
 
-	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, print_idxs, num_idx)
-	command += " --CZ_path "
-
+	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, num_idx)
+	
 	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches
 
 	num_batches = dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, \
 	 cz_bits_strings, command, t_time, num_threads, mem, cut, ranges_bits, max_procs, approx, \
-	 multiple_nodes, binary_vectors_only)
+	 multiple_nodes, binary_vectors_only, print_idxs)
 
 	if test_fid:
 		if len(cz_bits_strings) > 2:

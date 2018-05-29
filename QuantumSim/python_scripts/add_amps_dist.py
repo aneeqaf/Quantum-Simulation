@@ -101,7 +101,7 @@ def main(cir_dir, num_idx, binary_vectors_only, not_final_amps, add_partial_res_
   for counter in range(multiprocessing.cpu_count()):
     queue_in.put('shut_down')
 
-  print('Writting results.')
+  print('Writing results.')
   results_file = "result" + ".amps"
   if not_final_amps:
     results_file = "result" + str(time.clock()) + ".amps"

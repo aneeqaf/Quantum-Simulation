@@ -375,15 +375,15 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
                            idx_size& X_bitmask,
                            idx_size& Y_bitmask,
                            const int num_qubits,
-                           bool zero_block = false,
-                           bool last_cycle = false)
+                           idx_size H_bitmask = 0,
+                           bool zero_block = false)
 {
     idx_size gates_bitmask = 0, i_count = 0;
     int gate_type = UpdateXYBitmask(X_bitmask, Y_bitmask, gates_bitmask, i_count);
     
     if (!zero_block) {
         bool AVX = ApplyMergedXYFT(amp, gates_bitmask, gate_type, num_qubits);
-        if (last_cycle) {
+        if ((H_bitmask & gates_bitmask) != 0) {
             if (AVX)
                 Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
                                         ApplyHHGateAVX, 4);
@@ -425,11 +425,12 @@ XYFastTransform(cmplx* __restrict amp,
                 const ZeroOptMask& zero_opt_mask,
                 const int th)
 {
+    idx_size H_bitmask = 0;
     //base case
     if (num_qubits <= th)
         return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
     
-    return XYHFastTransformHighQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads,
+    return XYHFastTransformHighQ(amp, X_bitmask, Y_bitmask, H_bitmask, num_qubits, num_threads,
                                 zero_opt_mask);
 }
 
@@ -468,18 +469,19 @@ XYFastTransformIterative(cmplx* __restrict amp,
 
 idx_size
 XYHFastTransformHighQ(cmplx* __restrict amp,
-                     idx_size X_bitmask,
-                     idx_size Y_bitmask,
-                     const int num_qubits,
-                     const int num_threads,
-                     const ZeroOptMask& zero_opt_mask,
-                     const bool zero_block,
-                     const bool last_cycle)
+                      idx_size X_bitmask,
+                      idx_size Y_bitmask,
+                      idx_size H_bitmask,
+                      const int num_qubits,
+                      const int num_threads,
+                      const ZeroOptMask& zero_opt_mask,
+                      const bool zero_block)
 {
     idx_size i_count = 0;
    
     if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1)
-        i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits, zero_block, last_cycle);
+        i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits,
+                                              H_bitmask, zero_block);
     
     const int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
     const int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
@@ -499,8 +501,8 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
                 zero_block = true;
     
             temp_i += XYHFastTransformHighQ(amp + (i * stride), X_bitmask,
-                                               Y_bitmask, num_qubits - k, num_threads,
-                                               zero_opt_mask, zero_block, last_cycle);
+                                               Y_bitmask, H_bitmask, num_qubits - k, num_threads,
+                                               zero_opt_mask, zero_block);
         }
         i_count += temp_i / num_iters;
     }
@@ -533,7 +535,7 @@ XYFastTransformLowQ(cmplx* __restrict amp,
 //        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
 //
 //    return i_count;
-
+    
     idx_size i_count = 0;
     
     for (int i = 0; i < num_qubits; ++i) {

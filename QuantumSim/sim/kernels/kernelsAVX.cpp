@@ -240,11 +240,9 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                   const idx_size Lo_H_bitmask,
                                  const int num_threads,
                                  const int num_high_qubits,
-                                 const ZeroOptMask& zero_opt_mask,
-                                 const bool last_cycle)
+                                 const ZeroOptMask& zero_opt_mask)
 {
-    const int bits_for_blk = Lo_X_bitmask == 0 && Lo_Y_bitmask == 0
-    ? num_high_qubits : num_qubits_amp - num_high_qubits;
+    const int bits_for_blk = num_qubits_amp - num_high_qubits;
     const idx_size amp_size = (1ull << num_qubits_amp);
     const idx_size block_size = amp_size > (1ull << bits_for_blk) ? (1ull << bits_for_blk) : amp_size;
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits_amp;
@@ -265,7 +263,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                    i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
                                               Lo_Y_bitmask, block_bits, num_threads);
                 
-            if (last_cycle)
+            if (Lo_H_bitmask)
                 ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
                                        num_threads, Lo_H_bitmask);
         }

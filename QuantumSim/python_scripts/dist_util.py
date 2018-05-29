@@ -60,12 +60,10 @@ def FormatE(n):
     a = '%E' % n
     return a.split('E')[0].rstrip('0').rstrip('.') + 'E' + a.split('E')[1]
 
-def AddPrintOptToCommand(seed, command, idx_file, p_idx, num_idx):
+def AddPrintOptToCommand(seed, command, idx_file, num_idx):
 	print_opt = ""
 	if int(seed) != -1:
 		print_opt += " --idx " + str(seed) + "," + str(num_idx)
-		if p_idx != -1:
-			print_opt += "+"
 	elif idx_file != "":
 		print_opt += " --idx " + idx_file
 	else:
@@ -392,7 +390,7 @@ def EvalMemAndRuntime(t_time, num_cz, mem, num_batches = 1, sim_type = "Simulati
 
 def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings, \
 	command, t_time, num_threads, mem, cut, app_cz_len = 0, truncated = 0, approx = False, \
-	multiple_nodes=False, binary_vectors_only=False):
+	multiple_nodes=False, binary_vectors_only=False, print_idxs = False):
 
 	# Generating scripts for each parallel run
 	print("\033[1m" + "Generating scripts for execution" + "\033[0m\n")
@@ -417,6 +415,7 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 	# 	proc_per_script = 1
 	# else:
 	proc_per_script = ceil(float(num_procs)/ float(num_batches));
+	new_cmd = command
 	
 	batch_count= 0
 	if proc_per_script:
@@ -430,12 +429,17 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				for j in range(start_idx, start_idx + proc_per_script):
 					proc_count += 1
 					script.write("START_TIME=$SECONDS\n")
-					if j < (start_idx + proc_per_script - 1) or binary_vectors_only:
-						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
-						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+					if print_idxs and batch_count == 0 and proc_count == 1:
+						new_cmd += "+ "
 					else:
-						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
-						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						new_cmd = command
+					new_cmd += " --CZ_path "
+					if j < (start_idx + proc_per_script - 1) or binary_vectors_only:
+						script.write("echo /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+						script.write("/usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+					else:
+						script.write("echo /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						script.write("/usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
 					script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
 					"echo \"\n" + str(proc_count)  + " out of " + str(proc_per_script) \
 					+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\
@@ -454,12 +458,17 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 				for j in range(start_idx, num_procs):
 					proc_count += 1
 					script.write("START_TIME=SECONDS\n")
-					if j < (num_procs - 1) or binary_vectors_only:
-						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
-						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+					if print_idxs and batch_count == 0 and proc_count == 1:
+						new_cmd += "+ "
 					else:
-						script.write("echo /usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
-						script.write("/usr/bin/time " + command + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						new_cmd = command
+					new_cmd += " --CZ_path "
+					if j < (num_procs - 1) or binary_vectors_only:
+						script.write("echo /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+						script.write("/usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+					else:
+						script.write("echo /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						script.write("/usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
 					script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
 							"echo \"\n" + str(proc_count)  + " out of " + str(num_procs - start_idx) \
 							+ " processes completed.\n$(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec left for "\

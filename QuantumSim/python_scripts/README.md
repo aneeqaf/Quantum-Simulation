@@ -72,6 +72,7 @@ These options should be modified if default value is not desired:
 * **--no_nearest_neighbors**: this is a flag and if specified then the simulator does not check to make sure all 2 qubit gates are acting on nearest neighbors.
 * **--num_threads**: default = 4
 * **--num_idx**: default = 1000
+* **--print_idxs** : this is a flag and if specified it prints all the indices in the same directory as the amplitude vectors. There is a single output file of indices that ends with the extension `.idx`. Default is false.
 * **--trial** : this is a flag and if specified then a single trial run is performed before launching the entire simulation. Not recommended for simulations with long processes. Default is false. The single process is ran exactly how the multiple processes will be ran in the multiprocess simulation. This is used for making time estimations for the entire simulation, before launching the entire simulation in the background. Please do not use this flag if simulation of a single process is required.
 
 ##### Example runs:
