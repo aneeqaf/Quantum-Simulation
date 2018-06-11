@@ -280,8 +280,16 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 	print(": ", end="")
 
 	print("\n\t" + str(num_CZ_paths) + " processes (" + \
-		str(num_threads) + " threads each) in " + str(ceil(num_batches/num_machines)) + " batch(es) over "
-		+ str(num_machines) + " node(s)")
+		str(num_threads) + " threads each) over " + str(num_machines), end="")
+	if num_machines > 1 and ceil(num_batches/num_machines) > 1:
+		print(" nodes in " + str(ceil(num_batches/num_machines)) + " batches per node ")
+	elif num_machines > 1 and ceil(num_batches/num_machines) == 1:
+		print(" nodes in " + str(ceil(num_batches/num_machines)) + " batch per node ")
+	elif num_machines == 1 and ceil(num_batches/num_machines) > 1:
+		print(" node in " + str(ceil(num_batches/num_machines)) + " batches per node ")
+	elif num_machines == 1 and ceil(num_batches/num_machines) == 1:
+		print(" node in " + str(ceil(num_batches/num_machines)) + " batch per node ")
+
 	print("\t" + mem_line, end='')
 
 	if not no_checkpoint_with_ranges and dfs and cz_path_ranges:
@@ -302,9 +310,15 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 		print("\t" + num_layers_stats)
 	print ("\t" + layers_breakdown, end="")
 	
-	print("\tBatch stats :\n\t\tAvg user time : " + str(round((avg_user_time/num_batches), 3)) \
-		+ " s \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
-		str(round(max_elapsed_time, 3))+ " s (max)")
+	if round((avg_elapsed_time/num_batches),3) <= 3000 :
+		print("\tBatch stats :\n\t\tAvg user time : " + str(round((avg_user_time/num_batches), 3)) \
+			+ " s \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches),3)) + " s (avg), " +\
+			str(round(max_elapsed_time, 3))+ " s (max)")
+	else:
+		print("\tBatch stats :\n\t\tAvg user time : " + str(round((avg_user_time/num_batches)/3600, 3)) \
+			+ " hrs \n\t\tWallclock : " + str(round((avg_elapsed_time/num_batches)/3600,3)) + " hrs (avg), " +\
+			str(round(max_elapsed_time/3600, 3))+ " hrs (max)")
+
 	if avg_cpu_percent:
 		print("\t\tAvg CPU utilization : " + str(round(avg_cpu_percent/num_CZ_paths, 3)) + "% (" \
 			+ str(round((avg_cpu_percent/num_CZ_paths)/num_threads, 3)) + "% per thread)")

@@ -383,7 +383,7 @@ XYRecursiveTransformHelper(cmplx* __restrict amp,
     
     if (!zero_block) {
         bool AVX = ApplyMergedXYFT(amp, gates_bitmask, gate_type, num_qubits);
-        if ((H_bitmask & gates_bitmask) != 0) {
+        if (gates_bitmask && H_bitmask && (H_bitmask & gates_bitmask) == gates_bitmask) {
             if (AVX)
                 Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
                                         ApplyHHGateAVX, 4);
@@ -492,6 +492,7 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
         const idx_size stride = (1ull << num_qubits)/num_iters;
         X_bitmask >>= k;
         Y_bitmask >>= k;
+        H_bitmask >>= k;
         idx_size temp_i = 0;
         
     #pragma omp parallel for schedule(guided) reduction(+:temp_i) num_threads(num_threads)
@@ -621,11 +622,11 @@ void ApplyHGatesIteratively(cmplx* __restrict amp,
 {
     while (gate_bm) {
         int q1 = __builtin_ctzl(gate_bm);
-        int q2 = __builtin_ctzl(gate_bm ^ 1ull << q1);
-        idx_size gates_bitmask = 1ull << q1 | 1ull << q2;
+        int q2 = __builtin_ctzl(gate_bm ^ (1ull << q1));
+        idx_size gates_bitmask = (1ull << q1) | (1ull << q2);
         gate_bm ^= gates_bitmask;
     
-        bool AVX = (q1 < num_qubits - 1 && q2 < num_qubits - 2);
+        bool AVX = ((q1 < num_qubits - 1) && (q2 < num_qubits - 2));
 
         if (AVX)
             Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,

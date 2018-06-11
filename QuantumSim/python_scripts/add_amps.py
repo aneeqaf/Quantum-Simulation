@@ -53,6 +53,7 @@ def main(cir_dir, num_idx, binary_vectors_only, not_final_amps, add_partial_res_
 	# 	with open(os.path.join(outdir, results_file), "wb") as f:
 	# 		f.write(amps)
 	# else : 
+	
 	with open(os.path.join(outdir, results_file), "w") as f:
 		for a in amps:
 			f.write(str(a).replace("(", "").replace(")","") + "\n")
