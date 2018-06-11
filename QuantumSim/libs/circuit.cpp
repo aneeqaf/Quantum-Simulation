@@ -297,27 +297,27 @@ MovexCZGates(idx_size proc_prefix_bits,
     }
     
     GroupSimilarGates();
-    int c = 0;
-    for (auto& g : gates) {
-        ++c;
-        cout << c << " " ;
-        if(g.ids.back() == Gate::Type::Z) {
-            cout << "CZ ";
-            cout << g.qubits.front() << " " << g.qubits.back() << "\n";
-        }
-        else {
-            if (g.ids.back() == Gate::Type::X_1_2)
-                cout << "X ";
-            else if (g.ids.back() == Gate::Type::Y_1_2)
-                cout << "Y ";
-            else if (g.ids.back() == Gate::Type::T)
-                cout << "T ";
-            else if (g.ids.back() == Gate::Type::Hadamard)
-                cout << "H ";
-            cout << g.qubits.back() << "\n";
-        }
-    }
-    cout << "\n\n";
+//    int c = 0;
+//    for (auto& g : gates) {
+//        ++c;
+//        cout << c << " " ;
+//        if(g.ids.back() == Gate::Type::Z) {
+//            cout << "CZ ";
+//            cout << g.qubits.front() << " " << g.qubits.back() << "\n";
+//        }
+//        else {
+//            if (g.ids.back() == Gate::Type::X_1_2)
+//                cout << "X ";
+//            else if (g.ids.back() == Gate::Type::Y_1_2)
+//                cout << "Y ";
+//            else if (g.ids.back() == Gate::Type::T)
+//                cout << "T ";
+//            else if (g.ids.back() == Gate::Type::Hadamard)
+//                cout << "H ";
+//            cout << g.qubits.back() << "\n";
+//        }
+//    }
+//    cout << "\n\n";
     return total_xCZ_count;
 }
 
