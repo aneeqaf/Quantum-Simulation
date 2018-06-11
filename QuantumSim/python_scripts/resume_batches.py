@@ -27,7 +27,7 @@ def main(script_dir, start_range, end_range):
 			if "temp_" in filename:
 				continue
 			script_count = int(re.sub('[^0-9]', '', filename))
-			elif script_count >= int(start_range) and script_count < int(end_range):
+			if script_count >= int(start_range) and script_count < int(end_range):
 				log_file = os.path.join(log_dir, "log_" + filename.replace(".sh", ".txt"))
 				temp_script_dir = os.path.join(bindir, "temp_" + filename)
 				script_dir = os.path.join(bindir, filename)

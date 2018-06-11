@@ -221,14 +221,31 @@ MovexCZGates(idx_size proc_prefix_bits,
                   });
              
              if (transition_cycle && count_xCZ) {
-                 idx_size xCZ_counter = count_xCZ, move_count = 0;
+                 idx_size xCZ_counter = 0, move_count = 0;
                  vector<int> xCZ_q;
-                 for (idx_size k = i + count_xCZ - 1; xCZ_counter != 0; --k) {
+                 for (idx_size k = i + count_xCZ - 1; xCZ_counter != count_xCZ; --k) {
                      xCZ_q.push_back(gates[k].qubits.front());
                      xCZ_q.push_back(gates[k].qubits.back());
                      swap(gates[k], gates[j - 1 - move_count++]);
-                     --xCZ_counter;
+                     ++xCZ_counter;
                  }
+//                 move_count = 0;
+//                 idx_size non_xCZ_gates = j - i - count_xCZ;
+//                 for (idx_size k = i; non_xCZ_gates != 0; ++k, --non_xCZ_gates) {
+//                     for (int l = 0; l < xCZ_q.size(); ++l) {
+//                         if (gates[k].qubits.back() == xCZ_q[l]
+//                             || gates[k].qubits.front() == xCZ_q[l]) {
+//                             xCZ_q.push_back(gates[k].qubits.front());
+//                             xCZ_q.push_back(gates[k].qubits.back());
+//                             gates.insert(gates.begin() + j - move_count++, gates[k]);
+//                             gates.erase(gates.begin() + k);
+//                             ++xCZ_counter;
+//                             --k;
+//                             break;
+//                         }
+//                     }
+//                 }
+//                
                  idx_size last_CZ = j - 1;
                  idx_size next_CZ = last_CZ;
             
@@ -258,13 +275,13 @@ MovexCZGates(idx_size proc_prefix_bits,
                              }
                              if (XYH_count != 0) break;
                          }
-                         for (int k = 0; k < count_xCZ
+                         for (int k = 0; k < xCZ_counter
                               && gates[next_CZ - XYH_count - k].ids.back() != Gate::Type::Z ; ++k)
                              swap(gates[last_CZ - k], gates[next_CZ - XYH_count - k]);
                          
                          if (T_gates_idx != 0) {
                              for (int k = 0; gates[T_gates_idx + k].ids.back() == Gate::Type::T ; ++k)
-                                 swap(gates[last_CZ - count_xCZ + k + 1], gates[T_gates_idx + k]);
+                                 swap(gates[last_CZ - xCZ_counter + k + 1], gates[T_gates_idx + k]);
                          }
                          
                          break;
@@ -280,27 +297,27 @@ MovexCZGates(idx_size proc_prefix_bits,
     }
     
     GroupSimilarGates();
-//    int c = 0;
-//    for (auto& g : gates) {
-//        ++c;
-//        cout << c << " " ;
-//        if(g.ids.back() == Gate::Type::Z) {
-//            cout << "CZ ";
-//            cout << g.qubits.front() << " " << g.qubits.back() << "\n";
-//        }
-//        else {
-//            if (g.ids.back() == Gate::Type::X_1_2)
-//                cout << "X ";
-//            else if (g.ids.back() == Gate::Type::Y_1_2)
-//                cout << "Y ";
-//            else if (g.ids.back() == Gate::Type::T)
-//                cout << "T ";
-//            else if (g.ids.back() == Gate::Type::Hadamard)
-//                cout << "H ";
-//            cout << g.qubits.back() << "\n";
-//        }
-//    }
-//    cout << "\n\n";
+    int c = 0;
+    for (auto& g : gates) {
+        ++c;
+        cout << c << " " ;
+        if(g.ids.back() == Gate::Type::Z) {
+            cout << "CZ ";
+            cout << g.qubits.front() << " " << g.qubits.back() << "\n";
+        }
+        else {
+            if (g.ids.back() == Gate::Type::X_1_2)
+                cout << "X ";
+            else if (g.ids.back() == Gate::Type::Y_1_2)
+                cout << "Y ";
+            else if (g.ids.back() == Gate::Type::T)
+                cout << "T ";
+            else if (g.ids.back() == Gate::Type::Hadamard)
+                cout << "H ";
+            cout << g.qubits.back() << "\n";
+        }
+    }
+    cout << "\n\n";
     return total_xCZ_count;
 }
 

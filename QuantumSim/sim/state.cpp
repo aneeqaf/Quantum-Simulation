@@ -550,7 +550,7 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     idx_size hiq_Y_bitmask = Y_bitmask_64 & ((1ull << th) - 1);
     idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
     idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
-    idx_size hiq_H_bitmask = last_cycle ? H_bitmask_64 & (1ull << th) - 1 : 0;
+    idx_size hiq_H_bitmask = last_cycle ? H_bitmask_64 & ((1ull << th) - 1): 0;
     idx_size loq_H_bitmask = last_cycle ? H_bitmask_64 & ~((1ull << th) - 1) : 0;
     int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask);
     int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
@@ -607,8 +607,8 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         global_i_counter += XYHFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
                                                  num_qubits, num_threads, zero_opt_mask,
                                                  false);
-        hiq_H_bitmask ^= (hiq_X_bitmask | hiq_Y_bitmask);
-
+        
+        hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
