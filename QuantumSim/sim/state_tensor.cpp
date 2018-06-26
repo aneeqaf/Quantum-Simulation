@@ -64,7 +64,7 @@ TensorProductStateVector::
 }
 
 void TensorProductStateVector::
-PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs)
+PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
 {
     if (global_to_local_a != nullptr && global_to_local_b != nullptr) {
         delete [] global_to_local_a;
@@ -75,15 +75,72 @@ PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs)
     
     num_requested_amps = idxs.size();
     
+    vector<pair<idx_size, idx_size>> temp_global_to_local_a(num_requested_amps,
+                                                            pair<idx_size, idx_size>(0,0));
+    vector<pair<idx_size, idx_size>> temp_global_to_local_b(num_requested_amps,
+                                                            pair<idx_size, idx_size>(0,0));
+    
     global_to_local_a = new idx_size[num_requested_amps];
     global_to_local_b = new idx_size[num_requested_amps];
     memset(global_to_local_a, 0, num_requested_amps * sizeof(idx_size));
     memset(global_to_local_b, 0, num_requested_amps * sizeof(idx_size));
     
-    for (idx_size i = 0; i < num_requested_amps; ++i) {
-        global_to_local_a[i] = qp.IndexScatter(idxs[i], 0);
-        global_to_local_b[i] = qp.IndexScatter(idxs[i], 1);
+    for (idx_size i = 0; i < num_requested_amps; ++i)
+        temp_global_to_local_a[i] = pair<idx_size, idx_size>(i, qp.IndexScatter(idxs[i], 0));
+    
+    sort(temp_global_to_local_a.begin() + 5, temp_global_to_local_a.end(),
+         [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+             return first.second < second.second;
+         });
+    
+    for (idx_size i = 0; i < num_requested_amps; ++i)
+        temp_global_to_local_b[i] = pair<idx_size, idx_size>(temp_global_to_local_a[i].first,
+                                                qp.IndexScatter(idxs[temp_global_to_local_a[i].first], 1));
+    
+    idx_size last_idx_a = 5;
+//    for (idx_size i = 5; i < num_requested_amps; ++i) {
+//        if (temp_global_to_local_a[i].second != temp_global_to_local_a[last_idx_a].second) {
+//            if (i - last_idx_a > 1)
+//                sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + i,
+//                     [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+//                         return first.second < second.second;
+//                     });
+//            last_idx_a = i;
+//        }
+//    }
+//
+//    if (num_requested_amps - last_idx_a > 1)
+//        sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + num_requested_amps,
+//             [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+//                 return first.second < second.second;
+//             });
+    
+    for (idx_size i = 5; i < num_requested_amps; ++i) {
+        if (temp_global_to_local_a[i].second >= (temp_global_to_local_a[last_idx_a].second + (1ull << 14))) {
+            if (i - last_idx_a > 1)
+                sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + i,
+                     [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+                         return first.second < second.second;
+                     });
+            last_idx_a = i;
+        }
     }
+    
+    if (num_requested_amps - last_idx_a > 1)
+        sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + num_requested_amps,
+             [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+                 return first.second < second.second;
+             });
+    
+    vector<bitset<128>> temp_global_idxs (num_requested_amps, 0);
+    for (idx_size i = 0; i < num_requested_amps; ++i)
+        temp_global_idxs[i] = idxs[temp_global_to_local_b[i].first];
+    
+    for (idx_size i = 0; i < num_requested_amps; ++i) {
+        idxs[i] = temp_global_idxs[i];
+        global_to_local_a[i] = temp_global_to_local_a[i].second;
+        global_to_local_b[i] = temp_global_to_local_b[i].second;
+    }    
 }
 
 void TensorProductStateVector::

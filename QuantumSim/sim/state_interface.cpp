@@ -1,4 +1,4 @@
-//
+
 //  state_interface.cpp
 //  vector_state_sim
 //
@@ -129,7 +129,7 @@ QubitPartition(const Cuts cut_type,
             bitset<128> block0_bitmask = 0;
             for (int i = 0; i < block_bits; ++i)
                 block0_bitmask [num_q_1 - i] = 1;
-            (*this) = QubitPartition(y_axis, x_axis, block0_bitmask);
+        (*this) = QubitPartition(y_axis, x_axis, block0_bitmask);
 //        }
     }
     else {

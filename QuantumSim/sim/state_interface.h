@@ -66,7 +66,10 @@ public:
             cerr << " More than 64 qubits not supported here yet" << endl;
             exit(1);
         }
-        const bitset<128> mask((1ull << (rows * cols)) - 1);
+        bitset<128> mask = 0;//((1ull << (rows * cols)) - 1);
+        for (int i = 0; i < (rows * cols); ++i)
+            mask[i] = 1;
+        
         _blocks.push_back(mask ^ (mask & block0));
         InitMappings();
     }

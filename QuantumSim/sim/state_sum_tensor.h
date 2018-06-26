@@ -67,7 +67,7 @@ public:
                                    const bitset<128> T_bitmasks[2],
                                    int th,
                                    bool last_cycle = false);
-    void PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs);
+    void PopulateGlobalToLocalMap(vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();

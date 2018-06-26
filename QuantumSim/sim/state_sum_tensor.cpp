@@ -113,7 +113,7 @@ SumOfTensorsProductsStateVector::
 }
 
 void SumOfTensorsProductsStateVector::
-PopulateGlobalToLocalMap(const vector<bitset<128>>& idxs)
+PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
 {
     // Since the global to local arrays are static , a single call to PopulateGlobalToLocalMap
     // is enough.
