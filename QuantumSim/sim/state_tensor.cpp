@@ -138,7 +138,7 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
     
     for (idx_size i = 0; i < num_requested_amps; ++i) {
         idxs[i] = temp_global_idxs[i];
-        global_to_local_a[i] = temp_global_to_local_a[i].second;
+        global_to_local_a[i] = temp_global_to_local_a[temp_global_to_local_b[i].first].second;
         global_to_local_b[i] = temp_global_to_local_b[i].second;
     }    
 }
