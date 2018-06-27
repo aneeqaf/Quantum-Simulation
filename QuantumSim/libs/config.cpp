@@ -216,12 +216,12 @@ GenerateRandomIndices(const int seed,
     for (int i = 0; i < num_idx; ++i)
         indices.push_back(rand() % amp_size);
     
-//    sort(indices.begin() + 5, indices.end(), [](bitset<128>& first, bitset<128>& second) {
-//        for (int i = 127; i >= 0; i--) {
-//            if (first[i] ^ second[i]) return (bool)second[i];
-//        }
-//        return false;
-//    });
+    sort(indices.begin() + 5, indices.end(), [](bitset<128>& first, bitset<128>& second) {
+        for (int i = 127; i >= 0; i--) {
+            if (first[i] ^ second[i]) return (bool)second[i];
+        }
+        return false;
+    });
     
     if (print_idx) {
         string dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
@@ -234,6 +234,7 @@ GenerateRandomIndices(const int seed,
         
         auto& idx_print = indices;
         
+        //print numbers larger than 64 bits?
         for (idx_size i = 0; i < idx_print.size(); ++i)
             idx_out << indices[i].to_ullong() << "\n";
         idx_out.close();

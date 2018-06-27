@@ -648,6 +648,24 @@ ReportingAfterSim(GenericQuantumState& amp,
     
     amp.RescaleAndApplyGlobalICounter();
     
+    if (config.print_idx) {
+        vector<pair<bitset<128>, cmplx>> amps_with_idx (config.indices.size(), pair<bitset<128>, cmplx>(0, 0));
+        for (idx_size i = 0; i < config.indices.size(); ++i)
+            amps_with_idx[i] = pair<bitset<128>, cmplx>(config.indices[i], amps_of_interest[i]);
+        
+        sort(amps_with_idx.begin() + 5, amps_with_idx.end(),
+             [&](pair<bitset<128>, cmplx>& first, pair<bitset<128>, cmplx>& second) {
+                 for (int i = 127; i >= 0; i--) {
+                     if (first.first[i] ^ second.first[i])
+                         return (bool)second.first[i];
+                 }
+                 return false;
+             });
+        
+        for (idx_size i = 0; i < config.indices.size(); ++i)
+            amps_of_interest[i] = amps_with_idx[i].second;
+    }
+    
     if (config.norm_perc) {
         ofstream norm_out;
         norm_out.open(config.misc_outfile + "/" + config.infile + "_" + to_string(config.norm_depth) + ".norms");

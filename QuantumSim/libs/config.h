@@ -8,6 +8,7 @@
 #ifndef configuration_h
 #define configuration_h
 
+#include <algorithm>
 #include <bitset>
 #include <complex>
 #include <fstream>
