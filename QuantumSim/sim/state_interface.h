@@ -204,6 +204,9 @@ public:
     virtual void PrintStateVector() = 0;
     virtual void PrintProbabilities(const string& out_file,
                                     const int cycle_num)  = 0;
+    virtual void WriteAmpToDisk(const string& filename) = 0;
+    virtual void ReadFromDisk(const string& filename) = 0;
+    virtual void SetMemberVariables(const GenericQuantumState& amp) = 0;
         
     GenericQuantumState(){}
     GenericQuantumState(int n_threads);

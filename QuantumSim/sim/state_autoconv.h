@@ -81,6 +81,9 @@ public:
     void PrintStateVector() ;
     void PrintProbabilities(const string& out_file,
                             const int cycle_num) ;
+    void WriteAmpToDisk(const string& filename);
+    void ReadFromDisk(const string& filename);
+    void SetMemberVariables(const GenericQuantumState& amp);
     
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,

@@ -99,13 +99,14 @@ int main(int argc, char *argv[])
         { "layers_Hgates_b4_meas",    required_argument,       nullptr, 'H' },
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
         { "first_partition_smaller",    no_argument,       nullptr, 'f' },
+        { "save_checkpt_file",    no_argument,       nullptr, 'r' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false;
+    store_checkpoint_range = true, first_partition_smaller = false, save_cp_to_file = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0;
@@ -119,7 +120,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pf", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -301,6 +302,10 @@ int main(int argc, char *argv[])
                 threshold = stoi(s_th);
                 break;
             }
+            case 'r': {
+                save_cp_to_file = true;
+                break;
+            }
             case 's': {
                 string s_type = string(optarg);
                 sim_type = (Config::SimType)stoi(s_type);
@@ -421,7 +426,7 @@ int main(int argc, char *argv[])
                   cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx,
                   (Config::SimType)sim_type, verbose, vcut, hcut, depth,
                   threshold, num_threads, true, nearest_neighbors, row_major,
-                  layers_H_gates, store_checkpoint_range, first_partition_smaller);
+                  layers_H_gates, store_checkpoint_range, first_partition_smaller, save_cp_to_file);
     
     if (print_amp) {
         if (seed != -1)

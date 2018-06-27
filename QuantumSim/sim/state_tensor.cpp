@@ -138,7 +138,7 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
     
     for (idx_size i = 0; i < num_requested_amps; ++i) {
         idxs[i] = temp_global_idxs[i];
-        global_to_local_a[i] = temp_global_to_local_a[i].second;
+        global_to_local_a[i] = temp_global_to_local_a[temp_global_to_local_b[i].first].second;
         global_to_local_b[i] = temp_global_to_local_b[i].second;
     }    
 }
@@ -515,6 +515,16 @@ CopyState(const TensorProductStateVector& rhs)
     state_b -> CopyState(*rhs.state_b);
 }
 
+void TensorProductStateVector::
+CopyMemberVars(const TensorProductStateVector& rhs)
+{
+    qp = rhs.qp;
+    cut_type = rhs.cut_type;
+    
+    state_a -> CopyMemberVars(*rhs.state_a);
+    state_b -> CopyMemberVars(*rhs.state_b);
+}
+
 cmplx TensorProductStateVector::
 operator[](bitset<128> i) 
 {    
@@ -830,3 +840,28 @@ PrintProbabilities(const string& out_file,
         off = 1 + rand() % sampling_factor;
     }
 }
+
+void TensorProductStateVector::
+WriteAmpToDisk(const string& filename)
+{
+    state_a -> WriteAmpToDisk(filename + "_A");
+    state_b -> WriteAmpToDisk(filename + "_B");
+}
+
+void TensorProductStateVector::
+ReadFromDisk(const string& filename)
+{
+    state_a -> ReadFromDisk(filename + "_A");
+    state_b -> ReadFromDisk(filename + "_B");
+}
+
+void TensorProductStateVector::
+SetMemberVariables(const GenericQuantumState& rhs)
+{
+    const TensorProductStateVector& amp = (const TensorProductStateVector&)rhs;
+    qp = amp.qp;
+    cut_type = amp.cut_type;
+    state_a -> SetMemberVariables(*amp.state_a);
+    state_b -> SetMemberVariables(*amp.state_b);
+}
+

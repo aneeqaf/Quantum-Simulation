@@ -146,13 +146,15 @@ Config(const idx_size amp_size,
        const bool row_maj,
        const int layers_last_H,
        const bool store_r,
-       const bool first_part_small)
+       const bool first_part_small,
+       const bool sv_cp_file)
 : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
 misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l),
 proc_prefix_bits(cz_len), approx_epsilon(epsilon), dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc),
 hcut(hc), google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx), sim_type(sim),
 verbose(v), curr_mode(ProcPrefix), nearest_neighbors(near_neighbors), row_major(row_maj),
-last_layers_H(layers_last_H), store_checkpoint_range(store_r), first_part_smaller(first_part_small)
+last_layers_H(layers_last_H), store_checkpoint_range(store_r), first_part_smaller(first_part_small),
+save_cp_file(sv_cp_file)
 {
     if (!print_amp)
         mmap_obj = new MMapContent();
@@ -216,12 +218,12 @@ GenerateRandomIndices(const int seed,
     for (int i = 0; i < num_idx; ++i)
         indices.push_back(rand() % amp_size);
     
-//    sort(indices.begin() + 5, indices.end(), [](bitset<128>& first, bitset<128>& second) {
-//        for (int i = 127; i >= 0; i--) {
-//            if (first[i] ^ second[i]) return (bool)second[i];
-//        }
-//        return false;
-//    });
+    sort(indices.begin() + 5, indices.end(), [](bitset<128>& first, bitset<128>& second) {
+        for (int i = 127; i >= 0; i--) {
+            if (first[i] ^ second[i]) return (bool)second[i];
+        }
+        return false;
+    });
     
     if (print_idx) {
         string dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
@@ -279,6 +281,7 @@ Config(const Config& rhs)
     last_layers_H = rhs.last_layers_H;
     store_checkpoint_range = rhs.store_checkpoint_range;
     first_part_smaller = rhs.first_part_smaller;
+    save_cp_file = rhs.save_cp_file;
 }
 
 Config& Config::
@@ -317,6 +320,7 @@ operator=(const Config& rhs)
     last_layers_H = rhs.last_layers_H;
     store_checkpoint_range = rhs.store_checkpoint_range;
     first_part_smaller = rhs.first_part_smaller;
+    save_cp_file = rhs.save_cp_file;
     if (print_amp) swap(mmap_obj, temp.mmap_obj);
     else mmap_obj = new MMapContent();
     return *this;

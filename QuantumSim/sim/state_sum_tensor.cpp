@@ -448,6 +448,15 @@ CopyState(const SumOfTensorsProductsStateVector& rhs)
         tensor_addends[i] -> CopyState(*rhs.tensor_addends[i]);
 }
 
+void SumOfTensorsProductsStateVector::
+CopyMemberVars(const SumOfTensorsProductsStateVector& rhs)
+{
+    num_addends = rhs.GetNumAddends();
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CopyMemberVars(*rhs.tensor_addends[i]);
+}
+
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToStateAVX()
 {
@@ -921,3 +930,25 @@ PrintProbabilities(const string& out_file,
     }
 }
 
+void SumOfTensorsProductsStateVector::
+WriteAmpToDisk(const string& filename)
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> WriteAmpToDisk(filename + "_" + to_string(i));
+}
+
+void SumOfTensorsProductsStateVector::
+ReadFromDisk(const string& filename)
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> ReadFromDisk(filename + "_" + to_string(i));
+}
+
+void SumOfTensorsProductsStateVector::
+SetMemberVariables(const GenericQuantumState& rhs)
+{
+    const SumOfTensorsProductsStateVector& amp = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = amp.num_addends;
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> SetMemberVariables(*amp.tensor_addends[i]);
+}

@@ -77,6 +77,7 @@ public:
     void PopulateGlobalToLocalMap(vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
     void CopyState(const TensorProductStateVector& rhs);
+    void CopyMemberVars(const TensorProductStateVector& rhs);
 
     cmplx operator[](bitset<128> i);
     cmplx GetAmpFromGlobalState(const idx_size a,
@@ -110,7 +111,14 @@ public:
     void PrintStateVector() ;
     void PrintProbabilities(const string& out_file,
                             const int cycle_num) ;
+    void WriteAmpToDisk(const string& filename);
+    void ReadFromDisk(const string& filename);
+    void SetMemberVariables(const GenericQuantumState& amp);
     
+    TensorProductStateVector(): qp(0, 0) {
+        state_a = new FullAmpStateVector();
+        state_b = new FullAmpStateVector();
+    }
     TensorProductStateVector(const int qubits,
                              const QubitPartition::Cuts type,
                              const int hcut = 0,

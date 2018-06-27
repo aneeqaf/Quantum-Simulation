@@ -60,24 +60,87 @@ SetThreshold(int th)
 }
 
 void SequentialSimulation::
-CheckpointWithRanges(GenericQuantumState& amp,
-                     Circuit& circuit)
+CheckpointWithRangesWithFile(GenericQuantumState& amp,
+                             Circuit& circuit)
 {
+    idx_size gate_num = curr_gate;
+    
     Time time;
     time.StartTime();
     string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.proc_prefix_bits);
-    config.th = amp.GetNumQInBlock(0) >> 1;
-    amp.partition_to_sim = 'a';
-    string cz_path_copy = cz_path;
-    SimulationLoop(amp, circuit, cz_path, config.dfs_length, 0);
-    config.th = amp.GetNumQInBlock(1) >> 1;
-    amp.partition_to_sim = 'b';
-    SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length, 0);
-    amp.partition_to_sim = 'x';
+    idx_size cz_paths_ex = config.proc_prefix_bits ? 1ull << config.ranges_bits : 1ull << config.norm_depth,
+    num_bits = config.proc_prefix_bits ? config.ranges_bits : config.norm_depth;
+    
+    Time amp_storage_time;
+    amp_storage_time.StartTime();
+    string dir = "output/amp_vectors/" + config.infile + "_" + to_string(config.depth)
+    + "_" + to_string(config.proc_prefix_bits + config.ranges_bits) + "_" + to_string(config.num_threads);
+    if (config.approx)
+        dir += "_approx_" + to_string(config.approx_epsilon);
+    dir += "/temp/" + to_string(getpid());
+    string command = "mkdir -p " + dir;
+    system(command.c_str());
+    amp.WriteAmpToDisk(dir + "checkpoint");
+    
+    SumOfTensorsProductsStateVector temp_amp;
+    temp_amp.CopyMemberVars((SumOfTensorsProductsStateVector&)amp);
+
+    double storage_time = amp_storage_time.GetElapsedTime();
+    amp.time_by_category.amp_storage += storage_time;
+    mmap_time += storage_time;
+
+    if (config.ranges_bits)
+        config.curr_mode = Config::SimMode::Ranges;
+    
+    phase1_time += time.GetElapsedTime();
+    
+    for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
+        cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
+        
+        Phase1Simulation(amp, circuit, cz_path, gate_num);
+        
+        auto& idx = config.indices;
+        if (config.dfs_length == 0) {
+            Time amp_st_time;
+            amp_st_time.StartTime();
+            for(idx_size i = 0; i < idx.size(); ++i)
+                amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
+            double time_storage = amp_st_time.GetElapsedTime();
+            amp.time_by_category.amp_storage += time_storage;
+            phase1_time += time_storage;
+        }
+        
+        if (config.norm_perc)
+            norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
+        amp.book_keep = false;
+        
+        config.curr_mode = Config::SimMode::Ranges;
+        
+        if ((cz_p + 1) < cz_paths_ex) {
+            Time copy_time;
+            copy_time.StartTime();
+            amp.ReadFromDisk(dir + "checkpoint");
+            amp.SetMemberVariables(temp_amp);
+            double time_copying = copy_time.GetElapsedTime();
+            amp.time_by_category.copying += time_copying;
+            phase1_time += time_copying;
+            ++amp.count_of_category.copying;
+        }
+    }
+    
+    command = "rm -rf " + dir;
+    system(command.c_str());
+}
+
+void SequentialSimulation::
+CheckpointWithRangesWithoutFile(GenericQuantumState& amp,
+                                Circuit& circuit)
+{
     idx_size gate_num = curr_gate;
-    
-    amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
-    
+
+    Time time;
+    time.StartTime();
+    string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.proc_prefix_bits);
     idx_size cz_paths_ex = config.proc_prefix_bits ? 1ull << config.ranges_bits : 1ull << config.norm_depth,
     num_bits = config.proc_prefix_bits ? config.ranges_bits : config.norm_depth;
     
@@ -123,6 +186,28 @@ CheckpointWithRanges(GenericQuantumState& amp,
             ++amp.count_of_category.copying;
         }
     }
+}
+
+void SequentialSimulation::
+CheckpointWithRanges(GenericQuantumState& amp,
+                     Circuit& circuit)
+{
+    Time time;
+    time.StartTime();
+    string cz_path = bitset<128>(config.cz_path).to_string().substr(128 - config.proc_prefix_bits);
+    config.th = amp.GetNumQInBlock(0) >> 1;
+    amp.partition_to_sim = 'a';
+    string cz_path_copy = cz_path;
+    SimulationLoop(amp, circuit, cz_path, config.dfs_length, 0);
+    config.th = amp.GetNumQInBlock(1) >> 1;
+    amp.partition_to_sim = 'b';
+    SimulationLoop(amp, circuit, cz_path_copy, config.dfs_length, 0);
+    amp.partition_to_sim = 'x';
+    
+    amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
+    
+    if (config.save_cp_file) CheckpointWithRangesWithFile(amp, circuit);
+    else CheckpointWithRangesWithoutFile(amp, circuit);
 }
 
 void SequentialSimulation::
@@ -647,6 +732,24 @@ ReportingAfterSim(GenericQuantumState& amp,
 #endif
     
     amp.RescaleAndApplyGlobalICounter();
+    
+    if (config.print_idx) {
+        vector<pair<idx_size, cmplx>> amps_with_idx (config.indices.size(), pair<idx_size, cmplx>(0, 0));
+        for (idx_size i = 0; i < config.indices.size(); ++i)
+            amps_with_idx[i] = pair<idx_size, cmplx>(i, amps_of_interest[i]);
+        
+        sort(amps_with_idx.begin(), amps_with_idx.end(),
+             [&](pair<idx_size, cmplx>& first, pair<idx_size, cmplx>& second) {
+            for (int i = 127; i >= 0; i--) {
+                if (config.indices[first.first][i] ^ config.indices[second.first][i])
+                    return (bool)config.indices[second.first][i];
+            }
+            return false;
+        });
+        
+        for (idx_size i = 0; i < config.indices.size(); ++i)
+            amps_of_interest[i] = amps_with_idx[i].second;
+    }
     
     if (config.norm_perc) {
         ofstream norm_out;
