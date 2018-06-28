@@ -349,20 +349,19 @@ Project1QBitmask(bitset<128> gate_bitmask,
     const int num_qb1 = qp.getNumQubitsInBlock(block_idx) - 1;
 
     while (gate_bitmask != 0) {
-        const idx_size first_half = gate_bitmask.to_ulong();
+        const idx_size first_half = ((gate_bitmask << 64) >> 64).to_ulong();
         const idx_size second_half = (gate_bitmask >> 64).to_ulong();
-        const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
-
+        const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 64 + __builtin_ctzl(second_half) : 0;
         const int global_q_idx = is_zero_least_sig ? num_q1 - q : q;
         
         if (qp.globalToBlock(global_q_idx) == block_idx) {
             int local_q_idx = qp.globalToLocal(global_q_idx);
-            if (is_zero_least_sig) {
+            if (is_zero_least_sig)
                 local_q_idx = num_qb1 - local_q_idx;
-            }
+            assert(local_q_idx < 64);
             projected_bitmask |= 1ull << local_q_idx;
         }
-
+        
         gate_bitmask[q] = 0;
     }
     

@@ -194,10 +194,10 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
     
     for (idx_size i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
-            const idx_size first_half = xCZ_bitmask[i] .to_ulong();
-            const idx_size second_half = (xCZ_bitmask[i]  >> 63).to_ulong();
+            const idx_size first_half = ((xCZ_bitmask[i] << 64) >> 64) .to_ulong();
+            const idx_size second_half = (xCZ_bitmask[i]  >> 64).to_ulong();
             const int q = first_half ? __builtin_ctzl(first_half)
-            : second_half ? 63 + __builtin_ctzl(second_half) : 0;
+            : second_half ? 64 + __builtin_ctzl(second_half) : 0;
             
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
@@ -309,10 +309,10 @@ FormGatesBitmaskXCZ(bool& terminate,
             }
             
             ++last_xCZ_idx;
-            const idx_size first_half = xCZ_bitmask[i].to_ulong();
-            const idx_size second_half = (xCZ_bitmask[i] >> 63).to_ulong();
+            const idx_size first_half = ((xCZ_bitmask[i] << 64) >> 64).to_ulong();
+            const idx_size second_half = (xCZ_bitmask[i] >> 64).to_ulong();
             const int q = first_half ? __builtin_ctzl(first_half)
-            : second_half ? 63 +  __builtin_ctzl(second_half) : 0;
+            : second_half ? 64 +  __builtin_ctzl(second_half) : 0;
 
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
@@ -455,6 +455,11 @@ ConvertSumOfTensorsToStateAVX()
     const int num_q_b = tensor_addends[0] -> GetNumQInBlock(1), num_q_a = tensor_addends[0] -> GetNumQInBlock(0),
     total_q = num_q_a  + num_q_b;
     const idx_size size = 1ull << total_q, a_size = 2 * (1ull << num_q_a), b_size = 2 * (1ull << num_q_b);
+    
+    if (total_q >= 64) {
+        cerr << "Vector too large to convert\n";
+        exit(1);
+    }
     
     cmplx* amp;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * size);

@@ -14,7 +14,7 @@
 
 using namespace std;
 using cmplx = complex<float>;
-using idx_size = size_t;
+using idx_size = unsigned long long;
 
 vector<vector<cmplx>> matrix_mult(vector<vector<cmplx>>& g1, vector<vector<cmplx>>& g2);
 vector<cmplx> matrix_v_mult(const vector<vector<cmplx>>& matrix,

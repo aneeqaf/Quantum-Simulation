@@ -9,7 +9,7 @@
 #ifndef zero_opt_mask_h
 #define zero_opt_mask_h
 
-using idx_size = size_t;
+using idx_size = unsigned long long;
 
 class ZeroOptMask {
 private:

@@ -84,6 +84,12 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
     global_to_local_b = new idx_size[num_requested_amps];
     memset(global_to_local_a, 0, num_requested_amps * sizeof(idx_size));
     memset(global_to_local_b, 0, num_requested_amps * sizeof(idx_size));
+
+//    cout << endl;
+//    for (idx_size i = 0; i < num_requested_amps; ++i) {
+//        cout << idxs[i].to_ullong() << ": " << qp.IndexScatter(idxs[i], 0) << ", ";
+//        cout << qp.IndexScatter(idxs[i], 1) << endl;
+//    }
     
     for (idx_size i = 0; i < num_requested_amps; ++i)
         temp_global_to_local_a[i] = pair<idx_size, idx_size>(i, qp.IndexScatter(idxs[i], 0));
@@ -94,7 +100,7 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
          });
     
     for (idx_size i = 0; i < num_requested_amps; ++i)
-        temp_global_to_local_b[i] = pair<idx_size, idx_size>(temp_global_to_local_a[i].first,
+        temp_global_to_local_b[i] = pair<idx_size, idx_size>(i,
                                                 qp.IndexScatter(idxs[temp_global_to_local_a[i].first], 1));
     
     idx_size last_idx_a = 5;
@@ -116,7 +122,7 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
 //             });
     
     for (idx_size i = 5; i < num_requested_amps; ++i) {
-        if (temp_global_to_local_a[i].second >= (temp_global_to_local_a[last_idx_a].second + (1ull << 14))) {
+        if (temp_global_to_local_a[i].second >= (temp_global_to_local_a[last_idx_a].second + (1ull << 12))) {
             if (i - last_idx_a > 1)
                 sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + i,
                      [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
@@ -134,7 +140,7 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
     
     vector<bitset<128>> temp_global_idxs (num_requested_amps, 0);
     for (idx_size i = 0; i < num_requested_amps; ++i)
-        temp_global_idxs[i] = idxs[temp_global_to_local_b[i].first];
+        temp_global_idxs[i] = idxs[temp_global_to_local_a[temp_global_to_local_b[i].first].first];
     
     for (idx_size i = 0; i < num_requested_amps; ++i) {
         idxs[i] = temp_global_idxs[i];
@@ -322,9 +328,9 @@ CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             ++new_count;
-            const idx_size first_half = xCZ_bitmask[i].to_ulong();
+            const idx_size first_half = ((xCZ_bitmask[i] << 64) >> 64).to_ulong();
             const idx_size second_half = (xCZ_bitmask[i] >> 64).to_ulong();
-            const int q1 = first_half ? __builtin_ctzl(first_half) : second_half ? 63 + __builtin_ctzl(second_half) : 0;
+            const int q1 = first_half ? __builtin_ctzl(first_half) : second_half ? 64 + __builtin_ctzl(second_half) : 0;
             xCZ_bitmask[i][q1] = 0;
         }
     }
@@ -349,10 +355,10 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
-            const idx_size first_half = __builtin_ctzl(xCZ_bitmask[i].to_ulong());
+            const idx_size first_half = __builtin_ctzl(((xCZ_bitmask[i] << 64) >> 64).to_ulong());
             const idx_size second_half = __builtin_ctzl((xCZ_bitmask[i] >> 64).to_ulong());
             const int q = first_half ? __builtin_ctzl(first_half)
-            : second_half ? 63 + __builtin_ctzl(second_half) : 0;
+            : second_half ? 64 + __builtin_ctzl(second_half) : 0;
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
             ApplyCZGateAcrossTensorFactors(CZ_D_A, CZ_D_B, (int)i, modified_num_q_B - q);
@@ -483,8 +489,9 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
         
-        state_a -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateA_Xbitmask, stateA_Ybitmask, stateA_Hbitmask,
-                                             CZ_bitmasks_a, T_bitmasks_a, th, last_cycle);
+        state_a -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateA_Xbitmask, stateA_Ybitmask,
+                                              stateA_Hbitmask, CZ_bitmasks_a, T_bitmasks_a, th,
+                                              last_cycle);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
@@ -501,8 +508,9 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
         
-        state_b -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateB_Xbitmask, stateB_Ybitmask, stateB_Hbitmask,
-                                            CZ_bitmasks_b, T_bitmasks_b, th, last_cycle);
+        state_b -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateB_Xbitmask, stateB_Ybitmask,
+                                              stateB_Hbitmask, CZ_bitmasks_b, T_bitmasks_b, th,
+                                              last_cycle);
     }
     
     return -1;

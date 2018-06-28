@@ -22,6 +22,7 @@
 #include "config.h"
 #include "state_interface.h"
 #include "state_autoconv.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -32,7 +33,7 @@ private:
     ostringstream log;
     double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time, mmap_time;
     idx_size curr_gate, num_layers;
-    Config config;
+    Config* config;
     vector<double> norms_CZ_paths;
     vector<cmplx> amps_of_interest;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
@@ -74,7 +75,7 @@ public:
     void WriteMmapToASCIIFile() const;
     void WriteAmpToASCIIFile(GenericQuantumState& amp) const;
     
-    SequentialSimulation(const Config& c);
+    SequentialSimulation(Config* c);
     SequentialSimulation(const SequentialSimulation& rhs) = delete;
     SequentialSimulation& operator=(const SequentialSimulation& rhs) = delete;
 };

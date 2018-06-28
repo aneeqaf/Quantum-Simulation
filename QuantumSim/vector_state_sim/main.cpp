@@ -415,7 +415,9 @@ int main(int argc, char *argv[])
     
     idx_size input_filename_pos = input_filename.find_last_of('/') != string::npos ?
     input_filename.find_last_of('/') + 1 : 0;
-    Config config(1ull << cir.GetNumQubits(), input_filename.substr(input_filename_pos) ,
+    bitset<128> temp_size = 0;
+    temp_size[cir.GetNumQubits()] = 1;
+    Config* config = new Config (temp_size, input_filename.substr(input_filename_pos) ,
                   "output/probabilities/" + out_file,
                   "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
                   cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx,
@@ -425,13 +427,13 @@ int main(int argc, char *argv[])
     
     if (print_amp) {
         if (seed != -1)
-            config.GenerateRandomIndices(seed, num_idx, 1ull << cir.GetNumQubits());
+            config -> GenerateRandomIndices(seed, num_idx, ((__int128)1) << cir.GetNumQubits());
         else
-            config.ReadIndices(idx_filename);
+            config -> ReadIndices(idx_filename);
     }
     SequentialSimulation sim(config);
     
-    if (config.verbose)
+    if (config -> verbose)
         sim.PrintSystemReport();
     
     GenericQuantumState::num_threads = num_threads;
@@ -447,14 +449,14 @@ int main(int argc, char *argv[])
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Horizontal, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                      config.verbose);
+                                      config -> verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                      config.verbose);
+                                      config -> verbose);
         
 //        if (threshold == 0) {
 //            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
@@ -467,9 +469,9 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
                                              hcut, vcut, row_major, first_partition_smaller,
-                                             config.verbose);
-        if (!config.indices.empty())
-            amp.PopulateGlobalToLocalMap(config.indices);
+                                             config -> verbose);
+        if (!config -> indices.empty())
+            amp.PopulateGlobalToLocalMap(config -> indices);
         
 //        if (threshold == 0) {
 //            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
@@ -478,15 +480,17 @@ int main(int argc, char *argv[])
 //        }
         
         sim.Simulate(amp, cir);
-        if (!config.indices.empty())
+        if (!config -> indices.empty())
             amp.UnpopulateGlobalToLocalMap();
     }
     else {
         AdaptiveStateVector amp(cir.GetNumQubits(),
                                 (Config::SimType)sim_type, hcut, vcut, row_major, first_partition_smaller,
-                                config.verbose);
+                                config -> verbose);
         sim.Simulate(amp, cir);
     }
+    
+    delete config;
     return 0;
     
 }

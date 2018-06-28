@@ -26,7 +26,7 @@
 
 using namespace std;
 
-using idx_size = size_t;
+using idx_size = unsigned long long;
 using cmplx = complex<float>;
 
 class MMapContent {
@@ -40,6 +40,8 @@ public:
                           idx_size size);
     cmplx* operator[](idx_size i);
     void WriteToDisk();
+   
+    cmplx* GetMapPtr() { return map_ptr; }
     
     MMapContent(): map_ptr(nullptr), size(0), fd(0), filename("") {};
     MMapContent(const string filename,
@@ -94,14 +96,14 @@ public:
     void ReadIndices(const string& idx_file);
     void GenerateRandomIndices(const int seed,
                                const int num_idx,
-                               const idx_size amp_size);
+                               const __int128 amp_size);
     
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
     cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
     dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false),
     print_idx(false), ascii(false), approx(true), nearest_neighbors(true), row_major(true), last_layers_H(0),
     store_checkpoint_range(true), first_part_smaller(false), sim_type(FullState), verbose(Default), curr_mode(ProcPrefix) {}
-    Config(const idx_size amp_size,
+    Config(const bitset<128>& amp_size,
            const string ifile,
            const string pfile,
            const string afile,

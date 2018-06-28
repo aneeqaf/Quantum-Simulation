@@ -117,7 +117,7 @@ WriteToDisk()
 }
 
 Config::
-Config(const idx_size amp_size,
+Config(const bitset<128>& amp_size,
        const string ifile,
        const string pfile,
        const string afile,
@@ -159,10 +159,20 @@ last_layers_H(layers_last_H), store_checkpoint_range(store_r), first_part_smalle
     if (t == -1)
         th = 16;
     indices.push_back(3);
-    indices.push_back(amp_size/4);
-    indices.push_back(amp_size/2);
-    indices.push_back(3 * amp_size/4);
-    indices.push_back(amp_size - 3);
+    indices.push_back(amp_size >> 2);
+    indices.push_back(amp_size >> 1);
+    indices.push_back((amp_size >> 1) | (amp_size >> 2));
+//    indices.push_back(3 * (amp_size >> 2).to_ullong());
+    
+    const idx_size first_half = ((amp_size << 64) >> 64).to_ulong();
+    const idx_size second_half = (amp_size >> 64).to_ulong();
+    const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 64 + __builtin_ctzl(second_half) : 0;
+    
+    bitset<128> amp_3 = 0;
+    for (int i = 0; i < q; ++i)
+        if (i != 1)
+            amp_3[i] = 1;
+    indices.push_back(amp_3);
 }
 
 void Config::
@@ -197,13 +207,13 @@ ReadIndices(const string& idx_infile)
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".amps",
-                               sizeof(cmplx) * (indices.size()));
+                               sizeof(cmplx) * (indices.size()), true);
 }
 
 void Config::
 GenerateRandomIndices(const int seed,
                       const int num_idx,
-                      const idx_size amp_size)
+                      const __int128 amp_size)
 {
     srand(seed);
     string file_n = "output/amp_vectors/" + infile + "_" + to_string(depth)
@@ -213,35 +223,28 @@ GenerateRandomIndices(const int seed,
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     
-    for (int i = 0; i < num_idx; ++i)
-        indices.push_back(rand() % amp_size);
-    
-    sort(indices.begin() + 5, indices.end(), [](bitset<128>& first, bitset<128>& second) {
-        for (int i = 127; i >= 0; i--) {
-            if (first[i] ^ second[i]) return (bool)second[i];
+    for (int i = 0; i < num_idx; ++i) {
+        const idx_size first_half = (amp_size << 64) >> 64;
+        const idx_size second_half = amp_size >> 64;
+        const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 64 + __builtin_ctzl(second_half) : 0;
+        
+        if (q < 64)
+            indices.push_back(rand() % amp_size);
+        else {
+            bool large_idx = rand() % 2;
+            if (large_idx) {
+                __int128 n1_64 = rand() % INT64_MAX;
+                __int128 n2_64 = rand() % INT64_MAX;
+                indices.push_back((bitset<128>(n1_64) << 64) | bitset<128>(n2_64));
+            }
+            else {
+                indices.push_back(rand() % INT64_MAX);
+            }
         }
-        return false;
-    });
-    
-    if (print_idx) {
-        string dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
-        + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);
-        if (approx)
-            dir += "_approx_" + to_string(approx_epsilon);
-        string idx_outfile = dir + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".idx";
-        ofstream  idx_out;
-        idx_out.open(idx_outfile);
-        
-        auto& idx_print = indices;
-        
-        //print numbers larger than 64 bits?
-        for (idx_size i = 0; i < idx_print.size(); ++i)
-            idx_out << indices[i].to_ullong() << "\n";
-        idx_out.close();
     }
-
+    
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/"))  + ".amps",
-                               sizeof(cmplx) * (num_idx + 5));
+                               sizeof(cmplx) * (num_idx + 5), true);
 }
 
 Config::
@@ -271,7 +274,7 @@ Config(const Config& rhs)
     sim_type = rhs.sim_type;
     verbose = rhs.verbose;
     curr_mode = rhs.curr_mode;
-    if (print_amp) mmap_obj = new MMapContent(*rhs.mmap_obj);
+    if (print_amp && mmap_obj -> GetMapPtr()) mmap_obj = new MMapContent(*rhs.mmap_obj);
     else mmap_obj = new MMapContent();
     ascii = rhs.ascii;
     approx = rhs.approx;
@@ -318,7 +321,7 @@ operator=(const Config& rhs)
     last_layers_H = rhs.last_layers_H;
     store_checkpoint_range = rhs.store_checkpoint_range;
     first_part_smaller = rhs.first_part_smaller;
-    if (print_amp) swap(mmap_obj, temp.mmap_obj);
+    if (print_amp && mmap_obj -> GetMapPtr()) swap(mmap_obj, temp.mmap_obj);
     else mmap_obj = new MMapContent();
     return *this;
 }

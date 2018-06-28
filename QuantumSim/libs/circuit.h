@@ -20,7 +20,7 @@
 
 using namespace std;
 
-using idx_size = size_t;
+using idx_size = unsigned long long;
 
 class Circuit {
 private:
