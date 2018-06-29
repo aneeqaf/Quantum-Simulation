@@ -852,15 +852,19 @@ PrintProbabilities(const string& out_file,
 void TensorProductStateVector::
 WriteAmpToDisk(const string& filename)
 {
-    state_a -> WriteAmpToDisk(filename + "_A");
-    state_b -> WriteAmpToDisk(filename + "_B");
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+       state_a -> WriteAmpToDisk(filename + "_A");
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> WriteAmpToDisk(filename + "_B");
 }
 
 void TensorProductStateVector::
 ReadFromDisk(const string& filename)
 {
-    state_a -> ReadFromDisk(filename + "_A");
-    state_b -> ReadFromDisk(filename + "_B");
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a -> ReadFromDisk(filename + "_A");
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b -> ReadFromDisk(filename + "_B");
 }
 
 void TensorProductStateVector::
@@ -872,4 +876,3 @@ SetMemberVariables(const GenericQuantumState& rhs)
     state_a -> SetMemberVariables(*amp.state_a);
     state_b -> SetMemberVariables(*amp.state_b);
 }
-

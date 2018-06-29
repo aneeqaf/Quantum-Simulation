@@ -21,10 +21,10 @@ from math import ceil
 @click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
 @click.option("--not_final_amps", nargs=1, required=False, is_flag=True)
 @click.option("--batch_range", nargs=2, required=False, default=[-1, -1], type=int)
+@click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
 def main(cir_dir, num_procs, num_batches, est_time, t_time,
  num_idx, max_procs, test_fid, no_checkpoint_with_ranges, 
- binary_vectors_only, not_final_amps, batch_range):
-
+ binary_vectors_only, not_final_amps, batch_range, save_checkpoint_to_file):
 	# TODO: fix proc_per_script
 	proc_per_script = ceil(float(num_procs)/ float(num_batches)) if num_procs > 1 else 1
 	per_proc = num_procs if max_procs == 0 else max_procs
@@ -99,6 +99,9 @@ def main(cir_dir, num_procs, num_batches, est_time, t_time,
 		report_cmd += " --test_fid"
 	if no_checkpoint_with_ranges:
 		report_cmd += " --no_checkpoint_with_ranges"
+	if save_checkpoint_to_file:
+		report_cmd += " --save_checkpoint_to_file " + str(save_checkpoint_to_file)
+	
 	print(report_cmd)
 	os.system(report_cmd)
 

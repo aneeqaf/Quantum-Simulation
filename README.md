@@ -71,6 +71,12 @@ Rollright was developed in c++17 and uses g++7.
 	* The file specified is always created in the `output` directory, except when creating new random cicuits that are written to `input\random_circuits_rollright`. 
 	* The argument only includes the name of a file, not a path. The filename is used to write to predetermined locations pertinent to the type of output. (Namely, `output\amp_vectors`, `output\probabilities`, `output\qpro_scripts`, and `output\reports`.)
 	* If the amplitudes are requested to be printed, then the simulator creates a separate directory in `output\amp_vectors` pertinent to the name of the circuit file and prints the vectors in a file with the `.amp` extension. The default is binary. The name of the output file followed by `@` prints the amplitudes in the ASCII format.
+* **--save_checkpoint_to_file** :
+    * Takes as argument an integer between 0 and 2. Each integer implies the following :
+        * 0 : do not save any checkpoint to file
+        * 1 : save only the checkpoint before ranges to file 
+        * 2 : save both the checkpoints to file
+    * Default value is 0. 
 * **--sim_type, -s**
 	* Must be followed by an integer between 0 and 8 that specifies the type of simulation.
 	* The simulation types supported (in order): LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState, Approx2011, Approx1_101, Approx1110. Default simulation type is FullState. 

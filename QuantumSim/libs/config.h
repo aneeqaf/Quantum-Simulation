@@ -89,7 +89,8 @@ public:
     int last_layers_H;
     bool store_checkpoint_range;
     bool first_part_smaller;
-    bool save_cp_file;
+    int save_cp_file;
+    string temp_dir;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -103,7 +104,8 @@ public:
     cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
     dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false),
     print_idx(false), ascii(false), approx(true), nearest_neighbors(true), row_major(true), last_layers_H(0),
-    store_checkpoint_range(true), first_part_smaller(false), sim_type(FullState), verbose(Default), curr_mode(ProcPrefix) {}
+    store_checkpoint_range(true), first_part_smaller(false), sim_type(FullState), verbose(Default),
+    curr_mode(ProcPrefix), save_cp_file(0), temp_dir("") {}
     Config(const bitset<128>& amp_size,
            const string ifile,
            const string pfile,
@@ -134,7 +136,7 @@ public:
            const int layers_last_H = 0,
            const bool checkpoint_r = true,
            const bool first_part_small = false,
-           const bool sv_cp_file = false);
+           const int sv_cp_file = 0);
     Config(const Config& rhs);
     Config& operator=(const Config& rhs);
     ~Config();

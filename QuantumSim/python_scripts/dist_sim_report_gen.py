@@ -13,7 +13,9 @@ from math import ceil
 @click.option("--max_procs", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
-def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
+@click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
+def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
+	save_checkpoint_to_file):
 
 	log_dir = os.path.join("output", "log", cir_file)
 
@@ -292,10 +294,14 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges):
 
 	print("\t" + mem_line, end='')
 
-	if not no_checkpoint_with_ranges and dfs and cz_path_ranges:
-		mem_val *= 3
-	elif cz_path_ranges or dfs:
-		mem_val += mem_val  
+	if not save_checkpoint_to_file :
+		if not no_checkpoint_with_ranges and dfs and cz_path_ranges:
+			mem_val *= 3
+		elif cz_path_ranges or dfs:
+			mem_val += mem_val  
+	elif save_checkpoint_to_file == 1 and dfs:
+		mem_val *= 2
+
 	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit, end="")
 
 	if num_machines > 1:

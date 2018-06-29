@@ -43,10 +43,11 @@ from math import sqrt, floor, ceil
 @click.option("--layers_hgates_b4_meas", nargs=1, required=False, default=0)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
 @click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
+@click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
  approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
- layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only):
+ layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only, save_checkpoint_to_file):
 
 	dist_util.CheckInputFile(circuit)
 
@@ -73,9 +74,11 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	# os.makedirs(cir_dir)
 
 	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
-	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, h_cut = h_cut) 
+	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
+	 h_cut = h_cut) 
 	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, approx, column_major,
-	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, v_cut = v_cut) 
+	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
+	 v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command, depth = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
@@ -161,6 +164,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		post_launch_cmd += " --no_checkpoint_with_ranges"
 	if binary_vectors_only:
 		post_launch_cmd += " --binary_vectors_only"
+	if save_checkpoint_to_file:
+		post_launch_cmd += " --save_checkpoint_to_file " + str(save_checkpoint_to_file)
 	if multiple_nodes:
 		post_launch_cmd += " --not_final_amps"
 		post_launch_cmd += "\033[1m --batch_range <inclusive start, exclusive end> \033[0m"

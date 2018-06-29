@@ -52,6 +52,7 @@ MMapContent::
         // Un-mmaping doesn't close the file, so we still need to do that.
         close(fd);
     }
+    map_ptr = nullptr;
 }
 
 void MMapContent::
@@ -147,7 +148,7 @@ Config(const bitset<128>& amp_size,
        const int layers_last_H,
        const bool store_r,
        const bool first_part_small,
-       const bool sv_cp_file)
+       const int sv_cp_file)
 : infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
 misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l),
 proc_prefix_bits(cz_len), approx_epsilon(epsilon), dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc),
@@ -156,25 +157,26 @@ verbose(v), curr_mode(ProcPrefix), nearest_neighbors(near_neighbors), row_major(
 last_layers_H(layers_last_H), store_checkpoint_range(store_r), first_part_smaller(first_part_small),
 save_cp_file(sv_cp_file)
 {
+    temp_dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
+    + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);
+    if (approx)
+        temp_dir += "_approx_" + to_string(approx_epsilon);
+    temp_dir += "/temp_" + to_string(getpid()) + "/";
+    
     if (!print_amp)
         mmap_obj = new MMapContent();
     if (t == -1)
         th = 16;
+    
+    const __int128 first_half = (amp_size >> 64).to_ulong();
+    const __int128 second_half = (__int128)((amp_size << 64) >> 64).to_ulong();
+    const __int128 t_idx = ((__int128)first_half << 64) + (__int128)second_half;
+    
     indices.push_back(3);
-    indices.push_back(amp_size >> 2);
-    indices.push_back(amp_size >> 1);
-    indices.push_back((amp_size >> 1) | (amp_size >> 2));
-//    indices.push_back(3 * (amp_size >> 2).to_ullong());
-    
-    const idx_size first_half = ((amp_size << 64) >> 64).to_ulong();
-    const idx_size second_half = (amp_size >> 64).to_ulong();
-    const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 64 + __builtin_ctzl(second_half) : 0;
-    
-    bitset<128> amp_3 = 0;
-    for (int i = 0; i < q; ++i)
-        if (i != 1)
-            amp_3[i] = 1;
-    indices.push_back(amp_3);
+    indices.push_back(t_idx >> 2);
+    indices.push_back(t_idx >> 1);
+    indices.push_back(3 * (t_idx >> 2));
+    indices.push_back(t_idx - 3);
 }
 
 void Config::

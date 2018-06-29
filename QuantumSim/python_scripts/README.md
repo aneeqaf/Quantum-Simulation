@@ -73,6 +73,11 @@ These options should be modified if default value is not desired:
 * **--num_threads**: default = 4
 * **--num_idx**: default = 1000
 * **--print_idxs** : this is a flag and if specified it prints all the indices in the same directory as the amplitude vectors. There is a single output file of indices that ends with the extension `.idx`. Default is false.
+* **--save_checkpoint_to_file** : takes as argument an integer between 0 and 2. Each integer implies the following:
+	* 0 : do not save any checkpoint to file
+	* 1 : save only the checkpoint before ranges to file 
+	* 2 : save both the checkpoints to file
+Default value is 0.
 * **--trial** : this is a flag and if specified then a single trial run is performed before launching the entire simulation. Not recommended for simulations with long processes. Default is false. The single process is ran exactly how the multiple processes will be ran in the multiprocess simulation. This is used for making time estimations for the entire simulation, before launching the entire simulation in the background. Please do not use this flag if simulation of a single process is required.
 
 ##### Example runs:
@@ -113,7 +118,12 @@ dist_sim.py prints the total number of processes and batches on the terminal.
 * **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches)
 * **--binary_vectors_only** : this is a flag. Use it when the final amplitude vector of a batch is in binary format instead of the ASCII format. The default is set to false. The script passes the flag to the add_amps.py script. 
 * **--not_final_amps** : this is a flag. Use it when the amplitude vector that is produced by adding all the amplitude vectors in the specified directory is not the final amplitude vector. This flag is passed to the add_amps.py script.
-* **batch_range** : this option takes in two arguments, starting index (inclusive) and last index (exclusive) of the batches being executed on a node. The default is 0 to number of batches. 
+* **batch_range** : this option takes in two arguments, starting index (inclusive) and last index (exclusive) of the batches being executed on a node. The default is 0 to number of batches.
+* **--save_checkpoint_to_file** : takes as argument an integer between 0 and 2. Each integer implies the following which in turn affect the memory usage reported:
+	* 0 : do not save any checkpoint to file
+	* 1 : save only the checkpoint before ranges to file 
+	* 2 : save both the checkpoints to file
+Default value is 0. 
 
 ##### Example runs:
 
@@ -198,6 +208,11 @@ When generating a report for approximate simulation, this script checks if the c
 **Optional options**
 
 * **--max_procs** : same as the value set in dist_sim.py. (Must be set if running trial batches )
+* **--save_checkpoint_to_file** : takes as argument an integer between 0 and 2. Each integer implies the following which in turn affect the memory usage reported:
+	* 0 : do not save any checkpoint to file
+	* 1 : save only the checkpoint before ranges to file 
+	* 2 : save both the checkpoints to file
+Default value is 0. 
 
 ##### Example runs:
 

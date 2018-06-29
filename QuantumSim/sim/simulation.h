@@ -40,10 +40,25 @@ private:
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
    
     void PopulateBenchmarkMap();
-    void CheckpointWithRangesWithFile(GenericQuantumState& amp,
-                                      Circuit& circuit);
-    void CheckpointWithRangesWithoutFile(GenericQuantumState& amp,
-                                         Circuit& circuit);
+    void CopyOrRead(bool file_back_up,
+                    bool branch,
+                    GenericQuantumState& amp,
+                    const GenericQuantumState& copy_amp);
+    void CheckpointWithFile(bool branch,
+                            GenericQuantumState& amp,
+                            Circuit& circuit,
+                            const idx_size gate_i = 0);
+    void CheckpointWithoutFile(bool branch,
+                               GenericQuantumState& amp,
+                               Circuit& circuit,
+                               const idx_size gate_i = 0);
+    void MainLoopForRanges(GenericQuantumState& amp,
+                           Circuit& circuit,
+                           const GenericQuantumState& copy_amp);
+    void MainLoopForBranching(GenericQuantumState& amp,
+                              Circuit& circuit,
+                              const GenericQuantumState& copy_amp,
+                              const idx_size gate_i = 0);
     void CheckpointWithRanges(GenericQuantumState& amp,
                               Circuit& circuit);
     void NoCheckpointWithRanges(GenericQuantumState& amp,

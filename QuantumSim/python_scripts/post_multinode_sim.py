@@ -20,10 +20,12 @@ def main(cir_dir, num_idx, max_procs, test_fid):
 	print(add_amps_cmd) 
 	os.system(add_amps_cmd)
 
+	
 	report_cmd = "./python_scripts/multinode_report_gen.py " + str(cir_dir) + \
 	  " --max_procs " + str(max_procs)
 	if test_fid:
 		report_cmd += " --test_fid"
+	
 	print(report_cmd)
 	os.system(report_cmd)
 

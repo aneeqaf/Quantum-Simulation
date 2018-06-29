@@ -126,6 +126,8 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void TurnMemoryMappingOff();
+    void TurnMemoryMappingOn();
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -138,7 +140,7 @@ public:
     
     FullAmpStateVector(): max_prob(numeric_limits<double>::min()),
         min_prob(numeric_limits<double>::max()), amp_size(0), global_factor_power(0), global_i_counter(0),
-        num_qubits(0), zero_opt_mask(num_qubits) {}
+        num_qubits(0), zero_opt_mask(num_qubits), amp(nullptr) {}
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);

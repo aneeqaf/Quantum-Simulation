@@ -99,17 +99,18 @@ int main(int argc, char *argv[])
         { "layers_Hgates_b4_meas",    required_argument,       nullptr, 'H' },
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
         { "first_partition_smaller",    no_argument,       nullptr, 'f' },
-        { "save_checkpt_file",    no_argument,       nullptr, 'r' },
+        { "save_checkpoint_to_file",    required_argument,       nullptr, 'r' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false, save_cp_to_file = false;
+    store_checkpoint_range = true, first_partition_smaller = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0;
+    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
+    save_cp_to_file = 0;
     float norm_perc = 0;
     idx_size cz_path = 0, epsilon = 0;
     int sim_type = -1;
@@ -303,7 +304,12 @@ int main(int argc, char *argv[])
                 break;
             }
             case 'r': {
-                save_cp_to_file = true;
+                string s_cp = string(optarg);
+                save_cp_to_file = stoi(s_cp);
+                if (save_cp_to_file > 2 || save_cp_to_file < 0) {
+                    cerr << "Please enter a value between 0 and 2 for specifying how many checkpoints to save to file\n";
+                    exit(1);
+                }
                 break;
             }
             case 's': {
@@ -454,14 +460,14 @@ int main(int argc, char *argv[])
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Horizontal, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                      config -> verbose);
+                                       config -> verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                      config -> verbose);
+                                       config -> verbose);
         
 //        if (threshold == 0) {
 //            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
@@ -474,7 +480,7 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
                                              hcut, vcut, row_major, first_partition_smaller,
-                                             config -> verbose);
+                                              config -> verbose);
         if (!config -> indices.empty())
             amp.PopulateGlobalToLocalMap(config -> indices);
         

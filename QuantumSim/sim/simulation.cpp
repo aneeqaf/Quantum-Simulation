@@ -41,7 +41,11 @@ PopulateBenchmarkMap()
     benchmark["inst_5x5_21_0_22"] = {cmplx(9.21374e-05, 6.59681e-05), cmplx(-1.35506e-05,0.000152743),
         cmplx(-2.26996e-05, -4.063e-06), cmplx(0.000146145, 3.12126e-06), cmplx(-8.68663e-06, -7.95167e-05)};
     benchmark["inst_5x6_21_0_22"] = {cmplx(-1.141978e-05, 8.101054e-06), cmplx(-2.860430e-05, -4.218435e-05),
-        cmplx(-2.930546e-05, 4.713042e-06), cmplx(-1.063005e-05, -1.160662e-06), cmplx(-1.208545e-05, -2.048368e-07)};
+        cmplx(-2.930546e-05, 4.713042e-06), cmplx(1.8098e-12, -1.160662e-06), cmplx(-1.208545e-05, -2.048368e-07)};
+    benchmark["inst_8_8_26_0_chen_6"] = {cmplx(1.01709e-13, 9.58446e-13), cmplx(-2.3139e-12, 2.4555e-13),
+        cmplx(1.01712e-13, 9.58448e-13), cmplx(1.204301e-10, 1.46254e-12), cmplx(-2.89576e-10, 3.58332e-10)};
+    benchmark["inst_8_8_26_0_chen_11"] = {cmplx(1.904682e-10, 2.036684e-10), cmplx(-6.751987e-11, 2.830940e-11),
+        cmplx(-6.978375e-11, -1.419068e-10), cmplx(1.204301e-10, 7.646200e-11), cmplx(-4.436820e-11, -5.569570e-11)};
     
 //    benchmark["25_26"] = {cmplx(0.000104529,-0.000158536), cmplx(0.00011983,5.54614e-05), cmplx(0.000158796,6.78702e-05),
 //        cmplx(-1.13099e-05,-7.9362e-06), cmplx(4.02591e-05, -6.56695e-05)};
@@ -60,36 +64,40 @@ SetThreshold(int th)
 }
 
 void SequentialSimulation::
-CheckpointWithRangesWithFile(GenericQuantumState& amp,
-                             Circuit& circuit)
+CopyOrRead(bool file_back_up,
+           bool branch,
+           GenericQuantumState& amp,
+           const GenericQuantumState& copy_amp)
+{
+    Time copy_time;
+    copy_time.StartTime();
+    if (file_back_up) {
+        amp.ReadFromDisk(config -> temp_dir + "checkpoint" + to_string(branch));
+        amp.SetMemberVariables(copy_amp);
+    }
+    else {
+        SumOfTensorsProductsStateVector& temp_amp = (SumOfTensorsProductsStateVector&)amp;
+        temp_amp.CopyState((SumOfTensorsProductsStateVector&)copy_amp);
+    }
+    double time_copying = copy_time.GetElapsedTime();
+    amp.time_by_category.copying += time_copying;
+    phase1_time += time_copying;
+    ++amp.count_of_category.copying;
+}
+
+void SequentialSimulation::
+MainLoopForRanges(GenericQuantumState& amp,
+                  Circuit& circuit,
+                  const GenericQuantumState& copy_amp)
 {
     idx_size gate_num = curr_gate;
     
     Time time;
     time.StartTime();
-
     string cz_path = bitset<128>(config -> cz_path).to_string().substr(128 - config -> proc_prefix_bits);
     idx_size cz_paths_ex = config -> proc_prefix_bits ? 1ull << config -> ranges_bits : 1ull << config -> norm_depth,
     num_bits = config -> proc_prefix_bits ? config -> ranges_bits : config -> norm_depth;
     
-    Time amp_storage_time;
-    amp_storage_time.StartTime();
-    string dir = "output/amp_vectors/" + config -> infile + "_" + to_string(config -> depth)
-    + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
-    if (config -> approx)
-        dir += "_approx_" + to_string(config -> approx_epsilon);
-    dir += "/temp/" + to_string(getpid());
-    string command = "mkdir -p " + dir;
-    system(command.c_str());
-    amp.WriteAmpToDisk(dir + "checkpoint");
-    
-    SumOfTensorsProductsStateVector temp_amp;
-    temp_amp.CopyMemberVars((SumOfTensorsProductsStateVector&)amp);
-
-    double storage_time = amp_storage_time.GetElapsedTime();
-    amp.time_by_category.amp_storage += storage_time;
-    mmap_time += storage_time;
-
     if (config -> ranges_bits)
         config -> curr_mode = Config::SimMode::Ranges;
     
@@ -117,76 +125,106 @@ CheckpointWithRangesWithFile(GenericQuantumState& amp,
         
         config -> curr_mode = Config::SimMode::Ranges;
         
-        if ((cz_p + 1) < cz_paths_ex) {
-            Time copy_time;
-            copy_time.StartTime();
-            amp.ReadFromDisk(dir + "checkpoint");
-            amp.SetMemberVariables(temp_amp);
-            double time_copying = copy_time.GetElapsedTime();
-            amp.time_by_category.copying += time_copying;
-            phase1_time += time_copying;
-            ++amp.count_of_category.copying;
+        if ((cz_p + 1) < cz_paths_ex)
+            CopyOrRead(config -> save_cp_file > 0, false, amp, copy_amp);
+    }
+}
+
+void SequentialSimulation::
+MainLoopForBranching(GenericQuantumState& amp,
+                     Circuit& circuit,
+                     const GenericQuantumState& copy_amp,
+                     const idx_size gate_i)
+{
+    static int exec = 0; ++exec;
+    
+    config -> curr_mode = Config::SimMode::Branch;
+    
+    string cz_path = "-";
+    idx_size num_CZ_paths = 1ull << config -> dfs_length;
+    for (idx_size i = 0; i < num_CZ_paths; ++i) {
+        cz_path = bitset<100>(i).to_string();
+        cz_path = cz_path.substr(cz_path.size() - config -> dfs_length);
+        
+        //        config -> th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
+        config -> th = amp.GetNumQInBlock(0) >> 1;
+        string cz_path_copy = cz_path;
+        amp.partition_to_sim = 'a';
+        SimulationLoop(amp, circuit, cz_path, 0, gate_i);
+        //        config -> th = amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15;
+        config -> th = amp.GetNumQInBlock(1) >> 1;
+        amp.partition_to_sim = 'b';
+        SimulationLoop(amp, circuit, cz_path_copy, 0, gate_i);
+        amp.partition_to_sim = 'x';
+        
+        auto& idx = config -> indices;
+        for(idx_size i = 0; i < idx.size(); ++i) {
+            Time amp_st_time;
+            amp_st_time.StartTime();
+            amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
+            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
         }
+        
+        amp.book_keep = false;
+        
+        if ((i + 1) < num_CZ_paths)
+            CopyOrRead(config -> save_cp_file > 1, true, amp, copy_amp);
     }
     
-    command = "rm -rf " + dir;
+    if (exec == 1) {
+        if (!cz_path.size()) {
+            if (circuit.GetTotalNumGates() != curr_gate)
+                cout << "DFS path exhausted early\n";
+            else
+                cout << "No xCZ gates left\n";
+        }
+        else
+            cout << "Truncated DFS length : " << cz_path.size() << "\n";
+    }
+}
+
+void SequentialSimulation::
+CheckpointWithFile(bool branch,
+                   GenericQuantumState& amp,
+                   Circuit& circuit,
+                   const idx_size gate_i)
+{
+    Time copy_time;
+    copy_time.StartTime();
+    amp.WriteAmpToDisk(config -> temp_dir + "checkpoint" + to_string(branch));
+    SumOfTensorsProductsStateVector temp_amp;
+    temp_amp.CopyMemberVars((SumOfTensorsProductsStateVector&)amp);
+    double time_copying = copy_time.GetElapsedTime();
+    amp.time_by_category.copying += time_copying;
+    phase1_time += time_copying;
+    
+    if (branch)
+        MainLoopForBranching(amp, circuit, temp_amp, gate_i);
+    else
+        MainLoopForRanges(amp, circuit, temp_amp);
+
+    string command = "rm " + config -> temp_dir + "checkpoint" + to_string(branch) + "*";
     system(command.c_str());
 }
 
 void SequentialSimulation::
-CheckpointWithRangesWithoutFile(GenericQuantumState& amp,
-                                Circuit& circuit)
+CheckpointWithoutFile(bool branch,
+                      GenericQuantumState& amp,
+                      Circuit& circuit,
+                      const idx_size gate_i)
 {
-    idx_size gate_num = curr_gate;
-
-    Time time;
-    time.StartTime();
-    string cz_path = bitset<128>(config -> cz_path).to_string().substr(128 - config -> proc_prefix_bits);
-    idx_size cz_paths_ex = config -> proc_prefix_bits ? 1ull << config -> ranges_bits : 1ull << config -> norm_depth,
-    num_bits = config -> proc_prefix_bits ? config -> ranges_bits : config -> norm_depth;
     
     Time copy_time;
     copy_time.StartTime();
     SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
-    amp.time_by_category.copying += copy_time.GetElapsedTime();
-    ++amp.count_of_category.copying;
+    double time_copying = copy_time.GetElapsedTime();
+    amp.time_by_category.copying += time_copying;
+    phase1_time += time_copying;
     
-    if (config -> ranges_bits)
-        config -> curr_mode = Config::SimMode::Ranges;
-    
-    phase1_time += time.GetElapsedTime();
-    
-    for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
-        cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
-        
-        Phase1Simulation(temp_amp, circuit, cz_path, gate_num);
-        
-        auto& idx = config -> indices;
-        if (config -> dfs_length == 0) {
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            for(idx_size i = 0; i < idx.size(); ++i)
-                amps_of_interest[i] += temp_amp.GetGlobalAmpAtInterestingIdx(i);
-            double time_storage = amp_st_time.GetElapsedTime();
-            amp.time_by_category.amp_storage += time_storage;
-            phase1_time += time_storage;
-        }
-        
-        if (config -> norm_perc)
-            norms_CZ_paths[cz_p] = sqrt(temp_amp.CalculateNormSquared());
-        amp.book_keep = false;
-        
-        config -> curr_mode = Config::SimMode::Ranges;
-        
-        if ((cz_p + 1) < cz_paths_ex) {
-            copy_time.StartTime();
-            temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
-            double time_copying = copy_time.GetElapsedTime();
-            amp.time_by_category.copying += time_copying;
-            phase1_time += time_copying;
-            ++amp.count_of_category.copying;
-        }
-    }
+    if (branch)
+        MainLoopForBranching(temp_amp, circuit, amp, gate_i);
+    else
+        MainLoopForRanges(temp_amp, circuit, amp);
 }
 
 void SequentialSimulation::
@@ -206,9 +244,19 @@ CheckpointWithRanges(GenericQuantumState& amp,
     amp.partition_to_sim = 'x';
     
     amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
+    phase1_time += time.GetElapsedTime();
     
-    if (config -> save_cp_file) CheckpointWithRangesWithFile(amp, circuit);
-    else CheckpointWithRangesWithoutFile(amp, circuit);
+    if (config -> save_cp_file > 0) {
+        string command = "mkdir -p " + config -> temp_dir;
+        system(command.c_str());
+        
+        CheckpointWithFile(false, amp, circuit);
+        
+        command = "rm -rf " + config -> temp_dir ;
+        system(command.c_str());
+    }
+    else CheckpointWithoutFile(false, amp, circuit);
+    
 }
 
 void SequentialSimulation::
@@ -409,68 +457,16 @@ Phase2Simulation(GenericQuantumState& amp,
                  Circuit& circuit,
                  const idx_size gate_i)
 {
-    static int exec = 0; ++exec;
-    
     Time phase2_time;
     phase2_time.StartTime();
     
     //    bool terminate = false;
     amp.RescaleAndApplyGlobalICounter();
     
-    Time copy_time;
-    copy_time.StartTime();
-    SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
-    amp.time_by_category.copying += copy_time.GetElapsedTime();
-    ++amp.count_of_category.copying;
-    config -> curr_mode = Config::SimMode::Branch;
-
-    string cz_path = "-";
-    idx_size num_CZ_paths = 1ull << config -> dfs_length;
-    for (idx_size i = 0; i < num_CZ_paths; ++i) {
-        cz_path = bitset<100>(i).to_string();
-        cz_path = cz_path.substr(cz_path.size() - config -> dfs_length);
-        
-        //        config -> th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
-        config -> th = amp.GetNumQInBlock(0) >> 1;
-        string cz_path_copy = cz_path;
-        temp_amp.partition_to_sim = 'a';
-        SimulationLoop(temp_amp, circuit, cz_path, 0, gate_i);
-        //        config -> th = amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15;
-        config -> th = amp.GetNumQInBlock(1) >> 1;
-        temp_amp.partition_to_sim = 'b';
-        SimulationLoop(temp_amp, circuit, cz_path_copy, 0, gate_i);
-        amp.partition_to_sim = 'x';
-        
-        auto& idx = config -> indices;
-        for(idx_size i = 0; i < idx.size(); ++i) {
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            amps_of_interest[i] += temp_amp.GetGlobalAmpAtInterestingIdx(i);
-            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
-        }
-        
-        amp.book_keep = false;
-        
-        if ((i + 1) < num_CZ_paths) {
-            copy_time.StartTime();
-            temp_amp.CopyState((SumOfTensorsProductsStateVector&)amp);
-            amp.time_by_category.copying += copy_time.GetElapsedTime();
-            ++amp.count_of_category.copying;
-        }
-    }
+    if (config -> save_cp_file > 1) CheckpointWithFile(true, amp, circuit, gate_i);
+    else CheckpointWithoutFile(true, amp, circuit, gate_i);
     
     dfs_time += phase2_time.GetElapsedTime();
-    
-    if (exec == 1) {
-        if (!cz_path.size()) {
-            if (circuit.GetTotalNumGates() != curr_gate)
-                cout << "DFS path exhausted early\n";
-            else
-                cout << "No xCZ gates left\n";
-        }
-        else
-            cout << "Truncated DFS length : " << cz_path.size() << "\n";
-    }
 }
 
 

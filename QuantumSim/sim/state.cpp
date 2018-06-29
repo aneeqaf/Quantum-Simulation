@@ -12,7 +12,7 @@ using namespace std;
 FullAmpStateVector::
 FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), global_factor_power(0), global_i_counter(0),
-num_qubits(qubits), zero_opt_mask(num_qubits)
+num_qubits(qubits),zero_opt_mask(num_qubits)
 {
     amp_size = 1ull << qubits;
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
@@ -64,11 +64,12 @@ num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits)
 }
 
 FullAmpStateVector::
-FullAmpStateVector(const FullAmpStateVector& rhs): zero_opt_mask(rhs.zero_opt_mask), min_prob(rhs.min_prob), max_prob(rhs.max_prob),
+FullAmpStateVector(const FullAmpStateVector& rhs):
+zero_opt_mask(rhs.zero_opt_mask), min_prob(rhs.min_prob), max_prob(rhs.max_prob),
 amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
 global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits)
 {
-    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
+   if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
         idx_size memory = sizeof(cmplx) * amp_size;
         cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
         if (memory >= (1 << 30)) {
@@ -85,6 +86,7 @@ global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits)
         free(amp);
         exit(err);
     }
+    
     idx_size size = 2 * rhs.GetSize();
     
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
@@ -1073,19 +1075,27 @@ PrintStateVector(const string& outfile,
 
 void FullAmpStateVector::
 WriteAmpToDisk(const string& filename)
-{    
-    MMapContent mmap_amp (filename, sizeof(cmplx) * amp_size);
-    for (idx_size i = 0; i < amp_size; ++i)
-        *(mmap_amp[i]) = amp[i];
-    mmap_amp.WriteToDisk();
+{
+    ofstream file;
+    file.open (filename, ios::out | ios::binary);
+    file.seekp(0);
+    if (!file.write((char*)amp, sizeof(cmplx) * amp_size)) {
+        cerr << "Error in writing to file\n";
+        exit(1);
+    }
+    file.close();
 }
 
 void FullAmpStateVector::
 ReadFromDisk(const string& filename)
 {
-    MMapContent mmap_amp (filename, sizeof(cmplx) * amp_size);
-    for (idx_size i = 0; i < amp_size; ++i)
-        amp[i] = *(mmap_amp[i]) ;
+    ifstream file;
+    file.open (filename, ios::in | ios::binary);
+    if (!file.read((char*)amp, sizeof(cmplx) * amp_size)) {
+        cerr << "Error in reading from file\n";
+        exit(1);
+    }
+    file.close();
 }
 
 void FullAmpStateVector::
