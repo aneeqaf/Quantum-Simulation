@@ -425,3 +425,32 @@ PrintProbabilities(const string& out_file,
     else
         full_state -> PrintProbabilities(out_file, cycle_num);
 }
+
+void AdaptiveStateVector::
+WriteAmpToDisk(const string& filename)
+{
+    if (full_state)
+        full_state -> WriteAmpToDisk(filename);
+    else
+        sumOfTensors -> WriteAmpToDisk(filename);
+}
+
+void AdaptiveStateVector::
+ReadFromDisk(const string& filename)
+{
+    if (full_state)
+        full_state -> ReadFromDisk(filename);
+    else
+        sumOfTensors -> ReadFromDisk(filename);
+}
+
+void AdaptiveStateVector::
+SetMemberVariables(const GenericQuantumState& rhs)
+{
+    const AdaptiveStateVector& amp = (const AdaptiveStateVector&)rhs;
+    total_q = amp.total_q;
+    if (full_state)
+        full_state -> SetMemberVariables(*amp.full_state);
+    else
+        sumOfTensors -> SetMemberVariables(*amp.sumOfTensors);
+}

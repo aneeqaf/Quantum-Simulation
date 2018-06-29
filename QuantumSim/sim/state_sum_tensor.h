@@ -72,6 +72,7 @@ public:
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
     void CopyState(const SumOfTensorsProductsStateVector& rhs);
+    void CopyMemberVars(const SumOfTensorsProductsStateVector& rhs);
 
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
@@ -106,7 +107,12 @@ public:
     void PrintStateVector() ;
     void PrintProbabilities(const string& out_file,
                             const int cycle_num) ;
+    void WriteAmpToDisk(const string& filename);
+    void ReadFromDisk(const string& filename);
+    void SetMemberVariables(const GenericQuantumState& amp);
     
+    SumOfTensorsProductsStateVector(): num_addends(0) {
+        tensor_addends.push_back(new TensorProductStateVector()); }
     SumOfTensorsProductsStateVector(const int qubits,
                                     const Config::SimType type,
                                     const int hcut = 0,

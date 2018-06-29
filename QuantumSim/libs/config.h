@@ -89,6 +89,7 @@ public:
     int last_layers_H;
     bool store_checkpoint_range;
     bool first_part_smaller;
+    bool save_cp_file;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -132,7 +133,8 @@ public:
            const bool row_maj = true,
            const int layers_last_H = 0,
            const bool checkpoint_r = true,
-           const bool first_part_small = false);
+           const bool first_part_small = false,
+           const bool sv_cp_file = false);
     Config(const Config& rhs);
     Config& operator=(const Config& rhs);
     ~Config();

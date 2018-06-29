@@ -662,6 +662,18 @@ CopyState(const FullAmpStateVector& rhs)
     }
 }
 
+void FullAmpStateVector::
+CopyMemberVars(const FullAmpStateVector& rhs)
+{
+    max_prob = rhs.max_prob;
+    min_prob = rhs. min_prob;
+    amp_size = rhs.amp_size;
+    num_qubits = rhs.num_qubits;
+    global_factor_power = rhs.global_factor_power;
+    global_i_counter = rhs.global_i_counter;
+    zero_opt_mask = rhs.zero_opt_mask;
+}
+
 cmplx FullAmpStateVector::
 operator[](bitset<128> i)
 {
@@ -1058,3 +1070,34 @@ PrintStateVector(const string& outfile,
         off = 1 + rand() % sampling_factor;
     }
 }
+
+void FullAmpStateVector::
+WriteAmpToDisk(const string& filename)
+{    
+    MMapContent mmap_amp (filename, sizeof(cmplx) * amp_size);
+    for (idx_size i = 0; i < amp_size; ++i)
+        *(mmap_amp[i]) = amp[i];
+    mmap_amp.WriteToDisk();
+}
+
+void FullAmpStateVector::
+ReadFromDisk(const string& filename)
+{
+    MMapContent mmap_amp (filename, sizeof(cmplx) * amp_size);
+    for (idx_size i = 0; i < amp_size; ++i)
+        amp[i] = *(mmap_amp[i]) ;
+}
+
+void FullAmpStateVector::
+SetMemberVariables(const GenericQuantumState& rhs)
+{
+    const FullAmpStateVector& amp = (const FullAmpStateVector&)rhs;
+    max_prob = amp.max_prob;
+    min_prob = amp. min_prob;
+    amp_size = amp.amp_size;
+    num_qubits = amp.num_qubits;
+    global_factor_power = amp.global_factor_power;
+    global_i_counter = amp.global_i_counter;
+    zero_opt_mask = amp.zero_opt_mask;
+}
+
