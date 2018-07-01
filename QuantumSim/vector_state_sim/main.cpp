@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {

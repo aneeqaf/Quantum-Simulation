@@ -247,12 +247,9 @@ CheckpointWithRanges(GenericQuantumState& amp,
     phase1_time += time.GetElapsedTime();
     
     if (config -> save_cp_file > 0) {
-        string command = "mkdir -p " + config -> temp_dir;
-        system(command.c_str());
-        
         CheckpointWithFile(false, amp, circuit);
         
-        command = "rm -rf " + config -> temp_dir ;
+        string command = "rm -rf " + config -> temp_dir ;
         system(command.c_str());
     }
     else CheckpointWithoutFile(false, amp, circuit);
@@ -463,7 +460,14 @@ Phase2Simulation(GenericQuantumState& amp,
     //    bool terminate = false;
     amp.RescaleAndApplyGlobalICounter();
     
-    if (config -> save_cp_file > 1) CheckpointWithFile(true, amp, circuit, gate_i);
+    if (config -> save_cp_file > 1 && config -> ranges_bits != 0)
+        CheckpointWithFile(true, amp, circuit, gate_i);
+    else if (config -> save_cp_file > 0 && config -> ranges_bits == 0) {
+        CheckpointWithFile(true, amp, circuit, gate_i);
+        
+        string command = "rm -rf " + config -> temp_dir ;
+        system(command.c_str());
+    }
     else CheckpointWithoutFile(true, amp, circuit, gate_i);
     
     dfs_time += phase2_time.GetElapsedTime();
@@ -839,6 +843,7 @@ WriteAmpToASCIIFile(GenericQuantumState& amp) const
     + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
     if (config -> approx)
         dir += "_approx_" + to_string(config -> approx_epsilon);
+    
     string command = "mkdir -p " + dir;
     system(command.c_str());
     auto time = to_string(clock());
@@ -919,7 +924,7 @@ void SequentialSimulation::
 PrintSystemReport() const
 {
     cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 2.2 - a quantum circuit simulator\n";
+    cout << "Rollright ver 2.3 - a quantum circuit simulator\n";
     cout << "Igor L. Markov and Aneeqa Fatima\n\n";
     
 //    char hostname[30] = {};

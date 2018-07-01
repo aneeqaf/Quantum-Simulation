@@ -168,15 +168,26 @@ save_cp_file(sv_cp_file)
     if (t == -1)
         th = 16;
     
-    const __int128 first_half = (amp_size >> 64).to_ulong();
-    const __int128 second_half = (__int128)((amp_size << 64) >> 64).to_ulong();
-    const __int128 t_idx = ((__int128)first_half << 64) + (__int128)second_half;
-    
+    if (save_cp_file > 0) {
+        string command = "mkdir -p " +  temp_dir;
+        system(command.c_str());
+    }
+        
     indices.push_back(3);
-    indices.push_back(t_idx >> 2);
-    indices.push_back(t_idx >> 1);
-    indices.push_back(3 * (t_idx >> 2));
-    indices.push_back(t_idx - 3);
+    indices.push_back(amp_size >> 2);
+    indices.push_back(amp_size >> 1);
+    indices.push_back((amp_size >> 1) | (amp_size >> 2));
+    //    indices.push_back(3 * (amp_size >> 2).to_ullong());
+    
+    const idx_size first_half = ((amp_size << 64) >> 64).to_ulong();
+    const idx_size second_half = (amp_size >> 64).to_ulong();
+    const int q = first_half ? __builtin_ctzl(first_half) : second_half ? 64 + __builtin_ctzl(second_half) : 0;
+    
+    bitset<128> amp_3 = 0;
+    for (int i = 0; i < q; ++i)
+        if (i != 1)
+            amp_3[i] = 1;
+    indices.push_back(amp_3);
 }
 
 void Config::

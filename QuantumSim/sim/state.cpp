@@ -1081,6 +1081,8 @@ WriteAmpToDisk(const string& filename)
     file.seekp(0);
     if (!file.write((char*)amp, sizeof(cmplx) * amp_size)) {
         cerr << "Error in writing to file\n";
+        string cmd = "rm -rf " + filename.substr(filename.find_last_of('/'));
+        system(cmd.c_str());
         exit(1);
     }
     file.close();
@@ -1093,6 +1095,8 @@ ReadFromDisk(const string& filename)
     file.open (filename, ios::in | ios::binary);
     if (!file.read((char*)amp, sizeof(cmplx) * amp_size)) {
         cerr << "Error in reading from file\n";
+        string cmd = "rm -rf " + filename.substr(filename.find_last_of('/'));
+        system(cmd.c_str());
         exit(1);
     }
     file.close();

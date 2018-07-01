@@ -23,6 +23,7 @@
 #include <string.h>
 #include <vector>
 #include <utility>
+#include <dirent.h>
 
 using namespace std;
 
