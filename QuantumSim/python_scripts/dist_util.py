@@ -306,36 +306,41 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 		ranges_bits = 0
 		branch_bits = 0
 
-	if not proc_prefix_bits and not ranges_bits and not branch_bits:
-		branch_bits = ceil(num_xCZ / 3)
-		proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)
-		ranges_bits = num_xCZ - branch_bits - proc_prefix_bits 
-	elif approx and not ranges_bits: 
-		if proc_prefix_bits and not branch_bits:
-			branch_bits = num_xCZ - proc_prefix_bits - ranges_bits
-		elif branch_bits and not proc_prefix_bits:
-			proc_prefix_bits = num_xCZ - branch_bits - ranges_bits
-	elif not ranges_bits and not branch_bits:
-		temp_num_xCZ = num_xCZ - max(proc_prefix_bits, 0)
-		if temp_num_xCZ:
-			branch_bits = ceil(temp_num_xCZ / 2)
-			ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
-	elif not ranges_bits and not proc_prefix_bits:
-		temp_num_xCZ = num_xCZ - max(branch_bits, 0)
-		if temp_num_xCZ:
-			proc_prefix_bits = ceil(temp_num_xCZ / 2)
-			ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
-	elif not branch_bits and not proc_prefix_bits:
-		temp_num_xCZ = num_xCZ - max(ranges_bits, 0)
-		if temp_num_xCZ:
-			branch_bits = ceil(temp_num_xCZ / 2)
-			proc_prefix_bits = num_xCZ - branch_bits - ranges_bits
-	elif not ranges_bits:
-		ranges_bits = max(num_xCZ - proc_prefix_bits - branch_bits, 0)
-	elif not branch_bits:
-		branch_bits = max(num_xCZ - proc_prefix_bits - ranges_bits, 0)
-	elif not proc_prefix_bits:
-		proc_prefix_bits = max(num_xCZ - branch_bits - ranges_bits, 0)
+	assign = True
+	if proc_prefix_bits + ranges_bits + branch_bits < num_xCZ:
+		assign = False
+
+	if assign:
+		if not proc_prefix_bits and not ranges_bits and not branch_bits:
+			branch_bits = ceil(num_xCZ / 3)
+			proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)
+			ranges_bits = num_xCZ - branch_bits - proc_prefix_bits 
+		elif approx and not ranges_bits: 
+			if proc_prefix_bits and not branch_bits:
+				branch_bits = num_xCZ - proc_prefix_bits - ranges_bits
+			elif branch_bits and not proc_prefix_bits:
+				proc_prefix_bits = num_xCZ - branch_bits - ranges_bits
+		elif not ranges_bits and not branch_bits:
+			temp_num_xCZ = num_xCZ - max(proc_prefix_bits, 0)
+			if temp_num_xCZ:
+				branch_bits = ceil(temp_num_xCZ / 2)
+				ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
+		elif not ranges_bits and not proc_prefix_bits:
+			temp_num_xCZ = num_xCZ - max(branch_bits, 0)
+			if temp_num_xCZ:
+				proc_prefix_bits = ceil(temp_num_xCZ / 2)
+				ranges_bits = num_xCZ - branch_bits - proc_prefix_bits
+		elif not branch_bits and not proc_prefix_bits:
+			temp_num_xCZ = num_xCZ - max(ranges_bits, 0)
+			if temp_num_xCZ:
+				branch_bits = ceil(temp_num_xCZ / 2)
+				proc_prefix_bits = num_xCZ - branch_bits - ranges_bits
+		elif not ranges_bits:
+			ranges_bits = max(num_xCZ - proc_prefix_bits - branch_bits, 0)
+		elif not branch_bits:
+			branch_bits = max(num_xCZ - proc_prefix_bits - ranges_bits, 0)
+		elif not proc_prefix_bits:
+			proc_prefix_bits = max(num_xCZ - branch_bits - ranges_bits, 0)
 
 	trial_time = 0.0
 	mem = 0.0
