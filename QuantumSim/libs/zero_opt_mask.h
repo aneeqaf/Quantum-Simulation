@@ -13,8 +13,8 @@ using idx_size = unsigned long long;
 
 class ZeroOptMask {
 private:
-    idx_size nonzero_mask; // 1 represents all asterisks. Initialzed to all bits set.
-    idx_size zero_mask; //1s represent odd zeros. Initialized to all bits set.
+    idx_size nonzero_mask; // 1 represents all asterisks. Initialzed to no bits set.
+    idx_size zero_mask; //1s represent odd zeros. Initialized to no bits set.
     idx_size num_qubits;
     
 public:
@@ -68,6 +68,11 @@ public:
                             idx_size block_size) const
     {
         return (idx & nonzero_mask) ? (zero_mask & block_size) ^ (idx & nonzero_mask) : true;
+    }
+    
+    bool CheckIfAllNonZeroes() const
+    {
+        return nonzero_mask == 0;
     }
 };
 

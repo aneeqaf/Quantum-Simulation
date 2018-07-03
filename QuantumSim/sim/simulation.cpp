@@ -11,7 +11,7 @@ unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
 SequentialSimulation(Config* c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0),
-config(c), mmap_time(0), num_layers(0)
+config(c), mmap_time(0), num_layers(0), curr_gate(0)
 {
     if (config -> norm_depth) {
         idx_size num_norms = config -> norm_depth ? 1ull << config -> norm_depth : 1ull << config -> ranges_bits;
@@ -386,6 +386,7 @@ Phase1Simulation(GenericQuantumState& amp,
                  idx_size gate_i)
 {
     static int exec = 0; ++exec;
+    int factor = 1;
     
     Time cz_path_time;
     cz_path_time.StartTime();
@@ -393,6 +394,7 @@ Phase1Simulation(GenericQuantumState& amp,
     bool terminate = false;
     
     if (cz_path != "-" && cz_path != "") {
+        factor = 2;
 //        config -> th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
         config -> th = amp.GetNumQInBlock(0) >> 1;
         amp.partition_to_sim = 'a';
@@ -425,7 +427,7 @@ Phase1Simulation(GenericQuantumState& amp,
     else if (exec == 1) {
         if (terminate && config -> dfs_length == 0 && cz_path == "" && cz_path != "-") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
-            + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. ";
+            + to_string(amp.count_of_category.decomposed_CZ / factor) + " xCZ gates. ";
             
             if (circuit.GetTotalNumGates() != curr_gate)
                 cout << "CZpath exhausted early.\n";
@@ -437,7 +439,7 @@ Phase1Simulation(GenericQuantumState& amp,
         }
         else if (!terminate && cz_path == "") {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
-            + to_string(amp.count_of_category.decomposed_CZ) + " xCZ gates. No xCZ gates left.\n";
+            + to_string(amp.count_of_category.decomposed_CZ / factor) + " xCZ gates. No xCZ gates left.\n";
             if (config -> dfs_length != 0)
                 cout << "Truncated DFS length : " << config -> dfs_length << "\n";
         }

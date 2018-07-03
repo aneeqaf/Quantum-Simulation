@@ -541,7 +541,7 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     Time time;
     time.StartTime();
 
-//    for (int i = num_qubits - 1; i >= 0; --i)
+    //    for (int i = num_qubits - 1; i >= 0; --i)
 //        if (X_bitmask[i] || Y_bitmask[i] || last_cycle) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
 
     idx_size CZ_bitmasks_64[num_qubits];
