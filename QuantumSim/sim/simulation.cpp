@@ -11,12 +11,14 @@ unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
 SequentialSimulation(Config* c): total_time(0), dfs_time(0), phase1_time(0), XE_time(0),
-config(c), mmap_time(0), num_layers(0), curr_gate(0)
+config(c), mmap_time(0), num_layers(0), curr_gate(0), adjustment_factor(1)
 {
     if (config -> norm_depth) {
         idx_size num_norms = config -> norm_depth ? 1ull << config -> norm_depth : 1ull << config -> ranges_bits;
         norms_CZ_paths.resize(num_norms, 0);
     }
+    if (config -> proc_prefix_bits)
+        adjustment_factor = 2;
 }
 
 void SequentialSimulation::
@@ -191,6 +193,7 @@ CheckpointWithFile(bool branch,
 {
     Time copy_time;
     copy_time.StartTime();
+    
     amp.WriteAmpToDisk(config -> temp_dir + "checkpoint" + to_string(branch));
     SumOfTensorsProductsStateVector temp_amp;
     temp_amp.CopyMemberVars((SumOfTensorsProductsStateVector&)amp);
@@ -198,10 +201,20 @@ CheckpointWithFile(bool branch,
     amp.time_by_category.copying += time_copying;
     phase1_time += time_copying;
     
-    if (branch)
+    if (branch) {
+//        if (config -> verbose >= Config::Verbose::Default) {
+        amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
+        amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
+        //}
         MainLoopForBranching(amp, circuit, temp_amp, gate_i);
-    else
+    }
+    else {
+//        if (config -> verbose >= Config::Verbose::Default) {
+        amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
+        amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
+        //}
         MainLoopForRanges(amp, circuit, temp_amp);
+    }
 
     string command = "rm " + config -> temp_dir + "checkpoint" + to_string(branch) + "*";
     system(command.c_str());
@@ -221,10 +234,20 @@ CheckpointWithoutFile(bool branch,
     amp.time_by_category.copying += time_copying;
     phase1_time += time_copying;
     
-    if (branch)
+    if (branch) {
+//        if (config -> verbose >= Config::Verbose::Default) {
+            amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
+            amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
+//        }
         MainLoopForBranching(temp_amp, circuit, amp, gate_i);
-    else
+    }
+    else {
+//        if (config -> verbose >= Config::Verbose::Default) {
+            amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
+            amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
+//        }
         MainLoopForRanges(temp_amp, circuit, amp);
+    }
 }
 
 void SequentialSimulation::
@@ -234,14 +257,50 @@ CheckpointWithRanges(GenericQuantumState& amp,
     Time time;
     time.StartTime();
     string cz_path = bitset<128>(config -> cz_path).to_string().substr(128 - config -> proc_prefix_bits);
-    config -> th = amp.GetNumQInBlock(0) >> 1;
-    amp.partition_to_sim = 'a';
-    string cz_path_copy = cz_path;
-    SimulationLoop(amp, circuit, cz_path, config -> dfs_length, 0);
+    
+//    if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1)) {
+//        config -> th = amp.GetNumQInBlock(0) >> 1;
+//        amp.partition_to_sim = 'a';
+//    }
+//    else {
+//        config -> th = amp.GetNumQInBlock(1) >> 1;
+//        amp.partition_to_sim = 'b';
+//    }
+//
+//    string cz_path_copy = cz_path;
+//    SimulationLoop(amp, circuit, cz_path, config -> dfs_length, 0);
+//
+//    if (amp.AreAllAmpsZeros()) {
+//        //        if (config -> verbose >= Config::Verbose::Default) {
+//        if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1))
+//            amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
+//        else
+//            amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
+////        }
+//        adjustment_factor = 1;
+//        return;
+//    }
+//
+//    if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1)) {
+//        config -> th = amp.GetNumQInBlock(1) >> 1;
+//        amp.partition_to_sim = 'b';
+//    }
+//    else {
+//        config -> th = amp.GetNumQInBlock(0) >> 1;
+//        amp.partition_to_sim = 'a';
+//    }
     config -> th = amp.GetNumQInBlock(1) >> 1;
-    amp.partition_to_sim = 'b';
-    SimulationLoop(amp, circuit, cz_path_copy, config -> dfs_length, 0);
+
+    SimulationLoop(amp, circuit, cz_path, config -> dfs_length, 0);
     amp.partition_to_sim = 'x';
+    
+    if (amp.AreAllAmpsZeros()) {
+        //        if (config -> verbose >= Config::Verbose::Default) {
+        amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
+        amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
+        //        }
+        return;
+    }
     
     amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
     phase1_time += time.GetElapsedTime();
@@ -1181,25 +1240,24 @@ PrintSimReport(GenericQuantumState& amp,
         cout << "\n";
     }
     
-    idx_size factor1 = config -> proc_prefix_bits ?  2 : 1;
     cout << "Layers simulated :";
-    cout << " H (" << amp.count_of_category.H_layers/factor1 << "), " ;
-    cout << "CZ & T (" << amp.count_of_category.CZT_layers/factor1 << "), " ;
+    cout << " H (" << amp.count_of_category.H_layers/adjustment_factor << "), " ;
+    cout << "CZ & T (" << amp.count_of_category.CZT_layers/adjustment_factor << "), " ;
     if (amp.count_of_category.last_H)
-        cout << "X & Y & H (" << amp.count_of_category.XY_layers/factor1 << ")\n" ;
+        cout << "X & Y & H (" << amp.count_of_category.XY_layers/adjustment_factor << ")\n" ;
     else
-        cout << "X & Y (" << amp.count_of_category.XY_layers/factor1 << ")\n" ;
+        cout << "X & Y (" << amp.count_of_category.XY_layers/adjustment_factor << ")\n" ;
 
     if (config -> proc_prefix_bits) {
         cout << "Layers breakdown : ";
         if (amp.count_of_category.proc_prefix_layers)
-            cout << amp.count_of_category.proc_prefix_layers / 2 << "p";
+            cout << amp.count_of_category.proc_prefix_layers / adjustment_factor << "p";
         if (amp.count_of_category.cycle_r && amp.count_of_category.cycle_p == 0)
-            cout << amp.count_of_category.ranges_layers / 2 << "p & r";
+            cout << amp.count_of_category.ranges_layers / adjustment_factor << "p & r";
         else if (amp.count_of_category.cycle_r )
-            cout << " + " << amp.count_of_category.ranges_layers / 2 << "r";
+            cout << " + " << amp.count_of_category.ranges_layers / adjustment_factor << "r";
         if (amp.count_of_category.cycle_d)
-            cout << " + " << amp.count_of_category.branch_layers / 2 << "b";
+            cout << " + " << amp.count_of_category.branch_layers / adjustment_factor << "b";
         
         cout << "\n";
     }
@@ -1226,6 +1284,29 @@ PrintSimReport(GenericQuantumState& amp,
         }
         else
             ss << memory << " B \n";
+        
+//        if (config -> verbose >= Config::Verbose::Default) {
+            if (config -> proc_prefix_bits && (config -> ranges_bits || config -> dfs_length)) {
+                ss << "Zero count \n";
+                ss << "\t1st Checkpoint : ";
+                if (config -> ranges_bits) {
+                    if (config -> store_checkpoint_range)
+                        ss << "A = " << amp.count_of_category.zero_count_cp1_A << " ("
+                        << ((double)amp.count_of_category.zero_count_cp1_A / (double)(1ull << amp.GetNumQInBlock(0))) * 100.0 << "%), ";
+                    ss << "B = " << amp.count_of_category.zero_count_cp1_B << " ("
+                    << ((double)amp.count_of_category.zero_count_cp1_B / (double)(1ull << amp.GetNumQInBlock(1))) * 100.0 << "%)\n";
+                    ss << "\t2nd Checkpoint : ";
+                }
+                if (config -> dfs_length) {
+                    idx_size A_avg_0s = amp.count_of_category.zero_count_cp2_A /
+                    ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length));
+                    idx_size B_avg_0s = amp.count_of_category.zero_count_cp2_B /
+                    ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length));
+                    ss << "A = " << A_avg_0s << " (" << ((double)A_avg_0s / (double)(1ull << amp.GetNumQInBlock(0))) * 100.0 << "%), ";
+                    ss << "B = " << B_avg_0s << " (" << ((double)B_avg_0s / (double)(1ull << amp.GetNumQInBlock(1))) * 100.0 << "%)\n";
+                }
+            }
+//        }
         
         
         if (config -> verbose >= Config::Verbose::Default) {
@@ -1430,7 +1511,7 @@ PrintSimReport(GenericQuantumState& amp,
         }
 
         if(amp.count_of_category.decomposed_CZ) {
-            string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/factor1) + ")" ;
+            string CZ_s = "\txCZ (" + to_string(amp.count_of_category.decomposed_CZ/adjustment_factor) + ")" ;
             ss << CZ_s << setw(width - (int)CZ_s.size()) << right << ": "
             << amp.time_by_category.decomposed_CZ << " s  \t\t  =  "
             << (amp.time_by_category.decomposed_CZ/(total_time)) * 100 << "%\n";
@@ -1439,7 +1520,7 @@ PrintSimReport(GenericQuantumState& amp,
         
         if(amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ || amp.count_of_category.low_q_XY1_2) {
             string CZ_T_s = "\tCZ & T (" +
-            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/factor1)
+            to_string((amp.count_of_category.CZ_T - amp.count_of_category.decomposed_CZ)/adjustment_factor)
             + "), Low X & Y (" + to_string(amp.count_of_category.low_q_XY1_2) + ")";
             if (amp.count_of_category.H_merged_lo)
                 CZ_T_s += " & H (" + to_string(amp.count_of_category.H_merged_lo) +  ")";
@@ -1478,7 +1559,7 @@ PrintSimReport(GenericQuantumState& amp,
         }
         
         if (amp.count_of_category.rescale) {
-            string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale/factor1) + ")";
+            string RP_s = "\tRescaling passes (" + to_string(amp.count_of_category.rescale/adjustment_factor) + ")";
             ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": " << (amp.time_by_category.rescale)
             << " s\t\t  =  " << (amp.time_by_category.rescale/(total_time)) * 100 << "%\n";
             sum_percen += (amp.time_by_category.rescale/(total_time)) * 100;
@@ -1516,7 +1597,7 @@ PrintSimReport(GenericQuantumState& amp,
             sum_percen += (amp.time_by_category.amp_storage/(total_time)) * 100;
         }
         
-        factor1 = (1ull << config -> ranges_bits) * (1ull << config -> dfs_length);
+        idx_size factor1 = (1ull << config -> ranges_bits) * (1ull << config -> dfs_length);
           
         ss << "\t\t\t\t\t\t\t\t\t    -------\n";
         ss << "\tTotal \t\t\t\t\t\t\t\t    " << sum_percen << "%\n";

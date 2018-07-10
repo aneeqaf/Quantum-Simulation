@@ -27,7 +27,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 	mem_val = 0
 	unit = "B"
 	qubits = 0
-	print_line = True
+	print_line = False
 	categories = {'I_H':0, 'L_H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0, 'H_lo':0, 'H_hi':0,\
 	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0, 'High XY': 0 , 'Low XY': 0}
 	num_threads = 0
@@ -49,9 +49,17 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 		if script_log.endswith(".txt"):
 			with open(os.path.join(log_dir, script_log), "r") as first_file:
 				requested_amps_line = ""
+				num_gates = 0
+				print_line_out = ""
 				for line in first_file:
+					if "(C) 2017, 2018  Regents of the University of Michigan" in line:
+						print_line = True
+						print_line_out += "\n"
 					if "Qubits" in line:
 						qubits = int(line.split(":")[1].split()[0].replace(' ',''))
+
+					if "Gates" in line:
+						num_gates = int(line.split(":")[2].split()[0].replace(' ',''))
 						
 					if "Max threads per process" in line:
 						num_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
@@ -60,7 +68,8 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						hardware_threads = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 
 					if "xCZ path breakdown" in line:
-						print(line.replace('\n',""), end=" (")
+						# print(line.replace('\n',""), end=" (")
+						print_line_out += line.replace('\n',"") + " ("
 						cz_path_t = line.split(":")[1]
 						# if cz_path_t[1].replace(" ", "").replace("\n", "") != "None":
 						cz_path = cz_path_t.split("+")
@@ -78,18 +87,22 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 					if "fidelity" in line:
 						epsilon = line.split(':')[1].replace(" ", "").replace("\n", "")
 					if "Cycle breakdown" in line:
-						print(line.replace('C', 'c').replace('\n',")"))
+						# print(line.replace('C', 'c').replace('\n',")"))
+						print_line_out += line.replace('C', 'c').replace('\n',")") + "\n"
 						if low_val_q_line != "":
-							print(low_val_q_line, end="")
+							# print(low_val_q_line, end="")
+							print_line_out += low_val_q_line
 					if "Layers breakdown" in line:
-						layers_breakdown += line
+						layers_breakdown = line
 					elif "Low-value qubits" in line:
 						low_val_q_line = line
 					elif "Requested num amps" in line:
 						num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
-						print(line,  end='')
+						# print(line,  end='')
+						print_line_out += line
 					elif "State representation size" not in line and print_line:
-						print(line,  end='')
+						# print(line,  end='')
+						print_line_out += line
 					elif "State representation size" in line:
 						mem_line = line
 						mem_usage = line.split(":")[1].replace('\n', '')
@@ -97,7 +110,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						unit = mem_usage.split(" ")[2].replace(' ','')
 						print_line = False
 					elif "Layers simulated" in line:
-						num_layers_stats += line.replace("\n", "")
+						num_layers_stats = line.replace("\n", "")
 					# elif "CZ & T" in line and "(" not in line:
 					# 	num_layers_stats += "\t" + line
 					# elif "X & Y" in line and "(" not in line:
@@ -131,9 +144,15 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 					elif "Copying" in line:
 						categories['Copying'] = int(line.split()[1].replace("(","").replace(")",""))
 					
-					elif "¯\_(ツ)_/¯ " in line:
+					elif "¯\_(ツ)_/¯ " in line and \
+					categories['I_H'] + categories['L_H'] + categories['CZ & T'] + categories['Low XY'] + \
+					categories['H_lo'] + categories['xCZ'] + categories['Single X'] + categories['Single Y'] + \
+					categories['High XY'] + categories['H_hi'] == num_gates:
+						print(print_line_out, end="")
 						break
-			break
+					elif "¯\_(ツ)_/¯ " in line:
+						print_line_out = ""
+				break
 
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
 	avg_time_per_category = {'I_H':0.0, 'L_H':0.0, 'CZ & T, Low XY & H':0.0, 'xCZ':0.0, 'Single X & Y':0.0, \
@@ -156,6 +175,16 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 	avg_minor_pagefaults = 0.0
 	avg_time_per_gate = 0.0
 	avg_mmap_time = 0.0
+	zeros_checkpoint_1_A = 0
+	zeros_checkpoint_2_A = 0
+	zeros_checkpoint_1_A_p = 0.0
+	zeros_checkpoint_2_A_p = 0.0
+	zeros_checkpoint_1_B = 0
+	zeros_checkpoint_2_B = 0
+	zeros_checkpoint_1_B_p = 0.0
+	zeros_checkpoint_2_B_p = 0.0
+	cp_1 = False
+	cp_2 = False
 
 	# Calculating other statistics for the report 
 	for script_log in scripts:
@@ -164,7 +193,19 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 			max_time = 0
 			with open(os.path.join(log_dir, script_log), "r") as sl:
 				for line in sl:
-					if "amp[3]" in line:
+					if "1st Checkpoint" in line:
+						cp_1 = True
+						zeros_checkpoint_1_A += int(line.split('=')[1].split(' ')[1].replace(' ', ''))
+						zeros_checkpoint_1_B += int(line.split('=')[2].split(' ')[1].replace(' ', ''))
+						zeros_checkpoint_1_A_p += float(line.split("(")[1].split(")")[0].replace("%",""))
+						zeros_checkpoint_1_B_p += float(line.split("(")[2].split(")")[0].replace("%",""))
+					elif "2nd Checkpoint" in line:
+						cp_2 = True
+						zeros_checkpoint_2_A += int(line.split('=')[1].split(' ')[1].replace(' ', ''))
+						zeros_checkpoint_2_B += int(line.split('=')[2].split(' ')[1].replace(' ', ''))
+						zeros_checkpoint_2_A_p += float(line.split("(")[1].split(")")[0].replace("%",""))
+						zeros_checkpoint_2_B_p += float(line.split("(")[2].split(")")[0].replace("%",""))
+					elif "amp[3]" in line:
 						amp['3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
 					elif "amp[1/4]" in line:
 						amp['1/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
@@ -354,6 +395,19 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 
 	print("\tBillable runtime : {:.3e}".format((max_elapsed_time * num_machines)/3600) \
 		+ " hrs ({:.3e}".format(((max_elapsed_time * num_machines)/num_amps)/3600) + " hrs per amp)")
+
+	if cp_1 or cp_2:
+		print("\tAvg zero count ")
+		if cp_1 :
+			print("\t\t1st Checkpoint : A = " + str(int(zeros_checkpoint_1_A/num_CZ_paths)) \
+				+ " (" + str(round(zeros_checkpoint_1_A_p/num_CZ_paths, 5)) + "%), B = " \
+				+ str(int(zeros_checkpoint_1_B/num_CZ_paths)) + " (" \
+				+ str(round(zeros_checkpoint_1_B_p/num_CZ_paths, 5)) + "%)")
+		if cp_2 : 
+			print("\t\t2nd Checkpoint : A = " + str(int(zeros_checkpoint_2_A/num_CZ_paths)) \
+				+ " (" + str(round(zeros_checkpoint_2_A_p/num_CZ_paths, 5)) + "%), B = " \
+				+ str(int(zeros_checkpoint_2_B/num_CZ_paths)) + " (" \
+				+ str(round(zeros_checkpoint_2_B_p/num_CZ_paths, 5)) + "%)")
 
 	print("\namp[3]  \t= {:.6e}".format(amp['3']))
 	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))

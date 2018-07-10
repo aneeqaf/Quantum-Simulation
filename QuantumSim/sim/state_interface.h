@@ -190,7 +190,9 @@ public:
     virtual double CalculateMeanEntropy() const = 0;
     virtual double CalculateCrossEntropy(int range) const = 0;
     virtual double CountZeroAmpPercentage() const = 0;
+    virtual idx_size CountZerosInBlock(int block) = 0;
     virtual idx_size GetNumAddends() const;
+    virtual bool AreAllAmpsZeros() const = 0;
     
     virtual void Normalize() = 0;
     virtual void ResetAmpVector() = 0;

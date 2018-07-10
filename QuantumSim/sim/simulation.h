@@ -36,6 +36,7 @@ private:
     Config* config;
     vector<double> norms_CZ_paths;
     vector<cmplx> amps_of_interest;
+    idx_size adjustment_factor;
     //1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
     //global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
    

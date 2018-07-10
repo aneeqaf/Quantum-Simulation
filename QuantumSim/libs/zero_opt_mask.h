@@ -55,6 +55,11 @@ public:
         nonzero_mask &= ~(1ull << q);
     }
     
+    idx_size GetNonZeroBitmask()
+    {
+        return nonzero_mask;
+    }
+    
     string print() const
     {
         string mask = "";

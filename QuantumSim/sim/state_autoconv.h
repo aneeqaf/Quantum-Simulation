@@ -64,11 +64,13 @@ public:
     int GetNumQInBlock(idx_size block) const;
     idx_size GetGlobalFactorPower() const;
     idx_size GetNumAddends() const;
+    idx_size CountZerosInBlock(int block);
     double CountZeroAmpPercentage() const;
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    bool AreAllAmpsZeros() const;
     
     void Normalize();
     void ResetAmpVector();

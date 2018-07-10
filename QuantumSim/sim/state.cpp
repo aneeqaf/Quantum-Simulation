@@ -12,7 +12,7 @@ using namespace std;
 FullAmpStateVector::
 FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), global_factor_power(0), global_i_counter(0),
-num_qubits(qubits),zero_opt_mask(num_qubits)
+num_qubits(qubits),zero_opt_mask(num_qubits), all_zeros(false)
 {
     amp_size = 1ull << qubits;
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
@@ -40,7 +40,7 @@ FullAmpStateVector::
 FullAmpStateVector(cmplx* a,
                    const idx_size size): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0), global_i_counter(0),
-num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits)
+num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits), all_zeros(false)
 {
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
         idx_size memory = sizeof(cmplx) * amp_size;
@@ -67,7 +67,7 @@ FullAmpStateVector::
 FullAmpStateVector(const FullAmpStateVector& rhs):
 zero_opt_mask(rhs.zero_opt_mask), min_prob(rhs.min_prob), max_prob(rhs.max_prob),
 amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
-global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits)
+global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits), all_zeros(rhs.all_zeros)
 {
    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
         idx_size memory = sizeof(cmplx) * amp_size;
@@ -127,6 +127,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
     Time time, time1;
     time.StartTime();
     
+    if (all_zeros)
+        return -1;
+    
 //    if (last_cycle)
 //        for (int i = num_qubits - 1; i >= 0; --i)
 //            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
@@ -145,9 +148,11 @@ ApplyBlockOfDiagGates(string& cz_bits,
     time_by_category.low_q_XY_CZT += time.GetElapsedTime();
     int single_H = 0;
     
-    for (int i = num_qubits - 1; i >= 0; --i)
-        if (loH_bitmask & (1ull << i))
-            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    if (zero_opt_mask.GetNonZeroBitmask()) {
+        for (int i = num_qubits - 1; i >= 0; --i)
+            if (loH_bitmask & (1ull << i))
+                UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    }
     
     if (last_cycle) {
         global_factor_power +=  __builtin_popcountll(loH_bitmask) +  __builtin_popcountll(hiH_bitmask);
@@ -223,9 +228,9 @@ ApplyCZDecompositions(const int gate_qubit,
 
 void FullAmpStateVector::
 ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
-{
+{    
     /*0 : Z; 1 : 01; 2 : 10 */
-    ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks, zero_opt_mask);
+    all_zeros = ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks, zero_opt_mask);
 
     for (int q = 0; q < num_qubits; ++q)
         if (xCZ_bitmasks[1] & (1ull << q))
@@ -540,9 +545,19 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
 {    
     Time time;
     time.StartTime();
-
-    //    for (int i = num_qubits - 1; i >= 0; --i)
-//        if (X_bitmask[i] || Y_bitmask[i] || last_cycle) UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    
+//    int z_c = 0;
+//    for (int i = 0; i < amp_size; ++i) {
+//        if (amp[i] == cmplx(0,0))
+//            ++z_c;
+//    }
+//    cout << "\nzero_count before: " << z_c << endl;
+    
+    
+    if (all_zeros) {
+//        cout << "All zeros : " << zero_opt_mask.print() << endl;
+        return -1;
+    }
 
     idx_size CZ_bitmasks_64[num_qubits];
     idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
@@ -558,9 +573,14 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
     int single_H = 0;
     
-    for (int i = num_qubits - 1; i >= 0; --i)
-        if (X_bitmask[i] || Y_bitmask[i] || (loq_H_bitmask & (1ull << i)))
-            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    if (zero_opt_mask.GetNonZeroBitmask()) {
+//        cout << "Before : " << zero_opt_mask.print() << endl;
+        for (int i = num_qubits - 1; i >= 0; --i)
+            if (X_bitmask[i] || Y_bitmask[i] || (loq_H_bitmask & (1ull << i)))
+                UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+//        cout << "After : " << zero_opt_mask.print() << endl;
+    }
+
     
     for (int i = 0; i < num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
@@ -614,9 +634,11 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     }
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
-    for (int i = num_qubits - 1; i >= 0; --i)
-        if (hiq_H_bitmask & (1ull << i))
-            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    if (zero_opt_mask.GetNonZeroBitmask()) {
+        for (int i = num_qubits - 1; i >= 0; --i)
+            if (hiq_H_bitmask & (1ull << i))
+                UnsetZeroPatternAtQubit(num_qubits - 1 - i);
+    }
     
     if (last_cycle && hiq_H_bitmask) {
         time.StartTime();
@@ -641,6 +663,13 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
             count_of_category.last_H += __builtin_popcountll(hiq_H_bitmask) + single_H;
         }
     }
+//
+//    int z_c_1 = 0;
+//    for (int i = 0; i < amp_size; ++i) {
+//        if (amp[i] == cmplx(0,0))
+//            ++z_c_1;
+//    }
+//    cout << "zero_count after : " << z_c_1 << endl;
     
     return -1;
 }
@@ -895,6 +924,25 @@ CountZeroAmpPercentage() const
     return double(zero_count)/double(amp_size) * 100;
 }
 
+idx_size FullAmpStateVector::
+CountZerosInBlock(int block)
+{
+    //    cout << zero_opt_mask.print() << endl;
+    idx_size z_c = 0;
+//    #pragma omp parallel for num_threads(num_threads) reduction(+:z_c)
+    for (int i = 0; i < amp_size; ++i) {
+        if (amp[i] == cmplx(0,0))
+            ++z_c;
+    }
+    return z_c;
+}
+
+bool FullAmpStateVector::
+AreAllAmpsZeros() const
+{
+    return all_zeros;
+}
+
 void FullAmpStateVector::
 ResetAmpVector()
 {
@@ -907,6 +955,7 @@ ResetAmpVector()
     
     global_factor_power = 0;
     global_i_counter = 0;
+    all_zeros = false;
     
     zero_opt_mask.reset();
 }

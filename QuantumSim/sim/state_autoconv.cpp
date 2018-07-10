@@ -334,6 +334,15 @@ CalculateMeanEntropy() const
         return sumOfTensors -> CalculateMeanEntropy();
 }
 
+bool AdaptiveStateVector::
+AreAllAmpsZeros() const
+{
+    if (full_state)
+        return full_state -> AreAllAmpsZeros();
+    else
+        return sumOfTensors -> AreAllAmpsZeros();
+}
+
 void AdaptiveStateVector::
 ResetAmpVector()
 {
@@ -387,6 +396,16 @@ CountZeroAmpPercentage() const
     else
         return sumOfTensors -> CountZeroAmpPercentage();
 }
+
+idx_size AdaptiveStateVector::
+CountZerosInBlock(int block)
+{
+    if (full_state)
+        return full_state -> CountZerosInBlock(block);
+    else
+        return sumOfTensors -> CountZerosInBlock(block);
+}
+
 
 void AdaptiveStateVector::
 ApplyGlobalICounter()

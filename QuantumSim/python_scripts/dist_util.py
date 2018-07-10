@@ -310,7 +310,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 	if proc_prefix_bits + ranges_bits + branch_bits < num_xCZ:
 		assign = False
 
-	if assign:
+	if not assign:
 		if not proc_prefix_bits and not ranges_bits and not branch_bits:
 			branch_bits = ceil(num_xCZ / 3)
 			proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)

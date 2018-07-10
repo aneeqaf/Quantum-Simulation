@@ -316,13 +316,13 @@ FormGatesBitmaskXCZ(bool& terminate,
 
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
-            if (tensor_addends[0] -> GetNumQInBlock(0) < tensor_addends[0] -> GetNumQInBlock(1)) {
+            if (tensor_addends[0] -> GetNumQInBlock(0) > tensor_addends[0] -> GetNumQInBlock(1)) {
                 if (cz_bits[0] == '0')
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
                 else
                     xCZ_bitmasks_path1_D3D4[i][q] = 1;
             }
-            else if (tensor_addends[0] -> GetNumQInBlock(0) > tensor_addends[0] -> GetNumQInBlock(1)) {
+            else if (tensor_addends[0] -> GetNumQInBlock(0) < tensor_addends[0] -> GetNumQInBlock(1)) {
                 if (cz_bits[0] == '0')
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
                 else
@@ -799,6 +799,21 @@ CalculateCrossEntropy2Cuts(int range) const
     return -xe / num_ranges;
 }
 
+bool SumOfTensorsProductsStateVector::
+AreAllAmpsZeros() const
+{
+    bool A_0s = true, B_0s = true;
+    
+    for (auto& t : tensor_addends)
+        if (!t -> state_a -> AreAllAmpsZeros())
+            A_0s = false;
+    for (auto& t : tensor_addends)
+        if (!t -> state_b -> AreAllAmpsZeros())
+            B_0s = false;
+    
+    return A_0s || B_0s;
+}
+
 void SumOfTensorsProductsStateVector::
 Normalize()
 {
@@ -848,6 +863,13 @@ CountZeroAmpPercentage() const
     if (num_addends == 1) return tensor_addends[0] -> CountZeroAmpPercentage();
 
    return NAN;
+}
+
+idx_size SumOfTensorsProductsStateVector::
+CountZerosInBlock(int block)
+{
+    //ToDo: Implement for multiple addends
+    return tensor_addends[0] -> CountZerosInBlock(block);
 }
 
 void SumOfTensorsProductsStateVector::

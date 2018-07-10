@@ -24,6 +24,7 @@ private:
     idx_size global_i_counter;
     int num_qubits;
     ZeroOptMask zero_opt_mask; //0 is most significant
+    bool all_zeros;
 
     bitset<128> FormBitmask(const vector<int>& qubits);
     void TransferOddBitsFromHiQubitsBM(int& th,
@@ -115,6 +116,8 @@ public:
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
     double CountZeroAmpPercentage() const;
+    idx_size CountZerosInBlock(int block);
+    bool AreAllAmpsZeros() const;
 
     void SetOddZeroPatternAtQubit(int qubit);
     void SetEvenZeroPatternAtQubit(int qubit);
@@ -140,7 +143,7 @@ public:
     
     FullAmpStateVector(): max_prob(numeric_limits<double>::min()),
         min_prob(numeric_limits<double>::max()), amp_size(0), global_factor_power(0), global_i_counter(0),
-        num_qubits(0), zero_opt_mask(num_qubits), amp(nullptr) {}
+        num_qubits(0), zero_opt_mask(num_qubits), amp(nullptr), all_zeros(false) {}
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);

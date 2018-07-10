@@ -95,10 +95,12 @@ public:
     idx_size GetGlobalFactorPower() const;
     const QubitPartition& GetQp() const;
     double CountZeroAmpPercentage() const;
+    idx_size CountZerosInBlock(int block);
     double CalculateNormSquared();
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    bool AreAllAmpsZeros() const;
     
     void Normalize();
     void ResetAmpVector();

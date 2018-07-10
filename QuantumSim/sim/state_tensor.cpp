@@ -706,6 +706,12 @@ CalculateCrossEntropy(int range) const
     return -xe / (num_ranges_a * num_ranges_b);
 }
 
+bool TensorProductStateVector::
+AreAllAmpsZeros() const
+{
+    return state_a -> AreAllAmpsZeros() || state_b -> AreAllAmpsZeros();
+}
+
 void TensorProductStateVector::
 ResetAmpVector()
 {
@@ -774,6 +780,20 @@ CountZeroAmpPercentage() const
     if (calls % 2)
         return state_a -> CountZeroAmpPercentage();
     else return state_b -> CountZeroAmpPercentage();
+}
+
+idx_size TensorProductStateVector::
+CountZerosInBlock(int block)
+{
+    if (block == 0)
+        return state_a -> CountZerosInBlock(0);
+    else if (block == 1)
+        return state_b -> CountZerosInBlock(1);
+    else {
+        cerr << "Invalid block number for counting zeros.";
+        exit(1);
+    }
+    return 0;
 }
 
 void TensorProductStateVector::
