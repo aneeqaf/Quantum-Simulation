@@ -138,33 +138,41 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
         idx_size num_iters = count/16;
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
-        if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * 16, 16)) {
+        idx_size gc0 = count ^ (count >> 1);
+        idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
+        const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
+        gc0 = (count + 8) ^ ((count + 8) >> 1);
+        gc4 = (count + 12) ^ ((count + 12) >> 1);
+        const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
+        idx_size prev_gc1 = gc_first[7];
         
-            idx_size gc0 = count ^ (count >> 1);
-            idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
-            const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-            
-            idx_size Tgate_count_1[8] = {0};
-            GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
+        idx_size Tgate_count_1[8] = {0};
+        GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
+        
+        idx_size Tgate_count_2[8] = {0};
+        GetTGatesCount(Tgate_count_2, negate_Z, prev_gc1, gc_second, CZ_bitmasks, T_bitmasks);
+        
+        if (zero_opt_mask.CheckIfAllNonZeroes() || zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * 16, 16)) {
+        
             FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
-            prev_gc = gc_first[7];
             
-            gc0 = (count + 8) ^ ((count + 8) >> 1);
-            gc4 = (count + 12) ^ ((count + 12) >> 1);
-            const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-            
-            idx_size Tgate_count_2[8] = {0};
-            GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
             FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
-            prev_gc = gc_second[7];
         }
 //        else {
-//            cout << "Zero bm : " << zero_opt_mask.print() << endl;
-//            for (idx_size i = 2 * (gc0); i < 2 * (gc0 + 15) ; ++i) {
-//                cout << i << ":" << t_amp[i] << ",";
-//                assert(t_amp[i] == 0);
+//            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * 16
+//            << " (" << bitset<15>(offset_idx * 16).to_string() << ")" << endl;
+//
+//            for (int i = 0; i < 8; ++i) {
+////                cout << gc_first[i] << ", " ;
+//                assert(t_amp[2 * gc_first[i]] == 0);
+//            }
+//
+//            for (int i = 0; i < 8; ++i) {
+////                cout << gc_second[i] << ", " ;
+//                assert(t_amp[2 * gc_second[i]] == 0);
 //            }
 //        }
+        prev_gc = gc_second[7];
     }
 }
 
@@ -187,13 +195,22 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
         idx_size num_iters = block_begin/block_size;
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
-        if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
+        if (zero_opt_mask.CheckIfAllNonZeroes() ||
+            zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
             ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                                    num_threads, block_begin, block_size, zero_opt_mask);
             if (Lo_H_bitmask != 0)
                 ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
                                        num_threads, Lo_H_bitmask);
         }
+//        else {
+//            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
+//            << " (" << bitset<15>(offset_idx * block_size).to_string() << ")" << endl;
+//            for (idx_size i = offset_idx * block_size; i < (offset_idx * block_size) + block_size ; ++i) {
+////                cout << amp[i] << ",";
+//                assert(amp[i] == cmplx(0,0));
+//            }
+//        }
     }
 }
 
@@ -255,7 +272,8 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
         idx_size num_iters = block_begin/block_size;
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
-        if (zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
+        if (zero_opt_mask.CheckIfAllNonZeroes() ||
+            zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
             ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                   num_threads, block_begin, block_size, zero_opt_mask);
 
@@ -268,9 +286,11 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                        num_threads, Lo_H_bitmask);
         }
 //        else {
-//            cout << "Zero bm : " << zero_opt_mask.print() << endl;
+//            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
+//            << " (" << bitset<15>(offset_idx * block_size).to_string() << ")" << endl;
 //            for (idx_size i = offset_idx * block_size; i < (offset_idx * block_size) + block_size ; ++i) {
-//                cout << t_amp[i] << ",";
+////                cout << amp[i] << ",";
+//                assert(amp[i] == cmplx(0,0));
 //            }
 //        }
    }

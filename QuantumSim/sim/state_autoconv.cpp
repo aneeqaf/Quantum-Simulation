@@ -388,6 +388,24 @@ CountZeroAmpPercentage() const
         return sumOfTensors -> CountZeroAmpPercentage();
 }
 
+idx_size AdaptiveStateVector::
+CountZerosInBlock(int block) const
+{
+    if (full_state)
+        return full_state -> CountZerosInBlock(block);
+    else
+        return sumOfTensors -> CountZerosInBlock(block);
+}
+
+bool AdaptiveStateVector::
+AreAllAmpsZero() const
+{
+    if (full_state)
+        return full_state -> AreAllAmpsZero();
+    else
+        return sumOfTensors -> AreAllAmpsZero();
+}
+
 void AdaptiveStateVector::
 ApplyGlobalICounter()
 {

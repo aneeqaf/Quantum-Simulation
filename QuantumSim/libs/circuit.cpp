@@ -79,17 +79,19 @@ GroupAlternateCycles()
     }
 }
 
-void Circuit::
+int Circuit::
 GroupSimilarGates()
 {
     idx_size last_CZ = 0, last_T = 0, last_X = 0, last_Y = 0;
     bool saw_CZ = false, saw_T = false, saw_X = false, saw_Y = false, saw_H = false;
     idx_size g_i = (idx_size)qubits;
+    idx_size count_CZ = 0;
     
     for (idx_size j = qubits; j < gates.size()
          && (g_i + last_Y + last_X + last_T + last_CZ) < gates.size(); ++j) {
         
         if (gates[j].ids.back() == Gate::Type::Z) {
+            ++count_CZ;
             if(saw_Y || saw_X || saw_H) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
@@ -156,9 +158,11 @@ GroupSimilarGates()
 #ifdef PrintG
     PrintGates();
 #endif
+    
+    return count_CZ;
 }
 
-int Circuit::
+pair<int, int> Circuit::
 MovexCZGates(idx_size proc_prefix_bits,
              idx_size range_bits,
              idx_size branch_bits,
@@ -262,7 +266,7 @@ MovexCZGates(idx_size proc_prefix_bits,
                      if (gates[i].ids.back() == Gate::Type::X_1_2 || gates[i].ids.back() == Gate::Type::Y_1_2 ||
                          gates[i].ids.back() == Gate::Type::Hadamard) {
                          for (j = i; j < gates.size() && gates[j].ids.back() != Gate::Type::Z; ++j) {
-                             for (int k = 0; k < xCZ_q.size(); ++k) {
+                             for (idx_size k = 0; k < xCZ_q.size(); ++k) {
                                  if (gates[j].qubits.back() == xCZ_q[k]) {
                                      if (j < (next_CZ - move_count)) {
                                          swap(gates[next_CZ - move_count++], gates[j]);
@@ -275,7 +279,7 @@ MovexCZGates(idx_size proc_prefix_bits,
                              }
                              if (XYH_count != 0) break;
                          }
-                         for (int k = 0; k < xCZ_counter
+                         for (idx_size k = 0; k < xCZ_counter
                               && gates[next_CZ - XYH_count - k].ids.back() != Gate::Type::Z ; ++k)
                              swap(gates[last_CZ - k], gates[next_CZ - XYH_count - k]);
                          
@@ -319,7 +323,7 @@ MovexCZGates(idx_size proc_prefix_bits,
 //        }
 //    }
 //    cout << "\n\n";
-    return total_xCZ_count;
+    return pair<int, int> (count_CZ, total_xCZ_count);
 }
 
 int Circuit::

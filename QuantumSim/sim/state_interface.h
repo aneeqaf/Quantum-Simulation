@@ -191,6 +191,8 @@ public:
     virtual double CalculateCrossEntropy(int range) const = 0;
     virtual double CountZeroAmpPercentage() const = 0;
     virtual idx_size GetNumAddends() const;
+    virtual idx_size CountZerosInBlock(int block) const = 0;
+    virtual bool AreAllAmpsZero() const = 0;
     
     virtual void Normalize() = 0;
     virtual void ResetAmpVector() = 0;

@@ -422,7 +422,6 @@ XYFastTransform(cmplx* __restrict amp,
                 idx_size Y_bitmask,
                 const int num_qubits,
                 const int num_threads,
-                const ZeroOptMask& zero_opt_mask,
                 const int th)
 {
     idx_size H_bitmask = 0;
@@ -430,8 +429,7 @@ XYFastTransform(cmplx* __restrict amp,
     if (num_qubits <= th)
         return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
     
-    return XYHFastTransformHighQ(amp, X_bitmask, Y_bitmask, H_bitmask, num_qubits, num_threads,
-                                zero_opt_mask);
+    return XYHFastTransformHighQ(amp, X_bitmask, Y_bitmask, H_bitmask, num_qubits, num_threads);
 }
 
 idx_size
@@ -473,15 +471,13 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
                       idx_size Y_bitmask,
                       idx_size H_bitmask,
                       const int num_qubits,
-                      const int num_threads,
-                      const ZeroOptMask& zero_opt_mask,
-                      const bool zero_block)
+                      const int num_threads)
 {
     idx_size i_count = 0;
    
     if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1)
         i_count += XYRecursiveTransformHelper(amp, X_bitmask, Y_bitmask, num_qubits,
-                                              H_bitmask, zero_block);
+                                              H_bitmask);
     
     const int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
     const int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
@@ -497,13 +493,13 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
         
     #pragma omp parallel for schedule(guided) reduction(+:temp_i) num_threads(num_threads)
         for (idx_size i = 0; i < num_iters ; ++i) {
-            bool zero_block = false;
-            if (!zero_opt_mask.CheckIfBlockIsNotZero(i * stride, stride))
-                zero_block = true;
+//            bool zero_block = false;
+//            if (!zero_opt_mask.CheckIfAllNonZeroes() &&
+//                !zero_opt_mask.CheckIfBlockIsNotZero(i * stride, stride))
+//                zero_block = true;
     
             temp_i += XYHFastTransformHighQ(amp + (i * stride), X_bitmask,
-                                               Y_bitmask, H_bitmask, num_qubits - k, num_threads,
-                                               zero_opt_mask, zero_block);
+                                               Y_bitmask, H_bitmask, num_qubits - k, num_threads);
         }
         i_count += temp_i / num_iters;
     }

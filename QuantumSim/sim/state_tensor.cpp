@@ -776,6 +776,26 @@ CountZeroAmpPercentage() const
     else return state_b -> CountZeroAmpPercentage();
 }
 
+idx_size TensorProductStateVector::
+CountZerosInBlock(int block) const
+{
+    if (block == 0)
+        return state_a -> CountZerosInBlock(0);
+    else if (block == 1)
+        return state_b -> CountZerosInBlock(1);
+    else {
+        cerr << "Invalid block number for counting zeros.";
+        exit(1);
+    }
+    return 0;
+}
+
+bool TensorProductStateVector::
+AreAllAmpsZero() const
+{
+    return state_a -> AreAllAmpsZero() || state_b  -> AreAllAmpsZero();
+}
+
 void TensorProductStateVector::
 PrintStateVector(const string& outfile,
                  const int cycle_num) 

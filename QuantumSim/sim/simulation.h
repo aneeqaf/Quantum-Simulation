@@ -31,8 +31,9 @@ private:
     
     static unordered_map<string, array<cmplx, 5>> benchmark;
     ostringstream log;
-    double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time, mmap_time;
     idx_size curr_gate, num_layers;
+    idx_size adjustment_factor;
+    double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time, mmap_time;
     Config* config;
     vector<double> norms_CZ_paths;
     vector<cmplx> amps_of_interest;
@@ -69,7 +70,7 @@ public:
     void PrintSystemReport() const;
     void PrintSimSpecReport(const GenericQuantumState& amp,
                             const Circuit& circuit,
-                            const int xCZ_gates);
+                            const pair<int, int> twoq_gates);
     void PrintSimReport(GenericQuantumState& amp,
                         const Circuit& circuit) const;
     void PrintReportToFile(GenericQuantumState& amp,

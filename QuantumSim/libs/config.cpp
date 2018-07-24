@@ -149,13 +149,14 @@ Config(const bitset<128>& amp_size,
        const bool store_r,
        const bool first_part_small,
        const int sv_cp_file)
-: infile(ifile), prob_outfile(pfile), amp_outfile(afile), report_outfile(rfile),
-misc_outfile(mfile), cz_path(cz_p), norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l),
-proc_prefix_bits(cz_len), approx_epsilon(epsilon), dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc),
-hcut(hc), google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx), sim_type(sim),
-verbose(v), curr_mode(ProcPrefix), nearest_neighbors(near_neighbors), row_major(row_maj),
-last_layers_H(layers_last_H), store_checkpoint_range(store_r), first_part_smaller(first_part_small),
-save_cp_file(sv_cp_file)
+: mmap_obj(nullptr), infile(ifile), prob_outfile(pfile), amp_outfile(afile),
+report_outfile(rfile), misc_outfile(mfile), cz_path(cz_p), approx_epsilon(epsilon),
+norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l), proc_prefix_bits(cz_len),
+dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc),
+google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx),
+nearest_neighbors(near_neighbors), row_major(row_maj), last_layers_H(layers_last_H),
+store_checkpoint_range(store_r), first_part_smaller(first_part_small), save_cp_file(sv_cp_file),
+sim_type(sim), verbose(v), curr_mode(ProcPrefix)
 {
     temp_dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
     + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);

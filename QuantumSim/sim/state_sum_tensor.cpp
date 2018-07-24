@@ -850,6 +850,19 @@ CountZeroAmpPercentage() const
    return NAN;
 }
 
+//Todo : Implement for multiple addends.
+idx_size SumOfTensorsProductsStateVector::
+CountZerosInBlock(int block) const
+{
+    return tensor_addends[0] -> CountZerosInBlock(block);
+}
+
+bool SumOfTensorsProductsStateVector::
+AreAllAmpsZero() const
+{
+    return tensor_addends[0] -> AreAllAmpsZero();
+}
+
 void SumOfTensorsProductsStateVector::
 PrintStateVector(const string& outfile,
                  const int cycle_num) 

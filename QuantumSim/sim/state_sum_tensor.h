@@ -95,6 +95,8 @@ public:
     double CalculateMeanEntropy2Cuts() const;
     double CalculateCrossEntropy2Cuts(int range) const;
     double CountZeroAmpPercentage() const;
+    idx_size CountZerosInBlock(int block) const;
+    bool AreAllAmpsZero() const;
     
     void Normalize();
     void ResetAmpVector();

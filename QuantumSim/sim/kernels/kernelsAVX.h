@@ -345,7 +345,7 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
     _mm256_store_ps(&t_amp[2*indices[3]], a3);
 }
 
-__attribute__((always_inline)) inline void
+__attribute__((always_inline)) inline bool
 ApplyxCZGateAVX(cmplx* __restrict amp,
                 int num_threads,
                 const int num_qubits_amp,
@@ -368,6 +368,8 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
 //    cout << "01 bm : " << (gate_bitmask[1]) << endl;
 //    cout << "10 bm : " << (gate_bitmask[2]) << endl;
     
+    bool all_zeros = true;
+    
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size i = 0; i < amp_size; i+=8) {
         idx_size amp_idx = i/2;
@@ -386,9 +388,16 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
         
         if (__builtin_parityll(amp_idx & gate_bitmask[0]))
             temp_amp = _mm256_xor_ps(temp_amp, kneg2);
+        
+        if (all_zeros && _mm256_movemask_ps(_mm256_cmp_ps(temp_amp, kzeros, _CMP_EQ_OQ)) != 255) {
+            #pragma omp atomic write
+            all_zeros = false;
+        }
 
         _mm256_store_ps(&t_amp[i], temp_amp);
     }
+    
+    return all_zeros;
 }
 
 idx_size
@@ -404,9 +413,7 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
                       idx_size Y_bitmask,
                       idx_size H_bitmask,
                       const int num_qubits,
-                      const int num_threads,
-                      const ZeroOptMask& zero_opt_mask,
-                      const bool zero_block = false);
+                      const int num_threads);
 
 void ApplyHGatesIteratively(cmplx* __restrict amp,
                             int num_qubits,

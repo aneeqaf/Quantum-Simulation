@@ -53,6 +53,7 @@ public:
     void SetNonZeroBit(idx_size q)
     {
         nonzero_mask &= ~(1ull << q);
+        zero_mask &= ~(1ull << q);
     }
     
     string print() const
@@ -67,7 +68,18 @@ public:
     bool CheckIfBlockIsNotZero(idx_size idx,
                             idx_size block_size) const
     {
-        return (idx & nonzero_mask) ? (zero_mask & block_size) ^ (idx & nonzero_mask) : true;
+//        return (idx & nonzero_mask)? (nonzero_mask & block_size) ^ (idx & nonzero_mask) : false;
+        
+        if (idx & nonzero_mask) {
+            idx = idx & ~(block_size - 1);
+            return (idx & nonzero_mask) ? (zero_mask & idx) ^ (idx & nonzero_mask) : true;
+        }
+        else if (~idx & nonzero_mask) {
+            idx = ~idx & ~(block_size - 1);
+            return (idx & nonzero_mask) ? !((zero_mask & idx) ^ (idx & nonzero_mask)) : true;
+        }
+        
+        return true;
     }
     
     bool CheckIfAllNonZeroes() const

@@ -69,6 +69,8 @@ public:
     double CalculateAverageInaccuracy(double norm) const;
     double CalculateMeanEntropy() const;
     double CalculateCrossEntropy(int range) const;
+    idx_size CountZerosInBlock(int block) const;
+    bool AreAllAmpsZero() const;
     
     void Normalize();
     void ResetAmpVector();

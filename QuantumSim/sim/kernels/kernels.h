@@ -338,7 +338,6 @@ XYFastTransform(cmplx* __restrict amp,
                 idx_size Y_bitmask,
                 const int num_qubits,
                 const int num_threads,
-                const ZeroOptMask& zero_opt_mask,
                 const int th);
 
 void ApplyHGatesRecursively(cmplx* __restrict amp,

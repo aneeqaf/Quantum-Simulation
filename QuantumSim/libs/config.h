@@ -101,12 +101,13 @@ public:
                                const int num_idx,
                                const __int128 amp_size);
     
-    Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""), amp_outfile(""), report_outfile(""), misc_outfile(""),
+    Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""),
+    amp_outfile(""), report_outfile(""), misc_outfile(""),
     cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
     dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false),
     print_idx(false), ascii(false), approx(true), nearest_neighbors(true), row_major(true), last_layers_H(0),
-    store_checkpoint_range(true), first_part_smaller(false), sim_type(FullState), verbose(Default),
-    curr_mode(ProcPrefix), save_cp_file(0), temp_dir("") {}
+    store_checkpoint_range(true), first_part_smaller(false), save_cp_file(0), temp_dir(""),
+    sim_type(FullState), verbose(Default), curr_mode(ProcPrefix) {}
     Config(const bitset<128>& amp_size,
            const string ifile,
            const string pfile,

@@ -37,8 +37,8 @@ public:
     bool google ;
     
     void GroupAlternateCycles();
-    void GroupSimilarGates();
-    int MovexCZGates(idx_size prox_prefix_bits,
+    int GroupSimilarGates();
+    pair<int, int> MovexCZGates(idx_size prox_prefix_bits,
                      idx_size range_bits,
                      idx_size branch_bits,
                      const QubitPartition& bitmasks,
