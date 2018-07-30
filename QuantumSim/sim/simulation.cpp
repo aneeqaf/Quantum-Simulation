@@ -204,17 +204,17 @@ CheckpointWithFile(bool branch,
     phase1_time += time_copying;
     
     if (branch) {
-//        if (config -> verbose >= Config::Verbose::Default) {
+        if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
-//        }
+        }
         MainLoopForBranching(amp, circuit, temp_amp, gate_i);
     }
     else {
-//        if (config -> verbose >= Config::Verbose::Default) {
+        if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
-//        }
+        }
         MainLoopForRanges(amp, circuit, temp_amp);
     }
 
@@ -237,17 +237,17 @@ CheckpointWithoutFile(bool branch,
     phase1_time += time_copying;
     
     if (branch) {
-//        if (config -> verbose >= Config::Verbose::Default) {
+        if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
-//        }
+        }
         MainLoopForBranching(temp_amp, circuit, amp, gate_i);
     }
     else {
-//        if (config -> verbose >= Config::Verbose::Default) {
+        if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
-//        }
+        }
         MainLoopForRanges(temp_amp, circuit, amp);
     }
 }
@@ -272,12 +272,12 @@ CheckpointWithRanges(GenericQuantumState& amp,
     SimulationLoop(amp, circuit, cz_path, config -> dfs_length, 0);
 
     if (amp.AreAllAmpsZero()) {
-        //        if (config -> verbose >= Config::Verbose::Default) {
-        if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1))
-            amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
-        else
-            amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
-//        }
+        if (config -> count_zeros) {
+            if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1))
+                amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
+            else
+                amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
+        }
         adjustment_factor = 1;
         return;
     }
@@ -295,10 +295,10 @@ CheckpointWithRanges(GenericQuantumState& amp,
     amp.partition_to_sim = 'x';
     
     if (amp.AreAllAmpsZero()) {
-//        if (config -> verbose >= Config::Verbose::Default) {
+        if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
-//        }
+        }
         return;
     }
     
@@ -1078,7 +1078,7 @@ PrintSimSpecReport(const GenericQuantumState& amp,
     }
     
     cout << "Qubits : " << circuit.GetNumQubits() << "  ";
-    cout << "Gates : " << circuit.GetTotalNumGates() << " (" << twoq_gates.first << " two q gates) " ;
+    cout << "Gates : " << circuit.GetTotalNumGates() << " (" << twoq_gates.first << " two-q gates) " ;
     cout << "Cycles : " << circuit.GetNumCycles() << "\n";
     
     if (!amp.log.empty())
@@ -1090,7 +1090,8 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         << 1.0/float(config -> approx_epsilon) << "\nApproximation type : ";
         if (config -> proc_prefix_bits)
             approx_type << "pruned xCZ branches";
-        if (config -> sim_type == Config::SimType::ApproxCZPathH2011 || config -> sim_type == Config::SimType::ApproxCZPathV2011) {
+        if (config -> sim_type == Config::SimType::ApproxCZPathH2011
+            || config -> sim_type == Config::SimType::ApproxCZPathV2011) {
             if (config -> ranges_bits == 0)
                 approx_type << " / ";
             approx_type << "Approx2011";
@@ -1285,28 +1286,32 @@ PrintSimReport(GenericQuantumState& amp,
         else
             ss << memory << " B \n";
         
-        //        if (config -> verbose >= Config::Verbose::Default) {
-        if (config -> proc_prefix_bits && (config -> ranges_bits || config -> dfs_length)) {
-            ss << "Zero count \n";
-            ss << "\t1st Checkpoint : ";
-            if (config -> ranges_bits) {
-                if (config -> store_checkpoint_range)
-                ss << "A = " << amp.count_of_category.zero_count_cp1_A << " ("
-                << ((double)amp.count_of_category.zero_count_cp1_A / (double)(1ull << amp.GetNumQInBlock(0))) * 100.0 << "%), ";
-                ss << "B = " << amp.count_of_category.zero_count_cp1_B << " ("
-                << ((double)amp.count_of_category.zero_count_cp1_B / (double)(1ull << amp.GetNumQInBlock(1))) * 100.0 << "%)\n";
-                ss << "\t2nd Checkpoint : ";
-            }
-            if (config -> dfs_length) {
-                idx_size A_avg_0s = amp.count_of_category.zero_count_cp2_A /
-                ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length));
-                idx_size B_avg_0s = amp.count_of_category.zero_count_cp2_B /
-                ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length));
-                ss << "A = " << A_avg_0s << " (" << ((double)A_avg_0s / (double)(1ull << amp.GetNumQInBlock(0))) * 100.0 << "%), ";
-                ss << "B = " << B_avg_0s << " (" << ((double)B_avg_0s / (double)(1ull << amp.GetNumQInBlock(1))) * 100.0 << "%)\n";
+        if (config -> count_zeros) {
+            if (config -> proc_prefix_bits && (config -> ranges_bits || config -> dfs_length)) {
+                ss << "Zero count \n";
+                ss << "\t1st Checkpoint : ";
+                if (config -> ranges_bits) {
+                    if (config -> store_checkpoint_range)
+                    ss << "A = " << amp.count_of_category.zero_count_cp1_A << " ("
+                    << ((double)amp.count_of_category.zero_count_cp1_A /
+                        (double)(1ull << amp.GetNumQInBlock(0))) * 100.0 << "%), ";
+                    ss << "B = " << amp.count_of_category.zero_count_cp1_B << " ("
+                    << ((double)amp.count_of_category.zero_count_cp1_B /
+                        (double)(1ull << amp.GetNumQInBlock(1))) * 100.0 << "%)\n";
+                    ss << "\t2nd Checkpoint : ";
+                }
+                if (config -> dfs_length) {
+                    idx_size A_avg_0s = amp.count_of_category.zero_count_cp2_A /
+                    ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length));
+                    idx_size B_avg_0s = amp.count_of_category.zero_count_cp2_B /
+                    ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length));
+                    ss << "A = " << A_avg_0s << " (" << ((double)A_avg_0s /
+                                                         (double)(1ull << amp.GetNumQInBlock(0))) * 100.0 << "%), ";
+                    ss << "B = " << B_avg_0s << " (" << ((double)B_avg_0s /
+                                                         (double)(1ull << amp.GetNumQInBlock(1))) * 100.0 << "%)\n";
+                }
             }
         }
-        //        }
         
         
         if (config -> verbose >= Config::Verbose::Default) {

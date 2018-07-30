@@ -19,11 +19,11 @@ def main(circuit_file, depth):
 		outfile.write("namespace Microsoft.Quantum.msftBM {\n")
 		outfile.write("\topen Microsoft.Quantum.Primitive;\n\topen Microsoft.Quantum.Canon;")
 		outfile.write("\n\topen Microsoft.Quantum.Extensions.Math;")
-		outfile.write("\n\n\toperation simulate_" + circuit_file + " () : () {\n\t\tbody {")
+		outfile.write("\n\n\toperation simulate_" + circuit_file.replace(".txt", "") + " () : () {\n\t\tbody {")
 
 		with open(input_file, "r") as circuit_in:
 			for line in circuit_in:
-				if len(line.split()) > 1 and int(line.split()[0]) > int(depth):
+				if int(depth) != 0 and len(line.split()) > 1 and int(line.split()[0]) > int(depth):
 					break
 				if "cz" in line:
 					qubit1 = line.split()[2]

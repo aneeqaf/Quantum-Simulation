@@ -75,7 +75,7 @@ def AddPrintOptToCommand(seed, command, idx_file, num_idx):
 
 def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_major ,\
  					depth , no_nearest_neighbors, layers_Hgates_b4_meas,\
- 					no_checkpoint_with_ranges, save_checkpoint_to_file,\
+ 					no_checkpoint_with_ranges, save_checkpoint_to_file, count_zeros,\
  					h_cut = 0, v_cut = 0):
 	if h_cut:
 		command += " --num_threads " + str(num_threads) + " --sim_type " \
@@ -107,6 +107,9 @@ def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_majo
 
 	if save_checkpoint_to_file:
 		command += " --save_checkpoint_to_file " + str(save_checkpoint_to_file)
+
+	if count_zeros:
+		command += " --count_zeros"
 
 	return command
 
@@ -176,7 +179,7 @@ def CheckxCZGatesAndDepth(report_file):
 				temp = line.split(":")[1].split("(")[1]
 				num_xCZ = int(re.sub('[^0-9]', '', temp)) 
 			elif "Cycles" in line:
-				depth = int(line.split()[8])
+				depth = int(line.split()[-1])
 	return num_xCZ, depth
 
 def ChooseBetterCut(num_xCZ1, num_xCZ2, time1, time2, command1, command2):

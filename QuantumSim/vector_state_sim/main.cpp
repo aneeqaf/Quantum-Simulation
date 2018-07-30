@@ -100,13 +100,14 @@ int main(int argc, char *argv[])
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
         { "first_partition_smaller",    no_argument,       nullptr, 'f' },
         { "save_checkpoint_to_file",    required_argument,       nullptr, 'r' },
+        { "count_zeros",    no_argument,       nullptr, 'z' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false;
+    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:z", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -350,6 +351,10 @@ int main(int argc, char *argv[])
                 
                 break;
             }
+            case 'z': {
+                count_zeros = true;
+                break;
+            }
             case '|': {
                 string s_c = string(optarg);
                 vcut = stoi(s_c);
@@ -429,12 +434,13 @@ int main(int argc, char *argv[])
     bitset<128> temp_size = 0;
     temp_size[cir.GetNumQubits()] = 1;
     Config* config = new Config (temp_size, input_filename.substr(input_filename_pos) ,
-                  "output/probabilities/" + out_file,
-                  "output/amp_vectors/" + out_file,  "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
-                  cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii, print_amp, print_idx,
-                  (Config::SimType)sim_type, verbose, vcut, hcut, depth,
-                  threshold, num_threads, true, nearest_neighbors, row_major,
-                  layers_H_gates, store_checkpoint_range, first_partition_smaller, save_cp_to_file);
+                                 "output/probabilities/" + out_file, "output/amp_vectors/" + out_file,
+                                 "output/reports/" + out_file, "output/misc", norm_perc, norm_depth,
+                                 cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii,
+                                 print_amp, print_idx, (Config::SimType)sim_type, verbose, vcut, hcut,
+                                 depth, threshold, num_threads, true, nearest_neighbors, row_major,
+                                 layers_H_gates, store_checkpoint_range, first_partition_smaller,
+                                 count_zeros, save_cp_to_file);
     
     if (print_amp) {
         if (seed != -1)
@@ -460,7 +466,7 @@ int main(int argc, char *argv[])
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Horizontal, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                       config -> verbose);
+                                      config -> verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
