@@ -129,8 +129,6 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
-    void TurnMemoryMappingOff();
-    void TurnMemoryMappingOn();
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);

@@ -35,10 +35,13 @@ benchmark/
 output/*
 google.zip
 google/
-table2.pdf
-table2.xlsx
-~$table2.xlsx
-fide_graph.xlsx
+*.pdf
+*.xlsx
 rr
 QuantumSim/python_scripts/__pycache__/*
 ProjectQ/
+~*
+Quantum.
+ProjectQ/
+qiskit-terra/
+../ai.pem
