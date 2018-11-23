@@ -81,8 +81,10 @@ CopyOrRead(bool file_back_up,
         amp.CopyMemberVars(copy_amp);
     }
     else {
-        SumOfTensorsProductsStateVector& temp_amp = (SumOfTensorsProductsStateVector&)amp;
-        temp_amp.CopyState((SumOfTensorsProductsStateVector&)copy_amp);
+//        copy_amp.DecompressStateVector();
+//        amp.CopyState(copy_amp);
+//        copy_amp.CompressStateVector();
+        amp.DecompressAndCopyAnotherState(copy_amp);
     }
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
@@ -115,6 +117,9 @@ MainLoopForRanges(GenericQuantumState& amp,
         
         auto& idx = config -> indices;
         if (config -> dfs_length == 0) {
+            if (amp.compressed)
+                amp.DecompressStateVector();
+            
             Time amp_st_time;
             amp_st_time.StartTime();
             for(idx_size i = 0; i < idx.size(); ++i)
@@ -124,8 +129,12 @@ MainLoopForRanges(GenericQuantumState& amp,
             phase1_time += time_storage;
         }
         
-        if (config -> norm_perc)
+        if (config -> norm_perc) {
+            if (amp.compressed)
+                amp.DecompressStateVector();
+            
             norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
+        }
         amp.book_keep = false;
         
         config -> curr_mode = Config::SimMode::Ranges;
@@ -164,6 +173,7 @@ MainLoopForBranching(GenericQuantumState& amp,
         
         auto& idx = config -> indices;
         for(idx_size i = 0; i < idx.size(); ++i) {
+            assert(amp.compressed == false);
             Time amp_st_time;
             amp_st_time.StartTime();
             amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
@@ -231,7 +241,11 @@ CheckpointWithoutFile(bool branch,
     
     Time copy_time;
     copy_time.StartTime();
-    SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
+    
+    amp.CompressStateVector();
+    SumOfTensorsProductsStateVector temp_amp;// ((SumOfTensorsProductsStateVector&)amp);
+    temp_amp.DecompressAndCopyAnotherState(amp);
+    
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
     phase1_time += time_copying;
@@ -250,6 +264,8 @@ CheckpointWithoutFile(bool branch,
         }
         MainLoopForRanges(temp_amp, circuit, amp);
     }
+    
+    amp.DecompressStateVector();
 }
 
 void SequentialSimulation::

@@ -88,6 +88,7 @@ SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs)
 {
     sim_type = rhs.sim_type;
     num_addends = rhs.num_addends;
+    compressed = rhs.compressed;
     
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends.push_back(new TensorProductStateVector(*rhs.tensor_addends[i]));
@@ -100,6 +101,8 @@ operator=(const SumOfTensorsProductsStateVector& rhs)
     swap(tensor_addends, temp.tensor_addends);
     sim_type = rhs.sim_type;
     num_addends = rhs.num_addends;
+    compressed = rhs.compressed;
+    
     return *this;
 }
 
@@ -959,6 +962,9 @@ CopyMemberVars(const GenericQuantumState& rhs)
 {
     const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
     num_addends = t_rhs.num_addends;
+    compressed = t_rhs.compressed;
+    sim_type = t_rhs.sim_type;
+    
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i] -> CopyMemberVars(*t_rhs.tensor_addends[i]);
 }
@@ -984,5 +990,12 @@ DecompressStateVector()
 void SumOfTensorsProductsStateVector::
 DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
 {
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.num_addends;
+    sim_type = t_rhs.sim_type;
     
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> DecompressAndCopyAnotherState(*t_rhs.tensor_addends[i]);
+    
+    compressed = false;
 }

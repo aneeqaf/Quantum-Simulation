@@ -32,6 +32,7 @@ AdaptiveStateVector(const AdaptiveStateVector& rhs)
         sumOfTensors = new SumOfTensorsProductsStateVector(*(rhs.sumOfTensors));
     }
     
+    compressed = rhs.compressed;
     total_q = rhs.total_q;
 }
 
@@ -44,6 +45,7 @@ operator=(const AdaptiveStateVector& rhs)
     else
         swap(sumOfTensors, temp.sumOfTensors);
     
+    compressed = rhs.compressed;
     total_q = rhs.total_q;
     return *this;
 }
@@ -468,6 +470,8 @@ CopyMemberVars(const GenericQuantumState& rhs)
 {
     const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
     total_q = t_rhs.total_q;
+    compressed = rhs.compressed;
+    
     if (full_state)
         full_state -> CopyMemberVars(*t_rhs.full_state);
     else
@@ -481,6 +485,8 @@ CompressStateVector()
         full_state -> CompressStateVector();
     else
         sumOfTensors -> CompressStateVector();
+    
+    compressed = true;
 }
 
 void AdaptiveStateVector::
@@ -490,10 +496,20 @@ DecompressStateVector()
         full_state -> DecompressStateVector();
     else
         sumOfTensors -> DecompressStateVector();
+    
+    compressed = false;
 }
 
 void AdaptiveStateVector::
 DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
 {
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    total_q = t_rhs.total_q;
     
+    if (full_state)
+        full_state -> DecompressAndCopyAnotherState(*t_rhs.full_state);
+    else
+        sumOfTensors -> DecompressAndCopyAnotherState(*t_rhs.sumOfTensors);
+    
+    compressed = false;
 }
