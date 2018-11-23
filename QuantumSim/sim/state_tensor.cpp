@@ -516,23 +516,6 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     return -1;
 }
 
-void TensorProductStateVector::
-CopyState(const TensorProductStateVector& rhs)
-{
-    state_a -> CopyState(*rhs.state_a);
-    state_b -> CopyState(*rhs.state_b);
-}
-
-void TensorProductStateVector::
-CopyMemberVars(const TensorProductStateVector& rhs)
-{
-    qp = rhs.qp;
-    cut_type = rhs.cut_type;
-    
-    state_a -> CopyMemberVars(*rhs.state_a);
-    state_b -> CopyMemberVars(*rhs.state_b);
-}
-
 cmplx TensorProductStateVector::
 operator[](bitset<128> i) 
 {    
@@ -652,7 +635,7 @@ CalculateAverageInaccuracy(double norm) const
 double TensorProductStateVector::
 CalculateMeanEntropy() const
 {
-    const idx_size a_size = 1ull << qp.getNumQubitsInBlock(0), b_size = 1ull << qp.getNumQubitsInBlock(1), range = sampling_factor;
+    const idx_size a_size = 1ull << qp.getNumQubitsInBlock(0), b_size = 1ull << qp.getNumQubitsInBlock(1), range = SAMPLING_FACTOR;
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
     double entropy = 0.0;
     const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;
@@ -820,7 +803,7 @@ PrintStateVector(const string& outfile,
             file << imag(amp) << "j";
         file << "\n";
         
-        off = 1 + rand() % sampling_factor;
+        off = 1 + rand() % SAMPLING_FACTOR;
     }
 }
 
@@ -865,7 +848,7 @@ PrintProbabilities(const string& out_file,
         
         file << prob << "\n";
         
-        off = 1 + rand() % sampling_factor;
+        off = 1 + rand() % SAMPLING_FACTOR;
     }
 }
 
@@ -888,11 +871,22 @@ ReadFromDisk(const string& filename)
 }
 
 void TensorProductStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const TensorProductStateVector& amp = (const TensorProductStateVector&)rhs;
-    qp = amp.qp;
-    cut_type = amp.cut_type;
-    state_a -> SetMemberVariables(*amp.state_a);
-    state_b -> SetMemberVariables(*amp.state_b);
+    const TensorProductStateVector& t_rhs = (const TensorProductStateVector&)rhs;
+    
+    state_a -> CopyState(*t_rhs.state_a);
+    state_b -> CopyState(*t_rhs.state_b);
 }
+
+void TensorProductStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const TensorProductStateVector& t_rhs = (const TensorProductStateVector&)rhs;
+    qp = t_rhs.qp;
+    cut_type = t_rhs.cut_type;
+    
+    state_a -> CopyMemberVars(*t_rhs.state_a);
+    state_b -> CopyMemberVars(*t_rhs.state_b);
+}
+

@@ -656,39 +656,6 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     return -1;
 }
 
-void FullAmpStateVector::
-CopyState(const FullAmpStateVector& rhs)
-{
-    global_factor_power = rhs.global_factor_power;
-    global_i_counter = rhs.global_i_counter;
-    zero_opt_mask = rhs.zero_opt_mask;
-    all_zeros = rhs.all_zeros;
-    
-    idx_size size = 2 * rhs.GetSize();
-    
-    float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
-    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    
-#pragma omp parallel for num_threads(num_threads)
-    for (idx_size i = 0; i < size; i+=8) {
-        const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
-        _mm256_store_ps(&t_amp[i], temp_amp);
-    }
-}
-
-void FullAmpStateVector::
-CopyMemberVars(const FullAmpStateVector& rhs)
-{
-    max_prob = rhs.max_prob;
-    min_prob = rhs. min_prob;
-    amp_size = rhs.amp_size;
-    num_qubits = rhs.num_qubits;
-    global_factor_power = rhs.global_factor_power;
-    global_i_counter = rhs.global_i_counter;
-    zero_opt_mask = rhs.zero_opt_mask;
-    all_zeros = rhs.all_zeros;
-}
-
 cmplx FullAmpStateVector::
 operator[](bitset<128> i)
 {
@@ -867,14 +834,14 @@ CalculateMeanEntropy() const
         rescaling_factor *= 1.0/sqrt(2.0);
     
     double entropy = 0.0;
-    idx_size num_ranges = amp_size / sampling_factor;
+    idx_size num_ranges = amp_size / SAMPLING_FACTOR;
     for (idx_size i = 0; i < num_ranges; ++i) {
-        idx_size idx = (i * sampling_factor) + (rand() % sampling_factor);
+        idx_size idx = (i * SAMPLING_FACTOR) + (rand() % SAMPLING_FACTOR);
         if (real(amp[idx]) > 1e-50 || imag(amp[idx]) > 1e-50)
              entropy += norm(amp[idx] * rescaling_factor) * log2l(norm(amp[idx] * rescaling_factor));
     }
     
-    return -entropy * sampling_factor;
+    return -entropy * SAMPLING_FACTOR;
 }
 
 double FullAmpStateVector::
@@ -1057,7 +1024,7 @@ PrintProbabilities(const string &out_file,
         float prob = (norm(amp[i])/norm_f) * amp_size;
         file << prob << "\n";
         
-        off = 1 + rand() % sampling_factor;
+        off = 1 + rand() % SAMPLING_FACTOR;
     }
 }
 
@@ -1100,7 +1067,7 @@ PrintStateVector(const string& outfile,
             file << imag(a) << "j";
         file << "\n";
         
-        off = 1 + rand() % sampling_factor;
+        off = 1 + rand() % SAMPLING_FACTOR;
     }
 }
 
@@ -1134,16 +1101,36 @@ ReadFromDisk(const string& filename)
 }
 
 void FullAmpStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const FullAmpStateVector& amp = (const FullAmpStateVector&)rhs;
-    max_prob = amp.max_prob;
-    min_prob = amp. min_prob;
-    amp_size = amp.amp_size;
-    num_qubits = amp.num_qubits;
-    global_factor_power = amp.global_factor_power;
-    global_i_counter = amp.global_i_counter;
-    zero_opt_mask = amp.zero_opt_mask;
-    all_zeros = amp.all_zeros;
+    const FullAmpStateVector& t_rhs = (const FullAmpStateVector&)rhs;
+    global_factor_power = t_rhs.global_factor_power;
+    global_i_counter = t_rhs.global_i_counter;
+    zero_opt_mask = t_rhs.zero_opt_mask;
+    all_zeros = t_rhs.all_zeros;
+    
+    idx_size size = 2 * rhs.GetSize();
+    
+    float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(t_rhs.amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+#pragma omp parallel for num_threads(num_threads)
+    for (idx_size i = 0; i < size; i+=8) {
+        const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
+        _mm256_store_ps(&t_amp[i], temp_amp);
+    }
 }
 
+void FullAmpStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const FullAmpStateVector& t_rhs = (const FullAmpStateVector&)rhs;
+    max_prob = t_rhs.max_prob;
+    min_prob = t_rhs. min_prob;
+    amp_size = t_rhs.amp_size;
+    num_qubits = t_rhs.num_qubits;
+    global_factor_power = t_rhs.global_factor_power;
+    global_i_counter = t_rhs.global_i_counter;
+    zero_opt_mask = t_rhs.zero_opt_mask;
+    all_zeros = t_rhs.all_zeros;
+}

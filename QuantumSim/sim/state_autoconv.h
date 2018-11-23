@@ -51,7 +51,6 @@ public:
                                    const bitset<128> T_bitmasks[2],
                                    int th,
                                   bool last_cycle = false);
-    void CopyState(const AdaptiveStateVector& rhs);
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
@@ -77,6 +76,8 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -85,8 +86,9 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
+    AdaptiveStateVector(): full_state(nullptr),
+    sumOfTensors(new SumOfTensorsProductsStateVector), total_q(0) {}
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,
                         const int hcut = 0,

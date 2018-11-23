@@ -33,7 +33,7 @@ from math import sqrt, floor, ceil
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--num_idx", nargs=1, required=False, default=1000)
 @click.option("--print_idxs", nargs=1, required=False, is_flag=True)
-@click.option("--print_all", nargs=1, required=False, default=-1)
+@click.option("--num_q", nargs=1, required=False, default=-1)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
@@ -46,7 +46,7 @@ from math import sqrt, floor, ceil
 @click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
 @click.option("--count_zeros", nargs=1, required=False, is_flag=True)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
- idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
+ idx_file, print_idxs, num_batches, num_threads, num_q, max_procs, ranges_bits, trial, \
  approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
  layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only, save_checkpoint_to_file,
  count_zeros):
@@ -67,9 +67,10 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	# If the entire state vector needs to be printed, specify this command.
 	# The value is the number of qubits in the circuit
-	if int(print_all) != -1:
+	if int(num_q) != -1:
+		num_idx = 1 << int(num_q)
 		with open(idx_file, "w") as f:
-			for q in range(1 << int(print_all)):
+			for q in range(1 << int(num_q)):
 				f.write(str(q) + "\n")
 
 	# cir_name = circuit + "_" + str(depth) + "_"

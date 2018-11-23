@@ -62,10 +62,10 @@ def FormatE(n):
 
 def AddPrintOptToCommand(seed, command, idx_file, num_idx):
 	print_opt = ""
-	if int(seed) != -1:
-		print_opt += " --idx " + str(seed) + "," + str(num_idx)
-	elif idx_file != "":
+	if idx_file != "":
 		print_opt += " --idx " + idx_file
+	elif int(seed) != -1:
+		print_opt += " --idx " + str(seed) + "," + str(num_idx)
 	else:
 		print_opt += " --idx " + str(7) + "," + str(num_idx)
 		# if int(p_idx) != -1:

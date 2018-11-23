@@ -78,7 +78,7 @@ CopyOrRead(bool file_back_up,
     copy_time.StartTime();
     if (file_back_up) {
         amp.ReadFromDisk(config -> temp_dir + "checkpoint" + to_string(branch));
-        amp.SetMemberVariables(copy_amp);
+        amp.CopyMemberVars(copy_amp);
     }
     else {
         SumOfTensorsProductsStateVector& temp_amp = (SumOfTensorsProductsStateVector&)amp;
@@ -198,7 +198,7 @@ CheckpointWithFile(bool branch,
     copy_time.StartTime();
     amp.WriteAmpToDisk(config -> temp_dir + "checkpoint" + to_string(branch));
     SumOfTensorsProductsStateVector temp_amp;
-    temp_amp.CopyMemberVars((SumOfTensorsProductsStateVector&)amp);
+    temp_amp.CopyMemberVars(amp);
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
     phase1_time += time_copying;
@@ -1326,7 +1326,7 @@ PrintSimReport(GenericQuantumState& amp,
             double min = amp.GetMinProb();
             if (sqrt(norm) > 0.9) {
                 ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
-                ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
+                ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(SAMPLING_FACTOR) << "\n";
             }
             ss << "Probabilities : " << amp.GetMinProb() << "(min), "
                  << amp.GetMaxProb() << "(max), "

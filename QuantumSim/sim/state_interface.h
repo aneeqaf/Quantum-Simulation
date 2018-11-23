@@ -25,7 +25,7 @@
 
 using namespace std;
 
-constexpr int sampling_factor = 1;
+constexpr int SAMPLING_FACTOR = 1;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;
@@ -199,6 +199,8 @@ public:
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
     virtual void RescaleAndApplyGlobalICounter() = 0;
+    virtual void CopyState(const GenericQuantumState& rhs) = 0;
+    virtual void CopyMemberVars(const GenericQuantumState& rhs) = 0;
     
     virtual void PrintStateVector(const string& outfile,
                                   const int cycle_num) = 0;
@@ -207,7 +209,6 @@ public:
                                     const int cycle_num)  = 0;
     virtual void WriteAmpToDisk(const string& filename) = 0;
     virtual void ReadFromDisk(const string& filename) = 0;
-    virtual void SetMemberVariables(const GenericQuantumState& amp) = 0;
         
     GenericQuantumState(){}
     GenericQuantumState(int n_threads);

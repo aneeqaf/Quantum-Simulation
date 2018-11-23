@@ -439,24 +439,6 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     return last_xCZ_idx;
 }
 
-void SumOfTensorsProductsStateVector::
-CopyState(const SumOfTensorsProductsStateVector& rhs)
-{
-    num_addends = rhs.GetNumAddends();
-    
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CopyState(*rhs.tensor_addends[i]);
-}
-
-void SumOfTensorsProductsStateVector::
-CopyMemberVars(const SumOfTensorsProductsStateVector& rhs)
-{
-    num_addends = rhs.GetNumAddends();
-    
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CopyMemberVars(*rhs.tensor_addends[i]);
-}
-
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToStateAVX()
 {
@@ -764,7 +746,7 @@ CalculateMeanEntropy2Cuts() const
     double entropy = 0.0;
     
     auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
-    idx_size range = sampling_factor , num_ranges = amp_size / range;
+    idx_size range = SAMPLING_FACTOR , num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
         cmplx ampl =  t0[idx] + t1[idx];
@@ -889,7 +871,7 @@ PrintStateVector(const string& outfile,
                 file << imag(amp) << "j";
             file << "\n";
             
-            off = 1 + rand() % sampling_factor;
+            off = 1 + rand() % SAMPLING_FACTOR;
         }
     }
     else {
@@ -940,7 +922,7 @@ PrintProbabilities(const string& out_file,
             
             file << prob << "\n";
             
-            off = 1 + rand() % sampling_factor;
+            off = 1 + rand() % SAMPLING_FACTOR;
         }
     }
     else {
@@ -963,10 +945,20 @@ ReadFromDisk(const string& filename)
 }
 
 void SumOfTensorsProductsStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const SumOfTensorsProductsStateVector& amp = (const SumOfTensorsProductsStateVector&)rhs;
-    num_addends = amp.num_addends;
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.GetNumAddends();
+    
     for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> SetMemberVariables(*amp.tensor_addends[i]);
+        tensor_addends[i] -> CopyState(*t_rhs.tensor_addends[i]);
+}
+
+void SumOfTensorsProductsStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.num_addends;
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CopyMemberVars(*t_rhs.tensor_addends[i]);
 }

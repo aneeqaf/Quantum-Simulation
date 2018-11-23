@@ -191,21 +191,6 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
     return last_xCZ_idx;
 }
 
-void AdaptiveStateVector::
-CopyState(const AdaptiveStateVector& rhs)
-{
-    if (rhs.full_state) {
-        full_state -> CopyState(*rhs.full_state);
-        sumOfTensors = nullptr;
-    }
-    else {
-        full_state = nullptr;
-        sumOfTensors -> CopyState(*(rhs.sumOfTensors));
-    }
-    
-    total_q = rhs.total_q;
-}
-
 cmplx AdaptiveStateVector::
 operator[](bitset<128> i)
 {
@@ -463,12 +448,28 @@ ReadFromDisk(const string& filename)
 }
 
 void AdaptiveStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const AdaptiveStateVector& amp = (const AdaptiveStateVector&)rhs;
-    total_q = amp.total_q;
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    if (t_rhs.full_state) {
+        full_state -> CopyState(*t_rhs.full_state);
+        sumOfTensors = nullptr;
+    }
+    else {
+        full_state = nullptr;
+        sumOfTensors -> CopyState(*(t_rhs.sumOfTensors));
+    }
+    
+    total_q = t_rhs.total_q;
+}
+
+void AdaptiveStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    total_q = t_rhs.total_q;
     if (full_state)
-        full_state -> SetMemberVariables(*amp.full_state);
+        full_state -> CopyMemberVars(*t_rhs.full_state);
     else
-        sumOfTensors -> SetMemberVariables(*amp.sumOfTensors);
+        sumOfTensors -> CopyMemberVars(*t_rhs.sumOfTensors);
 }
