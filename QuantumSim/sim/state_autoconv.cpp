@@ -473,3 +473,27 @@ CopyMemberVars(const GenericQuantumState& rhs)
     else
         sumOfTensors -> CopyMemberVars(*t_rhs.sumOfTensors);
 }
+
+void AdaptiveStateVector::
+CompressStateVector()
+{
+    if (full_state)
+        full_state -> CompressStateVector();
+    else
+        sumOfTensors -> CompressStateVector();
+}
+
+void AdaptiveStateVector::
+DecompressStateVector()
+{
+    if (full_state)
+        full_state -> DecompressStateVector();
+    else
+        sumOfTensors -> DecompressStateVector();
+}
+
+void AdaptiveStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    
+}

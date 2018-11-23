@@ -962,3 +962,27 @@ CopyMemberVars(const GenericQuantumState& rhs)
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i] -> CopyMemberVars(*t_rhs.tensor_addends[i]);
 }
+
+void SumOfTensorsProductsStateVector::
+CompressStateVector()
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CompressStateVector();
+    
+    compressed = true;
+}
+
+void SumOfTensorsProductsStateVector::
+DecompressStateVector()
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void SumOfTensorsProductsStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    
+}

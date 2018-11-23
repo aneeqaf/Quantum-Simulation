@@ -1134,3 +1134,93 @@ CopyMemberVars(const GenericQuantumState& rhs)
     zero_opt_mask = t_rhs.zero_opt_mask;
     all_zeros = t_rhs.all_zeros;
 }
+
+void FullAmpStateVector::
+CompressStateVector()
+{
+    cmplx* compressed_amp = nullptr;
+    if (int err = posix_memalign((void**)&compressed_amp, 64, sizeof(char) * 2 * amp_size) != 0) {
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30)) {
+            cerr << memory / (1 << 30) << " GiB \n";
+        }
+        else if (memory >= (1 << 20)) {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10)) {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
+        free(amp);
+        exit(err);
+    }
+    
+    size_t i = 0;
+    
+    for (size_t c_idx = 0; c_idx < amp_size/4; ++c_idx) {
+        Packed8CharArray temp = "";
+        temp[0] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i]), amp_size), amp_size);
+        temp[1] = DiscretizeUDSample(arg(amp[i]), 2 * PI);
+        temp[2] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i + 1]), amp_size), amp_size);
+        temp[3] = DiscretizeUDSample(arg(amp[i + 1]), 2 * PI);
+        temp[4] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i + 2]), amp_size), amp_size);
+        temp[5] = DiscretizeUDSample(arg(amp[i + 2]), 2 * PI);
+        temp[6] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i + 3]), amp_size), amp_size);
+        temp[7] = DiscretizeUDSample(arg(amp[i + 3]), 2 * PI);
+        
+        compressed_amp[c_idx] = *(cmplx*)temp;
+        i += 4;
+    }
+    
+    free(amp);
+    amp = compressed_amp;
+    
+    compressed = true;
+}
+
+void FullAmpStateVector::
+DecompressStateVector()
+{
+    cmplx* decompressed_amp = nullptr;
+    if (int err = posix_memalign((void**)&decompressed_amp, 64, sizeof(cmplx) * amp_size) != 0){
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30)) {
+            cerr << memory / (1 << 30) << " GiB \n";
+        }
+        else if (memory >= (1 << 20)) {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10)) {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
+        free(amp);
+        exit(err);
+    }
+    
+    unsigned char * __restrict compressed_t_amp = (unsigned char*)amp;
+    
+    size_t c_size = 2 * amp_size;
+    size_t j = 0;
+    
+    for (size_t i = 0; i < c_size; i += 2) {
+        
+        decompressed_amp[j] = polar(SampleFromPTGivenUD(ReverseDiscretizationUDSample(compressed_t_amp[i], amp_size), amp_size), ReverseDiscretizationUDSample(compressed_t_amp[i + 1], 2 * PI));
+    }
+
+    free(amp);
+    amp = decompressed_amp;
+    
+    compressed = false;
+}
+
+void FullAmpStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    
+}
+

@@ -890,3 +890,26 @@ CopyMemberVars(const GenericQuantumState& rhs)
     state_b -> CopyMemberVars(*t_rhs.state_b);
 }
 
+void TensorProductStateVector::
+CompressStateVector()
+{
+    state_a -> CompressStateVector();
+    state_b -> CompressStateVector();
+    
+    compressed = true;
+}
+
+void TensorProductStateVector::
+DecompressStateVector()
+{
+    state_a -> DecompressStateVector();
+    state_b -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void TensorProductStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    
+}

@@ -28,7 +28,7 @@ ostream& operator<<(ostream& o, const vector<int>& v) {
 }
 
 GenericQuantumState::
-GenericQuantumState(int n_threads){
+GenericQuantumState(int n_threads): compressed(false){
     num_threads = n_threads;
 }
 

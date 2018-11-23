@@ -103,6 +103,9 @@ public:
     void RescaleAndApplyGlobalICounter();
     void CopyState(const GenericQuantumState& rhs);
     void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector();
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);

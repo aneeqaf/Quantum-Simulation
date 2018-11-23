@@ -22,6 +22,7 @@
 #include "kernels1.h"
 #include "profile.h"
 #include "config.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -134,6 +135,8 @@ public:
     static char partition_to_sim;
     static bool book_keep;
     
+    bool compressed;
+    
     virtual int ApplyBlockOfDiagGates(string& cz_bits,
                                       idx_size prefix_size,
                                       const bitset<128>* __restrict CZ_bitmasks,
@@ -201,6 +204,9 @@ public:
     virtual void RescaleAndApplyGlobalICounter() = 0;
     virtual void CopyState(const GenericQuantumState& rhs) = 0;
     virtual void CopyMemberVars(const GenericQuantumState& rhs) = 0;
+    virtual void CompressStateVector() = 0;
+    virtual void DecompressStateVector() = 0;
+    virtual void DecompressAndCopyAnotherState(const GenericQuantumState& rhs) = 0;
     
     virtual void PrintStateVector(const string& outfile,
                                   const int cycle_num) = 0;
@@ -210,7 +216,7 @@ public:
     virtual void WriteAmpToDisk(const string& filename) = 0;
     virtual void ReadFromDisk(const string& filename) = 0;
         
-    GenericQuantumState(){}
+    GenericQuantumState(): compressed(false){}
     GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };
