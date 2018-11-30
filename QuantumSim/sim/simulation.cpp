@@ -793,9 +793,9 @@ void SequentialSimulation::
 ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
-#ifdef Print
-//    amp.PrintStateVector();
-#endif
+//#ifdef Print
+    amp.PrintStateVector();
+//#endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config -> prob_outfile, circuit.GetNumCycles() - 1);
 #endif

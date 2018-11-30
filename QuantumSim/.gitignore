@@ -45,3 +45,5 @@ Quantum.
 ProjectQ/
 qiskit-terra/
 ../ai.pem
+compression/compression.xcodeproj
+compression/compression/*.png

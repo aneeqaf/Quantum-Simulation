@@ -1144,7 +1144,9 @@ CopyMemberVars(const GenericQuantumState& rhs)
 void FullAmpStateVector::
 CompressStateVector()
 {
-    RescaleAndApplyGlobalICounter();
+    if (global_i_counter || global_factor_power)
+        RescaleAndApplyGlobalICounter();
+    PrintStateVector();
     
     cmplx* compressed_amp = nullptr;
     if (int err = posix_memalign((void**)&compressed_amp, 64, sizeof(char) * 2 * amp_size) != 0) {
@@ -1171,14 +1173,14 @@ CompressStateVector()
     #pragma omp parallel for num_threads(num_threads)
     for (size_t c_idx = 0; c_idx < amp_size/4; ++c_idx) {
         Packed8CharArray temp = "";
-        temp[0] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i]), amp_size), amp_size);
-        temp[1] = DiscretizeUDSample(arg(amp[i]), 2 * PI);
-        temp[2] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i + 1]), amp_size), amp_size);
-        temp[3] = DiscretizeUDSample(arg(amp[i + 1]), 2 * PI);
-        temp[4] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i + 2]), amp_size), amp_size);
-        temp[5] = DiscretizeUDSample(arg(amp[i + 2]), 2 * PI);
-        temp[6] = DiscretizeUDSample(SampleFromUDGivenPT(abs(amp[i + 3]), amp_size), amp_size);
-        temp[7] = DiscretizeUDSample(arg(amp[i + 3]), 2 * PI);
+        temp[0] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i])));
+        temp[1] = DiscretizePhaseFromUD(amp[i]);
+        temp[2] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i + 1])));
+        temp[3] = DiscretizePhaseFromUD(amp[i + 1]);
+        temp[4] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i + 2])));
+        temp[5] = DiscretizePhaseFromUD(amp[i + 2]);
+        temp[6] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i + 3])));
+        temp[7] = DiscretizePhaseFromUD(amp[i + 3]);
         
         compressed_amp[c_idx] = *(cmplx*)temp;
         i += 4;
@@ -1219,7 +1221,10 @@ DecompressStateVector()
     
     #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < amp_size; ++i) {
-        decompressed_amp[i] = polar(SampleFromPTGivenUD(ReverseDiscretizationUDSample(compressed_t_amp[j], amp_size), amp_size), ReverseDiscretizationUDSample(compressed_t_amp[j + 1], 2 * PI));
+        decompressed_amp[i] =
+        ReconstructComplexFromPolar(SampleFromPTGivenUD(ReverseDiscretizeMagnitude(compressed_t_amp[i])),
+                                                         ReverseDiscretizePhase(compressed_t_amp[i + 1]),
+                                                         compressed_t_amp[i + 1]);
         
         j += 2;
     }
@@ -1279,11 +1284,15 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     
     #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < amp_size; ++i) {
-        amp[i] = polar(SampleFromPTGivenUD(ReverseDiscretizationUDSample(compressed_t_amp[j], amp_size), amp_size), ReverseDiscretizationUDSample(compressed_t_amp[j + 1], 2 * PI));
+        amp[i] = ReconstructComplexFromPolar(SampleFromPTGivenUD(ReverseDiscretizeMagnitude(compressed_t_amp[i])),
+                                             ReverseDiscretizePhase(compressed_t_amp[i + 1]),
+                                             compressed_t_amp[i + 1]);
         
         j += 2;
     }
     
     compressed = false;
+    PrintStateVector();
+   
 }
 
