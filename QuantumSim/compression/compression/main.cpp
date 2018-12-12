@@ -6,99 +6,58 @@
 //  Copyright © 2018 Aneeqa Fatima. All rights reserved.
 //
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <map>
-#include <cmath>
-#include <complex>
-#include <cassert>
+#include <getopt.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
-#include "gnuplot-iostream/gnuplot-iostream.h"
+#include "compression.h"
 
 using namespace std;
 
-using cmplx = complex<float>;
-using Packed8CharArray = unsigned char[8];
+int main(int argc, char * argv[]) {
+    
+    static const struct option longopts[] = {
+        { "inputfile",    required_argument,       nullptr, 'i' },
+        { "max_error",    required_argument,       nullptr, 'e' },
+        { "k_largest",    required_argument,       nullptr, 'k' },
+        { nullptr,  0,                 nullptr, '\0' }
+    };
+    
+    string input_filename = "";
+    double error_bound = 0;
+    int c = 0, idx = 0, exponent = -4;
+    idx_size k_largest = 16;
 
-constexpr double PI = M_PI;
-
-void FindPitch(const cmplx* amp,
-               size_t size,
-               map<double, pair<double, double>>& mag_phases_pitches)
-{
-    for (size_t i = 0; i < size; ++i) {
-        double amp_real = amp[i].real(), amp_imag = amp[i].imag();
-        bool neg_real = false, neg_imag = false;
-        if (amp_real < 0) {
-            amp_real *= -1;
-            neg_real = true;
+    while ((c = getopt_long(argc, argv, "i:e:k:", longopts, &idx)) != -1)
+    {
+        switch (c) {
+            case 'i': {
+                if (argc < 2) {
+                    cerr << "Please enter filename\n";
+                    exit(1);
+                }
+                input_filename = string(optarg);
+                break;
+            }
+            case 'e': {
+                string temp = string(optarg);
+                exponent = stoi(temp);
+                error_bound = pow(10, exponent);
+                break;
+            }
+            case 'k': {
+                string temp = string(optarg);
+                k_largest = stoul(temp);
+                break;
+            }
+            default: {
+                cerr << "Unknown option " << c << '\n';
+                exit(1);
+                break;
+            }
         }
-        if (amp_imag < 0) {
-            amp_imag *= -1;
-            neg_imag = true;
-        }
-        
-        double phase = atan(amp_imag/amp_real);
-        double magnitude = abs(amp[i]);
-        
-        double b = (1/phase) * log(magnitude);
-        double pitch = (PI/2) - atan(1/b);
-        mag_phases_pitches[magnitude] = pair<double, double>(phase, pitch);
-//        double new_b = 1/tan((PI/2) - pitch);
-//        double new_magnitude = exp(new_b * phase);
-//
-//        cout << b << " : " << pitch << " | " << new_b << " : " << magnitude << " -> " << new_magnitude << endl;
-        
     }
-    
-//    for (auto mpp : mag_phases_pitches) {
-//        cout << mpp.first << " , " << mpp.second.first << " , " << mpp.second.second << endl;
-//    }
-}
-
-void PlotLogSpiralAndAmpDensity(cmplx* amp,
-                                size_t size)
-{
-    Gnuplot gp;
-    
-    vector<pair<float, float> > xy_pts;
-    for(size_t i = 0; i < size; ++i)
-        xy_pts.push_back(make_pair(amp[i].real(), amp[i].imag()));
-
-    
-    gp << "reset\nset nokey\n";
-    gp << "set term png size 1000,480\n";
-    gp << "set output 'log_spiral.png'\n";
-    gp << "set parametric\nset size ratio -1\nset samples 1e5\n";
-    gp << "set tics font 'Times New Roman,18'\n";
-//    gp << "set xl 'x(t)' enhanced font 'Latin Modern Math, 20'\n";
-//    gp << "set yl 'y(t)' enhanced font 'Latin Modern Math, 20'\n";
-    gp << "L = 0.04\n";
-    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    gp << "set xtics -L , 0.02 , L\nset ytics -L, 0.02, L\nset grid\n";
-    
-    
-    gp << "a=0.01 \nb=0.05\n";
-    gp << "x(t) = a*exp(b*t)*cos(t)\n";
-    gp << "y(t) = a*exp(b*t)*sin(t)\n";
-//    gp << "x(t) = a*exp(b*t)*(1-(t**2))/(1+(t**2))\n";
-//    gp << "y(t) = a*exp(b*t)*(2*t)/(1+(t**2))\n";
-    gp << "title(a, b) = sprintf(\"\\na=%.2f  b=%.2f \\n\",a, b) \n";
-    gp << "set multiplot layout 1, 2 title title(a, b) font 'Latin Modern Math, 20'\n";
-    gp << "set title \"Zoom out \"\n";
-    gp << "plot [-40*pi:8*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', x(t), y(t) lc 'blue'\n";
-    gp << "set termoption enhanced\n";
-    
-    gp << "set title \"Zoom in \"\n";
-    gp << "L = 0.0001\n";
-    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    gp << "set xtics -L , 0.00005 , L\nset ytics -L, 0.00005, L\nset grid\n";
-    gp << "plot [-40*pi:8*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', x(t), y(t) lc 'blue'\n";
-    
-}
-
-int main(int argc, const char * argv[]) {
+                
     
     size_t amp_size = 1ull << 16;
     cmplx* amp = nullptr;
@@ -109,7 +68,7 @@ int main(int argc, const char * argv[]) {
     amp[0] = 1;
     
     ifstream infile;
-    infile.open("exact.txt");
+    infile.open(input_filename);
     
     char extra = '\0';
 //    getline(infile, cmplx_num);
@@ -123,6 +82,17 @@ int main(int argc, const char * argv[]) {
     
     map<double, pair<double, double>> mag_phases_pitches;
 
-    FindPitch(amp, amp_size, mag_phases_pitches);
-    PlotLogSpiralAndAmpDensity(amp, amp_size);
+    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
+    PlotLogSpiralAndAmpDensity("PT_" + input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second,
+                               error_bound, amp_size/k_largest);
+    
+//    CompressDecompressStateVector(input_filename, amp, amp_size, exponent, k_largest);
+    
+    ApplyUniformTransformToStateVector(amp, amp_size);
+//    ApplyPTTransformToStateVector(amp, amp_size);
+    k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
+//    PlotLogSpiralAndAmpDensity("rePT_" +input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second, error_bound);
+    
+    PlotUniformSpiralAndAmpDensity("uniform_" + input_filename + to_string(k_largest), amp, amp_size,
+                                   k_largest_amps.second, pow(10, exponent/2), amp_size/k_largest);
 }
