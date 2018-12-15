@@ -8,37 +8,25 @@
 
 #include "compression.h"
 
-inline double radiusLogSpiral(double angle,
-                              double error_bound)
-{
-    return A * exp(PT_B * angle);
-}
-
-inline double radiusUniformSpiral(double angle,
-                                  double error_bound)
-{
-    return error_bound * angle;
-}
-
 cmplx DotProduct(const cmplx* vect_A,
                  const cmplx* vect_B,
-                 idx_size size)
+                 idx_size state_vector_size)
 {
     
     cmplx product = 0;
     
     // Loop for calculate cot product
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < state_vector_size; i++)
         product +=  conj(vect_A[i]) * vect_B[i];
     return product;
 }
 
 double CalculateNorm(const cmplx* amp,
-                     idx_size size)
+                     idx_size state_vector_size)
 {
     double norm_ = 0;
     
-    for (idx_size i = 0; i < size; ++i)
+    for (idx_size i = 0; i < state_vector_size; ++i)
         norm_ += norm(amp[i]);
     
     return sqrt(norm_);
@@ -47,8 +35,7 @@ double CalculateNorm(const cmplx* amp,
 
 int FindCInCThetaForRInLogSpiral(cmplx amp)
 {
-    float x = sqrt(norm(amp));
-    int c = ((1/(PT_B * PI)) * log(x/A)) + 4;
+    int c = CalculateCInCThetaGivenMagnitudeLogSpiral(abs(amp)) + 4;
     
     if (c % 2 != 0)
         c -= 1;
@@ -59,8 +46,7 @@ int FindCInCThetaForRInLogSpiral(cmplx amp)
 int FindCInCThetaForRInUniformSpiral(cmplx amp,
                                      double error_bound)
 {
-    float x = sqrt(norm(amp));
-    int c =  (x / (error_bound * PI)) + 4;
+    int c =  CalculateCInCThetaGivenMagnitudeUniformSpiral(abs(amp), error_bound) + 4;
     
     if (c % 2 != 0)
         c -= 1;
@@ -70,13 +56,13 @@ int FindCInCThetaForRInUniformSpiral(cmplx amp,
 
 double CalculateFidelity(const cmplx* original,
                          const cmplx* processed,
-                         idx_size size)
+                         idx_size state_vector_size)
 {
 //    dotp_exact_approx = np.vdot(exact_amps, approx_amps) / (np.linalg.norm(exact_amps) * np.linalg.norm(approx_amps))
 //    fidelity = round(pow(np.linalg.norm(dotp_exact_approx), 2), 5)
 
-    double norm_product = (CalculateNorm(original, size) * CalculateNorm(processed, size));
-    cmplx dotp_exact_approx = DotProduct(original, processed, size);
+    double norm_product = (CalculateNorm(original, state_vector_size) * CalculateNorm(processed, state_vector_size));
+    cmplx dotp_exact_approx = DotProduct(original, processed, state_vector_size);
     return pow(norm(cmplx(dotp_exact_approx.real()/norm_product, dotp_exact_approx.imag()/norm_product)), 2);
 }
 
@@ -86,14 +72,14 @@ cmplx FindAmpWithMaxMagnitude(const cmplx* state_vector,
     float amp_real = 0, amp_imag = 0;
     
     for (idx_size i = 0; i < amp_size; ++i) {
-        if (amp_real > amp_imag) {
-            if (amp_real < state_vector[i].real() || amp_real < state_vector[i].imag()) {
+        if (abs(amp_real) > abs(amp_imag)) {
+            if (abs(amp_real) < abs(state_vector[i].real()) || abs(amp_real) < abs(state_vector[i].imag())) {
                 amp_real = state_vector[i].real();
                 amp_imag = state_vector[i].imag();
             }
         }
         else {
-            if (amp_imag < state_vector[i].real() || amp_imag < state_vector[i].imag()) {
+            if (abs(amp_imag) < abs(state_vector[i].real()) || abs(amp_imag) < abs(state_vector[i].imag())) {
                 amp_real = state_vector[i].real();
                 amp_imag = state_vector[i].imag();
             }
@@ -109,86 +95,19 @@ cmplx FindAmpWithMaxMagnitude(const cmplx* state_vector,
 }
 
 template<typename function>
-pair<double, double> FindCodewordsForPlotting(const function& radius_func,
-                                              vector<tuple<float, float, double>>& codewords,
-                                              int r,
-                                              int R,
-                                              double error_bound)
+void FindCodewordsForPlotting(const function& radius_func,
+                              vector<tuple<float, float>>& codewords,
+                              int r,
+                              int R,
+                              int num_codewords,
+                              double error_bound)
 {
-    double angle = r * PI;
-    double radius = radius_func(angle, error_bound) * cos(angle);
-    double prev_radius = 0;
-    bool move_next = false;
-    double max_error = 1e-12, min_error = 100000;
+    double c_dist = (double)(R - r)/(double)num_codewords;
     
-    while (angle < R * PI) {
-        double error = 0;
-        error = radius - prev_radius; //> max_error ? max_error : radius - prev_radius;
-        
-        if (error > max_error)
-            max_error = error;
-        
-        if (error < min_error)
-            min_error = error;
-        
-        double t_angle = error / radius;
-        if (t_angle > (r + 0.5) * PI)
-            angle += 0.01 * PI;
-        else
-            angle += t_angle;
-        
-        if (angle < (r + 0.5) * PI)
-            codewords.push_back(make_tuple(radius_func(angle, error_bound) * cos(angle), radius_func(angle, error_bound) * sin(angle), error));
-        else move_next = true;
-        
-        if (move_next) {
-            r += 2;
-            angle = r * PI;
-            prev_radius = radius;
-            radius = radius_func(angle, error_bound) * cos(angle);
-            move_next = false;
-        }
-    }
-    
-    return make_pair(min_error, max_error);
-}
-
-template<typename function>
-void FindCodewordsForCompression(const function& radius_func,
-                                 vector<float>& codewords,
-                                 int r,
-                                 int R,
-                                 double error_bound)
-{
-    float angle = r * PI;
-    double radius = radius_func(angle, error_bound) * cos(angle);
-    double prev_radius = 0;
-    bool move_next = false;
-    double max_error = 1e-12, min_error = 100000;
-    
-    codewords.push_back(0);
-    
-    while (angle < R * PI) {
-        double error = 0;
-        error = radius - prev_radius; //> max_error ? max_error : radius - prev_radius;
-       
-        double t_angle = error / radius;
-        if (t_angle > (r + 0.5) * PI)
-            angle += 0.01 * PI;
-        else
-            angle += t_angle;
-        
-        if (angle < (r + 0.5) * PI)
-            codewords.push_back(angle/PI);
-        else move_next = true;
-        
-        if (move_next) {
-            r += 2;
-            angle = r * PI;
-            prev_radius = radius;
-            radius = radius_func(angle, error_bound) * cos(angle);
-            move_next = false;
-        }
+    for (int i = 0; i < num_codewords; ++i) {
+        double angle = (r + (i * c_dist)) * PI;
+        codewords.push_back(make_tuple(radius_func(angle, error_bound) * cos(angle),
+                             radius_func(angle, error_bound) * sin(angle)));
     }
 }
 
@@ -229,7 +148,7 @@ pair<amp_idx_t*, cmplx> ExtractFractionsOfAmpsFromState(const cmplx* state_vecto
     
     if (posix_memalign((void**)&k_amps, 64, sizeof(amp_idx_t) * fraction_amps) != 0)
         throw "Unable to allocate";
-    memset(k_amps, 0, fraction_amps * sizeof(k_amps));
+    memset(k_amps, 0, fraction_amps * sizeof(amp_idx_t));
     cmplx minimum = pq_k_largest_amps.top().second;
     
     for (idx_size x = 0; x < fraction_amps; ++x) {
@@ -258,33 +177,31 @@ pair<amp_idx_t*, cmplx> ExtractFractionsOfAmpsFromState(const cmplx* state_vecto
 
 void PlotLogSpiralAndAmpDensity(const string& filename,
                                 const cmplx* state_vector,
-                                idx_size size,
+                                idx_size state_vector_size,
                                 cmplx smallest_amp_in_k_largest,
                                 double error_bound,
-                                idx_size k_size)
+                                idx_size k_size,
+                                int num_codewords,
+                                idx_size multiplicant,
+                                double fidelity,
+                                idx_size num_zero_amps)
 {
 #ifdef GP
     Gnuplot gp;
 #endif
     
-    vector<tuple<float, float, double>> codewords;
+    vector<tuple<float, float>> codewords;
     
     vector<pair<float, float>> xy_pts;
-    for(size_t i = 0; i < size; ++i) {
-        float amp_real = state_vector[i].real(), amp_imag = state_vector[i].imag();
-        if (amp_real < 0)
-            amp_real *= -1;
-        if (amp_imag < 0)
-            amp_imag *= -1;
-        
-        xy_pts.push_back(make_pair(amp_real, amp_imag));
-    }
+    for(size_t i = 0; i < state_vector_size; ++i)
+        xy_pts.push_back(make_pair(state_vector[i].real(), state_vector[i].imag()));
     
-    int r = FindCInCThetaForRInLogSpiral(cmplx(error_bound, error_bound));//-584;
-    int R = FindCInCThetaForRInLogSpiral(smallest_amp_in_k_largest); //30
-    cmplx max_amp = FindAmpWithMaxMagnitude(state_vector, size);
+    
+    int r = FindCInCThetaForRInLogSpiral(cmplx(error_bound, error_bound));
+    int R = FindCInCThetaForRInLogSpiral(smallest_amp_in_k_largest);
+    cmplx max_amp = FindAmpWithMaxMagnitude(state_vector, state_vector_size);
     int max_R = FindCInCThetaForRInLogSpiral(max_amp);
-    pair<double, double> error = FindCodewordsForPlotting(radiusLogSpiral, codewords, r, R, error_bound);
+    FindCodewordsForPlotting(RadiusLogSpiral, codewords, r, R, num_codewords, error_bound);
     
 #ifdef GP
     gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
@@ -303,12 +220,26 @@ void PlotLogSpiralAndAmpDensity(const string& filename,
     //    gp << "set yl 'y(t)' enhanced font 'Latin Modern Math, 20'\n";
     gp << "set linetype 1 linecolor rgb \"blue\"\n";
     gp << "set linetype 2 linecolor rgb \"light-blue\"\n";
-    gp << "a=" << A << "\nb=" << PT_B << "\ncw=" << codewords.size() << "\n e=" << error.second << "\n m=" << error.first << "\n";
-    gp << "r=" << r << "\n R=" << R << "\n maxR=" << max_R << "\n maxMag=" << sqrt(norm(max_amp)) << "\n k=" << k_size << "\n";
-    gp << "title(a, b) = sprintf(\"\\na=%.3f  b=%.3f \\n\\n r=%.10f  R=%.4f  maxR/R=%.5f\\n\\n codewords=%i  largest amps=%i"
-    << "\\n\\n max error=%.6f  min error=%.12f \""
-    << ",a, b, a * exp( b * r * pi), a * exp( b * R * pi), maxMag/(a * exp(b*R*pi)), cw, k, e, m) \n";
-    gp << "set multiplot layout 2,2 columnsfirst title title(a, b) font 'Latin Modern Math, 20' margins screen MP_LEFT, MP_RIGHT, MP_BOTTOM, MP_TOP spacing screen MP_GAP \n";
+    gp << "a=" << A << "\nb=" << PT_B << "\ncw=" << codewords.size() << "\n q=" << log2(state_vector_size) << "\n";
+    gp << "r=" << r << "\n R=" << R << "\n maxR=" << max_R << "\n maxMag=" << abs(max_amp) << "\n k=" << k_size << "\n";
+    
+    if (fidelity == 0) {
+        gp << "title(a, b) = sprintf(\"\\nPT distribution and log spirals (%iq) \\n\\na=%.3f  b=%.3f \\n\\n"
+        << "r=%.10f  R=%.4f  maxR/R=%.5f\\n\\n codewords=%i  largest amps=%i" << "\\n\\n \""
+        << ",q, a, b, a * exp( b * r * pi), a * exp( b * R * pi), maxMag/(a * exp(b*R*pi)), cw, k) \n";
+        
+        gp << "set multiplot layout 2,2 columnsfirst title title(a, b) font 'Latin Modern Math,"
+        << "20' margins screen MP_LEFT, MP_RIGHT, MP_BOTTOM, MP_TOP spacing screen MP_GAP \n";
+    }
+    else {
+        
+        gp << "f=" << fidelity << "\n z=" << num_zero_amps << "\n qs=" << state_vector_size << "\n";
+        gp << "title(a, b) = sprintf(\"\\nResults after compression-decompression\\n\\nPT distribution and log spirals (%iq) \\n\\na=%.3f  b=%.3f \\n\\n"
+        << "r=%.10f  R=%.4f  maxR/R=%.5f\\n\\n codewords=%i  largest amps=%i \\n\\n fidelity=%.5f  fraction zero amps=%i/%i\""
+        << ",q, a, b, a * exp( b * r * pi), a * exp( b * R * pi), maxMag/(a * exp(b*R*pi)), cw, k, f, z, qs) \n";
+        
+        gp << "set multiplot layout 1,2 title title(a, b) font 'Latin Modern Math, 20'\n";
+    }
     
     gp << "x(t) = a*exp(b*t)*cos(t)\n";
     gp << "y(t) = a*exp(b*t)*sin(t)\n";
@@ -320,69 +251,64 @@ void PlotLogSpiralAndAmpDensity(const string& filename,
     gp << "L = " << A * exp(PT_B * max_R * PI) << "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")
-    << " with points pt 7 ps 0.2 lc 'grey', (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    gp << "plot " << gp.file1d(xy_pts, "file.dat")
+    << " with points pt 7 ps 0.2 lc 'grey'\n";
+    
+    if (fidelity == 0) {
+        gp << "L = " << A * exp(PT_B * max_R * PI) << "\n";
+        gp << "set xr[-L:L]\nset yr[-L:L]\n";
+        gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
+        gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")
+        << " with points pt 7 ps 0.2 lc 'grey', (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+        << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
+        << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    }
     
     gp << "set title \"Zoom in \"\n";
-    gp << "L = " << error_bound * 10 << "\n";
+    gp << "L = " << error_bound * 5 << "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
     gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
     << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
     
-    gp << "set title \"Zoom out: positive \"\n";
-    gp << "L = " <<  A * exp(PT_B * max_R * PI) << " \n";
-    gp << "set xr[0:L]\nset yr[0:L]\n";
-    gp << "set xtics 0 , L/2 , L\nset ytics 0, L/2, L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey',"
-    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    if (fidelity == 0) {
+        gp << "L = " << error_bound * 5 << "\n";
+        gp << "set xr[-L:L]\nset yr[-L:L]\n";
+        gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
+        gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
+        << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+        << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
+        << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    }
     
-    gp << "set title \"Zoom in: positive\"\n";
-    gp << "L = " << error_bound * 10 << "\n";
-    gp << "set xr[0:L]\nset yr[0:L]\n";
-    gp << "set xtics 0 , L/2 , L\nset ytics 0, L/2 , L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
-    << "(t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'";
 #endif
 }
 
 void PlotUniformSpiralAndAmpDensity(const string& filename,
                                     const cmplx* state_vector,
-                                    idx_size size,
+                                    idx_size state_vector_size,
                                     cmplx smallest_amp_in_k_largest,
                                     double error_bound,
-                                    idx_size k_size)
+                                    idx_size k_size,
+                                    int num_codewords,
+                                    idx_size multiplicant)
 {
 #ifdef GP
     Gnuplot gp;
 #endif
     
-    vector<tuple<float, float, double>> codewords;
+    vector<tuple<float, float>> codewords;
     
     vector<pair<float, float>> xy_pts;
-    for(size_t i = 0; i < size; ++i) {
-        float amp_real = state_vector[i].real(), amp_imag = state_vector[i].imag();
-        if (amp_real < 0)
-            amp_real *= -1;
-        if (amp_imag < 0)
-            amp_imag *= -1;
-        
-        xy_pts.push_back(make_pair(amp_real, amp_imag));
-    }
+    for(size_t i = 0; i < state_vector_size; ++i)
+        xy_pts.push_back(make_pair(state_vector[i].real(), state_vector[i].imag()));
     
-    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound, error_bound), error_bound);//-584;
+    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound * multiplicant, error_bound * multiplicant), error_bound);//-584;
     int R = FindCInCThetaForRInUniformSpiral(smallest_amp_in_k_largest, error_bound); //30
-    cmplx max_amp = FindAmpWithMaxMagnitude(state_vector, size);
+    cmplx max_amp = FindAmpWithMaxMagnitude(state_vector, state_vector_size);
     int max_R = FindCInCThetaForRInUniformSpiral(max_amp, error_bound);
-    pair<double, double> err = FindCodewordsForPlotting(radiusUniformSpiral, codewords, r, R, error_bound);
+    FindCodewordsForPlotting(RadiusUniformSpiral, codewords, r, R, num_codewords, error_bound);
     
 #ifdef GP
     gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
@@ -401,10 +327,10 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     //    gp << "set yl 'y(t)' enhanced font 'Latin Modern Math, 20'\n";
     gp << "set linetype 1 linecolor rgb \"blue\"\n";
     gp << "set linetype 2 linecolor rgb \"light-blue\"\n";
-    gp << "eb_real=" << err.first << "\neb=" << error_bound << "\ncw=" << codewords.size() << "\n";
-    gp << "r=" << r << "\n R=" << R << "\n maxR=" << max_R << "\n maxMag=" << sqrt(norm(max_amp)) << "\n k=" << k_size << "\n";
-    gp << "title(eb) = sprintf(\"\\nerror bound=%.8f \\n\\n r=%.4f  R=%.4f  maxR/R=%.5f\\n\\n codewords=%i  largest amps=%i\""
-    << ",eb_real, eb * r * pi, eb * R * pi, maxMag/(eb*R*pi), cw, k) \n";
+    gp << "eb=" << error_bound << "\ncw=" << codewords.size() << "\n q=" << log2(state_vector_size) << "\n";
+    gp << "r=" << r << "\n R=" << R << "\n maxR=" << max_R << "\n maxMag=" << abs(max_amp) << "\n k=" << k_size << "\n";
+    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  maxR/R=%.5f\\n\\n codewords=%i  largest amps=%i\""
+    << ", q, eb * r * pi, eb * R * pi, maxMag/(eb*R*pi), cw, k) \n";
     gp << "set multiplot layout 2,2 columnsfirst title title(eb) font 'Latin Modern Math, 20' margins screen MP_LEFT, MP_RIGHT, MP_BOTTOM, MP_TOP spacing screen MP_GAP \n";
     
     gp << "x(t) = " << error_bound << "*t*cos(t)\n";
@@ -417,13 +343,27 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     gp << "L = " << error_bound * max_R * PI << "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")
+    gp << "plot " << gp.file1d(xy_pts, "file.dat")
+    << " with points pt 7 ps 0.2 lc 'grey'\n";
+    
+    gp << "L = " << error_bound * max_R * PI << "\n";
+    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
+    gp << "plot [r*pi:maxR*pi]" << gp.file1d(xy_pts, "file.dat")
     << " with points pt 7 ps 0.2 lc 'grey', (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
     << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
     << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
     
+    
     gp << "set title \"Zoom in \"\n";
-    gp << "L = " << error_bound * 100<< "\n";
+    gp << "L = " << error_bound * (3 * 100)<< "\n";
+    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
+    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")  << " with points pt 7 ps 0.2 lc 'grey', "
+    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
+    
+    gp << "L = " << error_bound * (3 * 100)<< "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
     gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
@@ -431,274 +371,208 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
     << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
     
-    gp << "set title \"Zoom out: positive \"\n";
-    gp << "L = " <<  error_bound * max_R * PI << " \n";
-    gp << "set xr[0:L]\nset yr[0:L]\n";
-    gp << "set xtics 0 , L/2 , L\nset ytics 0, L/2, L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey',"
-    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
-    
-    gp << "set title \"Zoom in: positive\"\n";
-    gp << "L = " << error_bound * 100 << "\n";
-    gp << "set xr[0:L]\nset yr[0:L]\n";
-    gp << "set xtics 0 , L/2 , L\nset ytics 0, L/2 , L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
-    << "(t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'";
 #endif
 }
 
 void ApplyUniformTransformToStateVector(cmplx* state_vector,
-                                        idx_size size)
+                                        idx_size state_vector_size)
 {    
-    for (idx_size i = 0; i < size; ++i) {
-        float PT_probability = norm(state_vector[i]);
-        float uniform_probability = 1.0 - exp(-PT_probability * size);
+    for (idx_size i = 0; i < state_vector_size; ++i) {
+        double original_phase = atan2(state_vector[i].imag(), state_vector[i].real());
+        original_phase = original_phase < 0 ? original_phase + ( 2 * PI) : original_phase;
+        double PT_probability = norm(state_vector[i]);
+        double uniform_probability = 1.0 - exp(-PT_probability * state_vector_size);
         
-        float c = ((1/(PT_B * PI)) * log(sqrt(uniform_probability)/A));
-        float uniform_mag = A * exp(PT_B * c * PI);
-        state_vector[i] = cmplx(uniform_mag * cos(c * PI), uniform_mag * sin(c * PI));
+        double uniform_mag = sqrt(uniform_probability);
+        state_vector[i] = cmplx(uniform_mag * cos(original_phase), uniform_mag * sin(original_phase));
+//        cout << state_vector[i] << "; ";
     }
 }
 
 void ApplyPTTransformToStateVector(cmplx* state_vector,
-                                   idx_size size)
+                                   idx_size state_vector_size)
 {
-    for (idx_size i = 0; i < size; ++i) {
-        float uniform_probability = norm(state_vector[i]);
-        float PT_probability = -log(abs(1.0 - uniform_probability)) / size;
+    for (idx_size i = 0; i < state_vector_size; ++i) {
+        double original_phase = atan2(state_vector[i].imag(), state_vector[i].real());
+        original_phase = original_phase < 0 ? original_phase + ( 2 * PI) : original_phase;
+        double uniform_probability = norm(state_vector[i]);
+        double PT_probability = -log(abs(1.0 - uniform_probability)) / state_vector_size;
         
-        float c = ((1/(PT_B * PI)) * log(sqrt(PT_probability)/A));
-        float PT_mag = A * exp(PT_B * c * PI);
-        state_vector[i] = cmplx(PT_mag * cos(c * PI), PT_mag * sin(c * PI));
-        cout << state_vector[i] << endl;
+        double PT_mag = sqrt(PT_probability);
+        state_vector[i] = cmplx(PT_mag * cos(original_phase), PT_mag * sin(original_phase));
     }
-}
-
-unsigned short BinarySearchForClosestRadiusToAmp(const vector<float>& codewords,
-                                                 double magnitude,
-                                                 double error_bound)
-{
-    double space_radii = (error_bound * (codewords[1] + 2) * PI) - (error_bound * codewords[1] * PI);
-    
-    int min = 0;
-    idx_size max = codewords.size() - 1; // last index value
-    unsigned short guess;
-    
-    
-    while (min <= max){
-        guess = (unsigned short)(((max + min) / 2) + 0.5);
-        if (guess == 0 || guess == codewords.size())
-            throw "Incorrect 0 mapping to codewords";
-        
-        double codeword_magnitude = error_bound * codewords[guess] * PI;
-        double diff_mag = codeword_magnitude - magnitude;
-        if (diff_mag >= 0 && diff_mag <= space_radii)
-            return guess;
-        else if (magnitude > codeword_magnitude)
-            min = guess + 1;
-        else
-            max = guess - 1;
-    }
-    
-    throw "Unable to map amp to codeword within error bound";
-}
-
-unsigned short FindClosestCodewordUsingAngle(const vector<float>& codewords,
-                                             cmplx amp,
-                                             double magnitude,
-                                             unsigned short closest_outer_radius,
-                                             double error_bound)
-{
-    double phase = asin(amp.imag()/magnitude);
-    unsigned short closest_cw = 0;
-    double closest_phase = 100000;
-    
-    double space_radii = (error_bound * (codewords[1] + 2) * PI) - (error_bound * codewords[1] * PI);
-    
-    for (idx_size i = closest_outer_radius; i > 0; --i) {
-        double codeword_magnitude = error_bound * codewords[i] * PI;
-        double phase_diff = abs(phase - (fmod(codewords[i], 2.0)* PI));
-                                          
-        if (phase_diff < closest_phase && abs(codeword_magnitude - magnitude) < space_radii/2) {
-            closest_cw = i;
-            closest_phase = phase_diff;
-        }
-        else if (abs(codeword_magnitude - magnitude) > space_radii)
-            break;
-    }
-    
-    return closest_cw;
 }
 
 unsigned short MapAmpToCodeword(const amp_idx_t* k_largest_amps,
-                                vector<float>& codewords,
                                 cmplx amp,
                                 idx_size amp_idx,
                                 idx_size k_largest_size,
                                 int r,
+                                int R,
+                                int num_codewords,
                                 double error_bound,
+                                double& near_zero_c,
                                 idx_size& num_near_zero_amps)
 {
     static idx_size idx_k_largest = 0;
-    double magnitude = sqrt(norm(amp));
-    double min_radius = r * PI * error_bound;
+    double magnitude = abs(amp);
+    double min_radius = RadiusUniformSpiral((r + 2) * PI, error_bound);
     
     assert(idx_k_largest <= k_largest_size);
     
     if (magnitude < min_radius) {
-        codewords[0] += ((1/(PT_B * PI)) * log(magnitude/A));
+        near_zero_c += CalculateCInCThetaGivenMagnitudeUniformSpiral(magnitude, error_bound);
         ++num_near_zero_amps;
         return 0;
     }
     else if (idx_k_largest < k_largest_size && amp_idx ==  k_largest_amps[idx_k_largest].first) {
         ++idx_k_largest;
-        return codewords.size();
+        return num_codewords + 1;
     }
-    else {
-        float amp_real = amp.real(), amp_imag = amp.imag();
-        bool neg_real = false, neg_imag = false;
-        if (amp_real < 0) {
-            amp_real *= -1;
-            neg_real = true;
-        }
-        if (amp_imag < 0) {
-            amp_imag *= -1;
-            neg_imag = true;
-        }
-        amp = cmplx(amp_real, amp_imag);
-        
-        unsigned short cw = FindClosestCodewordUsingAngle(codewords, amp, magnitude,
-                                                          BinarySearchForClosestRadiusToAmp(codewords, magnitude, error_bound), error_bound);
-        
-        if (neg_real)
-            cw |= 1 << 15;
-        if (neg_imag)
-            cw |= 1 << 14;
-        
-        return cw;
-    }
+    else
+        return CalculateNearestCodewordToAmp(amp, r, (double)(R - r)/(double)num_codewords, error_bound);
 }
 
-void CompressStateVector(const amp_idx_t* k_largest_amps,
-                         vector<float>& codewords,
-                         cmplx* state_vector,
-                         idx_size size,
+idx_size CompressStateVector(const amp_idx_t* k_largest_amps,
+                         int num_codewords,
+                         cmplx*& state_vector,
+                         idx_size state_vector_size,
                          idx_size k_largest_size,
                          double error_bound,
-                         int r)
+                         double& near_zero_c,
+                         int r,
+                         int R)
 {
     
     cmplx* compressed_amp = nullptr;
-    if (int err = posix_memalign((void**)&compressed_amp, 64, sizeof(unsigned short) * size) != 0) {
-        idx_size memory = sizeof(unsigned short) * size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30)) {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20)) {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10)) {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        exit(err);
-    }
-    memset(compressed_amp, 0, sizeof(unsigned short) * size);
+    if (posix_memalign((void**)&compressed_amp, 64, sizeof(unsigned short) * state_vector_size) != 0)
+        throw "Unable to allocate";
+
+    memset(compressed_amp, 0, sizeof(unsigned short) * state_vector_size);
     
     size_t i = 0;
     
     idx_size num_near_zero_amps = 0;
     
-    cout << codewords.size();
-    
-    for (size_t c_idx = 0; c_idx < size/4; ++c_idx) {
-        Packed4ShortArray temp = {0};
-        temp[0] = MapAmpToCodeword(k_largest_amps, codewords, state_vector[i], i, k_largest_size, r, error_bound, num_near_zero_amps);
-        temp[1] = MapAmpToCodeword(k_largest_amps, codewords, state_vector[i + 1], i + 1, k_largest_size, r, error_bound, num_near_zero_amps);
-        temp[2] = MapAmpToCodeword(k_largest_amps, codewords, state_vector[i + 2], i + 2, k_largest_size, r, error_bound, num_near_zero_amps);
-        temp[3] = MapAmpToCodeword(k_largest_amps, codewords, state_vector[i + 3], i + 3, k_largest_size, r, error_bound, num_near_zero_amps);
+    for (idx_size c_idx = 0; c_idx < state_vector_size/8; ++c_idx) {
+        Packed8ShortArray temp = {0};
+        temp[0] = MapAmpToCodeword(k_largest_amps, state_vector[i], i, k_largest_size, r, R, num_codewords,
+                                   error_bound, near_zero_c, num_near_zero_amps);
+        temp[1] = MapAmpToCodeword(k_largest_amps, state_vector[i + 1], i + 1, k_largest_size, r, R, num_codewords,
+                                    error_bound, near_zero_c, num_near_zero_amps);
+        temp[2] = MapAmpToCodeword(k_largest_amps, state_vector[i + 2], i + 2, k_largest_size, r, R, num_codewords,
+                                    error_bound, near_zero_c, num_near_zero_amps);
+        temp[3] = MapAmpToCodeword(k_largest_amps, state_vector[i + 3], i + 3, k_largest_size, r, R, num_codewords,
+                                    error_bound, near_zero_c, num_near_zero_amps);
+        temp[4] = MapAmpToCodeword(k_largest_amps, state_vector[i + 4], i + 4, k_largest_size, r, R, num_codewords,
+                                   error_bound, near_zero_c, num_near_zero_amps);
+        temp[5] = MapAmpToCodeword(k_largest_amps, state_vector[i + 5], i + 5, k_largest_size, r, R, num_codewords,
+                                   error_bound, near_zero_c, num_near_zero_amps);
+        temp[6] = MapAmpToCodeword(k_largest_amps, state_vector[i + 6], i + 6, k_largest_size, r, R, num_codewords,
+                                   error_bound, near_zero_c, num_near_zero_amps);
+        temp[7] = MapAmpToCodeword(k_largest_amps, state_vector[i + 7], i + 7, k_largest_size, r, R, num_codewords,
+                                   error_bound, near_zero_c, num_near_zero_amps);
+        
         
         compressed_amp[c_idx] = *(cmplx*)temp;
-        i += 4;
+        i += 8;
     }
-    
-    codewords[0] /= num_near_zero_amps;
+
+    near_zero_c /= num_near_zero_amps;
     
     free(state_vector);
+    state_vector = nullptr;
     state_vector = compressed_amp;
+    
+    return num_near_zero_amps;
 }
 
 void DecompressStateVector(const amp_idx_t* k_largest_amps,
-                           vector<float>& codewords,
-                           cmplx* state_vector,
+                           cmplx*& state_vector,
                            idx_size k_largest_size,
-                           idx_size size)
+                           idx_size state_vector_size,
+                           idx_size num_codewords,
+                           int r,
+                           int R,
+                           double error_bound,
+                           double near_zero_c)
 {
     cmplx* decompressed_amp = nullptr;
-    if (posix_memalign((void**)&decompressed_amp, 64, sizeof(cmplx) * size) != 0)
+    if (posix_memalign((void**)&decompressed_amp, 64, sizeof(cmplx) * state_vector_size) != 0)
         throw "Unable to allocate";
+    memset(decompressed_amp, 0, sizeof(cmplx) * state_vector_size);
     
-    unsigned short * __restrict compressed_t_amp = (unsigned short*)state_vector;
+    unsigned short * __restrict compressed_t_amp = (unsigned short *)state_vector;
     
     idx_size large_amps_idx = 0;
+    double cw_dist = (double)(R - r)/(double)num_codewords;
     
-    for (idx_size i = 0; i < size; ++i) {
+    for (idx_size i = 0; i < state_vector_size; ++i) {
         
-        unsigned short cw = compressed_t_amp[i] & MAX_14BITS;
-        
-        if (cw != codewords.size()) {
-            double magnitude = A * exp(PT_B * codewords[cw] * PI);
+        if (compressed_t_amp[i] == 0) {
+            double magnitude = RadiusUniformSpiral(near_zero_c * PI, error_bound);
             
-            float amp_real = compressed_t_amp[i] & (1 << 15) ? -magnitude * cos(codewords[cw] * PI) : magnitude * cos(codewords[cw] * PI);
-            float amp_imag = compressed_t_amp[i] & (1 << 14) ? -magnitude * sin(codewords[cw] * PI) : magnitude * sin(codewords[cw] * PI);
+            decompressed_amp[i] = cmplx(magnitude * cos(near_zero_c * PI), magnitude * sin(near_zero_c * PI));
+        }
+        else if (compressed_t_amp[i] != num_codewords + 1) {
+            double c = CalculateCforCodewordInCTheta(compressed_t_amp[i], r, cw_dist);
+            double magnitude = RadiusUniformSpiral(c * PI, error_bound);
             
-            decompressed_amp[i] = cmplx(amp_real, amp_imag);
+            decompressed_amp[i] = cmplx(magnitude * cos(c * PI), magnitude * sin(c * PI));
         }
         else
             decompressed_amp[i] = k_largest_amps[large_amps_idx++].second;
-        
-        assert(large_amps_idx < k_largest_size);
+
+//        assert(large_amps_idx < k_largest_size);
     }
 
     free(state_vector);
+    state_vector = nullptr;
     state_vector = decompressed_amp;
 }
 
 void CompressDecompressStateVector(const string& filename,
                                    cmplx* state_vector,
-                                   idx_size size,
+                                   idx_size state_vector_size,
                                    int error_exponent,
-                                   idx_size kth_fraction_of_amps)
+                                   idx_size kth_fraction_of_amps,
+                                   int num_codewords)
 {
-    vector<cmplx> copy_state_vector(size);
-    for (idx_size i = 0; i < size; ++i)
+    double error_bound = pow(10, error_exponent);
+
+    vector<cmplx> copy_state_vector(state_vector_size);
+    for (idx_size i = 0; i < state_vector_size; ++i)
         copy_state_vector[i] = state_vector[i];
     
-    ApplyUniformTransformToStateVector(state_vector, size);
-    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(state_vector, size, kth_fraction_of_amps);
+    ApplyUniformTransformToStateVector(state_vector, state_vector_size);
+    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(state_vector, state_vector_size, kth_fraction_of_amps);
     
-    PlotUniformSpiralAndAmpDensity("uniform" + filename + to_string(kth_fraction_of_amps), state_vector, size,
-                                   k_largest_amps.second, error_exponent/2, size/kth_fraction_of_amps);
+//    PlotUniformSpiralAndAmpDensity("uniform_" + filename + to_string(kth_fraction_of_amps), state_vector, state_vector_size,
+//                                   k_largest_amps.second, pow(10, error_exponent), state_vector_size/kth_fraction_of_amps,
+//                                   num_codewords, 90);
+
+    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound * 10, error_bound * 10), error_bound);
+    int R = FindCInCThetaForRInUniformSpiral(FindAmpWithMaxMagnitude(state_vector, state_vector_size), error_bound);
     
-    double error_bound = pow(10, error_exponent/2);
-    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound, error_bound), error_bound);
-    int R = FindCInCThetaForRInUniformSpiral(k_largest_amps.second, error_bound);
+    double near_zero_c = 0;
     
-    vector<float> codewords;
-    FindCodewordsForCompression(radiusUniformSpiral, codewords, r, R, error_bound);
+    idx_size num_zero_amps = CompressStateVector(k_largest_amps.first, num_codewords, state_vector, state_vector_size,
+                                                 state_vector_size/kth_fraction_of_amps, error_bound, near_zero_c, r, R);
+
     
-    CompressStateVector(k_largest_amps.first, codewords, state_vector, size, size/kth_fraction_of_amps, error_bound, r);
-    DecompressStateVector(k_largest_amps.first, codewords, state_vector, size/kth_fraction_of_amps, size);
-    ApplyPTTransformToStateVector(state_vector, size);
+    DecompressStateVector(k_largest_amps.first, state_vector, state_vector_size/kth_fraction_of_amps,
+                          state_vector_size, num_codewords, r, R, error_bound, near_zero_c);
+    ApplyPTTransformToStateVector(state_vector, state_vector_size);
     
-    cout << endl << "Fidelity of Compression : " << CalculateFidelity(copy_state_vector.data(), state_vector, size) << endl;
+    double fidelity = CalculateFidelity(copy_state_vector.data(), state_vector, state_vector_size);
+    cout << "Results after compression-decompression of " << log2(state_vector_size) << "q\n";
+    cout << "r = " << r << ", R = " << R << endl;
+    cout << "Fraction of amps mapped to zero : " << num_zero_amps << "/" << state_vector_size << endl;
+    cout << "Largest stored amps : " << state_vector_size/kth_fraction_of_amps << endl;
+    cout << "Number of codewords : " << num_codewords << endl;
+    cout << "Fidelity of Compression : " << fidelity << endl;
    
-    PlotLogSpiralAndAmpDensity("rePT_" + filename + to_string(kth_fraction_of_amps), state_vector,
-                               size, k_largest_amps.second, pow(10, error_exponent), size/kth_fraction_of_amps);
+//    PlotLogSpiralAndAmpDensity("rePT_" + filename + to_string(kth_fraction_of_amps), state_vector,
+//                               state_vector_size, k_largest_amps.second, pow(10, error_exponent), state_vector_size/kth_fraction_of_amps,
+//                               num_codewords, 90, fidelity, num_zero_amps);
 }

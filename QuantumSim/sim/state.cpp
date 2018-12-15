@@ -1163,7 +1163,6 @@ CompressStateVector()
         }
         else
             cerr << memory << " B \n";
-        free(amp);
         exit(err);
     }
     memset(compressed_amp, 0, sizeof(char) * 2 * amp_size);

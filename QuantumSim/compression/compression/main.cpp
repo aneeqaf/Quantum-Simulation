@@ -20,6 +20,8 @@ int main(int argc, char * argv[]) {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "max_error",    required_argument,       nullptr, 'e' },
         { "k_largest",    required_argument,       nullptr, 'k' },
+        { "num_codewords",    required_argument,       nullptr, 'n' },
+        { "num_codewords",    required_argument,       nullptr, 'q' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
@@ -27,8 +29,10 @@ int main(int argc, char * argv[]) {
     double error_bound = 0;
     int c = 0, idx = 0, exponent = -4;
     idx_size k_largest = 16;
+    idx_size num_codewords = (1 << 13) - 2;
+    idx_size num_q = 0;
 
-    while ((c = getopt_long(argc, argv, "i:e:k:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:e:k:n:q:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
@@ -50,6 +54,16 @@ int main(int argc, char * argv[]) {
                 k_largest = stoul(temp);
                 break;
             }
+            case 'n': {
+                string temp = string(optarg);
+                num_codewords = (1 << stoul(temp)) - 2;
+                break;
+            }
+            case 'q': {
+                string temp = string(optarg);
+                num_q = stoul(temp);
+                break;
+            }
             default: {
                 cerr << "Unknown option " << c << '\n';
                 exit(1);
@@ -59,13 +73,12 @@ int main(int argc, char * argv[]) {
     }
                 
     
-    size_t amp_size = 1ull << 16;
+    size_t amp_size = 1ull << num_q;
     cmplx* amp = nullptr;
     
     if (posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0)
         throw "Unable to allocate";
-    memset(amp, 0, amp_size * sizeof(amp));
-    amp[0] = 1;
+    memset(amp, 0, amp_size * sizeof(cmplx));
     
     ifstream infile;
     infile.open(input_filename);
@@ -80,19 +93,24 @@ int main(int argc, char * argv[]) {
     }
     infile.close();
     
-    map<double, pair<double, double>> mag_phases_pitches;
-
     pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
     PlotLogSpiralAndAmpDensity("PT_" + input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second,
-                               error_bound, amp_size/k_largest);
+                               error_bound, amp_size/k_largest, num_codewords, 90);
     
-//    CompressDecompressStateVector(input_filename, amp, amp_size, exponent, k_largest);
-    
-    ApplyUniformTransformToStateVector(amp, amp_size);
+    CompressDecompressStateVector(input_filename, amp, amp_size, exponent, k_largest, num_codewords);
+
+//    vector<cmplx> copy_state_vector(amp_size);
+//    for (idx_size i = 0; i < amp_size; ++i)
+//        copy_state_vector[i] = amp[i];
+//
+//    ApplyUniformTransformToStateVector(amp, amp_size);
+//
+//    k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
+////    PlotLogSpiralAndAmpDensity("rePT_" +input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second, error_bound);
+//
+//    PlotUniformSpiralAndAmpDensity("uniform_" + input_filename + to_string(k_largest), amp, amp_size,
+//                                   k_largest_amps.second, pow(10, exponent), amp_size/k_largest, num_codewords);
 //    ApplyPTTransformToStateVector(amp, amp_size);
-    k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
-//    PlotLogSpiralAndAmpDensity("rePT_" +input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second, error_bound);
-    
-    PlotUniformSpiralAndAmpDensity("uniform_" + input_filename + to_string(k_largest), amp, amp_size,
-                                   k_largest_amps.second, pow(10, exponent/2), amp_size/k_largest);
+//    cout << endl << "Fidelity of Compression : " << CalculateFidelity(copy_state_vector.data(), amp, amp_size) << endl;
+
 }
