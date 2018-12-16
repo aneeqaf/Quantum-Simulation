@@ -56,7 +56,7 @@ int main(int argc, char * argv[]) {
             }
             case 'n': {
                 string temp = string(optarg);
-                num_codewords = (1 << stoul(temp)) - 2;
+                num_codewords = (1 << stoul(temp)) - 1;
                 break;
             }
             case 'q': {
@@ -93,16 +93,16 @@ int main(int argc, char * argv[]) {
     }
     infile.close();
     
-    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
-    PlotLogSpiralAndAmpDensity("PT_" + input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second,
-                               error_bound, amp_size/k_largest, num_codewords, 90);
-    
+//    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
+//    PlotLogSpiralAndAmpDensity("PT_" + input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second,
+//                               error_bound, amp_size/k_largest, num_codewords, 90);
+//    
     CompressDecompressStateVector(input_filename, amp, amp_size, exponent, k_largest, num_codewords);
 
 //    vector<cmplx> copy_state_vector(amp_size);
 //    for (idx_size i = 0; i < amp_size; ++i)
 //        copy_state_vector[i] = amp[i];
-//
+////
 //    ApplyUniformTransformToStateVector(amp, amp_size);
 //
 //    k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);

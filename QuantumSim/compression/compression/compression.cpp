@@ -378,13 +378,13 @@ void ApplyUniformTransformToStateVector(cmplx* state_vector,
                                         idx_size state_vector_size)
 {    
     for (idx_size i = 0; i < state_vector_size; ++i) {
-        double original_phase = atan2(state_vector[i].imag(), state_vector[i].real());
-        original_phase = original_phase < 0 ? original_phase + ( 2 * PI) : original_phase;
-        double PT_probability = norm(state_vector[i]);
-        double uniform_probability = 1.0 - exp(-PT_probability * state_vector_size);
+        double original_phase = atan2((double)state_vector[i].imag(), (double)state_vector[i].real());
+        original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
+        double PT_probability = norm(complex<double>(state_vector[i]));
+        double uniform_probability = 1.0 - exp(-PT_probability * (double)state_vector_size);
         
         double uniform_mag = sqrt(uniform_probability);
-        state_vector[i] = cmplx(uniform_mag * cos(original_phase), uniform_mag * sin(original_phase));
+        state_vector[i] = complex<double>(uniform_mag * cos(original_phase), uniform_mag * sin(original_phase));
 //        cout << state_vector[i] << "; ";
     }
 }
@@ -393,14 +393,15 @@ void ApplyPTTransformToStateVector(cmplx* state_vector,
                                    idx_size state_vector_size)
 {
     for (idx_size i = 0; i < state_vector_size; ++i) {
-        double original_phase = atan2(state_vector[i].imag(), state_vector[i].real());
-        original_phase = original_phase < 0 ? original_phase + ( 2 * PI) : original_phase;
-        double uniform_probability = norm(state_vector[i]);
-        double PT_probability = -log(abs(1.0 - uniform_probability)) / state_vector_size;
+        double original_phase = atan2((double)state_vector[i].imag(), (double)state_vector[i].real());
+        original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
+        double uniform_probability = norm(complex<double>(state_vector[i]));
+        double PT_probability = -log(abs(1.0 - uniform_probability)) / (double)state_vector_size;
         
         double PT_mag = sqrt(PT_probability);
-        state_vector[i] = cmplx(PT_mag * cos(original_phase), PT_mag * sin(original_phase));
+        state_vector[i] = complex<double>(PT_mag * cos(original_phase), PT_mag * sin(original_phase));
     }
+    cout << endl;
 }
 
 unsigned short MapAmpToCodeword(const amp_idx_t* k_largest_amps,
@@ -427,7 +428,7 @@ unsigned short MapAmpToCodeword(const amp_idx_t* k_largest_amps,
     }
     else if (idx_k_largest < k_largest_size && amp_idx ==  k_largest_amps[idx_k_largest].first) {
         ++idx_k_largest;
-        return num_codewords + 1;
+        return num_codewords;
     }
     else
         return CalculateNearestCodewordToAmp(amp, r, (double)(R - r)/(double)num_codewords, error_bound);
@@ -514,7 +515,7 @@ void DecompressStateVector(const amp_idx_t* k_largest_amps,
             
             decompressed_amp[i] = cmplx(magnitude * cos(near_zero_c * PI), magnitude * sin(near_zero_c * PI));
         }
-        else if (compressed_t_amp[i] != num_codewords + 1) {
+        else if (compressed_t_amp[i] != num_codewords) {
             double c = CalculateCforCodewordInCTheta(compressed_t_amp[i], r, cw_dist);
             double magnitude = RadiusUniformSpiral(c * PI, error_bound);
             
@@ -551,7 +552,7 @@ void CompressDecompressStateVector(const string& filename,
 //                                   k_largest_amps.second, pow(10, error_exponent), state_vector_size/kth_fraction_of_amps,
 //                                   num_codewords, 90);
 
-    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound * 10, error_bound * 10), error_bound);
+    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound * 300, error_bound * 300), error_bound);
     int R = FindCInCThetaForRInUniformSpiral(FindAmpWithMaxMagnitude(state_vector, state_vector_size), error_bound);
     
     double near_zero_c = 0;
@@ -565,13 +566,20 @@ void CompressDecompressStateVector(const string& filename,
     ApplyPTTransformToStateVector(state_vector, state_vector_size);
     
     double fidelity = CalculateFidelity(copy_state_vector.data(), state_vector, state_vector_size);
+    cout << setprecision(3);
     cout << "Results after compression-decompression of " << log2(state_vector_size) << "q\n";
-    cout << "r = " << r << ", R = " << R << endl;
-    cout << "Fraction of amps mapped to zero : " << num_zero_amps << "/" << state_vector_size << endl;
+    cout << "R max = " << FindCInCThetaForRInUniformSpiral(FindAmpWithMaxMagnitude(state_vector, state_vector_size), error_bound) * error_bound * PI << endl;
+    cout << "Fraction of amps mapped to zero : " << num_zero_amps << "/" << state_vector_size
+    << " (" << (double)num_zero_amps/(double)state_vector_size << ")" << endl;
     cout << "Largest stored amps : " << state_vector_size/kth_fraction_of_amps << endl;
     cout << "Number of codewords : " << num_codewords << endl;
     cout << "Fidelity of Compression : " << fidelity << endl;
+    cout << "Compression ratio : " << (double)((sizeof(complex<float>) * (double)state_vector_size) + (sizeof(complex<float>)
+                                    * ((double)state_vector_size/(double)kth_fraction_of_amps))
+                                    + (sizeof(idx_size) * ((double)state_vector_size/(double)kth_fraction_of_amps)))
+                                    /(double)((log2(num_codewords)/8) * (double)state_vector_size) << endl;
    
+//    k_largest_amps = ExtractFractionsOfAmpsFromState(state_vector, state_vector_size, kth_fraction_of_amps);
 //    PlotLogSpiralAndAmpDensity("rePT_" + filename + to_string(kth_fraction_of_amps), state_vector,
 //                               state_vector_size, k_largest_amps.second, pow(10, error_exponent), state_vector_size/kth_fraction_of_amps,
 //                               num_codewords, 90, fidelity, num_zero_amps);
