@@ -31,7 +31,8 @@
 using namespace std;
 
 using idx_size = size_t;
-using cmplx = complex<double>;
+using cmplx = complex<float>;
+using cmplxd = complex<double>;
 using Packed4ShortArray = unsigned short[4];
 using Packed8ShortArray = unsigned short[8];
 using amp_idx_t = pair<size_t, cmplx>;
@@ -127,7 +128,7 @@ static inline unsigned short ShiftCodeWordToCorrectQuadrant(double phase,
     
     return round(CalculateCodewordGivenCInCTheta(c, r, cw_dist));
 }
-static inline unsigned short CalculateNearestCodewordToAmp(cmplx amp,
+static inline unsigned short CalculateNearestCodewordToAmp(cmplxd amp,
                                                            int r,
                                                            double cw_dist,
                                                            double error_bound)
@@ -225,39 +226,39 @@ void CompressDecompressStateVector(const string& filename,
                                    cmplx* state_vector,
                                    idx_size state_vector_size,
                                    int error_exponent,
-                                   idx_size k_largest,
-                                   int num_codewords);
+                                   int num_codewords,
+                                   double probability_acceptance);
 
-idx_size CompressStateVector(const amp_idx_t* k_largest_amps,
-                         int num_codewords,
-                         cmplx*& state_vector,
-                         idx_size state_vector_size,
-                         idx_size k,
-                         double error_bound,
-                         double& near_zero_cw,
-                         int r,
-                         int R);
+idx_size CompressStateVector(vector<cmplx>& k_largest_amps,
+                             int num_codewords,
+                             cmplx*& state_vector,
+                             idx_size state_vector_size,
+                             double min_radius_uniform,
+                             double error_bound,
+                             double probability_acceptance,
+                             cmplx& near_zero_amp,
+                             int r,
+                             int R);
 
-void DecompressStateVector(const amp_idx_t* k_largest_amps,
+void DecompressStateVector(const cmplx* k_largest_amps,
                            cmplx*& state_vector,
-                           idx_size k_largest_size,
                            idx_size state_vector_size,
                            idx_size num_codewords,
                            int r,
                            int R,
                            double error_bound,
-                           double near_zero_c);
+                           cmplx near_zero_amp);
 
-unsigned short MapAmpToCodeword(const amp_idx_t* k_largest_amps,
-                                cmplx amp,
+unsigned short MapAmpToCodeword(vector<cmplx>& k_largest_amps,
+                                cmplxd amp,
                                 idx_size amp_idx,
-                                idx_size k,
-                                int r,
-                                int R,
+                                idx_size state_vector_size,
+                                int r_uniform,
                                 int num_codewords,
                                 double error_bound,
-                                double& near_zero_cw,
-                                idx_size& num_near_zero_amps);
+                                cmplx& near_zero_amp,
+                                idx_size& num_near_zero_amps,
+                                double probability_acceptance);
 
 #endif /* compression_h */
 

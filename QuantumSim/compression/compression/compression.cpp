@@ -404,45 +404,75 @@ void ApplyPTTransformToStateVector(cmplx* state_vector,
     cout << endl;
 }
 
-unsigned short MapAmpToCodeword(const amp_idx_t* k_largest_amps,
-                                cmplx amp,
+pair<double, cmplxd> UniformTransformMagnitudeAndAmp(cmplxd amp,
+                                                     idx_size state_vector_size)
+{
+    double original_phase = atan2(amp.imag(), amp.real());
+    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
+    double PT_probability = norm(amp);
+    double uniform_probability = 1.0 - exp(-PT_probability * (double)state_vector_size);
+    
+    double uniform_mag = sqrt(uniform_probability);
+    amp = cmplxd(uniform_mag * cos(original_phase), uniform_mag * sin(original_phase));
+    
+    return make_pair(uniform_mag, amp);
+}
+
+pair<double, cmplxd> PTTransformMagnitudeAndAmp(cmplxd amp,
+                                                idx_size state_vector_size)
+{
+    double original_phase = atan2(amp.imag(), amp.real());
+    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
+    double uniform_probability = norm(amp);
+    double PT_probability = -log(abs(1.0 - uniform_probability)) / state_vector_size;
+    
+    double PT_mag = sqrt(PT_probability);
+    amp = cmplxd(PT_mag * cos(original_phase), PT_mag * sin(original_phase));
+    
+    return make_pair(PT_mag, amp);
+}
+
+unsigned short MapAmpToCodeword(vector<cmplx>& k_largest_amps,
+                                cmplxd amp,
                                 idx_size amp_idx,
-                                idx_size k_largest_size,
-                                int r,
-                                int R,
+                                idx_size state_vector_size,
+                                int r_uniform,
+                                int R_uniform,
+                                double min_radius_uniform,
                                 int num_codewords,
                                 double error_bound,
-                                double& near_zero_c,
-                                idx_size& num_near_zero_amps)
+                                cmplx& near_zero_amp,
+                                idx_size& num_near_zero_amps,
+                                double probability_acceptance)
 {
-    static idx_size idx_k_largest = 0;
-    double magnitude = abs(amp);
-    double min_radius = RadiusUniformSpiral((r + 2) * PI, error_bound);
+    double PT_mag = abs(amp);
     
-    assert(idx_k_largest <= k_largest_size);
+    pair<double, cmplxd> uniform_transform = UniformTransformMagnitudeAndAmp(amp, state_vector_size);
     
-    if (magnitude < min_radius) {
-        near_zero_c += CalculateCInCThetaGivenMagnitudeUniformSpiral(magnitude, error_bound);
+    if (PT_mag < probability_acceptance) {
+        near_zero_amp += (cmplxd)amp;
         ++num_near_zero_amps;
         return 0;
     }
-    else if (idx_k_largest < k_largest_size && amp_idx ==  k_largest_amps[idx_k_largest].first) {
-        ++idx_k_largest;
-        return num_codewords;
+    else if (uniform_transform.first < min_radius_uniform) {
+        k_largest_amps.push_back((cmplx)amp);
+        return num_codewords + 1;
     }
     else
-        return CalculateNearestCodewordToAmp(amp, r, (double)(R - r)/(double)num_codewords, error_bound);
+        return CalculateNearestCodewordToAmp(uniform_transform.second, r_uniform, (double)(R_uniform - r_uniform)/(double)num_codewords, error_bound);
+    
 }
 
-idx_size CompressStateVector(const amp_idx_t* k_largest_amps,
-                         int num_codewords,
-                         cmplx*& state_vector,
-                         idx_size state_vector_size,
-                         idx_size k_largest_size,
-                         double error_bound,
-                         double& near_zero_c,
-                         int r,
-                         int R)
+idx_size CompressStateVector(vector<cmplx>& k_largest_amps,
+                             int num_codewords,
+                             cmplx*& state_vector,
+                             idx_size state_vector_size,
+                             double min_radius_uniform,
+                             double error_bound,
+                             double probability_acceptance,
+                             cmplx& near_zero_amp,
+                             int r,
+                             int R)
 {
     
     cmplx* compressed_amp = nullptr;
@@ -455,31 +485,22 @@ idx_size CompressStateVector(const amp_idx_t* k_largest_amps,
     
     idx_size num_near_zero_amps = 0;
     
-    for (idx_size c_idx = 0; c_idx < state_vector_size/8; ++c_idx) {
-        Packed8ShortArray temp = {0};
-        temp[0] = MapAmpToCodeword(k_largest_amps, state_vector[i], i, k_largest_size, r, R, num_codewords,
-                                   error_bound, near_zero_c, num_near_zero_amps);
-        temp[1] = MapAmpToCodeword(k_largest_amps, state_vector[i + 1], i + 1, k_largest_size, r, R, num_codewords,
-                                    error_bound, near_zero_c, num_near_zero_amps);
-        temp[2] = MapAmpToCodeword(k_largest_amps, state_vector[i + 2], i + 2, k_largest_size, r, R, num_codewords,
-                                    error_bound, near_zero_c, num_near_zero_amps);
-        temp[3] = MapAmpToCodeword(k_largest_amps, state_vector[i + 3], i + 3, k_largest_size, r, R, num_codewords,
-                                    error_bound, near_zero_c, num_near_zero_amps);
-        temp[4] = MapAmpToCodeword(k_largest_amps, state_vector[i + 4], i + 4, k_largest_size, r, R, num_codewords,
-                                   error_bound, near_zero_c, num_near_zero_amps);
-        temp[5] = MapAmpToCodeword(k_largest_amps, state_vector[i + 5], i + 5, k_largest_size, r, R, num_codewords,
-                                   error_bound, near_zero_c, num_near_zero_amps);
-        temp[6] = MapAmpToCodeword(k_largest_amps, state_vector[i + 6], i + 6, k_largest_size, r, R, num_codewords,
-                                   error_bound, near_zero_c, num_near_zero_amps);
-        temp[7] = MapAmpToCodeword(k_largest_amps, state_vector[i + 7], i + 7, k_largest_size, r, R, num_codewords,
-                                   error_bound, near_zero_c, num_near_zero_amps);
-        
-        
+    for (idx_size c_idx = 0; c_idx < state_vector_size/4; ++c_idx) {
+        Packed4ShortArray temp = {0};
+        temp[0] = MapAmpToCodeword(k_largest_amps, state_vector[i], i, state_vector_size, r, R, min_radius_uniform,
+                                   num_codewords, error_bound, near_zero_amp, num_near_zero_amps, probability_acceptance);
+        temp[1] = MapAmpToCodeword(k_largest_amps, state_vector[i + 1], i + 1, state_vector_size, r, R, min_radius_uniform,
+                                   num_codewords, error_bound, near_zero_amp, num_near_zero_amps, probability_acceptance);
+        temp[2] = MapAmpToCodeword(k_largest_amps, state_vector[i + 2], i + 2, state_vector_size, r, R, min_radius_uniform,
+                                   num_codewords, error_bound, near_zero_amp, num_near_zero_amps, probability_acceptance);
+        temp[3] = MapAmpToCodeword(k_largest_amps, state_vector[i + 3], i + 3, state_vector_size, r, R, min_radius_uniform,
+                                   num_codewords, error_bound, near_zero_amp, num_near_zero_amps, probability_acceptance);
+
         compressed_amp[c_idx] = *(cmplx*)temp;
-        i += 8;
+        i += 4;
     }
 
-    near_zero_c /= num_near_zero_amps;
+    near_zero_amp /= num_near_zero_amps;
     
     free(state_vector);
     state_vector = nullptr;
@@ -488,15 +509,14 @@ idx_size CompressStateVector(const amp_idx_t* k_largest_amps,
     return num_near_zero_amps;
 }
 
-void DecompressStateVector(const amp_idx_t* k_largest_amps,
+void DecompressStateVector(const cmplx* k_largest_amps,
                            cmplx*& state_vector,
-                           idx_size k_largest_size,
                            idx_size state_vector_size,
                            idx_size num_codewords,
                            int r,
                            int R,
                            double error_bound,
-                           double near_zero_c)
+                           cmplx near_zero_amp)
 {
     cmplx* decompressed_amp = nullptr;
     if (posix_memalign((void**)&decompressed_amp, 64, sizeof(cmplx) * state_vector_size) != 0)
@@ -510,21 +530,17 @@ void DecompressStateVector(const amp_idx_t* k_largest_amps,
     
     for (idx_size i = 0; i < state_vector_size; ++i) {
         
-        if (compressed_t_amp[i] == 0) {
-            double magnitude = RadiusUniformSpiral(near_zero_c * PI, error_bound);
-            
-            decompressed_amp[i] = cmplx(magnitude * cos(near_zero_c * PI), magnitude * sin(near_zero_c * PI));
-        }
-        else if (compressed_t_amp[i] != num_codewords) {
+        if (compressed_t_amp[i] == 0)
+            decompressed_amp[i] = near_zero_amp;
+        else if (compressed_t_amp[i] != num_codewords + 1) {
             double c = CalculateCforCodewordInCTheta(compressed_t_amp[i], r, cw_dist);
             double magnitude = RadiusUniformSpiral(c * PI, error_bound);
-            
-            decompressed_amp[i] = cmplx(magnitude * cos(c * PI), magnitude * sin(c * PI));
+            decompressed_amp[i] = PTTransformMagnitudeAndAmp(cmplxd(magnitude * cos(c * PI), magnitude * sin(c * PI)),
+                                                             state_vector_size).second;
         }
         else
-            decompressed_amp[i] = k_largest_amps[large_amps_idx++].second;
+            decompressed_amp[i] = k_largest_amps[large_amps_idx++];
 
-//        assert(large_amps_idx < k_largest_size);
     }
 
     free(state_vector);
@@ -536,8 +552,8 @@ void CompressDecompressStateVector(const string& filename,
                                    cmplx* state_vector,
                                    idx_size state_vector_size,
                                    int error_exponent,
-                                   idx_size kth_fraction_of_amps,
-                                   int num_codewords)
+                                   int num_codewords,
+                                   double probability_acceptance)
 {
     double error_bound = pow(10, error_exponent);
 
@@ -545,38 +561,34 @@ void CompressDecompressStateVector(const string& filename,
     for (idx_size i = 0; i < state_vector_size; ++i)
         copy_state_vector[i] = state_vector[i];
     
-    ApplyUniformTransformToStateVector(state_vector, state_vector_size);
-    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(state_vector, state_vector_size, kth_fraction_of_amps);
-    
 //    PlotUniformSpiralAndAmpDensity("uniform_" + filename + to_string(kth_fraction_of_amps), state_vector, state_vector_size,
 //                                   k_largest_amps.second, pow(10, error_exponent), state_vector_size/kth_fraction_of_amps,
 //                                   num_codewords, 90);
 
-    int r = FindCInCThetaForRInUniformSpiral(cmplx(error_bound * 300, error_bound * 300), error_bound);
-    int R = FindCInCThetaForRInUniformSpiral(FindAmpWithMaxMagnitude(state_vector, state_vector_size), error_bound);
+    int r_uniform = FindCInCThetaForRInUniformSpiral(cmplx(probability_acceptance, probability_acceptance), error_bound);
+    double min_radius_uniform = RadiusUniformSpiral((r_uniform + 2) * PI, error_bound);
+    double max_radius_uniform = UniformTransformMagnitudeAndAmp(cmplx(min_radius_uniform, min_radius_uniform), state_vector_size).first;
+    int R_uniform = FindCInCThetaForRInUniformSpiral(max_radius_uniform, error_bound);
     
-    double near_zero_c = 0;
+    cmplx near_zero_amp = 0;
+    vector<cmplx> k_largest_amp;
     
-    idx_size num_zero_amps = CompressStateVector(k_largest_amps.first, num_codewords, state_vector, state_vector_size,
-                                                 state_vector_size/kth_fraction_of_amps, error_bound, near_zero_c, r, R);
-
+    idx_size num_zero_amps = CompressStateVector(k_largest_amp, num_codewords, state_vector, state_vector_size, min_radius_uniform,
+                                                 error_bound, probability_acceptance, near_zero_amp, r_uniform, R_uniform);
     
-    DecompressStateVector(k_largest_amps.first, state_vector, state_vector_size/kth_fraction_of_amps,
-                          state_vector_size, num_codewords, r, R, error_bound, near_zero_c);
-    ApplyPTTransformToStateVector(state_vector, state_vector_size);
+    DecompressStateVector(k_largest_amp.data(), state_vector, state_vector_size, num_codewords, r_uniform, R_uniform, error_bound, near_zero_amp);
     
     double fidelity = CalculateFidelity(copy_state_vector.data(), state_vector, state_vector_size);
-    cout << setprecision(3);
+//    cout << setprecision(3);
     cout << "Results after compression-decompression of " << log2(state_vector_size) << "q\n";
-    cout << "R max = " << FindCInCThetaForRInUniformSpiral(FindAmpWithMaxMagnitude(state_vector, state_vector_size), error_bound) * error_bound * PI << endl;
+    cout << "r = " << r_uniform * error_bound * PI << ", R = " << R_uniform * error_bound * PI << endl;;
     cout << "Fraction of amps mapped to zero : " << num_zero_amps << "/" << state_vector_size
     << " (" << (double)num_zero_amps/(double)state_vector_size << ")" << endl;
-    cout << "Largest stored amps : " << state_vector_size/kth_fraction_of_amps << endl;
+    cout << "Largest stored amps : " << k_largest_amp.size() << endl;
     cout << "Number of codewords : " << num_codewords << endl;
     cout << "Fidelity of Compression : " << fidelity << endl;
-    cout << "Compression ratio : " << (double)((sizeof(complex<float>) * (double)state_vector_size) + (sizeof(complex<float>)
-                                    * ((double)state_vector_size/(double)kth_fraction_of_amps))
-                                    + (sizeof(idx_size) * ((double)state_vector_size/(double)kth_fraction_of_amps)))
+    cout << "Compression ratio : " << (double)((sizeof(complex<float>) * (double)state_vector_size)
+                                    + (sizeof(complex<float>)* k_largest_amp.size()))
                                     /(double)((log2(num_codewords)/8) * (double)state_vector_size) << endl;
    
 //    k_largest_amps = ExtractFractionsOfAmpsFromState(state_vector, state_vector_size, kth_fraction_of_amps);

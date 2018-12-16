@@ -19,20 +19,20 @@ int main(int argc, char * argv[]) {
     static const struct option longopts[] = {
         { "inputfile",    required_argument,       nullptr, 'i' },
         { "max_error",    required_argument,       nullptr, 'e' },
-        { "k_largest",    required_argument,       nullptr, 'k' },
         { "num_codewords",    required_argument,       nullptr, 'n' },
         { "num_codewords",    required_argument,       nullptr, 'q' },
+        { "probability",    required_argument,       nullptr, 'p' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     string input_filename = "";
-    double error_bound = 0;
-    int c = 0, idx = 0, exponent = -4;
-    idx_size k_largest = 16;
+    double error_bound = 1e-3;
+    int c = 0, idx = 0, exponent = -3;
     idx_size num_codewords = (1 << 13) - 2;
     idx_size num_q = 0;
+    double probability = 0;
 
-    while ((c = getopt_long(argc, argv, "i:e:k:n:q:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "i:e:n:q:p:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'i': {
@@ -49,14 +49,14 @@ int main(int argc, char * argv[]) {
                 error_bound = pow(10, exponent);
                 break;
             }
-            case 'k': {
+            case 'p': {
                 string temp = string(optarg);
-                k_largest = stoul(temp);
+                probability = stod(temp);
                 break;
             }
             case 'n': {
                 string temp = string(optarg);
-                num_codewords = (1 << stoul(temp)) - 1;
+                num_codewords = (1 << stoul(temp)) - 2;
                 break;
             }
             case 'q': {
@@ -97,7 +97,7 @@ int main(int argc, char * argv[]) {
 //    PlotLogSpiralAndAmpDensity("PT_" + input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second,
 //                               error_bound, amp_size/k_largest, num_codewords, 90);
 //    
-    CompressDecompressStateVector(input_filename, amp, amp_size, exponent, k_largest, num_codewords);
+    CompressDecompressStateVector(input_filename, amp, amp_size, exponent, num_codewords, probability);
 
 //    vector<cmplx> copy_state_vector(amp_size);
 //    for (idx_size i = 0; i < amp_size; ++i)
