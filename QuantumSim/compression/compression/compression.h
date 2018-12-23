@@ -71,7 +71,7 @@ static inline double CalculateCodewordInLogSpiral(double magnitude,
                                                   int r,
                                                   double cw_dist)
 {
-    return (CalculateCInCThetaGivenMagnitudeLogSpiral(magnitude) - r)/cw_dist;
+    return (CalculateCInCThetaGivenMagnitudeLogSpiral(magnitude) - r) / cw_dist;
 }
 
 static inline double CalculateCodewordInUniformSpiral(double magnitude,
@@ -79,14 +79,14 @@ static inline double CalculateCodewordInUniformSpiral(double magnitude,
                                                       int r,
                                                       double cw_dist)
 {
-    return (CalculateCInCThetaGivenMagnitudeUniformSpiral(magnitude, error_bound) - r)/cw_dist;
+    return (CalculateCInCThetaGivenMagnitudeUniformSpiral(magnitude, error_bound) - r) / cw_dist;
 }
 
 static inline double CalculateCodewordGivenCInCTheta(double c,
                                                      int r,
                                                      double cw_dist)
 {
-    return (c - r)/cw_dist;
+    return (c - r) / cw_dist;
 }
 
 
@@ -155,22 +155,23 @@ static inline unsigned short CalculateNearestCodewordToAmp(cmplxd amp,
     return cw;
 }
 
-cmplx DotProduct(const cmplx* vect_A,
-                 const cmplx* vect_B,
+cmplxd DotProduct(const cmplxd* vect_A,
+                 const cmplxd* vect_B,
                  idx_size state_vector_size);
 
-double CalculateNorm(const cmplx* amp,
+double CalculateNorm(const cmplxd* amp,
                      idx_size state_vector_size);
 
 /* This function is used to calculate the integer range of codewords so, it typically takes
  * the error bound, the largest amp in k smallest amp, or the smallest amp in the k largest amps.
  */
-int FindCInCThetaForRInLogSpiral(cmplx amp);
+int FindCInCThetaForRInLogSpiral(double magnitude);
 
-int FindCInCThetaForRInUniformSpiral(cmplx amp);
+int FindCInCThetaForRInUniformSpiral(double magnitude,
+                                     double error_bound);
 
-double CalculateFidelity(const cmplx* original,
-                         const cmplx* processed,
+double CalculateFidelity(const cmplxd* original,
+                         const cmplxd* processed,
                          idx_size state_vector_size);
 
 cmplx FindAmpWithMaxMagnitude(const cmplx* state_vector,
@@ -199,7 +200,8 @@ pair<amp_idx_t*, cmplx> ExtractFractionsOfAmpsFromState(const cmplx* state_vecto
 void PlotLogSpiralAndAmpDensity(const string& filename,
                                 const cmplx* state_vector,
                                 idx_size state_vector_size,
-                                cmplx smallest_amp_in_k_largest,
+                                int R,
+                                int r,
                                 double error_bound,
                                 idx_size k_size,
                                 int num_codewords,
@@ -210,7 +212,8 @@ void PlotLogSpiralAndAmpDensity(const string& filename,
 void PlotUniformSpiralAndAmpDensity(const string& filename,
                                     const cmplx* state_vector,
                                     idx_size state_vector_size,
-                                    cmplx smallest_amp_in_k_largest,
+                                    int R,
+                                    int r,
                                     double error_bound,
                                     idx_size k_size,
                                     int num_codewords,
@@ -251,7 +254,6 @@ void DecompressStateVector(const cmplx* k_largest_amps,
 
 unsigned short MapAmpToCodeword(vector<cmplx>& k_largest_amps,
                                 cmplxd amp,
-                                idx_size amp_idx,
                                 idx_size state_vector_size,
                                 int r_uniform,
                                 int num_codewords,

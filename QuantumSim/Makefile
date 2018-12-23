@@ -1,13 +1,15 @@
 CC := g++-7
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
+SZPATH := /usr/local
 SRCDIR := vector_state_sim
 TARGETDIR := bin
 OUTPUT := output/amp_vectors output/probabilities output/qpro_scripts output/reports output/misc
 INPUT := input/random_circuits_rollright
 TARGET := bin/rr
 LIBS = -lm -lstdc++
-INC = -I libs -I sim -I sim/kernels
+SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a -lm
+INC = -I libs -I sim -I sim/kernels 
 CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
 -fmodulo-sched-allow-regmoves -fsplit-ivs-in-unroller -ffast-math -fgcse-las -m64 -mavx -mavx2 -msse2avx \
 -march=core-avx-i -mtune=core-avx-i  -DRT -fopenmp -DParallel 
@@ -48,13 +50,9 @@ $(INPUT):
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(TARGETDIR) $(OUTPUT) $(INPUT) $(EXE) $(OBJECTS) 
-	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -fopenmp -o $@
+	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) $(SZFLAG) -fopenmp -o $@
 
 clean:
-	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/rr bin/bm
-
-# Benchmark
-bm: $(OBJECTS) $(BM) $(KERNELHEADERS)
-	$(CC) $(CFLAGS) $(BM) $(OBJECTS) $(INC) $(LIBS) benchmark/main.cpp -o bin/bm
+	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/rr
 
 # export LD_LIBRARY_PATH=/usr/local/gcc7/lib64

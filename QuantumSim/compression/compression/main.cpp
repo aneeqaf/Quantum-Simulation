@@ -73,7 +73,7 @@ int main(int argc, char * argv[]) {
     }
                 
     
-    size_t amp_size = 1ull << num_q;
+    size_t amp_size = 1ull << (num_q);
     cmplx* amp = nullptr;
     
     if (posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0)
@@ -90,6 +90,8 @@ int main(int argc, char * argv[]) {
     while (infile >> real >> imag >> extra) {
         assert(i < amp_size);
         amp[i++] = cmplx(real, imag);
+        if (i == amp_size)
+            break;
     }
     infile.close();
     

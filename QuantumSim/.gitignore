@@ -48,3 +48,4 @@ qiskit-terra/
 compression/compression.xcodeproj
 *.png
 *.dat
+compression/compression/sz-2.0.2.0/
