@@ -1146,7 +1146,6 @@ CompressStateVector()
 {
     if (global_i_counter || global_factor_power)
         RescaleAndApplyGlobalICounter();
-    PrintStateVector();
     
     cmplx* compressed_amp = nullptr;
     if (int err = posix_memalign((void**)&compressed_amp, 64, sizeof(char) * 2 * amp_size) != 0) {
@@ -1290,8 +1289,6 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
         j += 2;
     }
     
-    compressed = false;
-    PrintStateVector();
-   
+    compressed = false;   
 }
 
