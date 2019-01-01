@@ -67,10 +67,14 @@ FullAmpStateVector::
 FullAmpStateVector(const FullAmpStateVector& rhs):
 max_prob(rhs.max_prob), min_prob(rhs.min_prob), amp_size(rhs.amp_size),
 global_factor_power(rhs.global_factor_power), global_i_counter(rhs.global_i_counter),
-num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_zeros),
-sv_comp_decomp(rhs.sv_comp_decomp)
+num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_zeros)
 {
    compressed = rhs.compressed;
+    
+    if (rhs.sv_comp_decomp) {
+        if (sv_comp_decomp) free(sv_comp_decomp);
+        sv_comp_decomp = new SZ_Helper(*rhs.sv_comp_decomp);
+    }
     
    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
         idx_size memory = sizeof(cmplx) * amp_size;
@@ -1115,8 +1119,35 @@ CopyState(const GenericQuantumState& rhs)
     global_i_counter = t_rhs.global_i_counter;
     zero_opt_mask = t_rhs.zero_opt_mask;
     all_zeros = t_rhs.all_zeros;
+    compressed = t_rhs.compressed;
+    amp_size = t_rhs.amp_size;
     
     idx_size size = 2 * rhs.GetSize();
+    
+    if (amp == nullptr) {
+        if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
+            idx_size memory = sizeof(cmplx) * amp_size;
+            cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+            if (memory >= (1 << 30)) {
+                cerr << memory / (1 << 30) << " GiB \n";
+            }
+            else if (memory >= (1 << 20)) {
+                cerr << memory / (1 << 20) << " MiB \n";
+            }
+            else if (memory >= (1 << 10)) {
+                cerr << memory / (1 << 10) << " KiB \n";
+            }
+            else
+                cerr << memory << " B \n";
+            free(amp);
+            exit(err);
+        }
+        memset(amp, 0, amp_size * sizeof(amp));
+    }
+    if (t_rhs.sv_comp_decomp) {
+        if (sv_comp_decomp) free(sv_comp_decomp);
+        sv_comp_decomp = new SZ_Helper(*t_rhs.sv_comp_decomp);
+    }
     
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(t_rhs.amp, 64);
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
@@ -1152,7 +1183,7 @@ CompressStateVector(const string& SZ_cnfg)
     sv_comp_decomp = new SZ_Helper(SZ_cnfg, amp_size, num_threads);
     sv_comp_decomp -> Compress(amp);
     
-    free(amp);
+    if (amp) free(amp);
     amp = nullptr;
     compressed = true;
 }
@@ -1160,7 +1191,7 @@ CompressStateVector(const string& SZ_cnfg)
 void FullAmpStateVector::
 DecompressStateVector()
 {
-    free(amp);
+    if (amp) free(amp);
     amp = nullptr;
     amp = (cmplx*) sv_comp_decomp -> Decompress();
     compressed = false;
@@ -1173,19 +1204,11 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     assert(t_rhs.global_factor_power == 0);
     assert(t_rhs.global_i_counter == 0);
     
-    max_prob = t_rhs.max_prob;
-    min_prob = t_rhs. min_prob;
-    global_factor_power = t_rhs.global_factor_power;
-    global_i_counter = t_rhs.global_i_counter;
-    amp_size = t_rhs.amp_size;
-    num_qubits = t_rhs.num_qubits;
-    zero_opt_mask = t_rhs.zero_opt_mask;
-    all_zeros = t_rhs.all_zeros;
+    CopyMemberVars(rhs);
     
-    free(amp);
+    if (amp) free(amp);
     amp = nullptr;
     amp = (cmplx*) t_rhs.sv_comp_decomp -> Decompress();
-    
     compressed = false;   
 }
 

@@ -11,51 +11,36 @@
 SZ_Helper::
 ~SZ_Helper()
 {
-    for (size_t i = 0; i < num_threads; ++i)
-        free(compressed_vector_ptrs[i]);
-    delete [] compressed_vector_ptrs;
-    delete [] compressed_out_sizes;
+    for (auto ptrs : compressed_vector_ptrs)
+        if(ptrs) free(ptrs);
 }
 
 SZ_Helper::
 SZ_Helper(const SZ_Helper& rhs)
 {
-    compressed_vector_ptrs = new unsigned char*[num_threads];
-    compressed_out_sizes = new size_t[num_threads];
-    
     for (size_t i = 0; i < num_threads; ++i) {
         compressed_out_sizes[i] = rhs.compressed_out_sizes[i];
-        
-        for (size_t j = 0; j < compressed_out_sizes[i]; ++j) {
-            compressed_vector_ptrs[i] = (unsigned char*) malloc(sizeof(unsigned char) * compressed_out_sizes[i]);
+        compressed_vector_ptrs[i] = (unsigned char*) malloc(sizeof(unsigned char) * compressed_out_sizes[i]);
+
+        for (size_t j = 0; j < compressed_out_sizes[i]; ++j)
             compressed_vector_ptrs[i][j] = rhs.compressed_vector_ptrs[i][j];
-        }
     }
 }
 
 void SZ_Helper::
 Compress(const cmplx* original_vector)
 {
-    if (compressed_vector_ptrs != nullptr && compressed_out_sizes != nullptr) {
-        for (size_t i = 0; i < num_threads; ++i)
-            free(compressed_vector_ptrs[i]);
-        delete [] compressed_vector_ptrs;
-        delete [] compressed_out_sizes;
-    }
-    
-    compressed_vector_ptrs = new unsigned char*[num_threads];
-    compressed_out_sizes = new size_t[num_threads];
-    
     int status = SZ_Init(sz_cnfg.c_str());
     if(status == SZ_NSCS)
         exit(1);
     
     size_t size_of_each_compression = actual_vector_size/num_threads;
     
-    #pragma omp parallel for num_threads(num_threads)
+//    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < num_threads; ++i) {
-        unsigned char* compressed_ptr = (unsigned char*) SZ_compress_args(DATATYPE, (float *)(original_vector + (i * size_of_each_compression)),
-                                                                          compressed_out_sizes + i, ERR_BOUND_MODE, error_bound, error_bound,
+        unsigned char* compressed_ptr = (unsigned char*) SZ_compress_args(DATATYPE,
+                                                                          (float *)(original_vector + (i * size_of_each_compression)),
+                                                                          &compressed_out_sizes[i], ERR_BOUND_MODE, error_bound, error_bound,
                                                                           error_bound, 0, 0, 0, 0, 2 * size_of_each_compression);
         compressed_vector_ptrs[i] = compressed_ptr;
     }
@@ -85,10 +70,11 @@ Decompress()
     
     size_t size_of_each_compression = actual_vector_size/num_threads;
     
-    #pragma omp parallel for num_threads(num_threads)
+//    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < num_threads; ++i) {
         SZ_decompress_args(DATATYPE, compressed_vector_ptrs[i], compressed_out_sizes[i],
-                           (float *)(decompressed_amp + (i * size_of_each_compression)), 0, 0, 0, 0, 2 * size_of_each_compression);
+                           (float *)(decompressed_amp + (i * size_of_each_compression)), 0, 0, 0, 0,
+                           2 * size_of_each_compression);
     }
     
     return decompressed_amp;

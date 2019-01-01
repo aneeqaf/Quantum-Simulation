@@ -13,6 +13,7 @@
 #include <cstring>
 #include <iostream>
 #include <complex>
+#include <vector>
 
 #include "sz.h"
 
@@ -25,8 +26,8 @@ using cmplx = complex<float>;
 
 class SZ_Helper {
     
-    unsigned char** compressed_vector_ptrs;
-    size_t* compressed_out_sizes;
+    vector<unsigned char*> compressed_vector_ptrs;
+    vector<size_t> compressed_out_sizes;
     
     string sz_cnfg;
     double error_bound;
@@ -36,13 +37,19 @@ class SZ_Helper {
 public:
     SZ_Helper(string cnfg_file,
               size_t vector_size,
-              size_t threads): compressed_vector_ptrs(nullptr), compressed_out_sizes(nullptr), sz_cnfg(cnfg_file),
-                                error_bound(1e-2), actual_vector_size(vector_size), num_threads(threads) {}
+              size_t threads):  sz_cnfg(cnfg_file), error_bound(1e-2), actual_vector_size(vector_size),
+                                num_threads(threads) {
+                                    compressed_vector_ptrs.resize(num_threads, nullptr);
+                                    compressed_out_sizes.resize(num_threads, 0);
+                                }
     SZ_Helper(string cnfg_file,
               size_t vector_size,
               size_t threads,
-              double err_bound): compressed_vector_ptrs(nullptr), compressed_out_sizes(nullptr), sz_cnfg(cnfg_file),
-                                error_bound(err_bound), actual_vector_size(vector_size), num_threads(threads) {}
+              double err_bound): sz_cnfg(cnfg_file), error_bound(err_bound), actual_vector_size(vector_size),
+                                 num_threads(threads) {
+                                    compressed_vector_ptrs.resize(num_threads, nullptr);
+                                    compressed_out_sizes.resize(num_threads, 0);
+                                }
     SZ_Helper(const SZ_Helper& rhs);
     ~SZ_Helper();
     
