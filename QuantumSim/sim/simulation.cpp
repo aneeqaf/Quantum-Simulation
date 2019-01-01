@@ -84,7 +84,10 @@ CopyOrRead(bool file_back_up,
 //        copy_amp.DecompressStateVector();
 //        amp.CopyState(copy_amp);
 //        copy_amp.CompressStateVector();
-        amp.DecompressAndCopyAnotherState(copy_amp);
+        if (config -> SZ_compress)
+            amp.DecompressAndCopyAnotherState(copy_amp);
+        else
+            amp.CopyState(copy_amp);
     }
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
@@ -242,9 +245,16 @@ CheckpointWithoutFile(bool branch,
     Time copy_time;
     copy_time.StartTime();
     
-    amp.CompressStateVector();
-    SumOfTensorsProductsStateVector temp_amp;// ((SumOfTensorsProductsStateVector&)amp);
-    temp_amp.DecompressAndCopyAnotherState(amp);
+    SumOfTensorsProductsStateVector temp_amp;
+    
+    if (config -> SZ_compress) {
+        amp.CompressStateVector(config -> SZ_cnfg_file);
+        temp_amp.DecompressAndCopyAnotherState(amp);
+    }
+    else {
+        temp_amp.CopyState(amp);
+        temp_amp.CopyMemberVars(amp);
+    }
     
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
@@ -265,7 +275,8 @@ CheckpointWithoutFile(bool branch,
         MainLoopForRanges(temp_amp, circuit, amp);
     }
     
-    amp.DecompressStateVector();
+    if (config -> SZ_compress)
+        amp.DecompressStateVector();
 }
 
 void SequentialSimulation::

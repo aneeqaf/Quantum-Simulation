@@ -970,10 +970,10 @@ CopyMemberVars(const GenericQuantumState& rhs)
 }
 
 void SumOfTensorsProductsStateVector::
-CompressStateVector()
+CompressStateVector(const string& SZ_cnfg)
 {
     for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CompressStateVector();
+        tensor_addends[i] -> CompressStateVector(SZ_cnfg);
     
     compressed = true;
 }

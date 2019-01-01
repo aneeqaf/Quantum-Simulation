@@ -103,7 +103,7 @@ public:
     void RescaleAndApplyGlobalICounter();
     void CopyState(const GenericQuantumState& rhs);
     void CopyMemberVars(const GenericQuantumState& rhs);
-    void CompressStateVector();
+    void CompressStateVector(const string& SZ_cnfg);
     void DecompressStateVector();
     void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     

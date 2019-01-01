@@ -479,12 +479,12 @@ CopyMemberVars(const GenericQuantumState& rhs)
 }
 
 void AdaptiveStateVector::
-CompressStateVector()
+CompressStateVector(const string& SZ_cnfg)
 {
     if (full_state)
-        full_state -> CompressStateVector();
+        full_state -> CompressStateVector(SZ_cnfg);
     else
-        sumOfTensors -> CompressStateVector();
+        sumOfTensors -> CompressStateVector(SZ_cnfg);
     
     compressed = true;
 }

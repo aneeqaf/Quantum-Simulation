@@ -12,7 +12,7 @@ using namespace std;
 FullAmpStateVector::
 FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), global_factor_power(0), global_i_counter(0),
-num_qubits(qubits), zero_opt_mask(num_qubits), all_zeros(false)
+num_qubits(qubits), zero_opt_mask(num_qubits), all_zeros(false), sv_comp_decomp(nullptr)
 {
     amp_size = 1ull << qubits;
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
@@ -40,7 +40,7 @@ FullAmpStateVector::
 FullAmpStateVector(cmplx* a,
                    const idx_size size): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0), global_i_counter(0),
-num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits), all_zeros(false)
+num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits), all_zeros(false), sv_comp_decomp(nullptr)
 {
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
         idx_size memory = sizeof(cmplx) * amp_size;
@@ -67,7 +67,8 @@ FullAmpStateVector::
 FullAmpStateVector(const FullAmpStateVector& rhs):
 max_prob(rhs.max_prob), min_prob(rhs.min_prob), amp_size(rhs.amp_size),
 global_factor_power(rhs.global_factor_power), global_i_counter(rhs.global_i_counter),
-num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_zeros)
+num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_zeros),
+sv_comp_decomp(rhs.sv_comp_decomp)
 {
    compressed = rhs.compressed;
     
@@ -107,6 +108,7 @@ num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_
 FullAmpStateVector::
 ~FullAmpStateVector()
 {
+    delete sv_comp_decomp;
     free(amp);
     amp = nullptr;
 }
@@ -1142,94 +1144,25 @@ CopyMemberVars(const GenericQuantumState& rhs)
 }
 
 void FullAmpStateVector::
-CompressStateVector()
+CompressStateVector(const string& SZ_cnfg)
 {
     if (global_i_counter || global_factor_power)
         RescaleAndApplyGlobalICounter();
     
-    cmplx* compressed_amp = nullptr;
-    if (int err = posix_memalign((void**)&compressed_amp, 64, sizeof(char) * 2 * amp_size) != 0) {
-        idx_size memory = sizeof(cmplx) * amp_size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30)) {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20)) {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10)) {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        exit(err);
-    }
-    memset(compressed_amp, 0, sizeof(char) * 2 * amp_size);
-    
-    size_t i = 0;
-    
-    #pragma omp parallel for num_threads(num_threads)
-    for (size_t c_idx = 0; c_idx < amp_size/4; ++c_idx) {
-        Packed8CharArray temp = "";
-        temp[0] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i])));
-        temp[1] = DiscretizePhaseFromUD(amp[i]);
-        temp[2] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i + 1])));
-        temp[3] = DiscretizePhaseFromUD(amp[i + 1]);
-        temp[4] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i + 2])));
-        temp[5] = DiscretizePhaseFromUD(amp[i + 2]);
-        temp[6] = DiscretizeMagnitudeFromUD(SampleFromUDGivenPT(abs(amp[i + 3])));
-        temp[7] = DiscretizePhaseFromUD(amp[i + 3]);
-        
-        compressed_amp[c_idx] = *(cmplx*)temp;
-        i += 4;
-    }
+    sv_comp_decomp = new SZ_Helper(SZ_cnfg, amp_size, num_threads);
+    sv_comp_decomp -> Compress(amp);
     
     free(amp);
-    amp = compressed_amp;
-    
+    amp = nullptr;
     compressed = true;
 }
 
 void FullAmpStateVector::
 DecompressStateVector()
 {
-    cmplx* decompressed_amp = nullptr;
-    if (int err = posix_memalign((void**)&decompressed_amp, 64, sizeof(cmplx) * amp_size) != 0){
-        idx_size memory = sizeof(cmplx) * amp_size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30)) {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20)) {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10)) {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        free(amp);
-        exit(err);
-    }
-    memset(decompressed_amp, 0, sizeof(cmplx) * amp_size);
-    
-    unsigned char * __restrict compressed_t_amp = (unsigned char*)amp;
-    
-    size_t j = 0;
-    
-    #pragma omp parallel for num_threads(num_threads)
-    for (size_t i = 0; i < amp_size; ++i) {
-        decompressed_amp[i] =
-        ReconstructComplexFromPolar(SampleFromPTGivenUD(ReverseDiscretizeMagnitude(compressed_t_amp[i])),
-                                                         ReverseDiscretizePhase(compressed_t_amp[i + 1]),
-                                                         compressed_t_amp[i + 1]);
-        
-        j += 2;
-    }
-
     free(amp);
-    amp = decompressed_amp;
-    
+    amp = nullptr;
+    amp = (cmplx*) sv_comp_decomp -> Decompress();
     compressed = false;
 }
 
@@ -1239,7 +1172,6 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     const FullAmpStateVector& t_rhs = (const FullAmpStateVector&)rhs;
     assert(t_rhs.global_factor_power == 0);
     assert(t_rhs.global_i_counter == 0);
-    int err = 0;
     
     max_prob = t_rhs.max_prob;
     min_prob = t_rhs. min_prob;
@@ -1250,44 +1182,9 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     zero_opt_mask = t_rhs.zero_opt_mask;
     all_zeros = t_rhs.all_zeros;
     
-    if (amp == nullptr)
-        err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
-    else if (amp != nullptr && compressed) {
-        free(amp);
-        amp = nullptr;
-        err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size);
-    }
-    if (err != 0){
-        idx_size memory = sizeof(cmplx) * amp_size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30)) {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20)) {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10)) {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        free(amp);
-        exit(err);
-    }
-    memset(amp, 0, sizeof(cmplx) * amp_size);
-    
-    unsigned char * __restrict compressed_t_amp = (unsigned char*)t_rhs.amp;
-    
-    size_t j = 0;
-    
-    #pragma omp parallel for num_threads(num_threads)
-    for (size_t i = 0; i < amp_size; ++i) {
-        amp[i] = ReconstructComplexFromPolar(SampleFromPTGivenUD(ReverseDiscretizeMagnitude(compressed_t_amp[i])),
-                                             ReverseDiscretizePhase(compressed_t_amp[i + 1]),
-                                             compressed_t_amp[i + 1]);
-        
-        j += 2;
-    }
+    free(amp);
+    amp = nullptr;
+    amp = (cmplx*) t_rhs.sv_comp_decomp -> Decompress();
     
     compressed = false;   
 }

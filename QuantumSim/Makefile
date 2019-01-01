@@ -8,7 +8,7 @@ OUTPUT := output/amp_vectors output/probabilities output/qpro_scripts output/rep
 INPUT := input/random_circuits_rollright
 TARGET := bin/rr
 LIBS = -lm -lstdc++
-SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a -lm
+SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a
 INC = -I libs -I sim -I sim/kernels 
 CFLAGS = -O3 -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -fmodulo-sched \
 -fmodulo-sched-allow-regmoves -fsplit-ivs-in-unroller -ffast-math -fgcse-las -m64 -mavx -mavx2 -msse2avx \
