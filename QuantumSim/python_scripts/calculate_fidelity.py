@@ -39,7 +39,8 @@ def read_2D_amps_file(approx_file, size):
 @click.command()
 @click.argument("exact_file", nargs=1)
 @click.argument("approx_file", nargs=1)
-def main(exact_file, approx_file):
+@click.argument("file_type", default="c")
+def main(exact_file, approx_file, file_type):
 
 	if not os.path.isfile(exact_file) or not os.path.isfile(approx_file):
 		return float('nan');
@@ -49,7 +50,18 @@ def main(exact_file, approx_file):
 		lines = f.readlines()
 		exact_amps = np.loadtxt(lines, dtype=complex)
 
-	approx_amps = read_2D_amps_file(approx_file, len(exact_amps))
+	approx_amps = []
+	if file_type == "c":
+		with open(approx_file, "r") as f:
+			lines = f.readlines()
+			approx_amps = np.loadtxt(lines, dtype=complex)
+	elif file_type == "1d":
+		approx_amps = read_1D_amps_file(approx_file)
+	elif file_type == "2d":
+		approx_amps = read_2D_amps_file(approx_file, len(exact_amps))
+	else:
+		print("Incorrect reading format")
+		exit()
 	
 	dotp_exact_approx = np.vdot(exact_amps, approx_amps) / (np.linalg.norm(exact_amps) * np.linalg.norm(approx_amps))
 	fidelity = round(pow(np.linalg.norm(dotp_exact_approx), 2), 5)

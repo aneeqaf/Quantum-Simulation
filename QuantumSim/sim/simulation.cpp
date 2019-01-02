@@ -81,9 +81,6 @@ CopyOrRead(bool file_back_up,
         amp.CopyMemberVars(copy_amp);
     }
     else {
-//        copy_amp.DecompressStateVector();
-//        amp.CopyState(copy_amp);
-//        copy_amp.CompressStateVector();
         if (config -> SZ_compress)
             amp.DecompressAndCopyAnotherState(copy_amp);
         else
@@ -274,9 +271,6 @@ CheckpointWithoutFile(bool branch,
         }
         MainLoopForRanges(temp_amp, circuit, amp);
     }
-    
-    if (config -> SZ_compress)
-        amp.DecompressStateVector();
 }
 
 void SequentialSimulation::
@@ -447,8 +441,10 @@ Simulate(GenericQuantumState& amp,
         auto& idx = config -> indices;
         Time amp_st_time;
         amp_st_time.StartTime();
-        for(idx_size i = 0; i < idx.size(); ++i)
+        for(idx_size i = 0; i < idx.size(); ++i) {
+            assert(amp.compressed == false);
             amps_of_interest[i] += amp[idx[i]];
+        }
         amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
     }
 
@@ -463,6 +459,9 @@ Simulate(GenericQuantumState& amp,
     }
     
     total_time += time.GetElapsedTime() - XE_time;
+    
+    if (config -> SZ_compress)
+        amp.DecompressStateVector();
     
     ReportingAfterSim(amp, circuit);
 }
@@ -805,7 +804,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config -> prob_outfile, circuit.GetNumCycles() - 1);

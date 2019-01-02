@@ -96,9 +96,6 @@ num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_
     
     idx_size size = 2 * rhs.GetSize();
     
-    if (rhs.compressed)
-        size /= 4;
-    
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
