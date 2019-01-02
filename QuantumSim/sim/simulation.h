@@ -92,6 +92,7 @@ public:
                         const idx_size gate_i = 0);
     void ReportingAfterSim(GenericQuantumState& amp,
                            Circuit& circuit);
+    void PrintIdxsToFile() const;
     void WriteMmapToASCIIFile() const;
     void WriteAmpToASCIIFile(GenericQuantumState& amp) const;
     

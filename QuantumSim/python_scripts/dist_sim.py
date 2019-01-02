@@ -170,6 +170,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		post_launch_cmd += " --binary_vectors_only"
 	if save_checkpoint_to_file:
 		post_launch_cmd += " --save_checkpoint_to_file " + str(save_checkpoint_to_file)
+	if sz_compress_file:
+		post_launch_cmd += " --sz_compress"
 	if multiple_nodes:
 		post_launch_cmd += " --not_final_amps"
 		post_launch_cmd += "\033[1m --batch_range <inclusive start, exclusive end> \033[0m"

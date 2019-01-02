@@ -11,8 +11,9 @@
 SZ_Helper::
 ~SZ_Helper()
 {
-    for (auto ptrs : compressed_vector_ptrs)
-        if(ptrs) free(ptrs);
+    if (!compressed_vector_ptrs.empty())
+        for (auto ptrs : compressed_vector_ptrs)
+            if(ptrs) free(ptrs);
 }
 
 SZ_Helper::
