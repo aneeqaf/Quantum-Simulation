@@ -23,6 +23,7 @@
 #include <vector>
 #include <tuple>
 #include <utility>
+#include "zstd.h"
 
 #ifdef GP
 #include "gnuplot-iostream/gnuplot-iostream.h"
@@ -50,7 +51,7 @@ static inline double RadiusLogSpiral(double angle,
 }
 
 static inline double RadiusUniformSpiral(double angle,
-                                  double error_bound)
+                                         double error_bound)
 {
     return error_bound * angle;
 }
@@ -66,13 +67,19 @@ static inline double CalculateCInCThetaGivenMagnitudeUniformSpiral(double magnit
     return magnitude/(error_bound * PI);
 }
 
-static inline double CalculateCodewordInLogSpiral(double magnitude,
-                                                  double error_bound,
-                                                  int r,
-                                                  double cw_dist)
+static inline double CalculateCWDistanceAsALinearlyIncreasingFunction(double cw_dist,
+                                                                      double magnitude)
 {
-    return (CalculateCInCThetaGivenMagnitudeLogSpiral(magnitude) - r) / cw_dist;
+    return cw_dist * (1.0 - magnitude);
 }
+
+//static inline double CalculateCodewordInLogSpiral(double magnitude,
+//                                                  double error_bound,
+//                                                  int r,
+//                                                  double cw_dist)
+//{
+//    return (CalculateCInCThetaGivenMagnitudeLogSpiral(magnitude) - r) / cw_dist;
+//}
 
 static inline double CalculateCodewordInUniformSpiral(double magnitude,
                                                       double error_bound,
@@ -83,6 +90,7 @@ static inline double CalculateCodewordInUniformSpiral(double magnitude,
 }
 
 static inline double CalculateCodewordGivenCInCTheta(double c,
+                                                     double error_bound,
                                                      int r,
                                                      double cw_dist)
 {
@@ -91,6 +99,7 @@ static inline double CalculateCodewordGivenCInCTheta(double c,
 
 
 static inline double CalculateCforCodewordInCTheta(unsigned short codeword,
+                                                   double error_bound,
                                                    int r,
                                                    double cw_dist)
 {
@@ -118,18 +127,20 @@ static inline double sciToDub(const string& str) {
 static inline unsigned short ShiftCodeWordToCorrectQuadrant(double phase,
                                                             unsigned short codeword,
                                                             int r,
-                                                            double cw_dist)
+                                                            double cw_dist,
+                                                            double error_bound)
 {
-    double c = CalculateCforCodewordInCTheta(codeword, r, cw_dist);
+    double c = CalculateCforCodewordInCTheta(codeword, error_bound, r, cw_dist);
     
     double c_mod2 = fmod(c, 2.0);
     double diff_phase = (phase/PI) - c_mod2;
     c += diff_phase;
     
-    return round(CalculateCodewordGivenCInCTheta(c, r, cw_dist));
+    return round(CalculateCodewordGivenCInCTheta(c, error_bound, r, cw_dist));
 }
 static inline unsigned short CalculateNearestCodewordToAmp(cmplxd amp,
                                                            int r,
+                                                           idx_size num_codewords,
                                                            double cw_dist,
                                                            double error_bound)
 {
@@ -140,15 +151,15 @@ static inline unsigned short CalculateNearestCodewordToAmp(cmplxd amp,
     const unsigned short floor_cw = floor(CalculateCodewordInUniformSpiral(magnitude, error_bound, r, cw_dist));
     const unsigned short ceil_cw = ceil(CalculateCodewordInUniformSpiral(magnitude, error_bound, r, cw_dist));
     
-    const double floor_c = CalculateCforCodewordInCTheta(floor_cw, r, cw_dist);
-    const double ceil_c = CalculateCforCodewordInCTheta(ceil_cw, r, cw_dist);
+    const double floor_c = CalculateCforCodewordInCTheta(floor_cw, error_bound, r, cw_dist);
+    const double ceil_c = CalculateCforCodewordInCTheta(ceil_cw, error_bound, r, cw_dist);
     
     double floor_magnitude_diff = magnitude - RadiusUniformSpiral(floor_c * PI, error_bound);
     double ceil_magnitude_diff =  RadiusUniformSpiral(ceil_c * PI, error_bound) - magnitude;
 
     unsigned short cw = floor_magnitude_diff < ceil_magnitude_diff ? floor_cw : ceil_cw;
     
-    cw = ShiftCodeWordToCorrectQuadrant(phase, cw, r, cw_dist);
+    cw = ShiftCodeWordToCorrectQuadrant(phase, cw, r, cw_dist, error_bound);
 //    const double c = CalculateCforCodewordInCTheta(cw, r, cw_dist);
 //    double diff = abs(magnitude - RadiusUniformSpiral(c * PI, error_bound));
     
@@ -233,6 +244,7 @@ void CompressDecompressStateVector(const string& filename,
                                    double probability_acceptance);
 
 idx_size CompressStateVector(vector<cmplx>& k_largest_amps,
+                             idx_size& compression_size,
                              int num_codewords,
                              cmplx*& state_vector,
                              idx_size state_vector_size,
@@ -245,6 +257,7 @@ idx_size CompressStateVector(vector<cmplx>& k_largest_amps,
 
 void DecompressStateVector(const cmplx* k_largest_amps,
                            cmplx*& state_vector,
+                            idx_size compression_size,
                            idx_size state_vector_size,
                            idx_size num_codewords,
                            int r,
@@ -263,37 +276,3 @@ unsigned short MapAmpToCodeword(vector<cmplx>& k_largest_amps,
                                 double probability_acceptance);
 
 #endif /* compression_h */
-
-//void FindPitch(const cmplx* amp,
-//               size_t state_vector_size,
-//               map<double, pair<double, double>>& mag_phases_pitches)
-//{
-//    for (size_t i = 0; i < state_vector_size; ++i) {
-//        double amp_real = amp[i].real(), amp_imag = amp[i].imag();
-//        bool neg_real = false, neg_imag = false;
-//        if (amp_real < 0) {
-//            amp_real *= -1;
-//            neg_real = true;
-//        }
-//        if (amp_imag < 0) {
-//            amp_imag *= -1;
-//            neg_imag = true;
-//        }
-//        
-//        double phase = atan(amp_imag/amp_real);
-//        double magnitude = abs(amp[i]);
-//        
-//        double b = (1/phase) * log(magnitude);
-//        double pitch = (PI/2) - atan(1/b);
-//        mag_phases_pitches[magnitude] = pair<double, double>(phase, pitch);
-//        //        double new_b = 1/tan((PI/2) - pitch);
-//        //        double new_magnitude = exp(new_b * phase);
-//        //
-//        //        cout << b << " : " << pitch << " | " << new_b << " : " << magnitude << " -> " << new_magnitude << endl;
-//        
-//    }
-//    
-//    //    for (auto mpp : mag_phases_pitches) {
-//    //        cout << mpp.first << " , " << mpp.second.first << " , " << mpp.second.second << endl;
-//    //    }
-//}

@@ -42,8 +42,8 @@ Compress(const cmplx* original_vector)
         unsigned char* compressed_ptr = (unsigned char*) SZ_compress_args(DATATYPE,
                                                                           (float *)(original_vector + (i * size_of_each_compression)),
                                                                           &compressed_out_sizes[i], ERR_BOUND_MODE, error_bound, error_bound,
-                                                                          error_bound, 0, 0, 0, 0, 2 * size_of_each_compression);
-        compressed_vector_ptrs[i] = compressed_ptr;
+                                                                          error_bound, 0, 0, 0, 0, (2 * size_of_each_compression));
+       compressed_vector_ptrs[i] = compressed_ptr;
     }
 }
 
