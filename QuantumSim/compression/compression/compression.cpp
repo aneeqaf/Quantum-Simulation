@@ -152,15 +152,17 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     cramer.GetCodewordsForPlotting(codewords);
     
 #ifdef GP
-    gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
-    gp <<  "if (!exists(\"MP_RIGHT\"))  MP_RIGHT = .95\n";
-    gp << "if (!exists(\"MP_BOTTOM\")) MP_BOTTOM = .1\n";
-    gp << "if (!exists(\"MP_TOP\"))    MP_TOP = .8\n";
-    gp << "if (!exists(\"MP_GAP\"))    MP_GAP = 0.1\n";
+//    gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
+//    gp <<  "if (!exists(\"MP_RIGHT\"))  MP_RIGHT = .95\n";
+//    gp << "if (!exists(\"MP_BOTTOM\")) MP_BOTTOM = .1\n";
+//    gp << "if (!exists(\"MP_TOP\"))    MP_TOP = .8\n";
+//    gp << "if (!exists(\"MP_GAP\"))    MP_GAP = 0.1\n";
     
     gp << "reset\nset nokey\n";
+    gp << "set xtics rotate\n";
+    gp << "set bmargin 5\n";
     gp << "set termoption enhanced\n";
-    gp << "set term png size 1000,1000\n";
+    gp << "set term png\n";
     gp << "set output '" << filename << ".png'\n";
     gp << "set parametric\nset size ratio -1\nset samples 1e5\n";
     gp << "set tics font 'Times New Roman,18'\n";
@@ -169,21 +171,22 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     gp << "eb=" << cramer.GetFactorOfDistBetweenTurns() << "\ncw=" << codewords.size() << "\n q=" << log2(state_vector_size) << "\n";
     gp << "r=" << cramer.GetMinInnerRadius() << "\n R=" << cramer.GetMaxOuterRadius()
     << "\n maxR=" << max_R << "\n k=" << cramer.GetNumOfLargestVals() << "\n";
-    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  maxR/R=%.5f\\n\\n codewords=%i  largest amps=%i\""
-    << ", q, eb * r * pi, eb * R * pi, maxMag/(eb*R*pi), cw, k) \n";
-    gp << "set multiplot layout 2,2 columnsfirst title title(eb) font 'Latin Modern Math, 20' margins screen MP_LEFT, MP_RIGHT, MP_BOTTOM, MP_TOP spacing screen MP_GAP \n";
+    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  \\n\\n codewords=%i  largest amps=%i\""
+    << ", q, eb * r * pi, eb * R * pi, cw, k) \n";
+    gp << "set multiplot layout 1,2 columnsfirst title title(eb) font 'Latin Modern Math, 20'\n";
     
     gp << "x(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*cos(t)\n";
     gp << "y(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*sin(t)\n";
     
     gp << setprecision(2);
+//    gp << "set title \"Amplitudes after uniform transform \"\n";
+//    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
+//    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+//    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
+//    gp << "plot " << gp.file1d(xy_pts, "file.dat")
+//    << " with points pt 7 ps 0.2 lc 'grey'\n";
+//
     gp << "set title \"Zoom out \"\n";
-    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
-    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
-    gp << "plot " << gp.file1d(xy_pts, "file.dat")
-    << " with points pt 7 ps 0.2 lc 'grey'\n";
-    
     gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
@@ -194,13 +197,13 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     
     
     gp << "set title \"Zoom in \"\n";
-    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (3 * 100)<< "\n";
-    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")  << " with points pt 7 ps 0.2 lc 'grey', "
-    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
-    
+//    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (3 * 100)<< "\n";
+//    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+//    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
+//    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")  << " with points pt 7 ps 0.2 lc 'grey', "
+//    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+//    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
+//
     gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (3 * 100)<< "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";

@@ -62,6 +62,7 @@ static void PlotCWFrequency(const vector<idx_size>& codewords_freq)
     gp << "set title \"" << codewords_freq.size() << " Codewords Frequency\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
+    gp << "set term png\n";
     gp << "set output '" << filename << ".png'\n";
     gp << "set tics font 'Times New Roman,12'\n";
     gp << "cw=" << codewords_freq.size() << "\nmax_f=" << freq_max << "\n";

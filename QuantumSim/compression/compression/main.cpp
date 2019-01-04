@@ -97,12 +97,8 @@ int main(int argc, char * argv[]) {
     
     Cramer cramer(amp_size, num_codewords, probability, error_bound);
     
+//    ApplyUniformTransformToStateVector(amp, amp_size);
+//    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);
+//    ApplyPTTransformToStateVector(amp, amp_size);
     CompressDecompressStateVector(amp, amp_size, cramer);
-
-//    vector<cmplx> copy_state_vector(amp_size);
-//    for (idx_size i = 0; i < amp_size; ++i)
-//        copy_state_vector[i] = amp[i];
-////
-    ApplyUniformTransformToStateVector(amp, amp_size);
-    PlotUniformSpiralAndAmpDensity(input_filename, amp, amp_size, cramer);
 }
