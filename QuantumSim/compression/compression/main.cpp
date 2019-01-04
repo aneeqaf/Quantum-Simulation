@@ -95,24 +95,14 @@ int main(int argc, char * argv[]) {
     }
     infile.close();
     
-//    pair<amp_idx_t*, cmplx> k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
-//    PlotLogSpiralAndAmpDensity("PT_" + input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second,
-//                               error_bound, amp_size/k_largest, num_codewords, 90);
-//    
-    CompressDecompressStateVector(input_filename, amp, amp_size, exponent, num_codewords, probability);
+    Cramer cramer(amp_size, num_codewords, probability, error_bound);
+    
+    CompressDecompressStateVector(amp, amp_size, cramer);
 
 //    vector<cmplx> copy_state_vector(amp_size);
 //    for (idx_size i = 0; i < amp_size; ++i)
 //        copy_state_vector[i] = amp[i];
 ////
-//    ApplyUniformTransformToStateVector(amp, amp_size);
-//
-//    k_largest_amps = ExtractFractionsOfAmpsFromState(amp, amp_size, k_largest);
-////    PlotLogSpiralAndAmpDensity("rePT_" +input_filename + to_string(k_largest), amp, amp_size, k_largest_amps.second, error_bound);
-//
-//    PlotUniformSpiralAndAmpDensity("uniform_" + input_filename + to_string(k_largest), amp, amp_size,
-//                                   k_largest_amps.second, pow(10, exponent), amp_size/k_largest, num_codewords);
-//    ApplyPTTransformToStateVector(amp, amp_size);
-//    cout << endl << "Fidelity of Compression : " << CalculateFidelity(copy_state_vector.data(), amp, amp_size) << endl;
-
+    ApplyUniformTransformToStateVector(amp, amp_size);
+    PlotUniformSpiralAndAmpDensity(input_filename, amp, amp_size, cramer);
 }
