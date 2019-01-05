@@ -149,7 +149,7 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
 
     cmplx max_amp = FindAmpWithMaxMagnitude(state_vector, state_vector_size);
     int max_R = abs(max_amp)/(cramer.GetFactorOfDistBetweenTurns() * PI);
-    cramer.GetCodewordsForPlotting(codewords);
+    cramer.GetCWForPlotting(codewords);
     
 #ifdef GP
 //    gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
@@ -170,9 +170,9 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     gp << "set linetype 2 linecolor rgb \"light-blue\"\n";
     gp << "eb=" << cramer.GetFactorOfDistBetweenTurns() << "\ncw=" << codewords.size() << "\n q=" << log2(state_vector_size) << "\n";
     gp << "r=" << cramer.GetMinInnerRadius() << "\n R=" << cramer.GetMaxOuterRadius()
-    << "\n maxR=" << max_R << "\n k=" << cramer.GetNumOfLargestVals() << "\n";
-    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  \\n\\n codewords=%i  largest amps=%i\""
-    << ", q, eb * r * pi, eb * R * pi, cw, k) \n";
+    << "\n maxR=" << max_R <<  "\n";
+    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  \\n\\n codewords=%i\""
+    << ", q, eb * r * pi, eb * R * pi, cw) \n";
     gp << "set multiplot layout 1,2 columnsfirst title title(eb) font 'Latin Modern Math, 20'\n";
     
     gp << "x(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*cos(t)\n";
@@ -269,11 +269,8 @@ void CompressDecompressStateVector(cmplx* state_vector,
     cout << "r = " << cramer.GetMinInnerRadius() << ", R = " << cramer.GetMaxOuterRadius() << endl;;
     cout << "Fraction of amps mapped to zero : " << cramer.GetNumValsMappedToZero() << "/" << state_vector_size
     << " (" << (double)cramer.GetNumValsMappedToZero()/(double)state_vector_size << ")" << endl;
-    cout << "Largest stored amps : " << cramer.GetNumOfLargestVals()
-    << " (" << (double)cramer.GetNumOfLargestVals()/(double)state_vector_size << ")" << endl;
-    cout << "Number of codewords : " << cramer.GetNumOfCodewords() << endl;
+    cout << "Number of codewords : " << cramer.GetNumOfCW() << endl;
     cout << "Fidelity of Compression : " << fidelity << endl;
     cout << "Compression ratio : " << (double)((64 * (double)state_vector_size))
-                                    /(double)(((log2(cramer.GetNumOfCodewords() + 2)) * (double)state_vector_size) + (64 * cramer.GetNumOfLargestVals()))
-                                               << endl;
+                                    /(double)(((log2(cramer.GetNumOfCW() + 2)) * (double)state_vector_size)) << endl;
 }

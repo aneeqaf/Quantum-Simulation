@@ -9,6 +9,7 @@
 #ifndef Cramer_h
 #define Cramer_h
 
+#include <atomic>
 #include <fstream>
 #include <map>
 #include <cmath>
@@ -38,8 +39,9 @@ using Packed4ShortArray = unsigned short[4];
 using Packed8ShortArray = unsigned short[8];
 
 constexpr double PI = M_PI;
-constexpr double CDF_MAX_P = 1.009;
-constexpr idx_size INNER_R_SHIFT = 20;
+constexpr double CDF_MAX_P = 1.02;
+constexpr idx_size INNER_R_SHIFT = 0;
+constexpr double B = 0.00298;
 
 static void PlotCWFrequency(const vector<idx_size>& codewords_freq)
 {
@@ -75,17 +77,13 @@ static void PlotCWFrequency(const vector<idx_size>& codewords_freq)
 }
 
 class Cramer {
-    
-    vector<cmplx> k_largest_vals;
-    
-    cmplx avg_near_zero_val;
+        
     idx_size orig_vector_size;
     idx_size compressed_vector_size;
     idx_size r;
     idx_size R;
     idx_size num_codewords;
-    idx_size num_zero_amps;
-    double factor_dist_bw_turns;
+    atomic<idx_size> num_zero_amps;
     double codewords_spacing;
     double spiral_length_r;
     
@@ -93,42 +91,40 @@ class Cramer {
     cmplxd PTTransformMagnitudeAndAmp(cmplxd amp) const;
     
     //Polar equation: r = DTheta = DcPi
-    double CalculateCInMagnitudeUniformSpiral(double magnitude) const;
-    double CalculateThetaGivenMagnitude(double magnitude) const;
-    double CalculateMagnitudeGivenC(double c) const;
-    double CalculatCWGivenMagnitude(double magnitude) const;
-    double CalculatCWGivenTheta(double theta) const;
-    double CalculateMagnitudeGivenCW(unsigned short codeword) const;
-    double CalculateApproxSpiralLength(double theta) const;
-    double CalculateExactSpiralLength(double theta) const;
-    double CalculateApproxThetaGivenSpiralLength(double spiral_lenth) const;
-    double CalculateThetaGivenCW(unsigned short codeword) const;
+    double CalcCInMagnitudeUniformSpiral(double magnitude) const;
+    double CalcThetaForMagnitude(double magnitude) const;
+    double CalcMagnitudeForC(double c) const;
+    double CalcCWForMagnitude(double magnitude) const;
+    double CalcCWForTheta(double theta) const;
+    double CalcMagnitudeForCW(unsigned short codeword) const;
+    double CalcApproxSpiralLen(double theta) const;
+    double CalcExactSpiralLen(double theta) const;
+    double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
+    double CalcThetaForCW(unsigned short codeword) const;
     
-    unsigned short ShiftCodeWordToCorrectQuadrant(double phase,
-                                                  unsigned short codeword) const;
-    unsigned short CalculateNearestCodewordToVal(cmplxd val) const;
-    unsigned short MapValToCodeword(cmplxd val);
+    unsigned short ShiftCWToNearestPhase(double phase,
+                                         unsigned short codeword) const;
+    unsigned short CalcNearestCWToVal(cmplxd val) const;
+    unsigned short MapValToCW(cmplxd val);
     
 public:
     
     Cramer(idx_size vector_size,
            idx_size num_codewords,
-           double probabilty_rejection,
-           double dist_bw_turns);
+           double probabilty_rejection);
     Cramer(const Cramer& rhs);
     
     cmplx* CramerCompress(const cmplx* state_vector);
     cmplx* CramerDecompress(const cmplx* state_vector);
     
-    void GetCodewordsForPlotting(vector<pair<float, float>>& codewords) const;
-    idx_size GetNumOfLargestVals() const;
+    void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
     idx_size GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;
     double GetMaxOuterRadius() const;
-    idx_size GetNumOfCodewords() const;
+    idx_size GetNumOfCW() const;
     idx_size GetNumValsMappedToZero() const;
     double GetFactorOfDistBetweenTurns() const;
-    double GetDistBetweenCodewords() const;
+    double GetDistBetweenCW() const;
 };
 
 #endif /* Cramer_h */

@@ -11,23 +11,14 @@
 Cramer::
 Cramer(idx_size vector_size,
        idx_size num_cw,
-       double probabilty_rejection,
-       double dist_bw_turns): k_largest_vals({}), avg_near_zero_val(0), orig_vector_size(vector_size), compressed_vector_size(0),
-num_codewords(num_cw), num_zero_amps(0), factor_dist_bw_turns(dist_bw_turns)
+       double probabilty_rejection): orig_vector_size(vector_size), compressed_vector_size(0),
+num_codewords(num_cw), num_zero_amps(0)
 {
-    auto make_even = [](idx_size c) {
-        if (c % 2 != 0)
-            c -= 1;
-        if (c == 0)
-            c += 2;
-        return c;
-    };
-
-    r = make_even(CalculateCInMagnitudeUniformSpiral(probabilty_rejection)) + INNER_R_SHIFT;
-    R = make_even(CalculateCInMagnitudeUniformSpiral(CDF_MAX_P));
-    spiral_length_r = CalculateExactSpiralLength(r * PI);
+    r = CalcCInMagnitudeUniformSpiral(probabilty_rejection) + INNER_R_SHIFT;
+    R = CalcCInMagnitudeUniformSpiral(CDF_MAX_P);
+    spiral_length_r = CalcExactSpiralLen(r * PI);
     
-    double total_spiral_length = CalculateExactSpiralLength(R * PI) - spiral_length_r;
+    double total_spiral_length = CalcExactSpiralLen(R * PI) - spiral_length_r;
     codewords_spacing = total_spiral_length/num_codewords;
 }
 
@@ -66,132 +57,124 @@ PTTransformMagnitudeAndAmp(cmplxd amp) const
 }
 
 inline double Cramer::
-CalculateCInMagnitudeUniformSpiral(double magnitude) const
+CalcCInMagnitudeUniformSpiral(double magnitude) const
 {
-    return magnitude/(factor_dist_bw_turns * PI);
+    return magnitude/(B * PI);
 }
 
 inline double Cramer::
-CalculateThetaGivenMagnitude(double magnitude) const
+CalcThetaForMagnitude(double magnitude) const
 {
-    return magnitude/factor_dist_bw_turns;
+    return magnitude/B;
 }
 
 inline double Cramer::
-CalculateMagnitudeGivenC(double c) const
+CalcMagnitudeForC(double c) const
 {
-    return factor_dist_bw_turns * c * PI;
+    return B * c * PI;
 }
 
 inline double Cramer::
-CalculatCWGivenMagnitude(double magnitude) const
+CalcCWForMagnitude(double magnitude) const
 {
-    double theta = magnitude/factor_dist_bw_turns;
+    double theta = magnitude/B;
     
-    return (CalculateApproxSpiralLength(theta) - spiral_length_r)/codewords_spacing;
+    return (CalcApproxSpiralLen(theta) - spiral_length_r)/codewords_spacing;
 }
 
 inline double Cramer::
-CalculatCWGivenTheta(double theta) const
+CalcCWForTheta(double theta) const
 {
-    return (CalculateApproxSpiralLength(theta) - spiral_length_r)/codewords_spacing;
+    return (CalcApproxSpiralLen(theta) - spiral_length_r)/codewords_spacing;
 }
 
 inline double Cramer::
-CalculateMagnitudeGivenCW(unsigned short codeword) const
+CalcMagnitudeForCW(unsigned short codeword) const
 {
     double spiral_length = codeword * codewords_spacing;
     
-    return CalculateApproxThetaGivenSpiralLength(spiral_length + spiral_length_r) * factor_dist_bw_turns;
+    return CalcApproxThetaForSpiralLen(spiral_length + spiral_length_r) * B;
 }
 
 inline double Cramer::
-CalculateApproxSpiralLength(double theta) const
+CalcApproxSpiralLen(double theta) const
 {
-    return (factor_dist_bw_turns * theta * theta) / 2.0;
+    return (B * theta * theta) / 2.0;
 }
 
 inline double Cramer::
-CalculateExactSpiralLength(double theta) const
+CalcExactSpiralLen(double theta) const
 {
-    return 1.0/2.0 * factor_dist_bw_turns * ((theta * sqrt(1.0 + (theta * theta))) + log(theta + sqrt(1.0 + (theta * theta))));
+    return 1.0/2.0 * B * ((theta * sqrt(1.0 + (theta * theta))) + log(theta + sqrt(1.0 + (theta * theta))));
 }
 
 inline double Cramer::
-CalculateApproxThetaGivenSpiralLength(double spiral_length) const
+CalcApproxThetaForSpiralLen(double spiral_length) const
 {
-    return sqrt((2.0 * spiral_length) / factor_dist_bw_turns);
+    return sqrt((2.0 * spiral_length) / B);
 }
 
 inline double Cramer::
-CalculateThetaGivenCW(unsigned short codeword) const
+CalcThetaForCW(unsigned short codeword) const
 {
     double spiral_length = codeword * codewords_spacing;
     
-    return CalculateApproxThetaGivenSpiralLength(spiral_length + spiral_length_r);
+    return CalcApproxThetaForSpiralLen(spiral_length + spiral_length_r);
 }
 
 inline unsigned short Cramer::
-ShiftCodeWordToCorrectQuadrant(double phase,
+ShiftCWToNearestPhase(double phase,
                                unsigned short codeword) const
 {
-    double theta = CalculateThetaGivenCW(codeword);
+    double theta = CalcThetaForCW(codeword);
     
     double theta_mod2 = fmod(theta, 2.0 * PI);
     double diff_phase = phase - theta_mod2;
     theta += diff_phase;
     
-    return round(CalculatCWGivenTheta(theta));
+    return round(CalcCWForTheta(theta));
 }
 
 unsigned short Cramer::
-CalculateNearestCodewordToVal(cmplxd val) const
+CalcNearestCWToVal(cmplxd val) const
 {
     const double magnitude = abs(val);
     double phase = arg(val);
     phase = phase < 0 ? phase + (2 * PI) : phase;
    
-    double temp_codeword = CalculatCWGivenMagnitude(magnitude);
+    double temp_codeword = CalcCWForMagnitude(magnitude);
     const unsigned short floor_cw = floor(temp_codeword);
     const unsigned short ceil_cw = ceil(temp_codeword);
     
-    double floor_magnitude_diff = magnitude - CalculateMagnitudeGivenCW(floor_cw);
-    double ceil_magnitude_diff =  CalculateMagnitudeGivenCW(ceil_cw) - magnitude;
+    double floor_magnitude_diff = magnitude - CalcMagnitudeForCW(floor_cw);
+    double ceil_magnitude_diff =  CalcMagnitudeForCW(ceil_cw) - magnitude;
     
     unsigned short codeword = floor_magnitude_diff < ceil_magnitude_diff ? floor_cw : ceil_cw;
     
-    codeword = ShiftCodeWordToCorrectQuadrant(phase, codeword);
+    codeword = ShiftCWToNearestPhase(phase, codeword);
     
     return codeword;
 }
 
 unsigned short Cramer::
-MapValToCodeword(cmplxd val)
+MapValToCW(cmplxd val)
 {
     cmplxd amp_UT = UniformTransformMagnitudeAndAmp(val);
     double magnitude_UT = abs(amp_UT);
     
-    if (magnitude_UT <= CalculateMagnitudeGivenC(r)) {
-        avg_near_zero_val += val;
+    if (magnitude_UT <= CalcMagnitudeForC(r)) {
         ++num_zero_amps;
         return 0;
     }
-    else if (magnitude_UT >= CalculateMagnitudeGivenC(R)) {
-        k_largest_vals.push_back((cmplx)val);
-        return num_codewords + 1;
-    }
     else {
-        unsigned short codeword = CalculateNearestCodewordToVal(amp_UT);
+        unsigned short codeword = CalcNearestCWToVal(amp_UT);
         
         if (codeword == 0) {
-            avg_near_zero_val += val;
             ++num_zero_amps;
             return 0;
         }
-        else if (codeword >= num_codewords + 1) {
-            k_largest_vals.push_back((cmplx)val);
-            return num_codewords + 1;
-        }
+        else if (codeword >= num_codewords + 1)
+            return num_codewords;
         
         return codeword;
     }
@@ -206,24 +189,21 @@ CramerCompress(const cmplx* state_vector)
     
     memset(compressed_vector, 0, sizeof(unsigned short) * orig_vector_size);
     
-    size_t i = 0;
-    
     vector<idx_size> cw_freq(num_codewords, 0);
     
-    for (idx_size c_idx = 0; c_idx < orig_vector_size/4; ++c_idx, i+=4) {
+    #pragma omp parallel for
+    for (idx_size i = 0; i < orig_vector_size; i+=4) {
         Packed4ShortArray temp = {0};
-        temp[0] = MapValToCodeword(state_vector[i]); ++cw_freq[temp[0]];
-        temp[1] = MapValToCodeword(state_vector[i + 1]); ++cw_freq[temp[1]];
-        temp[2] = MapValToCodeword(state_vector[i + 2]); ++cw_freq[temp[2]];
-        temp[3] = MapValToCodeword(state_vector[i + 3]); ++cw_freq[temp[3]];
+        temp[0] = MapValToCW(state_vector[i]); ++cw_freq[temp[0]];
+        temp[1] = MapValToCW(state_vector[i + 1]); ++cw_freq[temp[1]];
+        temp[2] = MapValToCW(state_vector[i + 2]); ++cw_freq[temp[2]];
+        temp[3] = MapValToCW(state_vector[i + 3]); ++cw_freq[temp[3]];
        
-        compressed_vector[c_idx] = *(cmplx*)temp;
+        compressed_vector[i/4] = *(cmplx*)temp;
     }
     
     PlotCWFrequency(cw_freq);
     
-    avg_near_zero_val /= num_zero_amps;
-
     return compressed_vector;
 }
 
@@ -238,38 +218,29 @@ CramerDecompress(const cmplx* state_vector)
     
     unsigned short * __restrict compressed_vector = (unsigned short *)state_vector;
     
-    idx_size large_amps_idx = 0;
-    
+    #pragma omp parallel for
     for (idx_size i = 0; i < orig_vector_size; ++i) {
         if (compressed_vector[i] == 0)
-            decompressed_vector[i] = avg_near_zero_val;
-        else if (compressed_vector[i] != num_codewords + 1) {
-            double magnitude = CalculateMagnitudeGivenCW(compressed_vector[i]);
-            double theta = CalculateThetaGivenMagnitude(magnitude);
+            decompressed_vector[i] = 0;
+        else {
+            double magnitude = CalcMagnitudeForCW(compressed_vector[i]);
+            double theta = CalcThetaForMagnitude(magnitude);
             decompressed_vector[i] = PTTransformMagnitudeAndAmp(cmplxd(magnitude * cos(theta), magnitude * sin(theta)));
         }
-        else
-            decompressed_vector[i] = k_largest_vals[large_amps_idx++];
     }
     
     return decompressed_vector;
 }
 
 void Cramer::
-GetCodewordsForPlotting(vector<pair<float, float>>& codewords) const
+GetCWForPlotting(vector<pair<float, float>>& codewords) const
 {
     for (idx_size i = 0; i < num_codewords; ++i) {
         double s = spiral_length_r + (i * codewords_spacing);
-        double theta = CalculateApproxThetaGivenSpiralLength(s);
-        double magnitude = theta * factor_dist_bw_turns;
+        double theta = CalcApproxThetaForSpiralLen(s);
+        double magnitude = theta * B;
         codewords.push_back(make_pair(magnitude * cos(theta) , magnitude * sin(theta)));
     }
-}
-
-idx_size Cramer::
-GetNumOfLargestVals() const
-{
-    return k_largest_vals.size();
 }
 
 idx_size Cramer::
@@ -281,17 +252,17 @@ GetCompressedVectorSize() const
 double Cramer::
 GetMinInnerRadius() const
 {
-    return CalculateMagnitudeGivenC(r);
+    return CalcMagnitudeForC(r);
 }
 
 double Cramer::
 GetMaxOuterRadius() const
 {
-    return CalculateMagnitudeGivenC(R);
+    return CalcMagnitudeForC(R);
 }
 
 idx_size Cramer::
-GetNumOfCodewords() const
+GetNumOfCW() const
 {
     return num_codewords;
 }
@@ -305,11 +276,11 @@ GetNumValsMappedToZero() const
 double Cramer::
 GetFactorOfDistBetweenTurns() const
 {
-    return factor_dist_bw_turns;
+    return B;
 }
 
 double Cramer::
-GetDistBetweenCodewords() const
+GetDistBetweenCW() const
 {
     return codewords_spacing;
 }

@@ -27,7 +27,7 @@ int main(int argc, char * argv[]) {
     
     string input_filename = "";
     double error_bound = 1e-3;
-    int c = 0, idx = 0, exponent = -3;
+    int c = 0, idx = 0;
     idx_size num_codewords = (1 << 13) - 2;
     idx_size num_q = 0;
     double probability = 0;
@@ -45,8 +45,7 @@ int main(int argc, char * argv[]) {
             }
             case 'e': {
                 string temp = string(optarg);
-                exponent = stoi(temp);
-                error_bound = pow(10, exponent);
+                error_bound = stod(temp);
                 break;
             }
             case 'p': {
@@ -56,7 +55,7 @@ int main(int argc, char * argv[]) {
             }
             case 'n': {
                 string temp = string(optarg);
-                num_codewords = (1 << stoul(temp)) - 2;
+                num_codewords = (1 << stoul(temp)) - 1;
                 break;
             }
             case 'q': {
@@ -95,7 +94,7 @@ int main(int argc, char * argv[]) {
     }
     infile.close();
     
-    Cramer cramer(amp_size, num_codewords, probability, error_bound);
+    Cramer cramer(amp_size, num_codewords, probability);
     
 //    ApplyUniformTransformToStateVector(amp, amp_size);
 //    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);
