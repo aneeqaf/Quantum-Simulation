@@ -291,8 +291,10 @@ CramerCompressAVX(const cmplx* state_vector)
     
     memset(compressed_vector, 0, sizeof(cmplx) * compressed_vector_UL_size);
     
+    #pragma omp parallel for
     for (idx_size i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
         unsigned short codewords[num_codewords_reg];
+        #pragma omp parallel for
         for (idx_size j = 0; j < num_codewords_reg; ++j)
             codewords[j] = MapValToCW(state_vector[((i/NUM_UL_IN_REG) * num_codewords_reg) + j]);
         
@@ -314,9 +316,11 @@ CramerDecompressAVX(const cmplx* state_vector)
     
     bitset<REG_SIZE> * __restrict compressed_vector = (bitset<REG_SIZE> *)state_vector;
     
+    #pragma omp parallel for
     for (idx_size i = 0; i < compressed_vector_UL_size/4; ++i) {
         unsigned short unpacked_codewords[num_codewords_reg];
         UnpackCWFrom256Bits(compressed_vector[i], unpacked_codewords);
+        #pragma omp parallel for
         for (idx_size j = 0; j < num_codewords_reg; ++j) {
             if (unpacked_codewords[j] == 0)
                 decompressed_vector[(i * num_codewords_reg) + j] = 0;
