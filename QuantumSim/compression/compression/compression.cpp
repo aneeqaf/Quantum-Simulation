@@ -172,7 +172,7 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
     gp << "r=" << cramer.GetMinInnerRadius() << "\n R=" << cramer.GetMaxOuterRadius()
     << "\n maxR=" << max_R <<  "\n";
     gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  \\n\\n codewords=%i\""
-    << ", q, eb * r * pi, eb * R * pi, cw) \n";
+    << ", q,  r , R , cw) \n";
     gp << "set multiplot layout 1,2 columnsfirst title title(eb) font 'Latin Modern Math, 20'\n";
     
     gp << "x(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*cos(t)\n";
@@ -204,7 +204,7 @@ void PlotUniformSpiralAndAmpDensity(const string& filename,
 //    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
 //    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
 //
-    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (3 * 100)<< "\n";
+    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (1.5 * 100)<< "\n";
     gp << "set xr[-L:L]\nset yr[-L:L]\n";
     gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
     gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "

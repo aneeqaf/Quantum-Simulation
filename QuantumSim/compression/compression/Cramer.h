@@ -49,7 +49,8 @@ constexpr idx_size REG_SIZE = 256;
 constexpr idx_size BITS_SHORT = 16;
 constexpr idx_size BITS_UL = 64;
 
-static void PlotCWFrequency(const vector<idx_size>& codewords_freq)
+static void PlotCWFrequency(const vector<idx_size>& codewords_freq,
+                            idx_size num_qubits)
 {
 #ifdef GP
     Gnuplot gp;
@@ -67,11 +68,11 @@ static void PlotCWFrequency(const vector<idx_size>& codewords_freq)
     string filename = to_string(codewords_freq.size()) + "_codewords_freq";
     
     gp << "reset\nset nokey\n";
-    gp << "set title \"" << codewords_freq.size() << " Codewords Frequency\" font \",14\"\n";
+    gp << "set title \"" << num_qubits << "q: " << codewords_freq.size() << " Codewords Frequency\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
     gp << "set term png\n";
-    gp << "set output '" << filename << ".png'\n";
+    gp << "set output '" << filename + to_string(num_qubits) << ".png'\n";
     gp << "set tics font 'Times New Roman,12'\n";
     gp << "cw=" << codewords_freq.size() << "\nmax_f=" << freq_max << "\n";
     gp << "title(c) = sprintf(\"\\nAmplitudes to %i Codewords Frequency\"" << ", cw) \n";

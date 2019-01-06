@@ -246,7 +246,7 @@ CramerCompress(const cmplx* state_vector)
         compressed_vector[i/4] = *(cmplx*)temp;
     }
     
-    PlotCWFrequency(cw_freq);
+    PlotCWFrequency(cw_freq, log2(orig_vector_size));
     
     return compressed_vector;
 }
@@ -285,16 +285,22 @@ CramerCompressAVX(const cmplx* state_vector)
     
     memset(compressed_vector, 0, sizeof(cmplx) * compressed_vector_UL_size);
     
+    vector<idx_size> cw_freq(num_codewords, 0);
+    
     #pragma omp parallel for
     for (idx_size i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
         unsigned short codewords[num_codewords_reg];
         #pragma omp parallel for
-        for (idx_size j = 0; j < num_codewords_reg; ++j)
+        for (idx_size j = 0; j < num_codewords_reg; ++j) {
             codewords[j] = MapValToCW(state_vector[((i/NUM_UL_IN_REG) * num_codewords_reg) + j]);
+            ++cw_freq[codewords[j]];
+        }
         
         __m256 pack_cw = PackCWIn256BitsAVXReg(codewords);
         _mm256_store_ps((float*)&compressed_vector[i], pack_cw);
     }
+    
+    PlotCWFrequency(cw_freq, log2(orig_vector_size));
     
     return compressed_vector;
 }
