@@ -24,12 +24,6 @@ num_bits_codewords(log2(num_cw + 1))
     codewords_spacing = total_spiral_length/num_codewords;
 }
 
-Cramer::
-Cramer(const Cramer& rhs)
-{
-    
-}
-
 cmplxd Cramer::
 UniformTransformMagnitudeAndAmp(cmplxd amp) const
 {

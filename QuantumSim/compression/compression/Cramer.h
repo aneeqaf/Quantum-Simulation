@@ -126,7 +126,6 @@ public:
     Cramer(idx_size vector_size,
            idx_size num_codewords,
            double probabilty_rejection);
-    Cramer(const Cramer& rhs);
     
     cmplx* CramerCompress(const cmplx* state_vector);
     cmplx* CramerDecompress(const cmplx* state_vector);
