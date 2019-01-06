@@ -253,11 +253,11 @@ void CompressDecompressStateVector(cmplx* state_vector,
         copy_state_vector[i] = state_vector[i];
     
     
-    cmplx* comp_vector = cramer.CramerCompress(state_vector);
+    cmplx* comp_vector = cramer.CramerCompressAVX(state_vector);
     free(state_vector);
     state_vector = nullptr;
 
-    state_vector = cramer.CramerDecompress(comp_vector);
+    state_vector = cramer.CramerDecompressAVX(comp_vector);
     
     vector<cmplxd> new_state_vector(state_vector_size);
     for (idx_size i = 0; i < state_vector_size; ++i)
@@ -271,6 +271,5 @@ void CompressDecompressStateVector(cmplx* state_vector,
     << " (" << (double)cramer.GetNumValsMappedToZero()/(double)state_vector_size << ")" << endl;
     cout << "Number of codewords : " << cramer.GetNumOfCW() << endl;
     cout << "Fidelity of Compression : " << fidelity << endl;
-    cout << "Compression ratio : " << (double)((64 * (double)state_vector_size))
-                                    /(double)(((log2(cramer.GetNumOfCW() + 2)) * (double)state_vector_size)) << endl;
+    cout << "Compression ratio : " << (double)state_vector_size /(double)cramer.GetCompressedVectorSize() << endl;
 }

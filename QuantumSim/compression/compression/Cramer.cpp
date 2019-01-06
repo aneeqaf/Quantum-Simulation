@@ -11,12 +11,14 @@
 Cramer::
 Cramer(idx_size vector_size,
        idx_size num_cw,
-       double probabilty_rejection): orig_vector_size(vector_size), compressed_vector_size(0),
-num_codewords(num_cw), num_zero_amps(0)
+       double probabilty_rejection): orig_vector_size(vector_size), num_codewords(num_cw), num_zero_amps(0),
+num_bits_codewords(log2(num_cw + 1))
 {
     r = CalcCInMagnitudeUniformSpiral(probabilty_rejection) + INNER_R_SHIFT;
     R = CalcCInMagnitudeUniformSpiral(CDF_MAX_P);
     spiral_length_r = CalcExactSpiralLen(r * PI);
+    num_codewords_reg = CalcCWThatFitIn256BitsReg();
+    compressed_vector_UL_size = CalcNumULInCompressedVector(CalcNum256RegForSizeOfVector());
     
     double total_spiral_length = CalcExactSpiralLen(R * PI) - spiral_length_r;
     codewords_spacing = total_spiral_length/num_codewords;
@@ -122,6 +124,24 @@ CalcThetaForCW(unsigned short codeword) const
     return CalcApproxThetaForSpiralLen(spiral_length + spiral_length_r);
 }
 
+inline idx_size Cramer::
+CalcCWThatFitIn256BitsReg() const
+{
+    return floor((double)REG_SIZE/(double)num_bits_codewords);
+}
+
+inline idx_size Cramer::
+CalcNumULInCompressedVector(idx_size num_256_reg) const
+{
+    return num_256_reg * NUM_UL_IN_REG;
+}
+
+inline idx_size Cramer::
+CalcNum256RegForSizeOfVector() const
+{
+    return ceil((double)orig_vector_size/(double)num_codewords_reg);
+}
+
 inline unsigned short Cramer::
 ShiftCWToNearestPhase(double phase,
                                unsigned short codeword) const
@@ -180,6 +200,36 @@ MapValToCW(cmplxd val)
     }
 }
 
+__m256 Cramer::
+PackCWIn256BitsAVXReg(const unsigned short* codewords) const
+{
+    const bitset<REG_SIZE> set_UL = ~0ULL;
+    bitset<REG_SIZE> cw_pack_256_bits = 0;
+    
+    for (idx_size i = 0; i < num_codewords_reg; ++i) {
+        bitset<REG_SIZE> temp = codewords[i] ;
+        cw_pack_256_bits |= (temp << (i * num_bits_codewords));
+   }
+    
+    unsigned long long ul_in_256_reg[NUM_UL_IN_REG];
+    
+    for (idx_size i = 0;  i < NUM_UL_IN_REG; ++i)
+        ul_in_256_reg[i] = ((cw_pack_256_bits & (set_UL << (i * BITS_UL))) >> (i * BITS_UL)).to_ullong();
+    
+    return _mm256_load_ps((float*)ul_in_256_reg);
+}
+
+void Cramer::
+UnpackCWFrom256Bits(const bitset<REG_SIZE>& packed_codewords,
+                    unsigned short* unpacked_codewords) const
+{
+    bitset<REG_SIZE> set_cw_bits = (1ull << num_bits_codewords) - 1;
+    
+    for (idx_size i = 0; i < num_codewords_reg; ++i)
+        unpacked_codewords[i] =
+        ((packed_codewords & (set_cw_bits << (i * num_bits_codewords))) >> (i * num_bits_codewords)).to_ullong();
+}
+
 cmplx* Cramer::
 CramerCompress(const cmplx* state_vector)
 {
@@ -232,6 +282,55 @@ CramerDecompress(const cmplx* state_vector)
     return decompressed_vector;
 }
 
+cmplx* Cramer::
+CramerCompressAVX(const cmplx* state_vector)
+{
+    cmplx* compressed_vector = nullptr;
+    if (posix_memalign((void**)&compressed_vector, 64, sizeof(cmplx) * compressed_vector_UL_size) != 0)
+        throw "Unable to allocate space for compressed vector";
+    
+    memset(compressed_vector, 0, sizeof(cmplx) * compressed_vector_UL_size);
+    
+    for (idx_size i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
+        unsigned short codewords[num_codewords_reg];
+        for (idx_size j = 0; j < num_codewords_reg; ++j)
+            codewords[j] = MapValToCW(state_vector[((i/NUM_UL_IN_REG) * num_codewords_reg) + j]);
+        
+        __m256 pack_cw = PackCWIn256BitsAVXReg(codewords);
+        _mm256_store_ps((float*)&compressed_vector[i], pack_cw);
+    }
+    
+    return compressed_vector;
+}
+
+cmplx* Cramer::
+CramerDecompressAVX(const cmplx* state_vector)
+{
+    cmplx* decompressed_vector = nullptr;
+    if (posix_memalign((void**)&decompressed_vector, 64, sizeof(cmplx) * orig_vector_size) != 0)
+        throw "Unable to allocate space for decompressed vector";
+    
+    memset(decompressed_vector, 0, sizeof(cmplx) * orig_vector_size);
+    
+    bitset<REG_SIZE> * __restrict compressed_vector = (bitset<REG_SIZE> *)state_vector;
+    
+    for (idx_size i = 0; i < compressed_vector_UL_size/4; ++i) {
+        unsigned short unpacked_codewords[num_codewords_reg];
+        UnpackCWFrom256Bits(compressed_vector[i], unpacked_codewords);
+        for (idx_size j = 0; j < num_codewords_reg; ++j) {
+            if (unpacked_codewords[j] == 0)
+                decompressed_vector[(i * num_codewords_reg) + j] = 0;
+            else {
+                double magnitude = CalcMagnitudeForCW(unpacked_codewords[j]);
+                double theta = CalcThetaForMagnitude(magnitude);
+                decompressed_vector[(i * num_codewords_reg) + j] = PTTransformMagnitudeAndAmp(cmplxd(magnitude * cos(theta), magnitude * sin(theta)));
+            }
+        }
+    }
+    
+    return decompressed_vector;
+}
+
 void Cramer::
 GetCWForPlotting(vector<pair<float, float>>& codewords) const
 {
@@ -246,7 +345,7 @@ GetCWForPlotting(vector<pair<float, float>>& codewords) const
 idx_size Cramer::
 GetCompressedVectorSize() const
 {
-    return compressed_vector_size;
+    return compressed_vector_UL_size;
 }
 
 double Cramer::
