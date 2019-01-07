@@ -124,7 +124,6 @@ Config(const bitset<128>& amp_size,
        const string afile,
        const string rfile,
        const string mfile,
-       const string sz_cnfg_file,
        const float norm_p,
        const int norm_d,
        const idx_size cz_p,
@@ -151,14 +150,17 @@ Config(const bitset<128>& amp_size,
        const bool first_part_small,
        const bool count_0,
        const int sv_cp_file,
-       const bool sz_compress)
+       const bool sz_compress,
+       const idx_size cramer_num_cw,
+       const double cramer_p_reject)
 : mmap_obj(nullptr), infile(ifile), prob_outfile(pfile), amp_outfile(afile),
-report_outfile(rfile), misc_outfile(mfile), SZ_cnfg_file(sz_cnfg_file), cz_path(cz_p), approx_epsilon(epsilon),
+report_outfile(rfile), misc_outfile(mfile), cz_path(cz_p), approx_epsilon(epsilon),
+cramer_num_codewords(cramer_num_cw), cramer_p_rejection(cramer_p_reject),
 norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l), proc_prefix_bits(cz_len),
 dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), last_layers_H(layers_last_H),
 save_cp_file(sv_cp_file), google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx),
 nearest_neighbors(near_neighbors), row_major(row_maj), count_zeros(count_0),
-store_checkpoint_range(store_r), first_part_smaller(first_part_small), SZ_compress(sz_compress),
+store_checkpoint_range(store_r), first_part_smaller(first_part_small), compress(sz_compress),
 sim_type(sim), verbose(v), curr_mode(ProcPrefix)
 {
     temp_dir = "output/amp_vectors/" + infile + "_" + to_string(depth)

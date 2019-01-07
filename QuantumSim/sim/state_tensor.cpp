@@ -894,10 +894,11 @@ CopyMemberVars(const GenericQuantumState& rhs)
 }
 
 void TensorProductStateVector::
-CompressStateVector(const string& SZ_cnfg)
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
 {
-    state_a -> CompressStateVector(SZ_cnfg);
-    state_b -> CompressStateVector(SZ_cnfg);
+    state_a -> CompressStateVector(num_codewords, p_rejection);
+    state_b -> CompressStateVector(num_codewords, p_rejection);
     
     compressed = true;
 }

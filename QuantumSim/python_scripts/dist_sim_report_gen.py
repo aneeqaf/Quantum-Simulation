@@ -14,9 +14,9 @@ from math import ceil
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
 @click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
-@click.option("--sz_compress", required=False, is_flag=True)
+@click.option("--compress", required=False, is_flag=True)
 def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
-	save_checkpoint_to_file, sz_compress):
+	save_checkpoint_to_file, compress):
 
 	log_dir = os.path.join("output", "log", cir_file)
 

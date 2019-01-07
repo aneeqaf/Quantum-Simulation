@@ -25,7 +25,7 @@ private:
     int num_qubits;
     ZeroOptMask zero_opt_mask; //0 is most significant
     bool all_zeros;
-    SZ_Helper* sv_comp_decomp;
+    Cramer* cramer;
 
     bitset<128> FormBitmask(const vector<int>& qubits);
     void TransferOddBitsFromHiQubitsBM(int& th,
@@ -130,7 +130,8 @@ public:
     void RescaleAndApplyGlobalICounter();
     void CopyState(const GenericQuantumState& rhs);
     void CopyMemberVars(const GenericQuantumState& rhs);
-    void CompressStateVector(const string& SZ_cnfg);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
     void DecompressStateVector();
     void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
@@ -145,7 +146,7 @@ public:
     FullAmpStateVector(): max_prob(numeric_limits<double>::min()),
         min_prob(numeric_limits<double>::max()), amp(nullptr), amp_size(0),
         global_factor_power(0), global_i_counter(0),
-        num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false), sv_comp_decomp(nullptr) {}
+        num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false), cramer(nullptr) {}
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);

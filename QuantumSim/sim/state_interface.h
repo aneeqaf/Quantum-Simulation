@@ -22,7 +22,7 @@
 #include "kernels1.h"
 #include "profile.h"
 #include "config.h"
-#include "SZ_helper.h"
+#include "Cramer.h"
 
 using namespace std;
 
@@ -204,7 +204,8 @@ public:
     virtual void RescaleAndApplyGlobalICounter() = 0;
     virtual void CopyState(const GenericQuantumState& rhs) = 0;
     virtual void CopyMemberVars(const GenericQuantumState& rhs) = 0;
-    virtual void CompressStateVector(const string& SZ_cnfg) = 0;
+    virtual void CompressStateVector(idx_size num_codewords,
+                                     double p_rejection) = 0;
     virtual void DecompressStateVector() = 0;
     virtual void DecompressAndCopyAnotherState(const GenericQuantumState& rhs) = 0;
     

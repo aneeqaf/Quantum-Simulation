@@ -10,7 +10,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "graphing.h"
 #include "compression.h"
+
 
 using namespace std;
 
@@ -28,8 +30,8 @@ int main(int argc, char * argv[]) {
     string input_filename = "";
     double error_bound = 1e-3;
     int c = 0, idx = 0;
-    idx_size num_codewords = (1 << 13) - 2;
-    idx_size num_q = 0;
+    size_t num_codewords = (1 << 13) - 2;
+    size_t num_q = 0;
     double probability = 0;
 
     while ((c = getopt_long(argc, argv, "i:e:n:q:p:", longopts, &idx)) != -1)
@@ -73,11 +75,11 @@ int main(int argc, char * argv[]) {
                 
     
     size_t amp_size = 1ull << (num_q);
-    cmplx* amp = nullptr;
+    complex<float>* amp = nullptr;
     
-    if (posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0)
+    if (posix_memalign((void**)&amp, 64, sizeof(complex<float>) * amp_size) != 0)
         throw "Unable to allocate";
-    memset(amp, 0, amp_size * sizeof(cmplx));
+    memset(amp, 0, amp_size * sizeof(complex<float>));
     
     ifstream infile;
     infile.open(input_filename);
@@ -88,13 +90,15 @@ int main(int argc, char * argv[]) {
     int i = 0;
     while (infile >> real >> imag >> extra) {
         assert(i < amp_size);
-        amp[i++] = cmplx(real, imag);
+        amp[i++] = complex<float>(real, imag);
         if (i == amp_size)
             break;
     }
     infile.close();
     
-    Cramer cramer(amp_size, num_codewords, probability);
+//    PlotCDF(amp, num_q);
+//    PlotPT(amp, num_q);
+    Cramer cramer(amp_size, num_codewords, probability, true);
     
 //    ApplyUniformTransformToStateVector(amp, amp_size);
 //    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);

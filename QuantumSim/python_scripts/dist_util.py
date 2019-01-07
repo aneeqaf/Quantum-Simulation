@@ -75,8 +75,8 @@ def AddPrintOptToCommand(seed, command, idx_file, num_idx):
 
 def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_major ,\
  					depth , no_nearest_neighbors, layers_Hgates_b4_meas,\
- 					no_checkpoint_with_ranges, save_checkpoint_to_file, count_zeros, SZ_compress_file,\
- 					h_cut = 0, v_cut = 0):
+ 					no_checkpoint_with_ranges, save_checkpoint_to_file, count_zeros,\
+ 					compress_cw_bits, compress_p_rejection, h_cut = 0, v_cut = 0):
 	if h_cut:
 		command += " --num_threads " + str(num_threads) + " --sim_type " \
 		+ str(sim_type) + " --hcut " + str(h_cut) + " --high_value_q " + str(num_highq)
@@ -108,8 +108,8 @@ def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_majo
 	if save_checkpoint_to_file:
 		command += " --save_checkpoint_to_file " + str(save_checkpoint_to_file)
 
-	if SZ_compress_file:
-		command += " --SZ_compress " + str(SZ_compress_file)
+	if compress_cw_bits:
+		command += " --Cramer " + str(compress_cw_bits) + "," + str(compress_p_rejection)
 
 	if count_zeros:
 		command += " --count_zeros"

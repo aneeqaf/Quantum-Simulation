@@ -91,7 +91,7 @@ CopyOrRead(bool file_back_up,
         Time c_time;
         c_time.StartTime();
         
-        if (config -> SZ_compress) {
+        if (config -> compress) {
             amp.DecompressAndCopyAnotherState(copy_amp);
             
             double time = c_time.GetElapsedTime();
@@ -281,11 +281,11 @@ CheckpointWithoutFile(bool branch,
     
     SumOfTensorsProductsStateVector temp_amp;
     
-    if (config -> SZ_compress) {
+    if (config -> compress) {
         Time compress_time, decompress_time;
         compress_time.StartTime();
         
-        amp.CompressStateVector(config -> SZ_cnfg_file);
+        amp.CompressStateVector(config -> cramer_num_codewords, config -> cramer_p_rejection);
         
         double time_compress = compress_time.GetElapsedTime();
         amp.time_by_category.compress += time_compress;

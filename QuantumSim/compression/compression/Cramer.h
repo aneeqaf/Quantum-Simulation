@@ -16,88 +16,46 @@
 #include <cstring>
 #include <cmath>
 #include <complex>
-#include <cassert>
-#include <fstream>
-#include <map>
 #include <iostream>
 #include <immintrin.h>
-#include <queue>
-#include <stdio.h>
+#include <unordered_map>
 #include <vector>
 #include <utility>
 
-#include "zstd.h"
-
-#ifdef GP
-#include "gnuplot-iostream/gnuplot-iostream.h"
-#endif
-
 using namespace std;
 
-using idx_size = size_t;
-using cmplx = complex<float>;
-using cmplxd = complex<double>;
 using Packed4ShortArray = unsigned short[4];
 using Packed8ShortArray = unsigned short[8];
 
 constexpr double PI = M_PI;
 constexpr double CDF_MAX_P = 1.02;
-constexpr idx_size INNER_R_SHIFT = 0;
+constexpr size_t INNER_R_SHIFT = 0;
 constexpr double B = 0.00298;
-constexpr idx_size NUM_UL_IN_REG = 4;
-constexpr idx_size REG_SIZE = 256;
-constexpr idx_size BITS_SHORT = 16;
-constexpr idx_size BITS_UL = 64;
-
-static void PlotCWFrequency(const vector<idx_size>& codewords_freq,
-                            idx_size num_qubits)
-{
-#ifdef GP
-    Gnuplot gp;
-    
-    vector<pair<unsigned short,idx_size>> codewords_freq_idx;
-    for (idx_size i = 1; i < codewords_freq.size(); ++i)
-        codewords_freq_idx.push_back(make_pair(i, codewords_freq[i]));
-    
-    idx_size freq_max = 0;
-    for (idx_size i = 1; i < codewords_freq.size(); ++i) {
-        if(codewords_freq[i] > freq_max)
-            freq_max = codewords_freq[i];
-    }
-    
-    string filename = to_string(codewords_freq.size()) + "_codewords_freq";
-    
-    gp << "reset\nset nokey\n";
-    gp << "set title \"" << num_qubits << "q: " << codewords_freq.size() << " Codewords Frequency\" font \",14\"\n";
-    //    gp << "set ylabel 'Amplitude frequency'\n";
-    //    gp << "set xlabel 'Codewords'\n";
-    gp << "set term png\n";
-    gp << "set output '" << filename + to_string(num_qubits) << ".png'\n";
-    gp << "set tics font 'Times New Roman,12'\n";
-    gp << "cw=" << codewords_freq.size() << "\nmax_f=" << freq_max << "\n";
-    gp << "title(c) = sprintf(\"\\nAmplitudes to %i Codewords Frequency\"" << ", cw) \n";
-    
-    gp << "set xr[0:cw]\nset yr[0:max_f]\n";
-    gp << "plot " << gp.file1d(codewords_freq_idx, "file.txt") << " using 1:2 with lines lw 2 \n";
-    
-#endif
-}
+constexpr size_t NUM_UL_IN_REG = 4;
+constexpr size_t REG_SIZE = 256;
+constexpr size_t BITS_SHORT = 16;
+constexpr size_t BITS_UL = 64;
+constexpr size_t SAMPLING_SIZE = 1 << 10;
 
 class Cramer {
-        
-    idx_size orig_vector_size;
-    idx_size compressed_vector_UL_size;
-    idx_size r;
-    idx_size R;
-    idx_size num_bits_codewords;
-    idx_size num_codewords;
-    idx_size num_codewords_reg;
-    atomic<idx_size> num_zero_amps;
+    
+    complex<float>* codewords_mappings;
+    
+    size_t orig_vector_size;
+    size_t compressed_vector_UL_size;
+    size_t r;
+    size_t R;
+    size_t num_bits_codewords;
+    size_t num_codewords;
+    size_t num_codewords_reg;
+    atomic<size_t> num_zero_amps;
     double codewords_spacing;
     double spiral_length_r;
+    double lambda;
+    bool projection_vector;
     
-    cmplxd UniformTransformMagnitudeAndAmp(cmplxd amp) const;
-    cmplxd PTTransformMagnitudeAndAmp(cmplxd amp) const;
+    complex<double> UniformTransformMagnitudeAndAmp(complex<double> amp) const;
+    complex<double> PTTransformMagnitudeAndAmp(complex<double> amp) const;
     
     //Polar equation: r = BTheta = BcPi
     double CalcCInMagnitudeUniformSpiral(double magnitude) const;
@@ -110,35 +68,39 @@ class Cramer {
     double CalcExactSpiralLen(double theta) const;
     double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
     double CalcThetaForCW(unsigned short codeword) const;
-    idx_size CalcCWThatFitIn256BitsReg() const;
-    idx_size CalcNumULInCompressedVector(idx_size num_256_reg) const;
-    idx_size CalcNum256RegForSizeOfVector() const;
+    size_t CalcCWThatFitIn256BitsReg() const;
+    size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
+    size_t CalcNum256RegForSizeOfVector() const;
+    double CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const;
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          unsigned short codeword) const;
-    unsigned short CalcNearestCWToVal(cmplxd val) const;
-    unsigned short MapValToCW(cmplxd val);
+    unsigned short CalcNearestCWToVal(complex<double> val) const;
+    unsigned short MapValToCW(complex<double> val);
     __m256 PackCWIn256BitsAVXReg(const unsigned short* codewords) const;
     void UnpackCWFrom256Bits(const bitset<REG_SIZE>& packed_codewords,
                              unsigned short* unpacked_codewords) const;
     
 public:
     
-    Cramer(idx_size vector_size,
-           idx_size num_codewords,
-           double probabilty_rejection);
+    Cramer(size_t vector_size,
+           size_t num_codewords,
+           double probabilty_rejection,
+           bool projection_v = false);
+    Cramer(const Cramer& rhs);
+    ~Cramer();
     
-    cmplx* CramerCompress(const cmplx* state_vector);
-    cmplx* CramerDecompress(const cmplx* state_vector);
-    cmplx* CramerCompressAVX(const cmplx* state_vector);
-    cmplx* CramerDecompressAVX(const cmplx* state_vector);
+    complex<float>* CramerCompress(const complex<float>* state_vector);
+    complex<float>* CramerDecompress(const complex<float>* state_vector);
+    complex<float>* CramerCompressAVX(const complex<float>* state_vector);
+    complex<float>* CramerDecompressAVX(const complex<float>* state_vector);
     
     void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
-    idx_size GetCompressedVectorSize() const;
+    size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;
     double GetMaxOuterRadius() const;
-    idx_size GetNumOfCW() const;
-    idx_size GetNumValsMappedToZero() const;
+    size_t GetNumOfCW() const;
+    size_t GetNumValsMappedToZero() const;
     double GetFactorOfDistBetweenTurns() const;
     double GetDistBetweenCW() const;
 };

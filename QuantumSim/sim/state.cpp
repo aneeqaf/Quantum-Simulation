@@ -12,7 +12,7 @@ using namespace std;
 FullAmpStateVector::
 FullAmpStateVector(const int qubits): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), global_factor_power(0), global_i_counter(0),
-num_qubits(qubits), zero_opt_mask(num_qubits), all_zeros(false), sv_comp_decomp(nullptr)
+num_qubits(qubits), zero_opt_mask(num_qubits), all_zeros(false), cramer(nullptr)
 {
     amp_size = 1ull << qubits;
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
@@ -40,7 +40,7 @@ FullAmpStateVector::
 FullAmpStateVector(cmplx* a,
                    const idx_size size): max_prob(numeric_limits<double>::min()),
 min_prob(numeric_limits<double>::max()), amp_size(size), global_factor_power(0), global_i_counter(0),
-num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits), all_zeros(false), sv_comp_decomp(nullptr)
+num_qubits(__builtin_log2l(size)), zero_opt_mask(num_qubits), all_zeros(false), cramer(nullptr)
 {
     if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
         idx_size memory = sizeof(cmplx) * amp_size;
@@ -71,9 +71,9 @@ num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_
 {
    compressed = rhs.compressed;
     
-    if (rhs.sv_comp_decomp) {
-        if (sv_comp_decomp) free(sv_comp_decomp);
-        sv_comp_decomp = new SZ_Helper(*rhs.sv_comp_decomp);
+    if (rhs.cramer) {
+        if (cramer) free(cramer);
+        cramer = new Cramer(*cramer);
     }
     
    if (int err = posix_memalign((void**)&amp, 64, sizeof(cmplx) * amp_size) != 0) {
@@ -109,7 +109,7 @@ num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_
 FullAmpStateVector::
 ~FullAmpStateVector()
 {
-    delete sv_comp_decomp;
+    delete cramer;
     free(amp);
     amp = nullptr;
 }
@@ -1045,7 +1045,7 @@ PrintStateVector()
         auto a = amp[i];
         cout << real(a) ;
 
-        if (imag(a) > 0)
+        if (imag(a) >= 0)
             cout << "+" << imag(a) << "j";
         else if (imag(a) < 0)
             cout << imag(a) << "j";
@@ -1141,9 +1141,9 @@ CopyState(const GenericQuantumState& rhs)
         }
         memset(amp, 0, amp_size * sizeof(amp));
     }
-    if (t_rhs.sv_comp_decomp) {
-        if (sv_comp_decomp) free(sv_comp_decomp);
-        sv_comp_decomp = new SZ_Helper(*t_rhs.sv_comp_decomp);
+    if (t_rhs.cramer) {
+        if (cramer) free(cramer);
+        cramer = new Cramer(*t_rhs.cramer);
     }
     
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(t_rhs.amp, 64);
@@ -1172,16 +1172,19 @@ CopyMemberVars(const GenericQuantumState& rhs)
 }
 
 void FullAmpStateVector::
-CompressStateVector(const string& SZ_cnfg)
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
 {
     if (global_i_counter || global_factor_power)
         RescaleAndApplyGlobalICounter();
     
-    sv_comp_decomp = new SZ_Helper(SZ_cnfg, amp_size, num_threads);
-    sv_comp_decomp -> Compress(amp);
+//    cout << "\n\ncompressed\n\n";
+//    PrintStateVector();
+    cramer = new Cramer(amp_size, num_codewords, p_rejection);
+    cmplx* compressed_amp = cramer -> CramerCompress(amp);
     
     if (amp) free(amp);
-    amp = nullptr;
+    amp = compressed_amp;
     compressed = true;
 }
 
@@ -1189,8 +1192,9 @@ void FullAmpStateVector::
 DecompressStateVector()
 {
     if (amp) free(amp);
-    amp = nullptr;
-    amp = (cmplx*) sv_comp_decomp -> Decompress();
+    amp = cramer -> CramerDecompress(amp);
+//    cout << "\n\ndecompressed1\n\n";
+//    PrintStateVector();
     compressed = false;
 }
 
@@ -1200,12 +1204,13 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     const FullAmpStateVector& t_rhs = (const FullAmpStateVector&)rhs;
     assert(t_rhs.global_factor_power == 0);
     assert(t_rhs.global_i_counter == 0);
-    
+
     CopyMemberVars(rhs);
     
     if (amp) free(amp);
-    amp = nullptr;
-    amp = (cmplx*) t_rhs.sv_comp_decomp -> Decompress();
-    compressed = false;   
+    amp = t_rhs.cramer -> CramerDecompress(t_rhs.amp);
+//    cout << "\n\ndecompressed2\n\n";
+//    PrintStateVector();
+    compressed = false;
 }
 
