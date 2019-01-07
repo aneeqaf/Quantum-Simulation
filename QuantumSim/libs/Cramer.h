@@ -85,7 +85,7 @@ public:
     Cramer(size_t vector_size,
            size_t num_codewords,
            double probabilty_rejection,
-           bool projection_v = false);
+           bool projection_v = true);
     Cramer(const Cramer& rhs);
     ~Cramer();
     

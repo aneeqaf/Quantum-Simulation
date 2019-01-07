@@ -33,6 +33,7 @@ private:
     ostringstream log;
     idx_size curr_gate, num_layers;
     idx_size adjustment_factor;
+    double memory_usage;
     double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time, mmap_time;
     Config* config;
     vector<double> norms_CZ_paths;

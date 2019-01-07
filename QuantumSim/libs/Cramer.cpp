@@ -14,8 +14,8 @@ Cramer::
 Cramer(size_t vector_size,
        size_t num_cw,
        double probabilty_rejection,
-       bool projection_v): orig_vector_size(vector_size), num_codewords(num_cw), num_zero_amps(0),
-num_bits_codewords(log2(num_cw + 1)), lambda(0), projection_vector(projection_v)
+       bool projection_v): orig_vector_size(vector_size), num_bits_codewords(log2(num_cw + 1)),
+num_codewords(num_cw), num_zero_amps(0), lambda(0), projection_vector(projection_v)
 {
     r = CalcCInMagnitudeUniformSpiral(probabilty_rejection) + INNER_R_SHIFT;
     R = CalcCInMagnitudeUniformSpiral(CDF_MAX_P);

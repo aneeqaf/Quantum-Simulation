@@ -11,7 +11,7 @@ unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
 SequentialSimulation::
 SequentialSimulation(Config* c): curr_gate(0), num_layers(0), adjustment_factor(1),
-total_time(0), dfs_time(0), phase1_time(0), XE_time(0), mmap_time(0), config(c)
+memory_usage(0), total_time(0), dfs_time(0), phase1_time(0), XE_time(0), mmap_time(0), config(c)
 {
     if (config -> norm_depth) {
         idx_size num_norms = config -> norm_depth ? 1ull << config -> norm_depth : 1ull << config -> ranges_bits;
@@ -256,6 +256,8 @@ CheckpointWithFile(bool branch,
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
         }
+        if (amp.book_keep)
+            memory_usage += amp.GetMemUsage();
         MainLoopForBranching(amp, circuit, temp_amp, gate_i);
     }
     else {
@@ -300,6 +302,9 @@ CheckpointWithoutFile(bool branch,
         phase1_time += time_compress + time_decompress;
         ++amp.count_of_category.decompress;
         ++amp.count_of_category.compress;
+        
+        if (amp.book_keep)
+            memory_usage += amp.GetMemUsage();
     }
     else {
         Time copy_time;
@@ -311,6 +316,9 @@ CheckpointWithoutFile(bool branch,
         double time_copying = copy_time.GetElapsedTime();
         amp.time_by_category.copying += time_copying;
         phase1_time += time_copying;
+        
+        if (amp.book_keep)
+            memory_usage += amp.GetMemUsage();
     }
     
     
@@ -444,6 +452,8 @@ Simulate(GenericQuantumState& amp,
 //        amp.approx = config -> proc_prefix_bits + ceil(log2(config -> approx_epsilon));
 //        
     PopulateBenchmarkMap();
+    
+    memory_usage += amp.GetMemUsage();
    
     pair<int, int> twoq_gate_count(0, 0);
 
@@ -1343,7 +1353,7 @@ PrintSimReport(GenericQuantumState& amp,
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
 
-        double memory = amp.GetMemUsage();
+        double memory =  sizeof(cmplx) * amp.GetSize();
         ss << "State representation size : ";
 
         if (memory >= (1 << 30)) {
@@ -1713,6 +1723,20 @@ PrintSimReport(GenericQuantumState& amp,
             ss << "\tMemory mapped I/O : " << mmap_time << " s = "
             << (mmap_time/(total_time)) * 100 << "%\n";
         }
+        
+        ss << "Simulation memory usage : " ;
+        if (memory_usage >= (1 << 30)) {
+            ss << memory_usage / (1 << 30) << " GiB \n";
+        }
+        else if (memory_usage >= (1 << 20)) {
+            ss << memory_usage / (1 << 20) << " MiB \n";
+        }
+        else if (memory_usage >= (1 << 10)) {
+            ss << memory_usage / (1 << 10) << " KiB \n";
+        }
+        else
+            ss << memory_usage << " B \n";
+        
         cout << ss.str() << "\n";
     }
     

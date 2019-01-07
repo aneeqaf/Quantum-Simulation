@@ -720,7 +720,10 @@ GetAvgProb() const
 double FullAmpStateVector::
 GetMemUsage() const
 {
-    return sizeof(cmplx) * amp_size;
+    if (compressed)
+        return sizeof(cmplx) * cramer -> GetCompressedVectorSize();
+    else
+        return sizeof(cmplx) * amp_size;
 }
 
 idx_size FullAmpStateVector::
