@@ -266,14 +266,111 @@ PackCWIn256BitsAVXReg(const unsigned short* codewords) const
 }
 
 void Cramer::
-UnpackCWFrom256Bits(const bitset<REG_SIZE>& packed_codewords,
+UnpackCWFrom256Bits( bitset<REG_SIZE> packed_codewords,
                     unsigned short* unpacked_codewords) const
 {
-    bitset<REG_SIZE> set_cw_bits = (1ull << num_bits_codewords) - 1;
+    const bitset<REG_SIZE> set_cw_bits = (1ull << num_bits_codewords) - 1;
     
-    for (size_t i = 0; i < num_codewords_reg; ++i)
-        unpacked_codewords[i] =
-        ((packed_codewords & (set_cw_bits << (i * num_bits_codewords))) >> (i * num_bits_codewords)).to_ullong();
+    for (size_t i = 0; i < num_codewords_reg; ++i) {
+        unpacked_codewords[i] = (packed_codewords & set_cw_bits).to_ulong();
+        packed_codewords = packed_codewords >> num_bits_codewords;
+    }
+}
+
+inline __m256i Cramer::
+ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,
+                             const __m256i& mask_cw_256) const
+{
+    __m256i extracted_bits = _mm256_and_si256(packed_codewords, mask_cw_256);
+    packed_codewords = _mm256_shift_right(packed_codewords, num_bits_codewords);
+    
+    return extracted_bits;
+}
+
+void  Cramer::
+UnpackCWFrom256BitsAVX(__m256i packed_codewords,
+                       unsigned short* unpacked_codewords) const
+{
+    __m256i mask_cw_256 = {0, 0, 0, 0};
+    mask_cw_256[0] = (1ul << num_bits_codewords) - 1;
+//    const __m256i initial_cws = {0, 0, 0, 0};
+//    __m256i cws = initial_cws;
+    
+    for (size_t i = 0; i < num_codewords_reg; ++i) {
+        __m256i extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+        unpacked_codewords[i] = extracted_bits[0];
+    }
+    
+//
+//    for (size_t i = 0; i < num_codewords_reg; i+=NUM_SHORT_IN_REG) {
+//        __m256i extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<2>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<4>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<6>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<8>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<10>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<12>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left0To16<14>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16<16>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<18>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<20>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<22>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<24>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<26>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<28>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
+//        extracted_bits = _mm256_shift_left16To32<30>(extracted_bits);
+//        cws = _mm256_or_si256(cws, extracted_bits);
+//
+//        _mm256_storeu_ps((float*)&unpacked_codewords[i],(__m256)cws);
+////        _mm256_store_ps((float*)&unpacked_codewords[i],(__m256)cws);
+//
+//        cws = initial_cws;
+//    }
 }
 
 complex<float>* Cramer::
@@ -383,13 +480,14 @@ CramerDecompressAVX(const complex<float>* state_vector)
     
     memset(decompressed_vector, 0, sizeof(complex<float>) * orig_vector_size);
     
-    bitset<REG_SIZE> * __restrict compressed_vector = (bitset<REG_SIZE> *)state_vector;
+    __m256i* __restrict compressed_vector = (__m256i *)state_vector;
+     size_t num_cw = ceil((double)num_codewords_reg / (double)NUM_SHORT_IN_REG) * NUM_SHORT_IN_REG;
     
-    #pragma omp parallel for
+//    #pragma omp parallel for
     for (size_t i = 0; i < compressed_vector_UL_size/4; ++i) {
-        unsigned short unpacked_codewords[num_codewords_reg];
-        UnpackCWFrom256Bits(compressed_vector[i], unpacked_codewords);
-        #pragma omp parallel for
+        unsigned short unpacked_codewords[num_cw];
+//        align(alignof(unsigned short), sizeof(unsigned short), (void*&)unpacked_codewords, num_cw);
+        UnpackCWFrom256BitsAVX(compressed_vector[i], unpacked_codewords);
         for (size_t j = 0; j < num_codewords_reg; ++j) {
             size_t k = (i * num_codewords_reg) + j;
             if (k >= orig_vector_size)
