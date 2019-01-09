@@ -319,7 +319,7 @@ FormGatesBitmaskXCZ(bool& terminate,
 
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
-            if (tensor_addends[0] -> GetNumQInBlock(0) < tensor_addends[0] -> GetNumQInBlock(1)) {
+            if (tensor_addends[0] -> GetNumQInBlock(0) <= tensor_addends[0] -> GetNumQInBlock(1)) {
                 if (cz_bits[0] == '0')
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
                 else

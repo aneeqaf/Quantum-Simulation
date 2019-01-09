@@ -466,6 +466,7 @@ CramerCompressAVX(const complex<float>* state_vector)
         double magnitude = CalcMagnitudeForCW(i);
         double theta = CalcThetaForMagnitude(magnitude);
         codewords_mappings[i] = PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
+        cout << codewords_mappings[i] << endl;
     }
     
     return compressed_vector;
@@ -483,10 +484,9 @@ CramerDecompressAVX(const complex<float>* state_vector)
     __m256i* __restrict compressed_vector = (__m256i *)state_vector;
      size_t num_cw = ceil((double)num_codewords_reg / (double)NUM_SHORT_IN_REG) * NUM_SHORT_IN_REG;
     
-//    #pragma omp parallel for
+    #pragma omp parallel for
     for (size_t i = 0; i < compressed_vector_UL_size/4; ++i) {
         unsigned short unpacked_codewords[num_cw];
-//        align(alignof(unsigned short), sizeof(unsigned short), (void*&)unpacked_codewords, num_cw);
         UnpackCWFrom256BitsAVX(compressed_vector[i], unpacked_codewords);
         for (size_t j = 0; j < num_codewords_reg; ++j) {
             size_t k = (i * num_codewords_reg) + j;
@@ -551,4 +551,9 @@ double Cramer::
 GetDistBetweenCW() const
 {
     return codewords_spacing;
+}
+
+double Cramer:: GetLog2Lambda() const
+{
+    return log2(lambda);
 }

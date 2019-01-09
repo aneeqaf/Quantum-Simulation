@@ -210,7 +210,7 @@ static void PlotCDF(complex<float>* amps,
     gp << "set key right bottom\n";
     //    gp << "set logscale y\n";
     gp << "plot " << gp.file1d(amps_g, "dist.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"black\" t \"empirical\","
-    << gp.file1d(e_cdf, "dist2.txt") << " using 2:1 with point pt 5 ps 0.2 lc rgb \"red\" t \"calculated empirically\","
+    << gp.file1d(e_cdf, "dist2.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"red\" t \"calculated empirically\","
     << gp.file1d(cdf_pt, "dist1.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"purple\" t \"analytical\"\n";
     
 #endif

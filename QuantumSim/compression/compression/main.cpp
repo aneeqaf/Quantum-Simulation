@@ -96,8 +96,8 @@ int main(int argc, char * argv[]) {
     }
     infile.close();
     
-//    PlotCDF(amp, num_q);
-//    PlotPT(amp, num_q);
+    PlotCDF(amp, num_q);
+    PlotPT(amp, num_q);
     Cramer cramer(amp_size, num_codewords, probability, true);
     
 //    ApplyUniformTransformToStateVector(amp, amp_size);

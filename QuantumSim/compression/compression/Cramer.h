@@ -146,6 +146,7 @@ public:
     size_t GetNumValsMappedToZero() const;
     double GetFactorOfDistBetweenTurns() const;
     double GetDistBetweenCW() const;
+    double GetLog2Lambda() const;
 };
 
 #endif /* Cramer_h */
