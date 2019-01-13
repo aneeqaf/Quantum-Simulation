@@ -63,7 +63,7 @@ complex<double> Cramer::
 UniformTransformMagnitudeAndAmp(complex<double> amp) const
 {
     double original_phase = atan2(amp.imag(), amp.real());
-    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
+//    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
     double PT_probability = norm(amp);
     double uniform_probability = 1.0 - exp(-PT_probability * (double)lambda);
     
@@ -77,7 +77,7 @@ complex<double> Cramer::
 PTTransformMagnitudeAndAmp(complex<double> amp) const
 {
     double original_phase = atan2(amp.imag(), amp.real());
-    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
+//    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
     double uniform_probability = norm(amp);
     double PT_probability = -log(abs(1.0 - uniform_probability)) / lambda;
     
@@ -246,23 +246,57 @@ MapValToCW(complex<double> val)
     }
 }
 
+//__m256 Cramer::
+//PackCWIn256BitsAVXReg(const unsigned short* codewords) const
+//{
+//    const bitset<REG_SIZE> set_UL = ~0ULL;
+//    bitset<REG_SIZE> cw_pack_256_bits = 0;
+//
+//    for (size_t i = 0; i < num_codewords_reg; ++i) {
+//        bitset<REG_SIZE> temp = codewords[i] ;
+//        cw_pack_256_bits |= (temp << (i * num_bits_codewords));
+//    }
+//
+//    unsigned long long ul_in_256_reg[NUM_UL_IN_REG];
+//
+//    for (size_t i = 0;  i < NUM_UL_IN_REG; ++i)
+//        ul_in_256_reg[i] = ((cw_pack_256_bits & (set_UL << (i * BITS_UL))) >> (i * BITS_UL)).to_ullong();
+//
+//    return _mm256_load_ps((float*)ul_in_256_reg);
+//}
+
 __m256 Cramer::
 PackCWIn256BitsAVXReg(const unsigned short* codewords) const
 {
-    const bitset<REG_SIZE> set_UL = ~0ULL;
-    bitset<REG_SIZE> cw_pack_256_bits = 0;
-    
-    for (size_t i = 0; i < num_codewords_reg; ++i) {
-        bitset<REG_SIZE> temp = codewords[i] ;
-        cw_pack_256_bits |= (temp << (i * num_bits_codewords));
-   }
-    
-    unsigned long long ul_in_256_reg[NUM_UL_IN_REG];
-    
-    for (size_t i = 0;  i < NUM_UL_IN_REG; ++i)
-        ul_in_256_reg[i] = ((cw_pack_256_bits & (set_UL << (i * BITS_UL))) >> (i * BITS_UL)).to_ullong();
-    
-    return _mm256_load_ps((float*)ul_in_256_reg);
+    size_t iters = ceil((double)num_codewords_reg/(double) NUM_UI_IN_REG);
+    __m256i idxs = IDXS_CW_FOR_MASKS_UI[num_bits_codewords];
+    unsigned int idxs_iter[NUM_UI_IN_REG];
+    __m256i cw = {0};
+
+    for (size_t i = 0; i < iters; ++i) {
+        _mm256_store_ps((float*)idxs_iter, (__m256)idxs);
+        
+        __m256i temp1_cw = {0}, temp2_cw = {0};
+        temp1_cw [0] = codewords[idxs_iter[0]];
+        temp1_cw [1] = codewords[idxs_iter[2]];
+        temp1_cw [2] = codewords[idxs_iter[4]];
+        temp1_cw [3] = codewords[idxs_iter[6]];
+        
+        temp2_cw [0] = codewords[idxs_iter[1]];
+        temp2_cw [1] = codewords[idxs_iter[3]];
+        temp2_cw [2] = codewords[idxs_iter[5]];
+        temp2_cw [3] = codewords[idxs_iter[7]];
+        temp2_cw = _mm256_slli_epi64(temp2_cw, BITS_UI);
+        
+        __m256i temp_cw = _mm256_or_si256(temp1_cw, temp2_cw);
+        temp_cw = _mm256_sllv_epi32(temp_cw, BITS_TO_STARTING_OF_UI[num_bits_codewords]);
+        temp_cw = _mm256_shift_left(temp_cw, i * num_bits_codewords);
+        cw = _mm256_or_si256(cw, temp_cw);
+        
+        idxs = _mm256_add_epi64(idxs, INCREMENT_1_UI);
+    }
+   
+    return (__m256)cw;
 }
 
 void Cramer::
@@ -287,90 +321,43 @@ ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,
     return extracted_bits;
 }
 
+inline __m256i Cramer::
+ExtractCodewordFromAVX256Reg(__m256i& packed_codewords) const
+{
+    __m256i extracted_cws = _mm256_and_si256(packed_codewords, MASKS_CW_PER_UI_REG[num_bits_codewords]);
+    __m256i cws_alighned_ul = _mm256_srlv_epi32(extracted_cws, BITS_TO_STARTING_OF_UI[num_bits_codewords]);
+    
+    packed_codewords = _mm256_shift_right(packed_codewords, num_bits_codewords);
+    
+    return cws_alighned_ul;
+}
+
 void  Cramer::
 UnpackCWFrom256BitsAVX(__m256i packed_codewords,
                        unsigned short* unpacked_codewords) const
 {
-    __m256i mask_cw_256 = {0, 0, 0, 0};
-    mask_cw_256[0] = (1ul << num_bits_codewords) - 1;
-//    const __m256i initial_cws = {0, 0, 0, 0};
-//    __m256i cws = initial_cws;
-    
-    for (size_t i = 0; i < num_codewords_reg; ++i) {
-        __m256i extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-        unpacked_codewords[i] = extracted_bits[0];
+    size_t iters = ceil((double)num_codewords_reg/(double) NUM_UI_IN_REG);
+    __m256i idxs = IDXS_CW_FOR_MASKS_UI[num_bits_codewords];
+    __m256i extracted_cws[iters];
+
+    for (size_t i = 0; i < iters; ++i) {
+        extracted_cws[i] = ExtractCodewordFromAVX256Reg(packed_codewords);
+        unsigned int idxs_iter[NUM_UI_IN_REG];
+        unsigned int cws[NUM_UI_IN_REG];
+        _mm256_store_ps((float*)idxs_iter, (__m256)idxs);
+        _mm256_store_ps((float*)cws, (__m256)extracted_cws[i]);
+
+        unpacked_codewords[idxs_iter[0]] = cws[0];
+        unpacked_codewords[idxs_iter[1]] = cws[1];
+        unpacked_codewords[idxs_iter[2]] = cws[2];
+        unpacked_codewords[idxs_iter[3]] = cws[3];
+        unpacked_codewords[idxs_iter[4]] = cws[4];
+        unpacked_codewords[idxs_iter[5]] = cws[5];
+        unpacked_codewords[idxs_iter[6]] = cws[6];
+        unpacked_codewords[idxs_iter[7]] = cws[7];
+
+        idxs = _mm256_add_epi64(idxs, INCREMENT_1_UI);
     }
-    
-//
-//    for (size_t i = 0; i < num_codewords_reg; i+=NUM_SHORT_IN_REG) {
-//        __m256i extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<2>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<4>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<6>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<8>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<10>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<12>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left0To16<14>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16<16>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<18>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<20>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<22>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<24>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<26>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<28>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        extracted_bits = ExtractCodewordFromAVX256Reg(packed_codewords, mask_cw_256);
-//        extracted_bits = _mm256_shift_left16To32<30>(extracted_bits);
-//        cws = _mm256_or_si256(cws, extracted_bits);
-//
-//        _mm256_storeu_ps((float*)&unpacked_codewords[i],(__m256)cws);
-////        _mm256_store_ps((float*)&unpacked_codewords[i],(__m256)cws);
-//
-//        cws = initial_cws;
-//    }
 }
 
 complex<float>* Cramer::
@@ -440,7 +427,7 @@ CramerCompressAVX(const complex<float>* state_vector)
     
     memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
     
-    vector<size_t> cw_freq(num_codewords, 0);
+    vector<size_t> cw_freq(num_codewords + 1, 0);
     
     #pragma omp parallel for
     for (size_t i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
@@ -448,10 +435,13 @@ CramerCompressAVX(const complex<float>* state_vector)
         #pragma omp parallel for
         for (size_t j = 0; j < num_codewords_reg; ++j) {
             size_t k = ((i/NUM_UL_IN_REG) * num_codewords_reg) + j;
-            if (k >= orig_vector_size)
+            if (k >= orig_vector_size) {
                 codewords[j] = 0;
+                continue;
+            }
             else
                 codewords[j] = MapValToCW(state_vector[k]);
+            codewords_mappings[codewords[j]] += state_vector[k];
             ++cw_freq[codewords[j]];
         }
         
@@ -461,12 +451,11 @@ CramerCompressAVX(const complex<float>* state_vector)
     
     PlotCWFrequency(cw_freq, log2(orig_vector_size));
     
-    codewords_mappings[0] = 0;
-    for (size_t i = 1; i <= num_codewords; ++i) {
-        double magnitude = CalcMagnitudeForCW(i);
-        double theta = CalcThetaForMagnitude(magnitude);
-        codewords_mappings[i] = PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
-        cout << codewords_mappings[i] << endl;
+//    codewords_mappings[0] = 0;
+    for (size_t i = 0; i <= num_codewords; ++i) {
+//        double magnitude = CalcMagnitudeForCW(i);
+//        double theta = CalcThetaForMagnitude(magnitude);
+        codewords_mappings[i] /= cw_freq[i];  //PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
     }
     
     return compressed_vector;

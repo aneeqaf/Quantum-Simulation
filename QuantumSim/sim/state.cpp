@@ -1183,7 +1183,7 @@ CompressStateVector(idx_size num_codewords,
     
 //    cout << "\n\ncompressed\n\n";
 //    PrintStateVector();
-    cramer = new Cramer(amp_size, num_codewords, p_rejection);
+    cramer = new Cramer(amp_size, num_codewords, num_threads, p_rejection);
     cmplx* compressed_amp = cramer -> CramerCompress(amp);
     
     if (amp) free(amp);

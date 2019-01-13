@@ -37,7 +37,6 @@ Compress(const cmplx* original_vector)
     
     size_t size_of_each_compression = actual_vector_size/num_threads;
     
-//    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < num_threads; ++i) {
         unsigned char* compressed_ptr = (unsigned char*) SZ_compress_args(DATATYPE,
                                                                           (float *)(original_vector + (i * size_of_each_compression)),
@@ -71,7 +70,6 @@ Decompress()
     
     size_t size_of_each_compression = actual_vector_size/num_threads;
     
-// #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < num_threads; ++i) {
         SZ_decompress_args(DATATYPE, compressed_vector_ptrs[i], compressed_out_sizes[i],
                            (float *)(decompressed_amp + (i * size_of_each_compression)), 0, 0, 0, 0,

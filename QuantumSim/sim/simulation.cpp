@@ -316,6 +316,7 @@ CheckpointWithoutFile(bool branch,
         double time_copying = copy_time.GetElapsedTime();
         amp.time_by_category.copying += time_copying;
         phase1_time += time_copying;
+        ++amp.count_of_category.copying;
         
         if (amp.book_keep)
             memory_usage += amp.GetMemUsage();
