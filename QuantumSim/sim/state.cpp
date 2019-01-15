@@ -1183,10 +1183,15 @@ CompressStateVector(idx_size num_codewords,
     
 //    cout << "\n\ncompressed\n\n";
 //    PrintStateVector();
+    unsigned short block_num = partition_to_sim == 'a' ? 0 : 1;
     cramer = new Cramer(amp_size, num_codewords, num_threads, p_rejection);
-    cmplx* compressed_amp = cramer -> CramerCompress(amp);
+    cmplx* compressed_amp = cramer -> CramerCompress(compressed_vector_ptrs.back()[block_num],
+                                                     amp);
     
-    if (amp) free(amp);
+    if (book_keep)
+        compressed_vector_ptrs.back()[block_num] = compressed_amp;
+    
+    if (amp && !compressed) free(amp);
     amp = compressed_amp;
     compressed = true;
 }
@@ -1195,7 +1200,7 @@ void FullAmpStateVector::
 DecompressStateVector()
 {
     if (amp) free(amp);
-    amp = cramer -> CramerDecompress(amp);
+    amp = cramer -> CramerDecompress(nullptr, amp);
 //    cout << "\n\ndecompressed1\n\n";
 //    PrintStateVector();
     compressed = false;
@@ -1208,10 +1213,16 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     assert(t_rhs.global_factor_power == 0);
     assert(t_rhs.global_i_counter == 0);
 
+    bool prev_compressed = compressed;
     CopyMemberVars(rhs);
+    compressed = prev_compressed;
     
-    if (amp) free(amp);
-    amp = t_rhs.cramer -> CramerDecompress(t_rhs.amp);
+    if (compressed == true) {
+        if (amp)
+            amp = nullptr;
+    }
+    
+    amp = t_rhs.cramer -> CramerDecompress(amp, t_rhs.amp);
 //    cout << "\n\ndecompressed2\n\n";
 //    PrintStateVector();
     compressed = false;

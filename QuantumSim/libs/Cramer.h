@@ -10,8 +10,10 @@
 #define Cramer_h
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <bitset>
+#include <cassert>
 #include <complex>
 #include <cstring>
 #include <cmath>
@@ -23,6 +25,8 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+
+#include "profile.h"
 
 using namespace std;
 
@@ -208,8 +212,10 @@ public:
     Cramer(const Cramer& rhs);
     ~Cramer();
     
-    complex<float>* CramerCompress(const complex<float>* state_vector);
-    complex<float>* CramerDecompress(const complex<float>* state_vector);
+    complex<float>* CramerCompress(complex<float>* compressed_v,
+                                   const complex<float>* state_vector);
+    complex<float>* CramerDecompress(complex<float>* decompressed_v,
+                                     const complex<float>* state_vector);
     
     size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;

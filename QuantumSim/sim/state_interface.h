@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 
+#include <array>
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
@@ -126,6 +127,8 @@ inline ostream& operator<<(ostream& o, const QubitPartition& qp) {
 
 class GenericQuantumState {    
 public:
+    static vector<array<complex<float>*, 2>> compressed_vector_ptrs;
+    
     static Data data_per_cycles;
     static vector<string> log;
     static Counts count_of_category;

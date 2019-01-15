@@ -209,6 +209,8 @@ public:
     complex<float>* CramerDecompress(const complex<float>* state_vector);
     complex<float>* CramerCompressAVX(const complex<float>* state_vector);
     complex<float>* CramerDecompressAVX(const complex<float>* state_vector);
+    complex<float>* CramerCompressAVX16Bits(const complex<float>* state_vector);
+    complex<float>* CramerDecompressAVX16Bits(const complex<float>* state_vector);
     
     void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
     size_t GetCompressedVectorSize() const;

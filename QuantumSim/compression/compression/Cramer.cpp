@@ -62,13 +62,12 @@ Cramer::
 complex<double> Cramer::
 UniformTransformMagnitudeAndAmp(complex<double> amp) const
 {
-    double original_phase = atan2(amp.imag(), amp.real());
-//    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
-    double PT_probability = norm(amp);
+    double PT_mag = abs(amp);
+    double PT_probability = PT_mag * PT_mag;
     double uniform_probability = 1.0 - exp(-PT_probability * (double)lambda);
     
     double uniform_mag = sqrt(uniform_probability);
-    amp = complex<double>(uniform_mag * cos(original_phase), uniform_mag * sin(original_phase));
+    amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
     
     return amp;
 }
@@ -77,7 +76,6 @@ complex<double> Cramer::
 PTTransformMagnitudeAndAmp(complex<double> amp) const
 {
     double original_phase = atan2(amp.imag(), amp.real());
-//    original_phase = original_phase < 0 ? original_phase + ( 2.0 * PI) : original_phase;
     double uniform_probability = norm(amp);
     double PT_probability = -log(abs(1.0 - uniform_probability)) / lambda;
     
@@ -176,7 +174,7 @@ CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const
 {
     double temp_lambda = 0;
     size_t num_amps = 0;
-    for (size_t i = 0; i < orig_vector_size; ++i) {
+    for (size_t i = 0; i < 2048; ++i) {
         double p = norm(state_vector[i]);
         if (p > 1.0/(orig_vector_size * orig_vector_size)) {
             ++num_amps;
@@ -200,24 +198,43 @@ ShiftCWToNearestPhase(double phase,
     
     return round(CalcCWForTheta(theta));
 }
+double ApproxAtan(double z)
+{
+    const float n1 = 0.97239411f;
+    const float n2 = -0.19194795f;
+    return (n1 + n2 * z * z) * z;
+}
+
+double ApproxAtan2(double y, double x)
+{
+    
+    double ay = fabs(y), ax = fabs(x);
+    int invert = ay > ax;
+    double z = invert ? ax/ay : ay/ax; // [0,1]
+    double th = ApproxAtan(z);        // [0,π/4]
+    if(invert) th = M_PI_2 - th;       // [0,π/2]
+    if(x < 0) th = M_PI - th;          // [0,π]
+    th = copysign(th, y);              // [-π,π]
+    return th;
+}
 
 unsigned short Cramer::
 CalcNearestCWToVal(complex<double> val) const
 {
     const double magnitude = abs(val);
-    double phase = arg(val);
+    double phase = ApproxAtan2(val.imag(), val.real());// arg(val);
     phase = phase < 0 ? phase + (2 * PI) : phase;
    
-    double temp_codeword = CalcCWForMagnitude(magnitude);
-    const unsigned short floor_cw = floor(temp_codeword);
-    const unsigned short ceil_cw = ceil(temp_codeword);
+//    double temp_codeword = CalcCWForMagnitude(magnitude);
+//    const unsigned short floor_cw = floor(temp_codeword);
+//    const unsigned short ceil_cw = ceil(temp_codeword);
+//
+//    double floor_magnitude_diff = magnitude - CalcMagnitudeForCW(floor_cw);
+//    double ceil_magnitude_diff =  CalcMagnitudeForCW(ceil_cw) - magnitude;
+//
+//    unsigned short codeword = floor_magnitude_diff < ceil_magnitude_diff ? floor_cw : ceil_cw;
     
-    double floor_magnitude_diff = magnitude - CalcMagnitudeForCW(floor_cw);
-    double ceil_magnitude_diff =  CalcMagnitudeForCW(ceil_cw) - magnitude;
-    
-    unsigned short codeword = floor_magnitude_diff < ceil_magnitude_diff ? floor_cw : ceil_cw;
-    
-    codeword = ShiftCWToNearestPhase(phase, codeword);
+    unsigned short codeword = ShiftCWToNearestPhase(phase, CalcCWForMagnitude(magnitude));
     
     return codeword;
 }
@@ -429,24 +446,41 @@ CramerCompressAVX(const complex<float>* state_vector)
     
     vector<size_t> cw_freq(num_codewords + 1, 0);
     
-    #pragma omp parallel for
-    for (size_t i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
+//    #pragma omp parallel for
+//    for (size_t i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
+//        unsigned short codewords[num_codewords_reg];
+//        #pragma omp parallel for
+//        for (size_t j = 0; j < num_codewords_reg; ++j) {
+//            size_t k = ((i/NUM_UL_IN_REG) * num_codewords_reg) + j;
+//            if (k >= orig_vector_size) {
+//                codewords[j] = 0;
+//                continue;
+//            }
+//            else
+//                codewords[j] = MapValToCW(state_vector[k]);
+//            codewords_mappings[codewords[j]] += state_vector[k];
+//            ++cw_freq[codewords[j]];
+//        }
+//
+//        __m256 pack_cw = PackCWIn256BitsAVXReg(codewords);
+//        _mm256_store_ps((float*)&compressed_vector[i], pack_cw);
+//    }
+//
+#pragma omp parallel for
+    for (size_t i = 0; i < orig_vector_size ; i += num_codewords_reg) {
         unsigned short codewords[num_codewords_reg];
-        #pragma omp parallel for
+        memset(codewords, 0, sizeof(unsigned short) * num_codewords_reg);
         for (size_t j = 0; j < num_codewords_reg; ++j) {
-            size_t k = ((i/NUM_UL_IN_REG) * num_codewords_reg) + j;
-            if (k >= orig_vector_size) {
-                codewords[j] = 0;
-                continue;
-            }
-            else
-                codewords[j] = MapValToCW(state_vector[k]);
-            codewords_mappings[codewords[j]] += state_vector[k];
+            if (i + j >= orig_vector_size)
+                break;
+            codewords[j] = MapValToCW(state_vector[i + j]);
+            codewords_mappings[codewords[j]] += state_vector[i + j];
             ++cw_freq[codewords[j]];
         }
         
         __m256 pack_cw = PackCWIn256BitsAVXReg(codewords);
-        _mm256_store_ps((float*)&compressed_vector[i], pack_cw);
+        size_t idx = (i/num_codewords_reg) * NUM_UL_IN_REG;
+        _mm256_store_ps((float*)&compressed_vector[idx], pack_cw);
     }
     
     PlotCWFrequency(cw_freq, log2(orig_vector_size));
@@ -457,6 +491,41 @@ CramerCompressAVX(const complex<float>* state_vector)
 //        double theta = CalcThetaForMagnitude(magnitude);
         codewords_mappings[i] /= cw_freq[i];  //PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
     }
+    
+    return compressed_vector;
+}
+
+complex<float>* Cramer::
+CramerCompressAVX16Bits(const complex<float>* state_vector)
+{
+    if (projection_vector)
+        lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
+    
+    complex<float>* compressed_vector = nullptr;
+    if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
+        throw "Unable to allocate space for compressed vector";
+    
+    memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
+    
+    vector<size_t> cw_freq(num_codewords + 1, 0);
+    
+#pragma omp parallel for
+    for (size_t i = 0; i < orig_vector_size ; i += num_codewords_reg) {
+        Packed16ShortArray codewords;
+        for (size_t j = 0; j < num_codewords_reg; ++j) {
+            codewords[j] = MapValToCW(state_vector[i + j]);
+            codewords_mappings[codewords[j]] += state_vector[i + j];
+            ++cw_freq[codewords[j]];
+        }
+        
+        __m256 packed_cw = _mm256_load_ps((float*)codewords);
+        _mm256_store_ps((float*)&compressed_vector[i/4], packed_cw);
+    }
+    
+    PlotCWFrequency(cw_freq, log2(orig_vector_size));
+    
+    for (size_t i = 0; i <= num_codewords; ++i)
+        codewords_mappings[i] /= cw_freq[i];  //PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
     
     return compressed_vector;
 }
@@ -485,6 +554,24 @@ CramerDecompressAVX(const complex<float>* state_vector)
                 decompressed_vector[k] = codewords_mappings[unpacked_codewords[j]];
         }
     }
+    
+    return decompressed_vector;
+}
+
+complex<float>* Cramer::
+CramerDecompressAVX16Bits(const complex<float>* state_vector)
+{
+    complex<float>* decompressed_vector = nullptr;
+    if (posix_memalign((void**)&decompressed_vector, 64, sizeof(complex<float>) * orig_vector_size) != 0)
+        throw "Unable to allocate space for decompressed vector";
+    
+    memset(decompressed_vector, 0, sizeof(complex<float>) * orig_vector_size);
+    
+    unsigned short* __restrict compressed_vector = (unsigned short *)state_vector;
+    
+#pragma omp parallel for
+    for (size_t i = 0; i < orig_vector_size; ++i)
+        decompressed_vector[i] = codewords_mappings[compressed_vector[i]];
     
     return decompressed_vector;
 }

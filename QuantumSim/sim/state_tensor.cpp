@@ -897,8 +897,14 @@ void TensorProductStateVector::
 CompressStateVector(idx_size num_codewords,
                     double p_rejection)
 {
+    if (book_keep)
+        compressed_vector_ptrs.push_back({nullptr, nullptr});
+        
+    partition_to_sim = 'a';
     state_a -> CompressStateVector(num_codewords, p_rejection);
+    partition_to_sim = 'b';
     state_b -> CompressStateVector(num_codewords, p_rejection);
+    partition_to_sim = 'x';
     
     compressed = true;
 }
