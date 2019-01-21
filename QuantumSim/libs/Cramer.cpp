@@ -36,11 +36,10 @@ num_codewords(num_cw), num_threads(num_th), num_zero_amps(0), lambda(0), project
 Cramer::
 Cramer(const Cramer& rhs): orig_vector_size(rhs.orig_vector_size), compressed_vector_UL_size(rhs.compressed_vector_UL_size),
 r(rhs.r), R(rhs.R), num_bits_codewords(rhs.num_bits_codewords), num_codewords(rhs.num_codewords),
-num_codewords_reg(rhs.num_codewords_reg), codewords_spacing(rhs.codewords_spacing),
+num_codewords_reg(rhs.num_codewords_reg), num_threads(rhs.num_threads),
+num_zero_amps(rhs.num_zero_amps), codewords_spacing(rhs.codewords_spacing),
 spiral_length_r(rhs.spiral_length_r), lambda(rhs.lambda), projection_vector(rhs.projection_vector)
 {
-    num_zero_amps.store(rhs.num_zero_amps);
-    
     if (rhs.codewords_mappings) {
         if(codewords_mappings) delete [] codewords_mappings;
         codewords_mappings = new complex<float>[num_codewords + 1];
@@ -178,7 +177,7 @@ CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const
     num_amps.store(0);
     size_t size = orig_vector_size/(1ull << 12);
     
-//    #pragma omp parallel for num_threads(num_threads)
+    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < size; ++i) {
         atomic<double> p;
         p.store(norm(state_vector[i]));
@@ -361,16 +360,17 @@ CramerCompress(complex<float>* compressed_vector,
         lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
     
     if (compressed_vector == nullptr) {
+        cout << "lambda : " << lambda << endl;
         if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
             throw "Unable to allocate space for compressed vector";
         
         memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
     }
     
-    atomic<size_t> cw_freq[num_codewords + 1];
-    memset(cw_freq, 0, sizeof(atomic<size_t>) * (num_codewords + 1));
-    
-    #pragma omp parallel for num_threads(num_threads)
+    size_t cw_freq[num_codewords + 1];
+    memset(cw_freq, 0, sizeof(size_t) * (num_codewords + 1));
+
+    #pragma omp parallel for reduction(+:num_zero_amps, cw_freq) num_threads(num_threads)
     for (size_t i = 0; i < orig_vector_size ; i += num_codewords_reg) {
         unsigned short codewords[num_codewords_reg];
 //        memset(codewords, 0, sizeof(unsigned short) * num_codewords_reg);

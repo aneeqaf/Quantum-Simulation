@@ -26,8 +26,6 @@
 #include <vector>
 #include <utility>
 
-#include "profile.h"
-
 using namespace std;
 
 using Packed16ShortArray = unsigned short[16];
@@ -164,7 +162,7 @@ class Cramer {
     size_t num_codewords;
     size_t num_codewords_reg;
     size_t num_threads;
-    atomic<size_t> num_zero_amps;
+    size_t num_zero_amps;
     double codewords_spacing;
     double spiral_length_r;
     double lambda;

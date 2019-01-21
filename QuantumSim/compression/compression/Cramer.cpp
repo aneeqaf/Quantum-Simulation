@@ -7,18 +7,19 @@
 //
 
 
-#include "graphing.h"
 #include "Cramer.h"
 
 
 Cramer::
 Cramer(size_t vector_size,
        size_t num_cw,
+       size_t num_th,
        double probabilty_rejection,
-       bool projection_v): orig_vector_size(vector_size), num_codewords(num_cw), num_zero_amps(0),
-num_bits_codewords(log2(num_cw + 1)), lambda(0), projection_vector(projection_v)
+       bool projection_v): orig_vector_size(vector_size), num_bits_codewords(log2(num_cw + 1)),
+num_codewords(num_cw), num_threads(num_th), num_zero_amps(0), lambda(0), projection_vector(projection_v)
 {
     r = CalcCInMagnitudeUniformSpiral(probabilty_rejection) + INNER_R_SHIFT;
+    magnitude_r = CalcMagnitudeForC(r);
     R = CalcCInMagnitudeUniformSpiral(CDF_MAX_P);
     spiral_length_r = CalcExactSpiralLen(r * PI);
     num_codewords_reg = CalcCWThatFitIn256BitsReg();
@@ -36,11 +37,10 @@ num_bits_codewords(log2(num_cw + 1)), lambda(0), projection_vector(projection_v)
 Cramer::
 Cramer(const Cramer& rhs): orig_vector_size(rhs.orig_vector_size), compressed_vector_UL_size(rhs.compressed_vector_UL_size),
 r(rhs.r), R(rhs.R), num_bits_codewords(rhs.num_bits_codewords), num_codewords(rhs.num_codewords),
-num_codewords_reg(rhs.num_codewords_reg), codewords_spacing(rhs.codewords_spacing),
+num_codewords_reg(rhs.num_codewords_reg), num_threads(rhs.num_threads), magnitude_r(rhs.magnitude_r),
+num_zero_amps(rhs.num_zero_amps), codewords_spacing(rhs.codewords_spacing),
 spiral_length_r(rhs.spiral_length_r), lambda(rhs.lambda), projection_vector(rhs.projection_vector)
 {
-    num_zero_amps.store(rhs.num_zero_amps);
-    
     if (rhs.codewords_mappings) {
         if(codewords_mappings) delete [] codewords_mappings;
         codewords_mappings = new complex<float>[num_codewords + 1];
@@ -70,6 +70,23 @@ UniformTransformMagnitudeAndAmp(complex<double> amp) const
     amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
     
     return amp;
+}
+
+__m256 Cramer::
+UniformTransformMagnitudeAndAmpAVX(__m256& real,
+                                   __m256& imag) const
+{
+    __m256 PT_probs = _mm256_sq_norm_cmplx(real, imag);
+    __m256 PT_mags = _mm256_sqrt_ps(PT_probs);
+    __m256 neg_PT_probs = _mm256_sub_ps({}, PT_probs);
+    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(lambda), neg_PT_probs);
+    __m256 uniform_probs = _mm256_sub_ps(_mm256_set1_ps(1.0), _mm256_exp_ps(Np));
+    __m256 uniform_mags = _mm256_sqrt_ps(uniform_probs);
+    
+    real = _mm256_mul_ps(uniform_mags, _mm256_div_ps(real, PT_mags));
+    imag = _mm256_mul_ps(uniform_mags, _mm256_div_ps(imag, PT_mags));
+    
+    return uniform_mags;
 }
 
 complex<double> Cramer::
@@ -108,13 +125,27 @@ CalcCWForMagnitude(double magnitude) const
 {
     double theta = magnitude/B;
     
-    return (CalcApproxSpiralLen(theta) - spiral_length_r)/codewords_spacing;
+    return CalcCWForTheta(theta);
+}
+
+inline __m256 Cramer::
+CalcCWForMagnitudeAVX(__m256 magnitudes) const
+{
+    __m256 thetas = _mm256_div_ps(magnitudes, _mm256_set1_ps(B));
+    
+    return CalcCWForThetaAVX(thetas);
 }
 
 inline double Cramer::
 CalcCWForTheta(double theta) const
 {
     return (CalcApproxSpiralLen(theta) - spiral_length_r)/codewords_spacing;
+}
+
+inline __m256 Cramer::
+CalcCWForThetaAVX(__m256 thetas) const
+{
+    return _mm256_div_ps(_mm256_sub_ps(CalcApproxSpiralLenAVX(thetas), _mm256_set1_ps(spiral_length_r)), _mm256_set1_ps(codewords_spacing));
 }
 
 inline double Cramer::
@@ -131,6 +162,12 @@ CalcApproxSpiralLen(double theta) const
     return (B * theta * theta) / 2.0;
 }
 
+inline __m256 Cramer::
+CalcApproxSpiralLenAVX(__m256 thetas) const
+{
+    return _mm256_div_ps(_mm256_mul_ps(_mm256_mul_ps(thetas, thetas), _mm256_set1_ps(B)), _mm256_set1_ps(2.0));
+}
+
 inline double Cramer::
 CalcExactSpiralLen(double theta) const
 {
@@ -143,12 +180,26 @@ CalcApproxThetaForSpiralLen(double spiral_length) const
     return sqrt((2.0 * spiral_length) / B);
 }
 
+inline __m256 Cramer::
+CalcApproxThetaForSpiralLenAVX(__m256 spiral_lengths) const
+{
+    return _mm256_sqrt_ps(_mm256_div_ps(_mm256_add_ps(spiral_lengths, spiral_lengths), _mm256_set1_ps(B)));
+}
+
 inline double Cramer::
 CalcThetaForCW(unsigned short codeword) const
 {
     double spiral_length = codeword * codewords_spacing;
     
     return CalcApproxThetaForSpiralLen(spiral_length + spiral_length_r);
+}
+
+inline __m256 Cramer::
+CalcThetaForCWAVX(__m256 codewords) const
+{
+    __m256 spiral_lengths = _mm256_mul_ps(codewords, _mm256_set1_ps(codewords_spacing));
+    
+    return CalcApproxThetaForSpiralLenAVX(_mm256_add_ps(spiral_lengths, _mm256_set1_ps(spiral_length_r)));
 }
 
 inline size_t Cramer::
@@ -172,18 +223,44 @@ CalcNum256RegForSizeOfVector() const
 double Cramer::
 CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const
 {
-    double temp_lambda = 0;
-    size_t num_amps = 0;
-    for (size_t i = 0; i < 2048; ++i) {
-        double p = norm(state_vector[i]);
-        if (p > 1.0/(orig_vector_size * orig_vector_size)) {
+    atomic<double> temp_lambda;
+    temp_lambda.store(0);
+    atomic<size_t> num_amps;
+    num_amps.store(0);
+    size_t size = orig_vector_size/(1ull << 12);
+    
+#pragma omp parallel for num_threads(num_threads)
+    for (size_t i = 0; i < size; ++i) {
+        atomic<double> p;
+        p.store(norm(state_vector[i]));
+        if (p > 1.0/((double)orig_vector_size * (double)orig_vector_size)) {
             ++num_amps;
-            temp_lambda += p;
+            temp_lambda.store(temp_lambda + p);
         }
     }
     
-    temp_lambda /= (double)num_amps;
-   return 1.0/temp_lambda;
+    return 1.0/(temp_lambda.load()/(double)num_amps.load());
+}
+
+inline double Cramer::
+ApproxAtan(double z) const
+{
+    const double n1 = 0.97239411f;
+    const double n2 = -0.19194795f;
+    return (n1 + n2 * z * z) * z;
+}
+
+inline double Cramer::
+ApproxAtan2(double y, double x) const
+{
+    double ay = fabs(y), ax = fabs(x);
+    int invert = ay > ax;
+    double z = invert ? ax/ay : ay/ax; // [0,1]
+    double th = ApproxAtan(z);        // [0,π/4]
+    if(invert) th = M_PI_2 - th;       // [0,π/2]
+    if(x < 0) th = M_PI - th;          // [0,π]
+    th = copysign(th, y);              // [-π,π]
+    return th;
 }
 
 inline unsigned short Cramer::
@@ -198,24 +275,18 @@ ShiftCWToNearestPhase(double phase,
     
     return round(CalcCWForTheta(theta));
 }
-double ApproxAtan(double z)
-{
-    const float n1 = 0.97239411f;
-    const float n2 = -0.19194795f;
-    return (n1 + n2 * z * z) * z;
-}
 
-double ApproxAtan2(double y, double x)
+__m256 Cramer::
+ShiftCWToNearestPhaseAVX(__m256 phases,
+                         __m256 codewords) const
 {
+    __m256 thetas = CalcThetaForCWAVX(codewords);
     
-    double ay = fabs(y), ax = fabs(x);
-    int invert = ay > ax;
-    double z = invert ? ax/ay : ay/ax; // [0,1]
-    double th = ApproxAtan(z);        // [0,π/4]
-    if(invert) th = M_PI_2 - th;       // [0,π/2]
-    if(x < 0) th = M_PI - th;          // [0,π]
-    th = copysign(th, y);              // [-π,π]
-    return th;
+    __m256 theta_mod2 = _mm256_fmod_ps(thetas, _mm256_set1_ps(2.0 * PI));
+    __m256 diff_phases = _mm256_sub_ps(phases, theta_mod2);
+    thetas = _mm256_add_ps(diff_phases, thetas);
+    
+    return _mm256_round_ps(CalcCWForThetaAVX(thetas), _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
 }
 
 unsigned short Cramer::
@@ -224,19 +295,20 @@ CalcNearestCWToVal(complex<double> val) const
     const double magnitude = abs(val);
     double phase = ApproxAtan2(val.imag(), val.real());// arg(val);
     phase = phase < 0 ? phase + (2 * PI) : phase;
-   
-//    double temp_codeword = CalcCWForMagnitude(magnitude);
-//    const unsigned short floor_cw = floor(temp_codeword);
-//    const unsigned short ceil_cw = ceil(temp_codeword);
-//
-//    double floor_magnitude_diff = magnitude - CalcMagnitudeForCW(floor_cw);
-//    double ceil_magnitude_diff =  CalcMagnitudeForCW(ceil_cw) - magnitude;
-//
-//    unsigned short codeword = floor_magnitude_diff < ceil_magnitude_diff ? floor_cw : ceil_cw;
     
-    unsigned short codeword = ShiftCWToNearestPhase(phase, CalcCWForMagnitude(magnitude));
-    
-    return codeword;
+    return ShiftCWToNearestPhase(phase, CalcCWForMagnitude(magnitude));
+}
+
+__m256 Cramer::
+CalcNearestCWToValAVX(__m256 real,
+                      __m256 imag) const
+{
+    const __m256 magnitudes = _mm256_abs_cmplx(real, imag);
+    __m256 phases = _mm256_atan2_ps(imag, real);
+    for (size_t i = 0; i < 8; ++i)
+        phases[i] = phases[i] < 0 ? phases[i] + (2 * PI) : phases[i];
+
+    return ShiftCWToNearestPhaseAVX(phases, CalcCWForMagnitudeAVX(magnitudes));
 }
 
 unsigned short Cramer::
@@ -245,7 +317,7 @@ MapValToCW(complex<double> val)
     complex<double> amp_UT = UniformTransformMagnitudeAndAmp(val);
     double magnitude_UT = abs(amp_UT);
     
-    if (magnitude_UT <= CalcMagnitudeForC(r)) {
+    if (magnitude_UT <= magnitude_r) {
         ++num_zero_amps;
         return 0;
     }
@@ -263,24 +335,30 @@ MapValToCW(complex<double> val)
     }
 }
 
-//__m256 Cramer::
-//PackCWIn256BitsAVXReg(const unsigned short* codewords) const
-//{
-//    const bitset<REG_SIZE> set_UL = ~0ULL;
-//    bitset<REG_SIZE> cw_pack_256_bits = 0;
-//
-//    for (size_t i = 0; i < num_codewords_reg; ++i) {
-//        bitset<REG_SIZE> temp = codewords[i] ;
-//        cw_pack_256_bits |= (temp << (i * num_bits_codewords));
-//    }
-//
-//    unsigned long long ul_in_256_reg[NUM_UL_IN_REG];
-//
-//    for (size_t i = 0;  i < NUM_UL_IN_REG; ++i)
-//        ul_in_256_reg[i] = ((cw_pack_256_bits & (set_UL << (i * BITS_UL))) >> (i * BITS_UL)).to_ullong();
-//
-//    return _mm256_load_ps((float*)ul_in_256_reg);
-//}
+__m256 Cramer::
+MapValToCWAVX(__m256 real,
+              __m256 imag)
+{
+    __m256 magnitudes_UT = UniformTransformMagnitudeAndAmpAVX(real, imag);
+    
+    if (_mm256_movemask_ps(_mm256_cmp_ps(magnitudes_UT, _mm256_set1_ps(magnitude_r), _CMP_LE_OQ)) == 255) {
+        ++num_zero_amps;
+        return {};
+    }
+    else {
+        __m256 codewords = CalcNearestCWToValAVX(real, imag);
+        for (size_t i = 0; i < 8; ++i) {
+            if (codewords[i] == 0) {
+                ++num_zero_amps;
+                codewords[i] = 0;
+            }
+            else if (codewords[i] >= num_codewords + 1)
+                codewords[i] = num_codewords;
+        }
+        
+        return codewords;
+    }
+}
 
 __m256 Cramer::
 PackCWIn256BitsAVXReg(const unsigned short* codewords) const
@@ -289,7 +367,7 @@ PackCWIn256BitsAVXReg(const unsigned short* codewords) const
     __m256i idxs = IDXS_CW_FOR_MASKS_UI[num_bits_codewords];
     unsigned int idxs_iter[NUM_UI_IN_REG];
     __m256i cw = {0};
-
+    
     for (size_t i = 0; i < iters; ++i) {
         _mm256_store_ps((float*)idxs_iter, (__m256)idxs);
         
@@ -312,7 +390,7 @@ PackCWIn256BitsAVXReg(const unsigned short* codewords) const
         
         idxs = _mm256_add_epi64(idxs, INCREMENT_1_UI);
     }
-   
+    
     return (__m256)cw;
 }
 
@@ -355,15 +433,14 @@ UnpackCWFrom256BitsAVX(__m256i packed_codewords,
 {
     size_t iters = ceil((double)num_codewords_reg/(double) NUM_UI_IN_REG);
     __m256i idxs = IDXS_CW_FOR_MASKS_UI[num_bits_codewords];
-    __m256i extracted_cws[iters];
-
+    
     for (size_t i = 0; i < iters; ++i) {
-        extracted_cws[i] = ExtractCodewordFromAVX256Reg(packed_codewords);
+        __m256i extracted_cws = ExtractCodewordFromAVX256Reg(packed_codewords);
         unsigned int idxs_iter[NUM_UI_IN_REG];
         unsigned int cws[NUM_UI_IN_REG];
         _mm256_store_ps((float*)idxs_iter, (__m256)idxs);
-        _mm256_store_ps((float*)cws, (__m256)extracted_cws[i]);
-
+        _mm256_store_ps((float*)cws, (__m256)extracted_cws);
+        
         unpacked_codewords[idxs_iter[0]] = cws[0];
         unpacked_codewords[idxs_iter[1]] = cws[1];
         unpacked_codewords[idxs_iter[2]] = cws[2];
@@ -372,107 +449,37 @@ UnpackCWFrom256BitsAVX(__m256i packed_codewords,
         unpacked_codewords[idxs_iter[5]] = cws[5];
         unpacked_codewords[idxs_iter[6]] = cws[6];
         unpacked_codewords[idxs_iter[7]] = cws[7];
-
+        
         idxs = _mm256_add_epi64(idxs, INCREMENT_1_UI);
     }
 }
 
 complex<float>* Cramer::
-CramerCompress(const complex<float>* state_vector)
+CramerCompress(complex<float>* compressed_vector,
+               const complex<float>* state_vector)
 {
     if (projection_vector)
         lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
-
-    complex<float>* compressed_vector = nullptr;
-    if (posix_memalign((void**)&compressed_vector, 64, sizeof(unsigned short) * orig_vector_size) != 0)
-        throw "Unable to allocate space for compressed vector";
     
-    memset(compressed_vector, 0, sizeof(unsigned short) * orig_vector_size);
-    
-    vector<size_t> cw_freq(num_codewords, 0);
-    
-    #pragma omp parallel for
-    for (size_t i = 0; i < orig_vector_size; i+=4) {
-        Packed4ShortArray temp = {0};
-        temp[0] = MapValToCW(state_vector[i]); ++cw_freq[temp[0]];
-        temp[1] = MapValToCW(state_vector[i + 1]); ++cw_freq[temp[1]];
-        temp[2] = MapValToCW(state_vector[i + 2]); ++cw_freq[temp[2]];
-        temp[3] = MapValToCW(state_vector[i + 3]); ++cw_freq[temp[3]];
-       
-        compressed_vector[i/4] = *(complex<float>*)temp;
+    if (compressed_vector == nullptr) {
+        if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
+            throw "Unable to allocate space for compressed vector";
+        
+        memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
     }
     
-    PlotCWFrequency(cw_freq, log2(orig_vector_size));
+    size_t cw_freq[num_codewords + 1];
+    memset(cw_freq, 0, sizeof(size_t) * (num_codewords + 1));
     
-    return compressed_vector;
-}
-
-complex<float>* Cramer::
-CramerDecompress(const complex<float>* state_vector)
-{
-    complex<float>* decompressed_vector = nullptr;
-    if (posix_memalign((void**)&decompressed_vector, 64, sizeof(complex<float>) * orig_vector_size) != 0)
-        throw "Unable to allocate space for decompressed vector";
-    
-    memset(decompressed_vector, 0, sizeof(complex<float>) * orig_vector_size);
-    
-    unsigned short * __restrict compressed_vector = (unsigned short *)state_vector;
-    
-    #pragma omp parallel for
-    for (size_t i = 0; i < orig_vector_size; ++i) {
-        if (compressed_vector[i] == 0)
-            decompressed_vector[i] = 0;
-        else {
-            double magnitude = CalcMagnitudeForCW(compressed_vector[i]);
-            double theta = CalcThetaForMagnitude(magnitude);
-            decompressed_vector[i] = PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
-        }
-    }
-    
-    return decompressed_vector;
-}
-
-complex<float>* Cramer::
-CramerCompressAVX(const complex<float>* state_vector)
-{
-    if (projection_vector)
-        lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
-
-    complex<float>* compressed_vector = nullptr;
-    if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
-        throw "Unable to allocate space for compressed vector";
-    
-    memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
-    
-    vector<size_t> cw_freq(num_codewords + 1, 0);
-    
-//    #pragma omp parallel for
-//    for (size_t i = 0; i < compressed_vector_UL_size ; i += NUM_UL_IN_REG) {
-//        unsigned short codewords[num_codewords_reg];
-//        #pragma omp parallel for
-//        for (size_t j = 0; j < num_codewords_reg; ++j) {
-//            size_t k = ((i/NUM_UL_IN_REG) * num_codewords_reg) + j;
-//            if (k >= orig_vector_size) {
-//                codewords[j] = 0;
-//                continue;
-//            }
-//            else
-//                codewords[j] = MapValToCW(state_vector[k]);
-//            codewords_mappings[codewords[j]] += state_vector[k];
-//            ++cw_freq[codewords[j]];
-//        }
-//
-//        __m256 pack_cw = PackCWIn256BitsAVXReg(codewords);
-//        _mm256_store_ps((float*)&compressed_vector[i], pack_cw);
-//    }
-//
-#pragma omp parallel for
+#pragma omp parallel for reduction(+:num_zero_amps, cw_freq) num_threads(num_threads)
     for (size_t i = 0; i < orig_vector_size ; i += num_codewords_reg) {
         unsigned short codewords[num_codewords_reg];
-        memset(codewords, 0, sizeof(unsigned short) * num_codewords_reg);
+        //        memset(codewords, 0, sizeof(unsigned short) * num_codewords_reg);
         for (size_t j = 0; j < num_codewords_reg; ++j) {
-            if (i + j >= orig_vector_size)
-                break;
+            if (i + j >= orig_vector_size) {
+                codewords[j] = 0;
+                continue;
+            }
             codewords[j] = MapValToCW(state_vector[i + j]);
             codewords_mappings[codewords[j]] += state_vector[i + j];
             ++cw_freq[codewords[j]];
@@ -483,67 +490,30 @@ CramerCompressAVX(const complex<float>* state_vector)
         _mm256_store_ps((float*)&compressed_vector[idx], pack_cw);
     }
     
-    PlotCWFrequency(cw_freq, log2(orig_vector_size));
-    
-//    codewords_mappings[0] = 0;
-    for (size_t i = 0; i <= num_codewords; ++i) {
-//        double magnitude = CalcMagnitudeForCW(i);
-//        double theta = CalcThetaForMagnitude(magnitude);
-        codewords_mappings[i] /= cw_freq[i];  //PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
-    }
-    
-    return compressed_vector;
-}
-
-complex<float>* Cramer::
-CramerCompressAVX16Bits(const complex<float>* state_vector)
-{
-    if (projection_vector)
-        lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
-    
-    complex<float>* compressed_vector = nullptr;
-    if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
-        throw "Unable to allocate space for compressed vector";
-    
-    memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
-    
-    vector<size_t> cw_freq(num_codewords + 1, 0);
-    
-#pragma omp parallel for
-    for (size_t i = 0; i < orig_vector_size ; i += num_codewords_reg) {
-        Packed16ShortArray codewords;
-        for (size_t j = 0; j < num_codewords_reg; ++j) {
-            codewords[j] = MapValToCW(state_vector[i + j]);
-            codewords_mappings[codewords[j]] += state_vector[i + j];
-            ++cw_freq[codewords[j]];
-        }
-        
-        __m256 packed_cw = _mm256_load_ps((float*)codewords);
-        _mm256_store_ps((float*)&compressed_vector[i/4], packed_cw);
-    }
-    
-    PlotCWFrequency(cw_freq, log2(orig_vector_size));
-    
+    //    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i <= num_codewords; ++i)
-        codewords_mappings[i] /= cw_freq[i];  //PTTransformMagnitudeAndAmp(complex<double>(magnitude * cos(theta), magnitude * sin(theta)));
+        codewords_mappings[i] /= cw_freq[i];
     
     return compressed_vector;
 }
 
 complex<float>* Cramer::
-CramerDecompressAVX(const complex<float>* state_vector)
+CramerDecompress(complex<float>* decompressed_vector,
+                 const complex<float>* state_vector)
 {
-    complex<float>* decompressed_vector = nullptr;
-    if (posix_memalign((void**)&decompressed_vector, 64, sizeof(complex<float>) * orig_vector_size) != 0)
-        throw "Unable to allocate space for decompressed vector";
-    
-    memset(decompressed_vector, 0, sizeof(complex<float>) * orig_vector_size);
+    if (decompressed_vector == nullptr) {
+        if (posix_memalign((void**)&decompressed_vector, 64, sizeof(complex<float>) * orig_vector_size) != 0)
+            throw "Unable to allocate space for decompressed vector";
+        
+        memset(decompressed_vector, 0, sizeof(complex<float>) * orig_vector_size);
+    }
     
     __m256i* __restrict compressed_vector = (__m256i *)state_vector;
-     size_t num_cw = ceil((double)num_codewords_reg / (double)NUM_SHORT_IN_REG) * NUM_SHORT_IN_REG;
+    size_t num_cw = ceil((double)num_codewords_reg / (double)NUM_SHORT_IN_REG) * NUM_SHORT_IN_REG;
+    size_t iters = compressed_vector_UL_size/NUM_UL_IN_REG;
     
-    #pragma omp parallel for
-    for (size_t i = 0; i < compressed_vector_UL_size/4; ++i) {
+#pragma omp parallel for num_threads(num_threads)
+    for (size_t i = 0; i < iters; ++i) {
         unsigned short unpacked_codewords[num_cw];
         UnpackCWFrom256BitsAVX(compressed_vector[i], unpacked_codewords);
         for (size_t j = 0; j < num_codewords_reg; ++j) {
@@ -556,35 +526,6 @@ CramerDecompressAVX(const complex<float>* state_vector)
     }
     
     return decompressed_vector;
-}
-
-complex<float>* Cramer::
-CramerDecompressAVX16Bits(const complex<float>* state_vector)
-{
-    complex<float>* decompressed_vector = nullptr;
-    if (posix_memalign((void**)&decompressed_vector, 64, sizeof(complex<float>) * orig_vector_size) != 0)
-        throw "Unable to allocate space for decompressed vector";
-    
-    memset(decompressed_vector, 0, sizeof(complex<float>) * orig_vector_size);
-    
-    unsigned short* __restrict compressed_vector = (unsigned short *)state_vector;
-    
-#pragma omp parallel for
-    for (size_t i = 0; i < orig_vector_size; ++i)
-        decompressed_vector[i] = codewords_mappings[compressed_vector[i]];
-    
-    return decompressed_vector;
-}
-
-void Cramer::
-GetCWForPlotting(vector<pair<float, float>>& codewords) const
-{
-    for (size_t i = 0; i < num_codewords; ++i) {
-        double s = spiral_length_r + (i * codewords_spacing);
-        double theta = CalcApproxThetaForSpiralLen(s);
-        double magnitude = theta * B;
-        codewords.push_back(make_pair(magnitude * cos(theta) , magnitude * sin(theta)));
-    }
 }
 
 size_t Cramer::
@@ -632,4 +573,15 @@ GetDistBetweenCW() const
 double Cramer:: GetLog2Lambda() const
 {
     return log2(lambda);
+}
+
+void Cramer::
+GetCWForPlotting(vector<pair<float, float>>& codewords) const
+{
+    for (size_t i = 0; i < num_codewords; ++i) {
+        double s = spiral_length_r + (i * codewords_spacing);
+        double theta = CalcApproxThetaForSpiralLen(s);
+        double magnitude = theta * B;
+        codewords.push_back(make_pair(magnitude * cos(theta) , magnitude * sin(theta)));
+    }
 }

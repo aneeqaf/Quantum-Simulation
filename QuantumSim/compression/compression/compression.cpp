@@ -114,11 +114,11 @@ void CompressDecompressStateVector(complex<float>* state_vector,
         copy_state_vector[i] = state_vector[i];
     
     
-    complex<float>* comp_vector = cramer.CramerCompressAVX(state_vector);
+    complex<float>* comp_vector = cramer.CramerCompress(nullptr, state_vector);
     free(state_vector);
     state_vector = nullptr;
 
-    state_vector = cramer.CramerDecompressAVX(comp_vector);
+    state_vector = cramer.CramerDecompress(nullptr, comp_vector);
     
     vector<complex<double>> new_state_vector(state_vector_size);
     for (size_t i = 0; i < state_vector_size; ++i)
