@@ -1,3 +1,4 @@
+
 //
 //  Cramer.h
 //  compression
@@ -19,12 +20,13 @@
 #include <cmath>
 #include <complex>
 #include <iostream>
-#include <immintrin.h>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
 #include <utility>
+
+#include "avx_helper.h"
 
 using namespace std;
 
@@ -100,55 +102,6 @@ constexpr __m256i  BITS_TO_STARTING_OF_UI[17] = {{0}, {0}, {0}, {0}, {0}, {0}, {
     {0 | (7ull << 32), 1 | (8ull << 32), 2 | (9ull << 32), 3 | (10ull << 32)}, {0}, {0}, {0}};
 
 
-static inline __m256i _mm256_shift_right(__m256i A, unsigned int count) {
-    
-    unsigned int m = (1u << count) - 1;
-    __m256i mask = {0, m, m, m};
-    
-    __m256i last_bits = _mm256_and_si256(A, mask);
-    last_bits = _mm256_slli_epi64(last_bits, 64 - count);
-    last_bits = _mm256_permute4x64_epi64 (last_bits,  0b00111001);
-    last_bits[3] = 0;
-    
-    __m256i shift_bits = _mm256_srli_epi64(A, count);
-    
-    return _mm256_or_si256(last_bits, shift_bits);
-}
-
-static inline __m256i _mm256_shift_left(__m256i A, unsigned int count)
-{
-    unsigned long long m = ((1ul << count) - 1) << (64 - count);
-    __m256i mask = {(long long)m, (long long)m, (long long)m, 0};
-    
-    __m256i last_bits = _mm256_and_si256(A, mask);
-    last_bits = _mm256_srli_epi64(last_bits, 64 - count);
-    last_bits = _mm256_permute4x64_epi64 (last_bits,  0b10010000);
-    last_bits[0] = 0;
-    
-    __m256i shift_bits = _mm256_slli_epi64(A, count);
-    
-    return _mm256_or_si256(last_bits, shift_bits);
-}
-
-template  <unsigned int N> __m256i _mm256_shift_right(__m256i A)
-{
-    return _mm256_alignr_epi8(_mm256_permute2x128_si256(A, A, _MM_SHUFFLE(2, 0, 0, 1)), A, N);
-}
-
-template <unsigned int N> __m256i _mm256_shift_left0To16(__m256i A)
-{
-    return _mm256_alignr_epi8(A, _mm256_permute2x128_si256(A, A, _MM_SHUFFLE(0, 0, 2, 0)), 16 - N);
-}
-
-template <unsigned int N> __m256i _mm256_shift_left16(__m256i A)
-{
-    return _mm256_permute2x128_si256(A, A, _MM_SHUFFLE(0, 0, 2, 0));
-}
-
-template <unsigned int N> __m256i _mm256_shift_left16To32(__m256i A)
-{
-    return _mm256_slli_si256(_mm256_permute2x128_si256(A, A, _MM_SHUFFLE(0, 0, 2, 0)), N - 16);
-}
 
 class Cramer {
     
@@ -163,12 +116,15 @@ class Cramer {
     size_t num_codewords_reg;
     size_t num_threads;
     size_t num_zero_amps;
+    double magnitude_r;
     double codewords_spacing;
     double spiral_length_r;
     double lambda;
     bool projection_vector;
     
     complex<double> UniformTransformMagnitudeAndAmp(complex<double> amp) const;
+    __m256 UniformTransformMagnitudeAndAmpAVX(__m256& real,
+                                              __m256& imag) const;
     complex<double> PTTransformMagnitudeAndAmp(complex<double> amp) const;
     
     //Polar equation: r = BTheta = BcPi
@@ -176,22 +132,35 @@ class Cramer {
     double CalcThetaForMagnitude(double magnitude) const;
     double CalcMagnitudeForC(double c) const;
     double CalcCWForMagnitude(double magnitude) const;
+    __m256 CalcCWForMagnitudeAVX(__m256 magnitudes) const;
     double CalcCWForTheta(double theta) const;
+    __m256 CalcCWForThetaAVX(__m256 thetas) const;
     double CalcMagnitudeForCW(unsigned short codeword) const;
     double CalcApproxSpiralLen(double theta) const;
+    __m256 CalcApproxSpiralLenAVX(__m256 thetas) const;
+    __m256 CalcApproxThetaForSpiralLenAVX(__m256 spiral_lengths) const;
     double CalcExactSpiralLen(double theta) const;
     double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
     double CalcThetaForCW(unsigned short codeword) const;
+    __m256 CalcThetaForCWAVX(__m256 codewords) const;
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
     double CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const;
+    double ApproxAtan(double z) const;
+    double ApproxAtan2(double y, double x) const;
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          unsigned short codeword) const;
+    __m256 ShiftCWToNearestPhaseAVX(__m256 phase,
+                                    __m256 codeword) const;
     unsigned short CalcNearestCWToVal(complex<double> val) const;
+    __m256 CalcNearestCWToValAVX(__m256 real,
+                                 __m256 imag) const;
     unsigned short MapValToCW(complex<double> val);
-    __m256 PackCWIn256BitsAVXReg(const unsigned short* codewords) const;
+    __m256 MapValToCWAVX(__m256 real,
+                         __m256 imag);
+    __m256 PackCWIn256BitsAVXReg(const unsigned int* codewords) const;
     void UnpackCWFrom256Bits(bitset<REG_SIZE> packed_codewords,
                              unsigned short* unpacked_codewords) const;
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,
@@ -223,6 +192,8 @@ public:
     double GetFactorOfDistBetweenTurns() const;
     double GetDistBetweenCW() const;
     double GetLog2Lambda() const;
+    void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
 };
 
 #endif /* Cramer_h */
+
