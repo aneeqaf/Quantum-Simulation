@@ -161,7 +161,7 @@ class Cramer {
     unsigned short MapValToCW(complex<double> val);
     __m256 MapValToCWAVX(__m256 real,
                           __m256 imag);
-    __m256 PackCWIn256BitsAVXReg(const unsigned short* codewords) const;
+    __m256 PackCWIn256BitsAVXReg(const unsigned int* codewords) const;
     void UnpackCWFrom256Bits(bitset<REG_SIZE> packed_codewords,
                              unsigned short* unpacked_codewords) const;
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,

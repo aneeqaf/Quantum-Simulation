@@ -64,7 +64,7 @@ UniformTransformMagnitudeAndAmp(complex<double> amp) const
 {
     double PT_mag = abs(amp);
     double PT_probability = PT_mag * PT_mag;
-    double uniform_probability = 1.0 - exp(-PT_probability * (double)lambda);
+    double uniform_probability = 1.0 - exp(-PT_probability * lambda);
     
     double uniform_mag = sqrt(uniform_probability);
     amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
@@ -78,7 +78,7 @@ UniformTransformMagnitudeAndAmpAVX(__m256& real,
 {
     __m256 PT_probs = _mm256_sq_norm_cmplx(real, imag);
     __m256 PT_mags = _mm256_sqrt_ps(PT_probs);
-    __m256 neg_PT_probs = _mm256_sub_ps({}, PT_probs);
+    __m256 neg_PT_probs = _mm256_sub_ps(_mm256_set1_ps(0), PT_probs);
     __m256 Np = _mm256_mul_ps(_mm256_set1_ps(lambda), neg_PT_probs);
     __m256 uniform_probs = _mm256_sub_ps(_mm256_set1_ps(1.0), _mm256_exp_ps(Np));
     __m256 uniform_mags = _mm256_sqrt_ps(uniform_probs);
@@ -223,23 +223,21 @@ CalcNum256RegForSizeOfVector() const
 double Cramer::
 CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const
 {
-    atomic<double> temp_lambda;
-    temp_lambda.store(0);
-    atomic<size_t> num_amps;
-    num_amps.store(0);
+    double temp_lambda = 0;
+    size_t num_amps = 0;
     size_t size = orig_vector_size/(1ull << 12);
     
-#pragma omp parallel for num_threads(num_threads)
+#pragma omp parallel for reduction(+:num_amps, temp_lambda) num_threads(num_threads)
     for (size_t i = 0; i < size; ++i) {
         atomic<double> p;
         p.store(norm(state_vector[i]));
         if (p > 1.0/((double)orig_vector_size * (double)orig_vector_size)) {
             ++num_amps;
-            temp_lambda.store(temp_lambda + p);
+            temp_lambda += p;
         }
     }
     
-    return 1.0/(temp_lambda.load()/(double)num_amps.load());
+    return 1.0/(temp_lambda/(double)num_amps);
 }
 
 inline double Cramer::
@@ -343,7 +341,7 @@ MapValToCWAVX(__m256 real,
     
     if (_mm256_movemask_ps(_mm256_cmp_ps(magnitudes_UT, _mm256_set1_ps(magnitude_r), _CMP_LE_OQ)) == 255) {
         ++num_zero_amps;
-        return {};
+        return _mm256_set1_ps(0);
     }
     else {
         __m256 codewords = CalcNearestCWToValAVX(real, imag);
@@ -361,7 +359,7 @@ MapValToCWAVX(__m256 real,
 }
 
 __m256 Cramer::
-PackCWIn256BitsAVXReg(const unsigned short* codewords) const
+PackCWIn256BitsAVXReg(const unsigned int* codewords) const
 {
     size_t iters = ceil((double)num_codewords_reg/(double) NUM_UI_IN_REG);
     __m256i idxs = IDXS_CW_FOR_MASKS_UI[num_bits_codewords];
@@ -460,20 +458,20 @@ CramerCompress(complex<float>* compressed_vector,
 {
     if (projection_vector)
         lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
-    
+
     if (compressed_vector == nullptr) {
         if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
             throw "Unable to allocate space for compressed vector";
-        
+
         memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
     }
-    
+
     size_t cw_freq[num_codewords + 1];
     memset(cw_freq, 0, sizeof(size_t) * (num_codewords + 1));
-    
-#pragma omp parallel for reduction(+:num_zero_amps, cw_freq) num_threads(num_threads)
+
+    #pragma omp parallel for reduction(+:num_zero_amps, cw_freq) num_threads(num_threads)
     for (size_t i = 0; i < orig_vector_size ; i += num_codewords_reg) {
-        unsigned short codewords[num_codewords_reg];
+        unsigned int codewords[num_codewords_reg];
         //        memset(codewords, 0, sizeof(unsigned short) * num_codewords_reg);
         for (size_t j = 0; j < num_codewords_reg; ++j) {
             if (i + j >= orig_vector_size) {
@@ -484,18 +482,84 @@ CramerCompress(complex<float>* compressed_vector,
             codewords_mappings[codewords[j]] += state_vector[i + j];
             ++cw_freq[codewords[j]];
         }
-        
+
         __m256 pack_cw = PackCWIn256BitsAVXReg(codewords);
         size_t idx = (i/num_codewords_reg) * NUM_UL_IN_REG;
         _mm256_store_ps((float*)&compressed_vector[idx], pack_cw);
     }
-    
+
     //    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i <= num_codewords; ++i)
         codewords_mappings[i] /= cw_freq[i];
-    
+
     return compressed_vector;
 }
+
+//complex<float>* Cramer::
+//CramerCompress(complex<float>* compressed_vector,
+//               const complex<float>* state_vector)
+//{
+//    if (projection_vector)
+//        lambda = CalculateLambdaFromEmpiricalCDF(state_vector);
+//
+//    if (compressed_vector == nullptr) {
+//        if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * compressed_vector_UL_size) != 0)
+//            throw "Unable to allocate space for compressed vector";
+//
+//        memset(compressed_vector, 0, sizeof(complex<float>) * compressed_vector_UL_size);
+//    }
+//
+//    size_t cw_freq[num_codewords + 1];
+//    memset(cw_freq, 0, sizeof(size_t) * (num_codewords + 1));
+//
+//    size_t block_size = 8 * num_codewords_reg;
+//    size_t num_blocks = ceil((double)orig_vector_size/(double)block_size);
+//
+//    #pragma omp parallel for reduction(+:num_zero_amps, cw_freq) num_threads(num_threads)
+//    for (size_t i = 0; i < num_blocks; ++i) {
+//        unsigned int codewords[block_size];
+//        memset(codewords, 0, sizeof(unsigned short) * block_size);
+//        size_t block_idx = i * block_size;
+//
+//        //Find all the codewords
+//        for (size_t j = 0; j < block_size; j += 8) {
+//            size_t idx = block_idx + j;
+//            if (idx >= orig_vector_size)
+//                break;
+//
+//            //Load 8 amps
+//            const __m256 temps_amps0 = _mm256_load_ps((float*)&state_vector[idx]);
+//            const __m256 temps_amps1 = _mm256_load_ps((float*)&state_vector[idx + 4]);
+//            const __m256 perm_amps0 = _mm256_permutevar8x32_ps(temps_amps0, _mm256_set_epi32(7, 5, 3, 1, 6, 4, 2, 0));
+//            const __m256 perm_amps1 = _mm256_permutevar8x32_ps(temps_amps1, _mm256_set_epi32(6, 4, 2, 0, 7, 5, 3, 1));
+//            const __m256 real = _mm256_blend_ps(perm_amps0, perm_amps1, 0b11110000);
+//            __m256 imag = _mm256_blend_ps(perm_amps0, perm_amps1, 0b00001111);
+//            imag = _mm256_permutevar8x32_ps(imag, _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5 , 4));
+//            __m256 cws = MapValToCWAVX(real, imag);
+//
+//            _mm256_storeu_ps((float*)&codewords[j], (__m256)_mm256_cvtps_epi32(cws));
+//
+//            for (size_t k = 0; k < 8; ++k) {
+//                codewords_mappings[codewords[j + k]] += state_vector[idx + k];
+//                ++cw_freq[codewords[j + k]];
+//            }
+//        }
+//        //Pack all the codewords
+//        for (size_t j = 0; j < block_size; j += 23) {
+//            __m256 pack_cw = PackCWIn256BitsAVXReg(&codewords[j]);
+//            size_t idx = ((block_idx + j)/num_codewords_reg) * NUM_UL_IN_REG;;
+//            if (block_idx + j >= orig_vector_size)
+//                break;
+//            _mm256_store_ps((float*)&compressed_vector[idx], pack_cw);
+//        }
+//    }
+//
+//    //    #pragma omp parallel for num_threads(num_threads)
+//    for (size_t i = 0; i <= num_codewords; ++i)
+//        codewords_mappings[i] /= cw_freq[i];
+//
+//    return compressed_vector;
+//}
 
 complex<float>* Cramer::
 CramerDecompress(complex<float>* decompressed_vector,

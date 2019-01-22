@@ -22,12 +22,11 @@ constexpr unsigned long long MASK_64_ONES = ~0ull;
 constexpr unsigned int MASK_FLOAT_SIGN_EXP = ~((1u << 23) - 1);
 constexpr unsigned int FLOAT_MANTISSA_BITS = 23;
 
-const __m256 MASK_FLOAT_MANTISSA = _mm256_set1_epi32((1u << 23) - 1);
-const __m256 MASK_HIDDEN_BIT = _mm256_set1_epi32(1u << 23);
-const __m256 MASK_FLOAT_EXP = _mm256_set1_epi32(MASK_FLOAT_SIGN_EXP ^ (1u << 31));
-const __m256 MASK_REMOVE_HIDDEN_BIT = _mm256_set1_epi32(~(1u << 23));
-const __m256 MASK_SIGN = _mm256_set1_epi32(1u << 31);
-const __m256i MULTIPLIER = _mm256_set1_epi32(1);
+const __m256 MASK_FLOAT_MANTISSA = (__m256)_mm256_set1_epi32((1u << 23) - 1);
+const __m256 MASK_HIDDEN_BIT = (__m256)_mm256_set1_epi32(1u << 23);
+const __m256 MASK_FLOAT_EXP = (__m256)_mm256_set1_epi32(MASK_FLOAT_SIGN_EXP ^ (1u << 31));
+const __m256 MASK_REMOVE_HIDDEN_BIT = (__m256)_mm256_set1_epi32(~(1u << 23));
+const __m256 MASK_SIGN = (__m256)_mm256_set1_epi32(1u << 31);
 
 static inline __m256i _mm256_shift_right(__m256i A,
                                          unsigned int count) {
@@ -97,7 +96,7 @@ static inline __m256 _mm256_abs_cmplx(__m256 real,
 }
 
 static inline __m256 ldexp(__m256 value,
-                           __m256 exponent)
+                           __m256i exponent)
 {
     const __m128i exponentBias      = _mm_set1_epi32(127);
     __m256i       iExponent;
@@ -195,13 +194,13 @@ static inline __m256 _mm256_mul_128_unsigned(__m256 x,
 {
     const unsigned int most_sig_bit = find_most_sig_set_bit(y);
    
-    __m256 mantissas = _mm256_and_si256(x, MASK_FLOAT_MANTISSA);
-    __m256 exponents = _mm256_srli_epi32(_mm256_and_si256(x, MASK_FLOAT_EXP), FLOAT_MANTISSA_BITS);
+    __m256 mantissas = (__m256)_mm256_and_si256((__m256i)x, (__m256i)MASK_FLOAT_MANTISSA);
+    __m256 exponents = (__m256)_mm256_srli_epi32(_mm256_and_si256((__m256i)x, (__m256i)MASK_FLOAT_EXP), FLOAT_MANTISSA_BITS);
     
     //Assumes exponent never underflows or overflows.
-    exponents = _mm256_add_epi32(exponents, _mm256_set1_epi32(most_sig_bit));
+    exponents = (__m256)_mm256_add_epi32((__m256i)exponents, _mm256_set1_epi32(most_sig_bit));
     
-    __m256 result = _mm256_or_si256(_mm256_slli_epi32(exponents, FLOAT_MANTISSA_BITS), mantissas);
+    __m256 result = (__m256)_mm256_or_si256(_mm256_slli_epi32((__m256i)exponents, FLOAT_MANTISSA_BITS), (__m256i)mantissas);
     
     return result;
 }
