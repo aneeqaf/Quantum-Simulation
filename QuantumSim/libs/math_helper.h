@@ -1,13 +1,13 @@
 //
-//  avx_helper.h
+//  math_helper.h
 //  compression
 //
 //  Created by Aneeqa Fatima on 1/19/19.
 //  Copyright © 2019 Aneeqa Fatima. All rights reserved.
 //
 
-#ifndef avx_helper_h
-#define avx_helper_h
+#ifndef math_helper_h
+#define math_helper_h
 
 #include <bitset>
 #include <immintrin.h>
@@ -27,6 +27,38 @@ const __m256 MASK_HIDDEN_BIT = (__m256)_mm256_set1_epi32(1u << 23);
 const __m256 MASK_FLOAT_EXP = (__m256)_mm256_set1_epi32(MASK_FLOAT_SIGN_EXP ^ (1u << 31));
 const __m256 MASK_REMOVE_HIDDEN_BIT = (__m256)_mm256_set1_epi32(~(1u << 23));
 const __m256 MASK_SIGN = (__m256)_mm256_set1_epi32(1u << 31);
+
+static inline double
+Factorial(double x)
+{
+    double product = 1;
+    
+    for (size_t i = 1; i <= x; ++i)
+        product *= i;
+    return product;
+}
+
+static inline double
+ApproxAtan(double z)
+{
+    const double n1 = 0.97239411f;
+    const double n2 = -0.19194795f;
+    return (n1 + n2 * z * z) * z;
+}
+
+static inline double
+ApproxAtan2(double y,
+            double x)
+{
+    double ay = fabs(y), ax = fabs(x);
+    int invert = ay > ax;
+    double z = invert ? ax/ay : ay/ax; // [0,1]
+    double th = ApproxAtan(z);        // [0,π/4]
+    if(invert) th = M_PI_2 - th;       // [0,π/2]
+    if(x < 0) th = M_PI - th;          // [0,π]
+    th = copysign(th, y);              // [-π,π]
+    return th;
+}
 
 static inline __m256i _mm256_shift_right(__m256i A,
                                          unsigned int count) {
@@ -160,9 +192,9 @@ static inline __m256 _mm256_exp_ps(__m256 x)
     // with an argument that is so negative it cannot be converted to an integer
     // after being multiplied by argscale.
     
-     x = _mm256_max_ps(x, _mm256_set1_ps(std::numeric_limits<std::int32_t>::lowest())/argscale);
+    x = _mm256_max_ps(x, _mm256_set1_ps(std::numeric_limits<std::int32_t>::lowest())/argscale);
     
-     y = _mm256_mul_ps(x, argscale);
+    y = _mm256_mul_ps(x, argscale);
     
     
     fexppart  = ldexp(one,  _mm256_cvtps_epi32(y));
@@ -193,7 +225,7 @@ static inline __m256 _mm256_mul_128_unsigned(__m256 x,
                                              bitset<128> y)
 {
     const unsigned int most_sig_bit = find_most_sig_set_bit(y);
-   
+    
     __m256 mantissas = (__m256)_mm256_and_si256((__m256i)x, (__m256i)MASK_FLOAT_MANTISSA);
     __m256 exponents = (__m256)_mm256_srli_epi32(_mm256_and_si256((__m256i)x, (__m256i)MASK_FLOAT_EXP), FLOAT_MANTISSA_BITS);
     
@@ -289,4 +321,24 @@ static inline __m256 _mm256_fmod_ps(__m256 x,
     return _mm256_sub_ps(x, df_m);
 }
 
-#endif /* avx_helper_h */
+static inline __m256 _mm256_pow_ps(__m256 x,
+                                   int n)
+{
+    __m256 product = _mm256_set1_ps(1);
+    if (n == 0)
+        return product;
+    
+    bool reciprocal = false;
+    
+    if (n < 0) {
+        reciprocal = true;
+        n = -n;
+    }
+    
+    for (int i = 1; i <= n; ++i)
+        product = _mm256_mul_ps(product, x);
+    
+    return reciprocal ? 1/product : product;
+}
+
+#endif /* math_helper_h */

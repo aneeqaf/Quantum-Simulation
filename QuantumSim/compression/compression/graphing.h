@@ -156,6 +156,40 @@ static void PlotPT(const complex<float>* amps,
 #endif
 }
 
+complex<double>
+CalculateCDFofErlangDist(complex<double> amp,
+                         int k,
+                         double lambda) 
+{
+    double PT_mag = abs(amp);
+    double PT_probability = PT_mag * PT_mag;
+    double Np = PT_probability * lambda;
+    double uniform_probability = 0;
+    
+    for(size_t n = 0; n < k; ++n)
+        uniform_probability += (1/Factorial(n)) * pow(Np, n) * exp(-Np);
+    
+    double uniform_mag = sqrt(1 - uniform_probability);
+    amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
+    
+    return amp;
+}
+
+inline double
+CalculateKFromMeanAndVariance(double mean,
+                              double variance)
+{
+    return (mean * mean)/variance;
+}
+
+inline double
+CalculateLambdaFromMeanAndVariance(double mean,
+                                   double variance)
+{
+    return mean/variance;
+}
+
+
 static void PlotCDF(complex<float>* amps,
                     size_t num_qubits)
 {
@@ -174,20 +208,35 @@ static void PlotCDF(complex<float>* amps,
         amps_g.push_back(make_pair(cumultive_sum, probs[i]));
     }
     
-    double lambda = 0;
-    size_t non0_p = 0;
-    for (size_t i = 0; i < amp_size; ++i) {
-        if (probs[i] > 1/(amp_size * amp_size)) {
-            ++non0_p;
-            lambda += probs[i];
+    double mean = 0, variance = 0;
+    size_t num_amps = 0;
+    size_t size = amp_size;
+    
+    for (size_t i = 0; i < size; ++i) {
+        double p = norm(amps[i]);
+        if (p >= 1.0/((double)amp_size * (double)amp_size)) {
+            ++num_amps;
+            mean += p;
         }
     }
-    lambda /= (double)non0_p;
-    lambda = 1.0/lambda;
+    
+    mean /= (double)num_amps;
+    
+    for (size_t i = 0; i < size; ++i) {
+        double p = norm(amps[i]);
+        if (p >= 1.0/((double)amp_size * (double)amp_size))
+            variance += (p - mean) * (p - mean);
+    }
+    
+    variance /= (double)num_amps;
+    
+    double k = CalculateKFromMeanAndVariance(mean, variance);
+    double lambda = 1/mean;// CalculateLambdaFromMeanAndVariance(mean, variance);
     
     vector<pair<double,double>> e_cdf;
     for (size_t i = 0; i < amp_size ; ++i) {
-        e_cdf.push_back(make_pair(1.0 - exp(-norm(amps[i]) * lambda), norm(amps[i])));
+        complex<double> temp = CalculateCDFofErlangDist(amps[i], ceil(k), lambda);
+        e_cdf.push_back(make_pair(norm(temp), norm(amps[i])));
     }
     
     
@@ -204,8 +253,8 @@ static void PlotCDF(complex<float>* amps,
     gp << "set title \"" << num_qubits << "q CDF\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
-    gp << "set term png\n";
-    gp << "set output '" << filename << ".png'\n";
+//    gp << "set term png\n";
+//    gp << "set output '" << filename << ".png'\n";
     gp << "set tics font 'Times New Roman,12'\n";
     gp << "set key right bottom\n";
     //    gp << "set logscale y\n";

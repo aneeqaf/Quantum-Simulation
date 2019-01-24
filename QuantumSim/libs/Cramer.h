@@ -26,7 +26,7 @@
 #include <vector>
 #include <utility>
 
-#include "avx_helper.h"
+#include "math_helper.h"
 
 using namespace std;
 
@@ -105,6 +105,8 @@ constexpr __m256i  BITS_TO_STARTING_OF_UI[17] = {{0}, {0}, {0}, {0}, {0}, {0}, {
 
 class Cramer {
     
+    enum Distribution: unsigned int {exponential, erlang};
+    
     complex<float>* codewords_mappings;
     
     size_t orig_vector_size;
@@ -120,8 +122,16 @@ class Cramer {
     double codewords_spacing;
     double spiral_length_r;
     double lambda;
+    int k; //k -> shape in Gamma dist
     bool projection_vector;
+    Distribution dist_type;
     
+    complex<double> CalculateCDFofExponential(complex<double> amp) const;
+    __m256 CalculateCDFofExponentialAVX(__m256& real,
+                                        __m256& imag ) const;
+    complex<double> CalculateCDFofErlangDist(complex<double> amp) const;
+    __m256 CalculateCDFofErlangDistAVX(__m256& real,
+                                       __m256& imag ) const;
     complex<double> UniformTransformMagnitudeAndAmp(complex<double> amp) const;
     __m256 UniformTransformMagnitudeAndAmpAVX(__m256& real,
                                               __m256& imag) const;
@@ -146,9 +156,11 @@ class Cramer {
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
-    double CalculateLambdaFromEmpiricalCDF(const complex<float>* state_vector) const;
-    double ApproxAtan(double z) const;
-    double ApproxAtan2(double y, double x) const;
+    double CalculateKFromMeanAndVariance(double mean,
+                                         double variance) const;
+    double CalculateLambdaFromMeanAndVariance(double mean,
+                                              double variance) const;
+    void CalculateKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          unsigned short codeword) const;
@@ -192,6 +204,7 @@ public:
     double GetFactorOfDistBetweenTurns() const;
     double GetDistBetweenCW() const;
     double GetLog2Lambda() const;
+    int GetKForGammaDist() const;
     void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
 };
 

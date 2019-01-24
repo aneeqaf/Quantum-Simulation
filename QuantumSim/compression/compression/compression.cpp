@@ -129,6 +129,7 @@ void CompressDecompressStateVector(complex<float>* state_vector,
     cout << "Results after compression-decompression of " << log2(state_vector_size) << "q\n";
     cout << "r = " << cramer.GetMinInnerRadius() << ", R = " << cramer.GetMaxOuterRadius() << endl;
     cout << "Calculated Lambda : " << cramer.GetLog2Lambda() << endl;
+    cout << "Calculated K : " << cramer.GetKForGammaDist() << endl;
     cout << "Fraction of amps mapped to zero : " << cramer.GetNumValsMappedToZero() << "/" << state_vector_size
     << " (" << (double)cramer.GetNumValsMappedToZero()/(double)state_vector_size << ")" << endl;
     cout << "Number of codewords : " << cramer.GetNumOfCW() << endl;
