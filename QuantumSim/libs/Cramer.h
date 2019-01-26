@@ -105,7 +105,7 @@ constexpr __m256i  BITS_TO_STARTING_OF_UI[17] = {{0}, {0}, {0}, {0}, {0}, {0}, {
 
 class Cramer {
     
-    enum Distribution: unsigned int {exponential, erlang};
+    enum Distribution: unsigned int {exponential, erlang, gamma};
     
     complex<float>* codewords_mappings;
     
@@ -122,13 +122,16 @@ class Cramer {
     double codewords_spacing;
     double spiral_length_r;
     double lambda;
-    int k; //k -> shape in Gamma dist
+    float k; //k -> shape in Gamma dist
     bool projection_vector;
     Distribution dist_type;
     
     complex<double> CalculateCDFofExponential(complex<double> amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
                                         __m256& imag ) const;
+    complex<double> CalculateCDFofGammaDist(complex<double> amp) const;
+    __m256 CalculateCDFofGammaDistAVX(__m256& real,
+                                      __m256& imag ) const;
     complex<double> CalculateCDFofErlangDist(complex<double> amp) const;
     __m256 CalculateCDFofErlangDistAVX(__m256& real,
                                        __m256& imag ) const;
@@ -163,7 +166,7 @@ class Cramer {
     void CalculateKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
     
     unsigned short ShiftCWToNearestPhase(double phase,
-                                         unsigned short codeword) const;
+                                         double codeword) const;
     __m256 ShiftCWToNearestPhaseAVX(__m256 phase,
                                     __m256 codeword) const;
     unsigned short CalcNearestCWToVal(complex<double> val) const;
@@ -204,7 +207,7 @@ public:
     double GetFactorOfDistBetweenTurns() const;
     double GetDistBetweenCW() const;
     double GetLog2Lambda() const;
-    int GetKForGammaDist() const;
+    double GetKForGammaDist() const;
     void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
 };
 

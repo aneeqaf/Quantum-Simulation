@@ -175,6 +175,21 @@ CalculateCDFofErlangDist(complex<double> amp,
     return amp;
 }
 
+complex<double>
+CalculateCDFofGammaDist(complex<double> amp,
+                        double k,
+                        double lambda)
+{
+    double PT_mag = abs(amp);
+    double PT_probability = PT_mag * PT_mag;
+    double Np = PT_probability * lambda;
+    double uniform_probability = gammp(k, Np) ;
+    double uniform_mag = sqrt(uniform_probability);
+    amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
+    
+    return amp;
+}
+
 inline double
 CalculateKFromMeanAndVariance(double mean,
                               double variance)
@@ -224,25 +239,29 @@ static void PlotCDF(complex<float>* amps,
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
-        if (p >= 1.0/((double)amp_size * (double)amp_size))
+//        if (p >= 1.0/((double)amp_size * (double)amp_size))
             variance += (p - mean) * (p - mean);
     }
     
-    variance /= (double)num_amps;
+    variance /= (double)(amp_size - 1);
     
     double k = CalculateKFromMeanAndVariance(mean, variance);
-    double lambda = 1/mean;// CalculateLambdaFromMeanAndVariance(mean, variance);
+    double lambda = CalculateLambdaFromMeanAndVariance(mean, variance);
     
     vector<pair<double,double>> e_cdf;
     for (size_t i = 0; i < amp_size ; ++i) {
-        complex<double> temp = CalculateCDFofErlangDist(amps[i], ceil(k), lambda);
+        complex<double> temp = CalculateCDFofGammaDist(amps[i], k, lambda);
         e_cdf.push_back(make_pair(norm(temp), norm(amps[i])));
     }
     
     
+    vector<pair<double,double>> e_cdf1;
+    for (size_t i = 0; i < amp_size ; ++i)
+        e_cdf1.push_back(make_pair(1.0 - exp(-norm(amps[i]) * (1/mean)), norm(amps[i])));
+    
     vector<pair<double,double>> cdf_pt;
     for (size_t i = 0; i < amp_size ; ++i)
-        cdf_pt.push_back(make_pair(1.0 - exp(-norm(amps[i]) * (double)amp_size), norm(amps[i])));
+        cdf_pt.push_back(make_pair(norm(CalculateCDFofGammaDist(amps[i], 1, amp_size)), norm(amps[i])));
     
     string filename = to_string(num_qubits) + "_CDF";
     
@@ -259,8 +278,9 @@ static void PlotCDF(complex<float>* amps,
     gp << "set key right bottom\n";
     //    gp << "set logscale y\n";
     gp << "plot " << gp.file1d(amps_g, "dist.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"black\" t \"empirical\","
-    << gp.file1d(e_cdf, "dist2.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"red\" t \"calculated empirically\","
-    << gp.file1d(cdf_pt, "dist1.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"purple\" t \"analytical\"\n";
+    << gp.file1d(e_cdf, "dist2.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"red\" t \"calculated empirically - gamma\","
+    << gp.file1d(e_cdf1, "dist3.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"green\" t \"calculated empirically - exp\"\n";
+//    << gp.file1d(cdf_pt, "dist1.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"purple\" t \"analytical\"\n";
     
 #endif
 }

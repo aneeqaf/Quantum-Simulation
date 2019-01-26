@@ -72,7 +72,6 @@ int main(int argc, char * argv[]) {
             }
         }
     }
-                
     
     size_t amp_size = 1ull << (num_q);
     complex<float>* amp = nullptr;
