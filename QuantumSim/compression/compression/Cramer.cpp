@@ -350,18 +350,18 @@ CalculateKandLambdaFromEmpiricalCDF(const complex<float>* state_vector)
 {
     double mean = 0, variance = 0;
     size_t num_amps = 0;
-    size_t size = orig_vector_size;///(1ull << 4);
+    size_t size = orig_vector_size/(1ull << 12);///(1ull << 4);
     
 #pragma omp parallel for reduction(+:num_amps, mean) num_threads(num_threads)
     for (size_t i = 0; i < size; ++i) {
         double p = norm(state_vector[i]);
-//        if (p >= 1.0/((double)orig_vector_size * (double)orig_vector_size)) {
+        if (p >= 1.0/((double)orig_vector_size * (double)orig_vector_size)) {
             ++num_amps;
             mean += p;
-//        }
+        }
     }
     
-    mean /= (double)size;
+    mean /= (double)num_amps;
     
 #pragma omp parallel for reduction(+:variance) num_threads(num_threads)
     for (size_t i = 0; i < size; ++i) {

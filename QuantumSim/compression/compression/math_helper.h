@@ -512,11 +512,11 @@ static inline __m256 _mm256_gammln_ps(__m256 xx)
     return _mm256_sub_ps(_mm256_log_ps(_mm256_mul_ps(rand, ser)), tmp);
 }
 
-static inline float gser(const float a,
-                          const float x)
+static inline float gser(const double a,
+                          const double x)
 {
-    float gln = gammln(a);
-    float ap = a, del = 1.0 / a, sum = del;
+    double gln = gammln(a);
+    double ap = a, del = 1.0 / a, sum = del;
     for (;;) {
         ++ap;
         del *= x / ap;
@@ -549,23 +549,23 @@ static inline __m256 _mm256_gser_ps(__m256 a,
     return _mm256_mul_ps(sum, _mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_mul_ps(a, _mm256_log_ps(x)), x), gln)));
 }
 
-static inline float gcf(const float a,
-                         const float x)
+static inline float gcf(const double a,
+                         const double x)
 {
-    float gln = gammln(a);
-    float b = x + 1.0 - a;
-    float c = 1.0 / FPMIN;
-    float d = 1.0 / b;
-    float h = d;
+    double gln = gammln(a);
+    double b = x + 1.0 - a;
+    double c = 1.0 / FPMIN;
+    double d = 1.0 / b;
+    double h = d;
     for (int i = 1; ; i++) {
-        float an = -i * (i - a);
+        double an = -i * (i - a);
         b += 2.0;
         d = an * d + b;
         if (fabs(d) < FPMIN) { cout<< "!"; d = FPMIN;}
         c = b + an / c;
         if (fabs(c) < FPMIN) { cout<< "!"; c = FPMIN;}
         d = 1.0/d;
-        float del = d * c;
+        double del = d * c;
         h *= del;
         if (fabs(del - 1.0) <= EPS) break;
     }
@@ -607,12 +607,12 @@ static inline __m256 _mm256_gcf_ps(__m256 a,
     return _mm256_mul_ps(_mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_mul_ps(a, _mm256_log_ps(x)), x), gln)), h);
 }
 
-static inline float gammpapprox(float a,
-                                 float x)
+static inline float gammpapprox(double a,
+                                 double x)
 {
-    float xu,t,sum,ans;
-    float a1 = a - 1.0, lna1 = log(a1), sqrta1 = sqrt(a1);
-    float gln = gammln(a);
+    double xu,t,sum,ans;
+    double a1 = a - 1.0, lna1 = log(a1), sqrta1 = sqrt(a1);
+    double gln = gammln(a);
     if (x > a1) xu = max(a1 + 11.5 * sqrta1, x + 6.0 * sqrta1);
     else xu = max(0., min(a1 - 7.5 * sqrta1, x - 5.0 * sqrta1));
     sum = 0;
@@ -668,8 +668,8 @@ static inline __m256 _mm256_gammpapprox_ps(__m256 a,
     return ans;
 }
 
-static inline float gammp(const float a,
-                          const float x)
+static inline float gammp(const double a,
+                          const double x)
 {
     if (x < 0.0 || a <= 0.0) throw("bad args in gammp");
     if (x == 0.0) return 0.0;

@@ -209,23 +209,23 @@ static void PlotCDF(complex<float>* amps,
                     size_t num_qubits)
 {
     size_t amp_size = 1ull << num_qubits;
+    size_t size = amp_size/(1ull << 12);
     
     vector<double> probs;
-    for (size_t i = 0; i < amp_size; ++i)
+    for (size_t i = 0; i < size; ++i)
         probs.push_back(norm(amps[i]));
     
     sort(probs.begin(), probs.end());
     
     double cumultive_sum = 0;
     vector<pair<double,double>> amps_g;
-    for (size_t i = 0; i < amp_size ; ++i) {
+    for (size_t i = 0; i < size ; ++i) {
         cumultive_sum += 1.0/(double)amp_size;
         amps_g.push_back(make_pair(cumultive_sum, probs[i]));
     }
     
     double mean = 0, variance = 0;
     size_t num_amps = 0;
-    size_t size = amp_size;
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
@@ -243,24 +243,24 @@ static void PlotCDF(complex<float>* amps,
             variance += (p - mean) * (p - mean);
     }
     
-    variance /= (double)(amp_size - 1);
+    variance /= (double)(size - 1);
     
     double k = CalculateKFromMeanAndVariance(mean, variance);
     double lambda = CalculateLambdaFromMeanAndVariance(mean, variance);
     
     vector<pair<double,double>> e_cdf;
-    for (size_t i = 0; i < amp_size ; ++i) {
+    for (size_t i = 0; i < size ; ++i) {
         complex<double> temp = CalculateCDFofGammaDist(amps[i], k, lambda);
         e_cdf.push_back(make_pair(norm(temp), norm(amps[i])));
     }
     
     
     vector<pair<double,double>> e_cdf1;
-    for (size_t i = 0; i < amp_size ; ++i)
+    for (size_t i = 0; i < size ; ++i)
         e_cdf1.push_back(make_pair(1.0 - exp(-norm(amps[i]) * (1/mean)), norm(amps[i])));
     
     vector<pair<double,double>> cdf_pt;
-    for (size_t i = 0; i < amp_size ; ++i)
+    for (size_t i = 0; i < size ; ++i)
         cdf_pt.push_back(make_pair(norm(CalculateCDFofGammaDist(amps[i], 1, amp_size)), norm(amps[i])));
     
     string filename = to_string(num_qubits) + "_CDF";
