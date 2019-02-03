@@ -185,39 +185,53 @@ CalculateCDFofGammaDistP(complex<double> amp,
     double PT_mag = abs(amp);
     PT_mag = PT_mag > 0 ? PT_mag : 1;
     double PT_probability = PT_mag * PT_mag;
-    double Np = PT_probability * lambda;
-    double uniform_probability = gammp(k, Np) ;
+    double Np = (PT_probability) * lambda;
+    double uniform_probability = gammp(k, Np) - gammp(k, k) ;
     double uniform_mag = sqrt(uniform_probability);
     amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
     
     return amp;
 }
 
+static complex<double>
+CalculateCDFofUniformDistP(complex<double> amp,
+                           double num_amps)
+{
+    double PT_mag = abs(amp);
+    PT_mag = PT_mag > 0 ? PT_mag : 1;
+    double PT_probability = PT_mag * PT_mag;
+    double uniform_probability = PT_probability/num_amps ;
+    double uniform_mag = sqrt(uniform_probability);
+    amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
+    
+    return amp;
+}
+
+
 static pair<float, float> CalculateKAndLambda(const complex<float>* amps,
                                               size_t size)
 {
-    double mean = 0, mean1 = 0, variance = 0;
+    double mean = 0, variance = 0;
     size_t num_amps = 0;
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
-        if (p >= 1.0/((double)size * (double)size)) {
+//        if (p > 1.0/((double)size * (double)size)) {
             ++num_amps;
             mean += p;
-        }
-        mean1 += p;
+//        }
     }
     
     mean /= (double)num_amps;
-    mean1 /= size;
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
-        variance += (p - mean) * (p - mean);
+//        if (p > 1.0/((double)size * (double)size))
+            variance += (p - mean) * (p - mean);
     }
     
-    variance /= (double)(size - 1);
-    
+    variance /= (double)(num_amps - 1);
+    cout << mean << endl;
     double k = (mean * mean)/variance;
     double lambda = mean/variance;
     
@@ -248,10 +262,10 @@ static void PlotCDF(complex<float>* amps,
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
-//        if (p >= 1.0/((double)amp_size * (double)amp_size)) {
+        if (p >= 1.0/((double)amp_size * (double)amp_size)) {
             ++num_amps;
             mean += p;
-//        }
+        }
     }
     
     mean /= (double)num_amps;
@@ -473,19 +487,34 @@ static void PlotPointsOnComplexPlane(const complex<float>* original,
     double k = k_lambda.first;
     double lambda = k_lambda.second;
     
-    vector<pair<float, float>>orig_x_y(size);
-    vector<pair<float, float>>transformed_x_y(size);
+    size_t num_zero_amps = 0;
     for (size_t i = 0; i < size; ++i) {
-        orig_x_y[i] = make_pair(original[i].real(), original[i].imag());
-        complex<double> new_amp = CalculateCDFofGammaDistP(original[i], k , lambda);
-        transformed_x_y[i] = make_pair(new_amp.real(), new_amp.imag()) ;
+        double p = norm(original[i]);
+        if (p > 1.0/((double)size * (double)size))
+            ++num_zero_amps;
+    }
+    
+    vector<pair<float, float>>orig_x_y;
+    vector<pair<float, float>>transformed_x_y_g;
+    vector<pair<float, float>>transformed_x_y_u;
+    for (size_t i = 0; i < size; ++i) {
+        double p = norm(original[i]);
+        if (p > (k/lambda)) {
+            orig_x_y.push_back(make_pair(original[i].real(), original[i].imag()));
+            complex<double> new_amp = CalculateCDFofGammaDistP(original[i] , k, lambda);
+            transformed_x_y_g.push_back(make_pair(new_amp.real(), new_amp.imag())) ;
+        }
+        else {
+            complex<double> new_amp = CalculateCDFofUniformDistP(original[i], k/lambda);
+            transformed_x_y_u.push_back(make_pair(new_amp.real(), new_amp.imag())) ;
+        }
     }
     
 #ifdef GP
     Gnuplot gp;
     
     gp << "reset\nset nokey\n";
-    gp << "set multiplot layout 2,1 title \"" << log2(size) << " qubit amplitudes plots\" font \",14\"\n";
+    gp << "set multiplot layout 3,1 title \"" << log2(size) << " qubit amplitudes plots\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
 //    gp << "set term png\n";
@@ -493,8 +522,9 @@ static void PlotPointsOnComplexPlane(const complex<float>* original,
     gp << "set tics font 'Times New Roman,12'\n";
     //    gp << "set logscale y\n";
     gp << "plot " << gp.file1d(orig_x_y, "dist.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"blue\" title \"Original\"\n";
-    gp << "plot " << gp.file1d(transformed_x_y, "dist1.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"green\" title \"Gamma Transform\"\n";
-    
+    gp << "plot " << gp.file1d(transformed_x_y_g, "dist1.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"green\" title \"Gamma Transform\"\n";
+    gp << "plot " << gp.file1d(transformed_x_y_u, "dist2.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"red\" title \"Uniform Transform\"\n";
+
 #endif
 }
 

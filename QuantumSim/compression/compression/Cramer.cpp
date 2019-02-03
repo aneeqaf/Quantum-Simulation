@@ -613,7 +613,6 @@ complex<float>* Cramer::
 CramerCompress(complex<float>* compressed_vector,
                const complex<float>* state_vector)
 {
-//    PlotPointsOnComplexPlane(state_vector, orig_vector_size);
     
     if (projection_vector)
         CalcKandLambdaFromEmpiricalCDF(state_vector);
