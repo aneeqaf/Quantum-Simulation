@@ -78,6 +78,7 @@ ApproxAtan2(double y,
     if(invert) th = M_PI_2 - th;       // [0,π/2]
     if(x < 0) th = M_PI - th;          // [0,π]
     th = copysign(th, y);              // [-π,π]
+    th = th < 0 ? th + (2 * M_PI) : th;
     return th;
 }
 

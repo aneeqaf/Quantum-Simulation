@@ -37,7 +37,7 @@ double CalculateFidelity(const complex<double>* original,
                          size_t state_vector_size)
 {
     //temp
-    state_vector_size /= (1ull << 12);
+//    state_vector_size /= (1ull << 12);
     double norm_product = (CalculateNorm(original, state_vector_size) * CalculateNorm(processed, state_vector_size));
     complex<double> dotp_exact_approx = DotProduct(original, processed, state_vector_size);
     return pow(norm(complex<double>(dotp_exact_approx.real()/norm_product, dotp_exact_approx.imag()/norm_product)), 2);

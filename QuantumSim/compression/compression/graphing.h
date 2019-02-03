@@ -18,7 +18,8 @@
 #include <stdio.h>
 #include <vector>
 #include <utility>
-#include "Cramer.h"
+#include "math_helper.h"
+//#include "Cramer.h"
 
 #ifdef GP
 #include "gnuplot-iostream/gnuplot-iostream.h"
@@ -83,32 +84,33 @@ static void ApplyPTTransformToStateVector(complex<float>* state_vector,
     }
 }
 
-static void PlotCWFrequency(const vector<size_t>& codewords_freq,
+static void PlotCWFrequency(const size_t* codewords_freq,
+                            const size_t num_codewords,
                             size_t num_qubits)
 {
 #ifdef GP
     Gnuplot gp;
     
     vector<pair<unsigned short,size_t>> codewords_freq_idx;
-    for (size_t i = 1; i < codewords_freq.size(); ++i)
+    for (size_t i = 20; i <= num_codewords; ++i)
         codewords_freq_idx.push_back(make_pair(i, codewords_freq[i]));
     
     size_t freq_max = 0;
-    for (size_t i = 1; i < codewords_freq.size(); ++i) {
+    for (size_t i = 20; i <= num_codewords; ++i) {
         if(codewords_freq[i] > freq_max)
             freq_max = codewords_freq[i];
     }
     
-    string filename = to_string(codewords_freq.size()) + "_codewords_freq";
+    string filename = to_string(num_codewords + 1) + "_codewords_freq";
     
     gp << "reset\nset nokey\n";
-    gp << "set title \"" << num_qubits << "q: " << codewords_freq.size() << " Codewords Frequency\" font \",14\"\n";
+    gp << "set title \"" << num_qubits << "q: " << num_codewords + 1 << " Codewords Frequency\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
-    gp << "set term png\n";
+//    gp << "set term png\n";
     gp << "set output '" << filename + to_string(num_qubits) << ".png'\n";
     gp << "set tics font 'Times New Roman,12'\n";
-    gp << "cw=" << codewords_freq.size() << "\nmax_f=" << freq_max << "\n";
+    gp << "cw=" << num_codewords + 1 << "\nmax_f=" << freq_max << "\n";
     gp << "title(c) = sprintf(\"\\nAmplitudes to %i Codewords Frequency\"" << ", cw) \n";
     
     gp << "set xr[0:cw]\nset yr[0:max_f]\n";
@@ -156,8 +158,8 @@ static void PlotPT(const complex<float>* amps,
 #endif
 }
 
-complex<double>
-CalculateCDFofErlangDist(complex<double> amp,
+static complex<double>
+CalculateCDFofErlangDistP(complex<double> amp,
                          int k,
                          double lambda) 
 {
@@ -175,12 +177,13 @@ CalculateCDFofErlangDist(complex<double> amp,
     return amp;
 }
 
-complex<double>
-CalculateCDFofGammaDist(complex<double> amp,
-                        double k,
-                        double lambda)
+static complex<double>
+CalculateCDFofGammaDistP(complex<double> amp,
+                         double k,
+                         double lambda)
 {
     double PT_mag = abs(amp);
+    PT_mag = PT_mag > 0 ? PT_mag : 1;
     double PT_probability = PT_mag * PT_mag;
     double Np = PT_probability * lambda;
     double uniform_probability = gammp(k, Np) ;
@@ -190,26 +193,42 @@ CalculateCDFofGammaDist(complex<double> amp,
     return amp;
 }
 
-inline double
-CalculateKFromMeanAndVariance(double mean,
-                              double variance)
+static pair<float, float> CalculateKAndLambda(const complex<float>* amps,
+                                              size_t size)
 {
-    return (mean * mean)/variance;
+    double mean = 0, mean1 = 0, variance = 0;
+    size_t num_amps = 0;
+    
+    for (size_t i = 0; i < size; ++i) {
+        double p = norm(amps[i]);
+        if (p >= 1.0/((double)size * (double)size)) {
+            ++num_amps;
+            mean += p;
+        }
+        mean1 += p;
+    }
+    
+    mean /= (double)num_amps;
+    mean1 /= size;
+    
+    for (size_t i = 0; i < size; ++i) {
+        double p = norm(amps[i]);
+        variance += (p - mean) * (p - mean);
+    }
+    
+    variance /= (double)(size - 1);
+    
+    double k = (mean * mean)/variance;
+    double lambda = mean/variance;
+    
+    return make_pair(k, lambda);
 }
-
-inline double
-CalculateLambdaFromMeanAndVariance(double mean,
-                                   double variance)
-{
-    return mean/variance;
-}
-
 
 static void PlotCDF(complex<float>* amps,
                     size_t num_qubits)
 {
     size_t amp_size = 1ull << num_qubits;
-    size_t size = amp_size/(1ull << 12);
+    size_t size = amp_size;
     
     vector<double> probs;
     for (size_t i = 0; i < size; ++i)
@@ -224,33 +243,26 @@ static void PlotCDF(complex<float>* amps,
         amps_g.push_back(make_pair(cumultive_sum, probs[i]));
     }
     
-    double mean = 0, variance = 0;
+    double mean = 0;
     size_t num_amps = 0;
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
-        if (p >= 1.0/((double)amp_size * (double)amp_size)) {
+//        if (p >= 1.0/((double)amp_size * (double)amp_size)) {
             ++num_amps;
             mean += p;
-        }
+//        }
     }
     
     mean /= (double)num_amps;
     
-    for (size_t i = 0; i < size; ++i) {
-        double p = norm(amps[i]);
-//        if (p >= 1.0/((double)amp_size * (double)amp_size))
-            variance += (p - mean) * (p - mean);
-    }
-    
-    variance /= (double)(size - 1);
-    
-    double k = CalculateKFromMeanAndVariance(mean, variance);
-    double lambda = CalculateLambdaFromMeanAndVariance(mean, variance);
+    pair<float, float>k_lambda = CalculateKAndLambda(amps, amp_size);
+    double k = k_lambda.first;
+    double lambda = k_lambda.second;
     
     vector<pair<double,double>> e_cdf;
     for (size_t i = 0; i < size ; ++i) {
-        complex<double> temp = CalculateCDFofGammaDist(amps[i], k, lambda);
+        complex<double> temp = CalculateCDFofGammaDistP(amps[i], k, lambda);
         e_cdf.push_back(make_pair(norm(temp), norm(amps[i])));
     }
     
@@ -261,7 +273,7 @@ static void PlotCDF(complex<float>* amps,
     
     vector<pair<double,double>> cdf_pt;
     for (size_t i = 0; i < size ; ++i)
-        cdf_pt.push_back(make_pair(norm(CalculateCDFofGammaDist(amps[i], 1, amp_size)), norm(amps[i])));
+        cdf_pt.push_back(make_pair(norm(CalculateCDFofGammaDistP(amps[i], 1, amp_size)), norm(amps[i])));
     
     string filename = to_string(num_qubits) + "_CDF";
     
@@ -285,86 +297,203 @@ static void PlotCDF(complex<float>* amps,
 #endif
 }
 
-static void PlotUniformSpiralAndAmpDensity(const string& filename,
-                                    const complex<float>* state_vector,
-                                    size_t state_vector_size,
-                                    const Cramer& cramer)
+//static void PlotUniformSpiralAndAmpDensity(const string& filename,
+//                                    const complex<float>* state_vector,
+//                                    size_t state_vector_size,
+//                                    const Cramer& cramer)
+//{
+//#ifdef GP
+//    Gnuplot gp;
+//#endif
+//
+//    vector<pair<float, float>> codewords;
+//
+//    vector<pair<float, float>> xy_pts;
+//    for(size_t i = 0; i < state_vector_size; ++i)
+//        xy_pts.push_back(make_pair(state_vector[i].real(), state_vector[i].imag()));
+//
+//
+//    complex<float> max_amp = FindAmpWithMaxMagnitude(state_vector, state_vector_size);
+//    int max_R = abs(max_amp)/(cramer.GetFactorOfDistBetweenTurns() * M_PI);
+//    cramer.GetCWForPlotting(codewords);
+//
+//#ifdef GP
+//    //    gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
+//    //    gp <<  "if (!exists(\"MP_RIGHT\"))  MP_RIGHT = .95\n";
+//    //    gp << "if (!exists(\"MP_BOTTOM\")) MP_BOTTOM = .1\n";
+//    //    gp << "if (!exists(\"MP_TOP\"))    MP_TOP = .8\n";
+//    //    gp << "if (!exists(\"MP_GAP\"))    MP_GAP = 0.1\n";
+//
+//    gp << "reset\nset nokey\n";
+//    gp << "set xtics rotate\n";
+//    gp << "set bmargin 5\n";
+//    gp << "set termoption enhanced\n";
+//    gp << "set term png\n";
+//    gp << "set output '" << filename << ".png'\n";
+//    gp << "set parametric\nset size ratio -1\nset samples 1e5\n";
+//    gp << "set tics font 'Times New Roman,18'\n";
+//    gp << "set linetype 1 linecolor rgb \"blue\"\n";
+//    gp << "set linetype 2 linecolor rgb \"light-blue\"\n";
+//    gp << "eb=" << cramer.GetFactorOfDistBetweenTurns() << "\ncw=" << codewords.size() << "\n q=" << log2(state_vector_size) << "\n";
+//    gp << "r=" << cramer.GetMinInnerRadius() << "\n R=" << cramer.GetMaxOuterRadius()
+//    << "\n maxR=" << max_R <<  "\n";
+//    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  \\n\\n codewords=%i\""
+//    << ", q,  r , R , cw) \n";
+//    gp << "set multiplot layout 1,2 columnsfirst title title(eb) font 'Latin Modern Math, 20'\n";
+//
+//    gp << "x(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*cos(t)\n";
+//    gp << "y(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*sin(t)\n";
+//
+//    gp << setprecision(2);
+//    //    gp << "set title \"Amplitudes after uniform transform \"\n";
+//    //    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
+//    //    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+//    //    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
+//    //    gp << "plot " << gp.file1d(xy_pts, "file.dat")
+//    //    << " with points pt 7 ps 0.2 lc 'grey'\n";
+//    //
+//    gp << "set title \"Zoom out \"\n";
+//    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
+//    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+//    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
+//    gp << "plot [r*pi:maxR*pi]" << gp.file1d(xy_pts, "file.dat")
+//    << " with points pt 7 ps 0.2 lc 'grey', (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+//    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
+//    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+//
+//
+//    gp << "set title \"Zoom in \"\n";
+//    //    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (3 * 100)<< "\n";
+//    //    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+//    //    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
+//    //    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")  << " with points pt 7 ps 0.2 lc 'grey', "
+//    //    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+//    //    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
+//    //
+//    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (1.5 * 100)<< "\n";
+//    gp << "set xr[-L:L]\nset yr[-L:L]\n";
+//    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
+//    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
+//    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
+//    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
+//    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+//
+//#endif
+//}
+
+static void PlotPhaseError(const vector<float>& error,
+                           size_t num_codewords)
 {
+
+    vector<pair<double, size_t>> error_plot(num_codewords);
+    for (int i = 10; i <= num_codewords; ++i) {
+        error_plot[i] = make_pair(error[i], i);
+    }
 #ifdef GP
     Gnuplot gp;
-#endif
-    
-    vector<pair<float, float>> codewords;
-    
-    vector<pair<float, float>> xy_pts;
-    for(size_t i = 0; i < state_vector_size; ++i)
-        xy_pts.push_back(make_pair(state_vector[i].real(), state_vector[i].imag()));
-    
-    
-    complex<float> max_amp = FindAmpWithMaxMagnitude(state_vector, state_vector_size);
-    int max_R = abs(max_amp)/(cramer.GetFactorOfDistBetweenTurns() * M_PI);
-    cramer.GetCWForPlotting(codewords);
-    
-#ifdef GP
-    //    gp << "if (!exists(\"MP_LEFT\"))   MP_LEFT = .1\n";
-    //    gp <<  "if (!exists(\"MP_RIGHT\"))  MP_RIGHT = .95\n";
-    //    gp << "if (!exists(\"MP_BOTTOM\")) MP_BOTTOM = .1\n";
-    //    gp << "if (!exists(\"MP_TOP\"))    MP_TOP = .8\n";
-    //    gp << "if (!exists(\"MP_GAP\"))    MP_GAP = 0.1\n";
     
     gp << "reset\nset nokey\n";
-    gp << "set xtics rotate\n";
-    gp << "set bmargin 5\n";
-    gp << "set termoption enhanced\n";
+    gp << "set title \"Phase Error Plot\" font \",14\"\n";
+    //    gp << "set ylabel 'Amplitude frequency'\n";
+    //    gp << "set xlabel 'Codewords'\n";
+    //    gp << "set term png\n";
+    //    gp << "set output '" << filename << ".png'\n";
+    gp << "set tics font 'Times New Roman,12'\n";
+    //    gp << "set logscale y\n";
+    gp << "plot " << gp.file1d(error_plot, "dist.txt") << " using 2:1 with linespoints pt 5 ps 0.5 lc rgb \"black\"\n";
+    
+#endif
+}
+
+static void PlotAmpsAroundCW(const vector<complex<float>>& amps,
+                             const complex<float> cw_amp,
+                             size_t codeword)
+{
+    
+    vector<pair<double, double>> amps_x_y;
+    for (int i = 0; i < amps.size(); ++i)
+        amps_x_y.push_back(make_pair(amps[i].real(), amps[i].imag()));
+    
+    vector<pair<double, double>> one_pt(1, make_pair(cw_amp.real(), cw_amp.imag()));
+    
+    string filename = "cw_plots/codeword_plots";
+#ifdef GP
+    Gnuplot gp;
+    
+    gp << "reset\nset nokey\n";
+    gp << "set title \"Amps mapping to codeword " << codeword << " plot\" font \",14\"\n";
+    //    gp << "set ylabel 'Amplitude frequency'\n";
+    //    gp << "set xlabel 'Codewords'\n";
+        gp << "set term png\n";
+        gp << "set output '" << filename << codeword << ".png'\n";
+    gp << "set tics font 'Times New Roman,12'\n";
+    //    gp << "set logscale y\n";
+    gp << "plot " << gp.file1d(amps_x_y, "dist.txt") << " using 1:2 with point pt 5 ps 0.5 lc rgb \"black\", "
+    << gp.file1d(one_pt, "dist1.txt") << " using 1:2 with point pt 5 ps 2 lc rgb \"red\"\n";
+    
+    
+#endif
+}
+
+static void PlotErrorBins(const vector<vector<float>>& error_bins)
+{
+    vector<pair<float, size_t>> phase_error_bins_x_y;
+    vector<pair<float, size_t>> mag_error_bins_x_y;
+    for (int i = 0; i < error_bins[0].size(); ++i){
+        mag_error_bins_x_y.push_back(make_pair(error_bins[0][i], i));
+        phase_error_bins_x_y.push_back(make_pair(error_bins[1][i], i));
+    }
+    
+    
+    string filename = "error_bin_plots";
+#ifdef GP
+    Gnuplot gp;
+    
+    gp << "reset\nset nokey\n";
+//    gp << "set title \"" << error_bins.size() << " error bins avg error plot\" font \",14\"\n";
+    gp << "set style histogram columnstacked title textcolor lt -1\n";
+    gp << "set style data boxes\n";
+    gp << "set multiplot layout 2,1 title \"" << error_bins[0].size() << " error bins avg error plot\" font \",14\"\n";
+//    gp << "set xlabel \"error bins\"";
     gp << "set term png\n";
-    gp << "set output '" << filename << ".png'\n";
-    gp << "set parametric\nset size ratio -1\nset samples 1e5\n";
-    gp << "set tics font 'Times New Roman,18'\n";
-    gp << "set linetype 1 linecolor rgb \"blue\"\n";
-    gp << "set linetype 2 linecolor rgb \"light-blue\"\n";
-    gp << "eb=" << cramer.GetFactorOfDistBetweenTurns() << "\ncw=" << codewords.size() << "\n q=" << log2(state_vector_size) << "\n";
-    gp << "r=" << cramer.GetMinInnerRadius() << "\n R=" << cramer.GetMaxOuterRadius()
-    << "\n maxR=" << max_R <<  "\n";
-    gp << "title(eb) = sprintf(\"\\nUniform distribution and uniform spirals (%iq)\\n\\n r=%.4f  R=%.4f  \\n\\n codewords=%i\""
-    << ", q,  r , R , cw) \n";
-    gp << "set multiplot layout 1,2 columnsfirst title title(eb) font 'Latin Modern Math, 20'\n";
+    gp << "set style fill solid border lt -1 \n";
+    gp << "set output '" << filename << error_bins.size() << ".png'\n";
+    gp << "set tics font 'Times New Roman,12'\n";
+    gp << "set key\n";
+    gp << "plot " << gp.file1d(mag_error_bins_x_y, "dist1.txt") << " using 2:1 lc \"grey\" t \"Magnitude\"\n";
+    gp << "plot " << gp.file1d(phase_error_bins_x_y, "dist2.txt") << " using 2:1 lc \"magenta\" t \"Phase\"\n";
     
-    gp << "x(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*cos(t)\n";
-    gp << "y(t) = " << cramer.GetFactorOfDistBetweenTurns() << "*t*sin(t)\n";
+#endif
+}
+
+static void PlotPointsOnComplexPlane(const complex<float>* original,
+                                     const size_t size)
+{
+    pair<float, float>k_lambda = CalculateKAndLambda(original, size);
+    double k = k_lambda.first;
+    double lambda = k_lambda.second;
     
-    gp << setprecision(2);
-    //    gp << "set title \"Amplitudes after uniform transform \"\n";
-    //    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
-    //    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    //    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
-    //    gp << "plot " << gp.file1d(xy_pts, "file.dat")
-    //    << " with points pt 7 ps 0.2 lc 'grey'\n";
-    //
-    gp << "set title \"Zoom out \"\n";
-    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * max_R * PI << "\n";
-    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2, L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi]" << gp.file1d(xy_pts, "file.dat")
-    << " with points pt 7 ps 0.2 lc 'grey', (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    vector<pair<float, float>>orig_x_y(size);
+    vector<pair<float, float>>transformed_x_y(size);
+    for (size_t i = 0; i < size; ++i) {
+        orig_x_y[i] = make_pair(original[i].real(), original[i].imag());
+        complex<double> new_amp = CalculateCDFofGammaDistP(original[i], k , lambda);
+        transformed_x_y[i] = make_pair(new_amp.real(), new_amp.imag()) ;
+    }
     
+#ifdef GP
+    Gnuplot gp;
     
-    gp << "set title \"Zoom in \"\n";
-    //    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (3 * 100)<< "\n";
-    //    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    //    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
-    //    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat")  << " with points pt 7 ps 0.2 lc 'grey', "
-    //    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    //    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2\n";
-    //
-    gp << "L = " << cramer.GetFactorOfDistBetweenTurns() * (1.5 * 100)<< "\n";
-    gp << "set xr[-L:L]\nset yr[-L:L]\n";
-    gp << "set xtics -L , L/2 , L\nset ytics -L, L/2 , L\nset grid\n";
-    gp << "plot [r*pi:maxR*pi] " << gp.file1d(xy_pts, "file.dat") << " with points pt 7 ps 0.2 lc 'grey', "
-    << " (t <= R * pi ? x(t): 1/0), (t <= R * pi ? y(t): 1/0) ls 1, "
-    << "(t > R * pi ? x(t): 1/0), (t > R * pi ? y(t): 1/0) ls 2, "
-    << gp.file1d(codewords, "file.txt") << " using 1:2 with points pt 7 ps 0.4 lc 'red'\n";
+    gp << "reset\nset nokey\n";
+    gp << "set multiplot layout 2,1 title \"" << log2(size) << " qubit amplitudes plots\" font \",14\"\n";
+    //    gp << "set ylabel 'Amplitude frequency'\n";
+    //    gp << "set xlabel 'Codewords'\n";
+//    gp << "set term png\n";
+    gp << "set output '" << (log2(size)) << "amplitudes.png'\n";
+    gp << "set tics font 'Times New Roman,12'\n";
+    //    gp << "set logscale y\n";
+    gp << "plot " << gp.file1d(orig_x_y, "dist.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"blue\" title \"Original\"\n";
+    gp << "plot " << gp.file1d(transformed_x_y, "dist1.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"green\" title \"Gamma Transform\"\n";
     
 #endif
 }

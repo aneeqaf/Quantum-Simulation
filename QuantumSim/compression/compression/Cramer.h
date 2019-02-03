@@ -126,16 +126,16 @@ class Cramer {
     bool projection_vector;
     Distribution dist_type;
     
-    complex<double> CalculateCDFofExponential(complex<double> amp) const;
+    double CalculateCDFofExponential(complex<double>& amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
                                         __m256& imag ) const;
-    complex<double> CalculateCDFofGammaDist(complex<double> amp) const;
+    double CalculateCDFofGammaDist(complex<double>& amp) const;
     __m256 CalculateCDFofGammaDistAVX(__m256& real,
                                       __m256& imag ) const;
-    complex<double> CalculateCDFofErlangDist(complex<double> amp) const;
+    double CalculateCDFofErlangDist(complex<double>& amp) const;
     __m256 CalculateCDFofErlangDistAVX(__m256& real,
                                        __m256& imag ) const;
-    complex<double> UniformTransformMagnitudeAndAmp(complex<double> amp) const;
+    double UniformTransformMagnitudeAndAmp(complex<double>& amp) const;
     __m256 UniformTransformMagnitudeAndAmpAVX(__m256& real,
                                               __m256& imag) const;
     complex<double> PTTransformMagnitudeAndAmp(complex<double> amp) const;
@@ -159,11 +159,11 @@ class Cramer {
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
-    double CalculateKFromMeanAndVariance(double mean,
-                                         double variance) const;
-    double CalculateLambdaFromMeanAndVariance(double mean,
-                                              double variance) const;
-    void CalculateKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
+    double CalcKFromMeanAndVar(double mean,
+                               double variance) const;
+    double CalcLambdaFromMeanAndVar(double mean,
+                                    double variance) const;
+    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          double codeword) const;
@@ -175,7 +175,7 @@ class Cramer {
     unsigned short MapValToCW(complex<double> val);
     __m256 MapValToCWAVX(__m256 real,
                          __m256 imag);
-    __m256 PackCWIn256BitsAVXReg(const unsigned int* codewords) const;
+    __m256i PackCWIn256BitsAVXReg(const unsigned int* codewords) const;
     void UnpackCWFrom256Bits(bitset<REG_SIZE> packed_codewords,
                              unsigned short* unpacked_codewords) const;
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,
