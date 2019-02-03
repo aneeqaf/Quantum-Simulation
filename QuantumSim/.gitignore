@@ -14,17 +14,10 @@ sftp-config.json
 ../test_25_5.txt
 ../QuantumSim1
 temp.cpp
-output/misc/
-output/amp_vectors/
-output/probabilities/
-output/qpro_scripts/
-output/reports/
-output/log/
 profiling_data/
 ../omp.o
 ../openmp.cpp
 ../aneeqa.pem
-output/log/
 bin/inst*
 *.txt
 python_scripts/__pycache__/
@@ -45,3 +38,5 @@ Quantum.
 ProjectQ/
 qiskit-terra/
 ../ai.pem
+zstd/
+output/
