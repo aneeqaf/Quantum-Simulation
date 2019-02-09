@@ -98,10 +98,10 @@ int main(int argc, char * argv[]) {
 //    PlotPT(amp, num_q);
     PlotPointsOnComplexPlane(amp, amp_size);
 
-//    Cramer cramer(amp_size, num_codewords, 4, probability, true);
+    Cramer cramer(amp_size, num_codewords, 4, probability, true);
     
 //    ApplyUniformTransformToStateVector(amp, amp_size);
 //    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);
 //    ApplyPTTransformToStateVector(amp, amp_size);
-//    CompressDecompressStateVector(amp, amp_size, cramer);
+    CompressDecompressStateVector(amp, amp_size, cramer);
 }

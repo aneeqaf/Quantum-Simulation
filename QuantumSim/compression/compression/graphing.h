@@ -186,6 +186,22 @@ CalculateCDFofGammaDistP(complex<double> amp,
     PT_mag = PT_mag > 0 ? PT_mag : 1;
     double PT_probability = PT_mag * PT_mag;
     double Np = (PT_probability) * lambda;
+    double uniform_probability = gammp(k, Np);
+    double uniform_mag = sqrt(uniform_probability);
+    amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
+    
+    return amp;
+}
+
+static complex<double>
+CalculateCDFofGammaDistPModified(complex<double> amp,
+                         double k,
+                         double lambda)
+{
+    double PT_mag = abs(amp);
+    PT_mag = PT_mag > 0 ? PT_mag : 1;
+    double PT_probability = PT_mag * PT_mag;
+    double Np = (PT_probability) * lambda;
     double uniform_probability = gammp(k, Np) - gammp(k, k) ;
     double uniform_mag = sqrt(uniform_probability);
     amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
@@ -216,10 +232,10 @@ static pair<float, float> CalculateKAndLambda(const complex<float>* amps,
     
     for (size_t i = 0; i < size; ++i) {
         double p = norm(amps[i]);
-//        if (p > 1.0/((double)size * (double)size)) {
+        if (p > 0){// 1.0/((double)size * (double)size)) {
             ++num_amps;
             mean += p;
-//        }
+        }
     }
     
     mean /= (double)num_amps;
@@ -230,7 +246,7 @@ static pair<float, float> CalculateKAndLambda(const complex<float>* amps,
             variance += (p - mean) * (p - mean);
     }
     
-    variance /= (double)(num_amps - 1);
+    variance /= (double)(size - 1);
     cout << mean << endl;
     double k = (mean * mean)/variance;
     double lambda = mean/variance;
@@ -281,19 +297,34 @@ static void PlotCDF(complex<float>* amps,
     }
     
     
-    vector<pair<double,double>> e_cdf1;
-    for (size_t i = 0; i < size ; ++i)
-        e_cdf1.push_back(make_pair(1.0 - exp(-norm(amps[i]) * (1/mean)), norm(amps[i])));
+//    vector<pair<double,double>> e_cdf1;
+//    for (size_t i = 0; i < size ; ++i)
+//        e_cdf1.push_back(make_pair(1.0 - exp(-norm(amps[i]) * (1/mean)), norm(amps[i])));
+//
+//    vector<pair<double,double>> cdf_pt;
+//    for (size_t i = 0; i < size ; ++i)
+//        cdf_pt.push_back(make_pair(norm(CalculateCDFofGammaDistP(amps[i], 1, amp_size)), norm(amps[i])));
     
-    vector<pair<double,double>> cdf_pt;
-    for (size_t i = 0; i < size ; ++i)
-        cdf_pt.push_back(make_pair(norm(CalculateCDFofGammaDistP(amps[i], 1, amp_size)), norm(amps[i])));
+    vector<pair<float, float>>transformed_x_y_g;
+    vector<pair<float, float>>transformed_x_y_u;
+    for (size_t i = 0; i < size; ++i) {
+        double p = norm(amps[i]);
+        if (p > (k/lambda)) {
+            complex<double> new_amp = CalculateCDFofGammaDistPModified(amps[i], k, lambda);
+            transformed_x_y_g.push_back(make_pair(norm(new_amp) + gammp(k, k), norm(amps[i]))) ;
+        }
+        else {
+            complex<double> new_amp = CalculateCDFofUniformDistP(amps[i], k/lambda);
+            transformed_x_y_u.push_back(make_pair(norm(new_amp), norm(amps[i]))) ;
+        }
+    }
     
     string filename = to_string(num_qubits) + "_CDF";
     
 #ifdef GP
     Gnuplot gp;
     
+    gp << setprecision(3);
     gp << "reset\nset nokey\n";
     gp << "set title \"" << num_qubits << "q CDF\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
@@ -303,10 +334,10 @@ static void PlotCDF(complex<float>* amps,
     gp << "set tics font 'Times New Roman,12'\n";
     gp << "set key right bottom\n";
     //    gp << "set logscale y\n";
-    gp << "plot " << gp.file1d(amps_g, "dist.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"black\" t \"empirical\","
-    << gp.file1d(e_cdf, "dist2.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"red\" t \"calculated empirically - gamma\","
-    << gp.file1d(e_cdf1, "dist3.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"green\" t \"calculated empirically - exp\"\n";
-//    << gp.file1d(cdf_pt, "dist1.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"purple\" t \"analytical\"\n";
+    gp << "plot " << gp.file1d(amps_g, "dist.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"black\" t \"Empirical CDF\","
+    << gp.file1d(e_cdf, "dist2.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"purple\" t \"Gamma CDF : k = " << k << ", lambda = " << lambda << "\","
+    << gp.file1d(transformed_x_y_g, "dist3.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"red\" t \"Modified Gamma CDF x > k/lambda\","
+    << gp.file1d(transformed_x_y_u, "dist1.txt") << " using 2:1 with point pt 5 ps 0.5 lc rgb \"green\" t \"Uniform CDF x <= k/lambda\"\n";
     
 #endif
 }
@@ -495,35 +526,42 @@ static void PlotPointsOnComplexPlane(const complex<float>* original,
     }
     
     vector<pair<float, float>>orig_x_y;
+    vector<pair<float, float>>gamma_x_y;
     vector<pair<float, float>>transformed_x_y_g;
     vector<pair<float, float>>transformed_x_y_u;
     for (size_t i = 0; i < size; ++i) {
         double p = norm(original[i]);
+        orig_x_y.push_back(make_pair(original[i].real(), original[i].imag()));
+        complex<double> new_amp = CalculateCDFofGammaDistP(original[i] , k, lambda);
+        gamma_x_y.push_back(make_pair(new_amp.real(), new_amp.imag())) ;
         if (p > (k/lambda)) {
-            orig_x_y.push_back(make_pair(original[i].real(), original[i].imag()));
-            complex<double> new_amp = CalculateCDFofGammaDistP(original[i] , k, lambda);
+            new_amp = CalculateCDFofGammaDistPModified(original[i] , k, lambda);
             transformed_x_y_g.push_back(make_pair(new_amp.real(), new_amp.imag())) ;
         }
         else {
-            complex<double> new_amp = CalculateCDFofUniformDistP(original[i], k/lambda);
+             new_amp = CalculateCDFofUniformDistP(original[i], k/lambda);
             transformed_x_y_u.push_back(make_pair(new_amp.real(), new_amp.imag())) ;
         }
     }
+    
+    size_t qubits = log2(size);
     
 #ifdef GP
     Gnuplot gp;
     
     gp << "reset\nset nokey\n";
-    gp << "set multiplot layout 3,1 title \"" << log2(size) << " qubit amplitudes plots\" font \",14\"\n";
+    gp << "set multiplot layout 2,2 title \"" << qubits << " qubit amplitudes plots\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
 //    gp << "set term png\n";
-    gp << "set output '" << (log2(size)) << "amplitudes.png'\n";
+    gp << "set output '" << qubits << "amplitudes.png'\n";
     gp << "set tics font 'Times New Roman,12'\n";
     //    gp << "set logscale y\n";
+    gp << "set key box opaque\n";
     gp << "plot " << gp.file1d(orig_x_y, "dist.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"blue\" title \"Original\"\n";
-    gp << "plot " << gp.file1d(transformed_x_y_g, "dist1.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"green\" title \"Gamma Transform\"\n";
-    gp << "plot " << gp.file1d(transformed_x_y_u, "dist2.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"red\" title \"Uniform Transform\"\n";
+    gp << "plot " << gp.file1d(gamma_x_y, "dist3.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"purple\" title \" Gamma CDF \"\n";
+    gp << "plot " << gp.file1d(transformed_x_y_g, "dist1.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"red\" title \" Gamma CDF : x > k/lambda\"\n";
+    gp << "plot " << gp.file1d(transformed_x_y_u, "dist2.txt") << " using 1:2 with point pt 5 ps 0.2 lc rgb \"green\" title \" Uniform CDF : x <= k/lambda\"\n";
 
 #endif
 }

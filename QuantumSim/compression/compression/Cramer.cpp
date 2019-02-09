@@ -363,7 +363,7 @@ CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector)
 #pragma omp parallel for reduction(+:num_amps, mean) num_threads(num_threads)
     for (size_t i = 0; i < size; ++i) {
         double p = norm(state_vector[i]);
-        if (p >= 1.0/((double)orig_vector_size * (double)orig_vector_size)) {
+        if (p > 0){//} 1.0/((double)orig_vector_size * (double)orig_vector_size)) {
             ++num_amps;
             mean += p;
         }
@@ -691,7 +691,7 @@ CramerCompress(complex<float>* compressed_vector,
         codewords_mappings[i] /= cw_freq[i];
 //    for (int i = 0 ; i <= num_codewords; i+=25)
 //        PlotAmpsAroundCW(cw_map_plots[i], codewords_mappings[i], i);
-//    PlotCWFrequency(cw_freq, num_codewords, log2(orig_vector_size));
+    PlotCWFrequency(cw_freq, num_codewords, log2(orig_vector_size));
 
     for (size_t i = 0; i < cw_idx.size(); ++i) {
         for (size_t j = 0; j < cw_idx[i].size(); ++j) {
