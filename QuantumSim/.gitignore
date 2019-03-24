@@ -15,7 +15,7 @@ sftp-config.json
 ../QuantumSim1
 temp.cpp
 profiling_data/
-../omp.o
+*.o
 ../openmp.cpp
 ../aneeqa.pem
 bin/inst*

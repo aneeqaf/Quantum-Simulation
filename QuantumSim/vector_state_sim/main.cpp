@@ -346,8 +346,10 @@ int main(int argc, char *argv[])
 //                        throw "Cannot print more than 10000 amps";
                     print_idx = idx_arg.find_first_of("+") != string::npos;
                 }
-                else
-                    idx_filename = idx_arg;
+                else {
+                    print_idx = idx_arg.find_first_of("+") != string::npos;
+                    idx_filename = idx_arg.substr(0, idx_arg.find_first_of("+"));
+                }
                 
                 break;
             }

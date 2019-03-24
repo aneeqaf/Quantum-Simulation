@@ -19,6 +19,9 @@ def main(cir_dir, num_idx, binary_vectors_only, not_final_amps, add_partial_res_
 	files = os.listdir(outdir)
 
 	amps = np.zeros(int(num_idx) + 5, dtype=complex)
+
+	if binary_vectors_only:
+		amps = np.zeros(int(num_idx) + 5, dtype=complex)
 	
 	for filename in files:
 		if filename.endswith("_ascii.amps") or binary_vectors_only or "result" in filename:
@@ -43,7 +46,7 @@ def main(cir_dir, num_idx, binary_vectors_only, not_final_amps, add_partial_res_
 					lines = f.readlines()
 					temp = np.loadtxt(lines, dtype=complex)
 
-			amps += temp;
+			amps += temp
 
 	results_file = "result" + ".amps"
 	if not_final_amps:

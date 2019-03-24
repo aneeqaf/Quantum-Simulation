@@ -33,23 +33,24 @@ from math import sqrt, floor, ceil
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--num_idx", nargs=1, required=False, default=1000)
 @click.option("--print_idxs", nargs=1, required=False, is_flag=True)
-@click.option("--print_all", nargs=1, required=False, default=-1)
+@click.option("--print_all", nargs=1, required=False, is_flag=True)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--multiple_nodes", nargs=1, required=False, is_flag=True)
-@click.option("--cont_cz_paths", nargs=1, required=False, is_flag=True)
+@click.option("--continuous_cz_paths", nargs=1, required=False, is_flag=True)
 @click.option("--no_nearest_neighbors", nargs=1, required=False, is_flag=True)
 @click.option("--layers_hgates_b4_meas", nargs=1, required=False, default=0)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
 @click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
 @click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
 @click.option("--count_zeros", nargs=1, required=False, is_flag=True)
+@click.option("--num_q", nargs=1, required=False, default=0)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
- approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
+ approx, test_fid, multiple_nodes, continuous_cz_paths, column_major, no_nearest_neighbors,
  layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only, save_checkpoint_to_file,
- count_zeros):
+ count_zeros, num_q):
 
 	dist_util.CheckInputFile(circuit)
 
@@ -59,17 +60,22 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	command = binary + "-i " + circuit 
 
 	if not num_batches:
-		num_batches = int(max_threads/num_threads);
+		num_batches = int(max_threads/num_threads)
 
 	if not multiple_nodes and num_batches * num_threads > cpu_count():
 		print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.\033[0m")
 		exit()
 
+	if print_all and idx_file == "" and num_q == 0:
+		print("\033[1m Please specify idx file to print idxs to and number of qubits.\033[0m")
+		exit()
+
 	# If the entire state vector needs to be printed, specify this command.
 	# The value is the number of qubits in the circuit
-	if int(print_all) != -1:
+	if print_all:
+		num_idx = 1 << num_q
 		with open(idx_file, "w") as f:
-			for q in range(1 << int(print_all)):
+			for q in range(num_idx):
 				f.write(str(q) + "\n")
 
 	# cir_name = circuit + "_" + str(depth) + "_"
@@ -95,10 +101,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
 
 	if approx:
-		fid = approx
-		if not cont_cz_paths:
+		if not continuous_cz_paths:
 			epsilon = approx
-		if cont_cz_paths:
+		else:
 			num_bit_strings = ceil(num_bit_strings / approx)
 
 		cir_name += "_approx_" + str(approx)
@@ -115,7 +120,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
 
 	cz_bits_strings = []
-	for bit_comb in range(0, num_bit_strings, epsilon):
+	for bit_comb in range(12, num_bit_strings, epsilon):
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")
