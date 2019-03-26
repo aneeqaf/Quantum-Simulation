@@ -48,7 +48,7 @@ from math import sqrt, floor, ceil
 @click.option("--num_q", nargs=1, required=False, default=0)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
  idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
- approx, test_fid, multiple_nodes, continuous_cz_paths, column_major, no_nearest_neighbors,
+ fid, test_fid, multiple_nodes, continuous_cz_paths, column_major, no_nearest_neighbors,
  layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only, save_checkpoint_to_file,
  count_zeros, num_q):
 
@@ -81,16 +81,16 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	# cir_name = circuit + "_" + str(depth) + "_"
 	# os.makedirs(cir_dir)
 
-	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
+	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, fid, column_major,
 	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
 	count_zeros, h_cut = h_cut) 
-	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, approx, column_major,
+	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, fid, column_major,
 	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
 	count_zeros, v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command, depth = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
-		ranges_bits, branch_bits, trial, v_cut, h_cut, approx)
+		ranges_bits, branch_bits, trial, v_cut, h_cut, fid)
 
 	num_bit_strings = (1 << int(proc_prefix_bits)) 
 
@@ -100,13 +100,13 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	cir_name = circuit + "_" + str(depth) + "_" + \
 	str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
 
-	if approx:
+	if fid:
 		if not continuous_cz_paths:
-			epsilon = approx
+			epsilon = ceil(1/fid)
 		else:
-			num_bit_strings = ceil(num_bit_strings / approx)
+			num_bit_strings = ceil(num_bit_strings / fid)
 
-		cir_name += "_approx_" + str(approx)
+		cir_name += "_approx_" + str(fid)
 
 	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
 		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
@@ -120,7 +120,13 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
 
 	cz_bits_strings = []
-	for bit_comb in range(12, num_bit_strings, epsilon):
+	bit_combs = {}
+	for x in range(0, ceil(num_bit_strings * fid)):
+		bit_comb = random.randrange(0, num_bit_strings)
+		while bit_comb in bit_combs:
+			bit_comb = random.randrange(0, num_bit_strings)
+		bit_combs[bit_comb] = 0
+		
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")
@@ -129,7 +135,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		else:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
 
-	if max_procs or (max_procs and approx and max_procs < approx):
+	if max_procs or (max_procs and fid and max_procs < fid):
 		random.shuffle(cz_bits_strings)
 		cz_bits_strings = cz_bits_strings[:max_procs]
 		num_bit_strings = len(cz_bits_strings)
@@ -139,14 +145,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches
 
 	num_batches = dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, \
-	 cz_bits_strings, command, t_time, num_threads, mem, cut, ranges_bits, max_procs, approx, \
+	 cz_bits_strings, command, t_time, num_threads, mem, cut, ranges_bits, max_procs,  \
 	 multiple_nodes, binary_vectors_only, print_idxs)
-
-	if test_fid:
-		if len(cz_bits_strings) > 2:
-			temp_dir =  tempfile.mkdtemp()
-			os.system(command + cz_bits_strings[0] + "--outfile test_fid_1@ > " + os.path.join(temp_dir, "t1.txt"))
-			os.system(command + cz_bits_strings[-1] + "--outfile test_fid_2@ > " + os.path.join(temp_dir, "t2.txt"))
 
 	# Launch post_launch.py if a trial run has been performed
 	# otherwise just print the command line to be used for post_launch.py

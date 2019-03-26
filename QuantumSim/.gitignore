@@ -42,3 +42,4 @@ zstd/
 output/
 sz-2.0.2.0/
 compression/
+.*/

@@ -47,7 +47,7 @@ def main(num_q, amps_file, idx_file, approx_amps_file, approx_idx_file, print_he
 
 		approx_amps = approx_amps * np.conjugate(approx_amps)
 		print(approx_amps)
-		approx_median = np.nanpercentile(approx_amps, q = 25).real
+		approx_median = np.nanpercentile(approx_amps, q = 75).real
 		
 	heavy_exact = 0
 	heavy_approx_n_heavy_exact = 0
@@ -80,16 +80,17 @@ def main(num_q, amps_file, idx_file, approx_amps_file, approx_idx_file, print_he
 				
 			idx = idx + 1
 
-	print ("Heavy amps exact: " + str(heavy_exact))
-	print ("Heavy amps approx: " + str(heavy_approx))
-	print ("Exact simulation median: " + str(analytical_median))
+	
+	print ("Anayltical median: " + str(analytical_median))
 	if approx_amps_file != "" :
 		print ("Approx simulation median: " + str(approx_median))
-	print ("Fraction of heavy amps in exact: " + str(round(heavy_exact/len(amps), 5)))
+	print ("|H_exact|: " + str(heavy_exact))
+	print ("|H_approx|: " + str(heavy_approx))
+	print ("|H_exact| / num amps: " + str(round(heavy_exact/len(amps), 5)))
 	if approx_amps_file != "" :
+		print ("|H_approx n H_exact| / num amps: " + str(round(heavy_approx_n_heavy_exact/len(approx_amps), 5)))
 		print ("|H_approx n H_exact|/|H_approx|: " + str(round(heavy_approx_n_heavy_exact/heavy_approx, 5)))
 		print ("|H_approx n H_exact|/|H_exact|: " + str(round(heavy_approx_n_heavy_exact/heavy_exact, 5)))
-		print ("Fraction of heavy amps in approx: " + str(round(heavy_approx_n_heavy_exact/len(approx_amps), 5)))
 
 if __name__ == "__main__":
     main()	
