@@ -135,6 +135,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		else:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
 
+	bit_combs = {}
+	
 	if max_procs or (max_procs and fid and max_procs < fid):
 		random.shuffle(cz_bits_strings)
 		cz_bits_strings = cz_bits_strings[:max_procs]

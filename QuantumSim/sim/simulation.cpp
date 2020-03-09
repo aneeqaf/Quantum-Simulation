@@ -580,30 +580,7 @@ SimulationLoop(GenericQuantumState &amp,
             if (amp.book_keep)
                 amp.data_per_cycles.cycles.push_back(current_cycle);
             
-            if (amp.book_keep) {
-#ifdef CosineSimilarityDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintProbabilities(config -> prob_outfile, current_cycle);
-                XE_time += misc_time.GetElapsedTime();
-                
-#endif
-#ifdef XEDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintProbabilities(config -> prob_outfile, current_cycle);
-                XE_time += misc_time.GetElapsedTime();
-                            xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
-                
-#endif
-#ifdef FidelityDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintStateVector(config -> amp_outfile, current_cycle);
-               XE_time += misc_time.GetElapsedTime();
-                
-#endif
-            }
+
             if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
@@ -779,12 +756,6 @@ ReportingAfterSim(GenericQuantumState& amp,
 {
 #ifdef Print
     amp.PrintStateVector();
-#endif
-#ifdef CosineSimilarity
-    amp.PrintProbabilities(config -> prob_outfile, circuit.GetNumCycles() - 1);
-#endif
-#ifdef PorterThomas
-    amp.PrintProbabilities(config -> prob_outfile, circuit.GetNumCycles() - 1);
 #endif
 #ifdef ReportToFile
     if (config -> verbose)
