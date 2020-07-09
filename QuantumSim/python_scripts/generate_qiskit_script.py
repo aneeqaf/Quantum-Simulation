@@ -8,7 +8,7 @@ import os
 @click.command()
 @click.argument("circuit_file", nargs=1)
 @click.option("--depth", nargs=1, required=False, default=0)
-@click.option("--backend", nargs=1, required=False, default="state_vector")
+@click.option("--backend", nargs=1, required=False, default="local_qasm")
 @click.option("--num_threads", nargs=1, required=False, default=0)
 @click.option("--max_memory", nargs=1, required=False, default=16)
 def main(circuit_file, depth, backend, num_threads, max_memory):
@@ -19,11 +19,10 @@ def main(circuit_file, depth, backend, num_threads, max_memory):
 	num_q = ""
 
 	with open(output_file, "w") as outfile:
+		outfile.write("#!/usr/bin/python3\n\n")
 		outfile.write("\nfrom qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister")
-		outfile.write("\nfrom qiskit import available_backends, execute, register, get_backend")
-		outfile.write("\nimport qiskit.extensions.standard")
-		outfile.write("\nimport math")
-		outfile.write("\nimport Qconfig\n\n")
+		outfile.write("\nfrom qiskit import *")
+		outfile.write("\nimport math\n\n")
 		
 		with open(input_file, "r") as circuit_in:
 			for line in circuit_in:
@@ -56,38 +55,35 @@ def main(circuit_file, depth, backend, num_threads, max_memory):
 					outfile.write("\ncircuit = QuantumCircuit(quantum_r, classical_r)")
 
 					if backend == "ibmq_qasm":
-						outfile.write("\nregister(Qconfig.APItoken)\n")
-
+						outfile.write("\nIBMQ.save_account('ce1bbfc4d3a0dbd544d79a42905b3dbd691e56bfba14803643dc0f5c25db37a92cddebae0274a0dea2546cc5ce6906ec7e0198398f01369d64030309d01aa909')\n")
+						
 			if num_threads:
 				outfile.write("\n\nhpc_dict = {}\nhpc_dict['omp_num_threads'] = " + str(num_threads) +  
 				"\nhpc_dict['multi_shot_optimization'] = True")
 
 			if max_memory:
 				outfile.write("\n\nconfig_dict = {}\nconfig_dict['max_memory'] = " + str(max_memory))
-
+				
 			if backend == "local_qasm" :
-				outfile.write("\n\njob_sim = execute(circuit, \"local_qasm_simulator\"")
+				outfile.write("\n\nsimulator = BasicAer.get_backend('qasm_simulator')\njob_sim = execute(circuit, simulator)")
+				outfile.write("\nprint(job_sim.status)")
+				outfile.write("\nsim_result = job_sim.result()")
+				outfile.write("\nprint(sim_result.get_counts(circuit))")
+				outfile.write("\nprint(\"simulation: \", sim_result)")
+				outfile.write("\nprint(job_sim.status)")
 			elif backend == "ibmq_qasm" :
-				outfile.write("\n\njob_sim = execute(circuit, \"ibmq_qasm_simulator\"")
-			elif backend == "state_vector" :
-				outfile.write("\n\njob_sim = execute(circuit, \"local_statevector_simulator\"")
+				outfile.write("\n\nprovider = IBMQ.load_account()")
+				outfile.write("\ntry:\n\tsimulator =  provider.get_backend('ibmq_qasm_simulator')")
+				outfile.write("\n\tjob_sim = execute(circuit, simulator)")
+				outfile.write("\n\tprint(job_sim.status)")
+				outfile.write("\n\tsim_result = job_sim.result()")
+				outfile.write("\n\tprint(sim_result.get_counts(circuit))")
+				outfile.write("\n\tprint(\"simulation: \", sim_result)")
+				outfile.write("\n\tprint(job_sim.status)")
+				outfile.write("\nexcept:\n\tprint(\"All devices are currently unavailable.\")")
 			else :
 				print("Incorrect backend")
 				exit(1)
-
-			if num_threads: 
-				outfile.write(", hpc=hpc_dict")
-			if max_memory:
-				outfile.write(", config=config_dict")
-			
-
-			outfile.write(")")
-
-			outfile.write("\nprint(job_sim.status)")
-			outfile.write("\nsim_result = job_sim.result()\n")
-			outfile.write("print(\"simulation: \", sim_result)")
-			outfile.write("\nprint(job_sim.status)")
-			outfile.write("\nprint(sim_result.get_data())\n")
 
 			if backend == "state_vector" :
 				outfile.write("state_v = sim_result.get_statevector(circuit)\n")
