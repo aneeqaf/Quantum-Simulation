@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """Script for distributed execution"""
 
 import os
@@ -180,7 +180,7 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		post_launch_cmd += " --not_final_amps"
 		post_launch_cmd += "\033[1m --batch_range <inclusive start, exclusive end> \033[0m"
 
-	post_launch_cmd += " > " + str(log_dir) + "/final_report" + str(time.clock()) + ".rep 2>&1 &"
+	post_launch_cmd += " > " + str(log_dir) + "/final_report" + str(time.process_time()) + ".rep 2>&1 &"
 	print(post_launch_cmd)
 	if trial:
 		os.system(post_launch_cmd)
