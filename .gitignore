@@ -9,3 +9,6 @@ qp-3.8-i386/
 aneeqa.pem
 openmp.cpp
 qubit_partition/
+*.png
+*.pem
+*.pdf

@@ -12,8 +12,8 @@ import os
 @click.option("--num_threads", nargs=1, required=False, default=8)
 def main(circuit_file, depth, backend, num_threads):
 
-	input_file = os.path.join("input", "random_circuits_google", circuit_file)
-	output_file = os.path.join("qiskit-terra", "ibm-bm", circuit_file.replace(".txt", "") + ".py")
+	input_file = circuit_file
+	output_file = circuit_file.replace(".txt", "") + ".py"
 	print(output_file)
 	
 	with open(output_file, "w") as outfile:
@@ -51,29 +51,36 @@ def main(circuit_file, depth, backend, num_threads):
 
 					if backend == "ibmq_qasm":
 						outfile.write("\nIBMQ.save_account('')\n")
-						
-				
-			if backend == "local_qasm" or backend == "state_vector" :
-				outfile.write("\n\nbackend_options = {'precision': 'single', 'max_parallel_threads':" + str(num_threads) + ", 'fusion_enable':True}")
-				if backend == "state_vector":
-					outfile.write("\n\nbackend = StatevectorSimulator()")
-				if backend == "local_qasm":
-					outfile.write("\n\nbackend_options = {'method':'statevector', 'precision': 'single', 'max_parallel_threads':" + str(num_threads) + ", 'fusion_enable':True}")
-					outfile.write("\n\nbackend = QasmSimulator()")
-
-				outfile.write("\njob_sim = execute(circuit, backend, backend_options=backend_options)")
-				outfile.write("\nprint(job_sim.status)")
-				outfile.write("\nprint(\"simulation: \", job_sim.result())")
+		
+			outfile.write("\n\n# Get backend")
+			outfile.write("\nbackend_options = {'precision': 'single', 'max_parallel_threads':" + str(num_threads) + ", 'fusion_enable':True}")
+			if backend == "state_vector":
+				outfile.write("\nbackend = StatevectorSimulator()")
+			elif backend == "local_qasm":
+				outfile.write("\nbackend = QasmSimulator()")
 			elif backend == "ibmq_qasm" :
-				outfile.write("\n\nprovider = IBMQ.load_account()")
-				outfile.write("\ntry:\n\tsimulator =  provider.get_backend('ibmq_qasm_simulator')")
-				outfile.write("\n\tjob_sim = execute(circuit, simulator)")
-				outfile.write("\n\tprint(job_sim.status)")
-				outfile.write("\n\tprint(\"simulation: \", job_sim.result())")
-				outfile.write("\nexcept:\n\tprint(\"All devices are currently unavailable.\")")
-			else :
+				outfile.write("\nprovider = IBMQ.load_account()")
+				outfile.write("\nbackend =  provider.get_backend('ibmq_qasm_simulator')")
+			else:
 				print("Incorrect backend")
 				exit(1)
+	
+			outfile.write("\n\n# Transpile circuit and assemble QOBJ")
+			outfile.write("\nqobj = assemble(transpile(circuit, backend), shots=1, **backend_options)")
+
+			outfile.write("\n\n# Run simulation")
+			if backend == "ibmq_qasm":
+				outfile.write("\ntry:")
+				outfile.write("\n\tjob_sim = backend.run(qobj)")
+				outfile.write("\n\tprint(job_sim.status())")
+				outfile.write("\n\tresult_sim = job_sim.result()")
+				outfile.write("\n\tprint(\"Simulation: \", result_sim.status)")
+				outfile.write("\n\tprint(\"Time Taken (s): \", result_sim.time_taken)")
+				outfile.write("\nexcept:\n\tprint(\"All devices are currently unavailable.\")")
+			else:
+				outfile.write("\nresult_sim = backend.run(qobj).result()")
+				outfile.write("\nprint(\"Simulation: \", result_sim.status)")
+				outfile.write("\nprint(\"Time Taken (s): \", result_sim.time_taken)")
 
 			if backend == "state_vector" :
 				outfile.write("\n\nstate_v = job_sim.result().get_statevector(circuit)")
@@ -88,10 +95,4 @@ def main(circuit_file, depth, backend, num_threads):
 if __name__ == "__main__":
     main()
 
-# set results = MultiM(qubits);
-# for (q in 0..num_qubits) {
-# 	if (results[q] == One) {
-#         X(qubits[q]);
-#     }
-# }
 
