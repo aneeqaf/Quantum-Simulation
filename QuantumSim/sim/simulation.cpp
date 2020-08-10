@@ -1360,7 +1360,7 @@ PrintSimReport(GenericQuantumState& amp,
     
     if (!config -> proc_prefix_bits) {
         
-        string key = config -> infile + "_" + to_string(circuit.GetNumCycles());
+        string key = config -> infile.substr(0, config -> infile.find_first_of('.')) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
     
         if (benchmark.count(key)) {

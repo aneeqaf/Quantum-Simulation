@@ -616,8 +616,8 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         if (book_keep && last_cycle)
             count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
 
-        global_i_counter += XYHFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
-                                                 num_qubits, num_threads);
+        global_i_counter += ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
+                                                          num_qubits, num_threads);
         
         hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }

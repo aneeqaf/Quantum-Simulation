@@ -236,28 +236,39 @@ Apply2MergedGatesHelper(cmplx* __restrict amp,
                         const function& gate_func,
                         const idx_size add = 1);
 
-__attribute__((always_inline)) inline bool
-ApplyMergedXYFT(cmplx* __restrict amp,
+void
+Apply2MergedGatesInParallel(cmplx* __restrict amp,
+                            const int num_threads,
+                            const idx_size gate_qubits,
+                            const int num_qubits_amp,
+                            void (*gate_func)(cmplx*, const idx_size*),
+                            const idx_size add = 1);
+
+__attribute__((always_inline)) inline int
+ApplyMergedXYGates(cmplx* __restrict amp,
                 const idx_size gates_bitmask,
                 const int gate_type,
-                const int num_qubits)
+                const int num_qubits,
+                const int num_threads = 0,
+                const bool parallel = false)
 {
     static void (*XYApplicationFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12Gate, ApplyXY12Gate,
         ApplyYY12Gate, ApplyYX12Gate};
     static void (*XYApplicationAVXFuncs[4])(cmplx* , const idx_size*) = {ApplyXX12GateAVX, ApplyXY12GateAVX,
         ApplyYY12GateAVX, ApplyYX12GateAVX};
 
-    bool AVX = (__builtin_ctzl(gates_bitmask) < num_qubits - 1
-                && __builtin_ctzl(gates_bitmask ^ (1ull << __builtin_ctzl(gates_bitmask))) < num_qubits - 2);
+    int num_gates_collected = (__builtin_ctzl(gates_bitmask) < num_qubits - 1
+                && __builtin_ctzl(gates_bitmask ^ (1ull << __builtin_ctzl(gates_bitmask))) < num_qubits - 2) ? 4 : 1;
+    void (**XYApplicationToUse)(cmplx* , const idx_size*) = num_gates_collected == 4 ? XYApplicationAVXFuncs : XYApplicationFuncs;
     
-    if (AVX)
-        Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
-                                XYApplicationAVXFuncs[gate_type], 4);
+    if (parallel)
+        Apply2MergedGatesInParallel(amp, num_threads, gates_bitmask, num_qubits,
+                                XYApplicationToUse[gate_type], num_gates_collected);
     else
         Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
-                                XYApplicationFuncs[gate_type], 1);
+                            XYApplicationToUse[gate_type], num_gates_collected);
 
-    return AVX;
+    return num_gates_collected;
 }
 
 void
@@ -326,11 +337,6 @@ XYFastTransformIterative(cmplx* __restrict amp,
                          const int num_threads,
                          const int th);
 
-idx_size
-ApplyHighQXYGates(cmplx* __restrict amp,
-                  idx_size& X_bitmask,
-                  idx_size& Y_bitmask,
-                  const int num_qubits);
 
 idx_size
 XYFastTransform(cmplx* __restrict amp,
@@ -339,6 +345,14 @@ XYFastTransform(cmplx* __restrict amp,
                 const int num_qubits,
                 const int num_threads,
                 const int th);
+
+idx_size
+ApplyXYHIterativelyInParallel(cmplx* __restrict amp,
+                             idx_size X_bitmask,
+                             idx_size Y_bitmask,
+                             idx_size H_bitmask,
+                             const int num_qubits,
+                              const int num_threads);
 
 void ApplyHGatesRecursively(cmplx* __restrict amp,
                             int num_qubits,

@@ -254,7 +254,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                  const idx_size* __restrict T_bitmasks,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
-                                  const idx_size Lo_H_bitmask,
+                                 const idx_size Lo_H_bitmask,
                                  const int num_threads,
                                  const int num_high_qubits,
                                  const ZeroOptMask& zero_opt_mask)
