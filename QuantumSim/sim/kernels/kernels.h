@@ -359,6 +359,15 @@ void ApplyHGatesRecursively(cmplx* __restrict amp,
                             int num_threads,
                             idx_size gate_bm);
 
+idx_size
+ApplyHighXYHGatesByBitReversal(cmplx* __restrict amp,
+                               idx_size X_bitmask,
+                               idx_size Y_bitmask,
+                               idx_size H_bitmask,
+                               const int num_qubits,
+                               const int num_low_qubits,
+                               const int num_threads);
+
 //void ApplyHGatesRecursively(cmplx* __restrict amp,
 //                            int num_qubits,
 //                            int num_threads,

@@ -616,8 +616,10 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         if (book_keep && last_cycle)
             count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
 
-        global_i_counter += ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
-                                                          num_qubits, num_threads);
+//        global_i_counter += ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
+//                                                          num_qubits, num_threads);
+        
+        global_i_counter += ApplyHighXYHGatesByBitReversal(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask, num_qubits, th, num_threads);
         
         hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }
@@ -629,17 +631,17 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                 UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     }
     
-    if (last_cycle && hiq_H_bitmask) {
-        time.StartTime();
-        if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
-            int q = __builtin_ctzl(hiq_H_bitmask);
-            Apply1QXYHGates(amp, q, num_qubits, Gate::Type::Hadamard, num_threads);
-            hiq_H_bitmask ^= 1ull << q;
-            ++single_H;
-        }
-        ApplyHGatesRecursively(amp, num_qubits, num_threads, hiq_H_bitmask);
-        time_by_category.last_H += time.GetElapsedTime();
-    }
+//    if (last_cycle && hiq_H_bitmask) {
+//        time.StartTime();
+//        if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
+//            int q = __builtin_ctzl(hiq_H_bitmask);
+//            Apply1QXYHGates(amp, q, num_qubits, Gate::Type::Hadamard, num_threads);
+//            hiq_H_bitmask ^= 1ull << q;
+//            ++single_H;
+//        }
+//        ApplyHGatesRecursively(amp, num_qubits, num_threads, hiq_H_bitmask);
+//        time_by_category.last_H += time.GetElapsedTime();
+//    }
 
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
     
