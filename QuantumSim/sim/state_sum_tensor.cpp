@@ -255,12 +255,15 @@ ApplyXCZGatesForDist(string& cz_bits,
         xCZ_bitmasks_path0_D2D1[i] = 0;
         xCZ_bitmasks_path1_D4D3[i] = 0;
     }
-    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, cz_bits, prefix_size, xCZ_bitmasks_path0_D1D2,
-                                                 xCZ_bitmasks_path0_D2D1, xCZ_bitmasks_path1_D3D4,
-                                                 xCZ_bitmasks_path1_D4D3, CZ_bitmasks);
+    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, cz_bits, prefix_size,
+                                                 xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
+                                                 xCZ_bitmasks_path1_D3D4,xCZ_bitmasks_path1_D4D3,
+                                                 CZ_bitmasks);
     if (last_xCZ_idx != -1)
-        tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
-                                                            xCZ_bitmasks_path1_D3D4, xCZ_bitmasks_path1_D4D3);
+        tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2,
+                                                            xCZ_bitmasks_path0_D2D1,
+                                                            xCZ_bitmasks_path1_D3D4,
+                                                            xCZ_bitmasks_path1_D4D3);
       
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     

@@ -975,6 +975,9 @@ IncrementGlobalICounter()
 void FullAmpStateVector::
 Rescale()
 {
+    Time rescale_time;
+    rescale_time.StartTime();
+    
     const float rescaling_factor = (global_factor_power % 2) ? 1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0))
                             : 1.0/pow(2,(global_factor_power/2));
 
@@ -992,11 +995,16 @@ Rescale()
         t = _mm256_mul_ps(t, rescaling);
         _mm256_store_ps(t_amp + (2 * i), t);
     }
+    
+    time_by_category.rescale += rescale_time.GetElapsedTime();
 }
 
 void FullAmpStateVector::
 RescaleAndApplyGlobalICounter()
 {
+    Time rescale_time;
+    rescale_time.StartTime();
+    
     float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
@@ -1020,7 +1028,7 @@ RescaleAndApplyGlobalICounter()
         t = _mm256_mul_ps(t, rescaling);
         _mm256_store_ps(t_amp + (2 * i), t);
     }
-
+    time_by_category.rescale += rescale_time.GetElapsedTime();
 }
 
 void FullAmpStateVector::
