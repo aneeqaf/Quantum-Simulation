@@ -345,6 +345,141 @@ ApplyYX12GateAVX(cmplx* __restrict amp,
     _mm256_store_ps(&t_amp[2*indices[3]], a3);
 }
 
+__attribute__((always_inline)) inline void
+ApplyYY12HHGateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+   __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+   __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
+
+   a1 = _mm256_xor_ps(a1, kneg2);
+   a2 = _mm256_xor_ps(a2, kneg2);
+   
+   _mm256_store_ps(&t_amp[2*indices[1]], a1);
+   _mm256_store_ps(&t_amp[2*indices[2]], a2);
+}
+
+__attribute__((always_inline)) inline void
+ApplyXX12HHGateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
+{
+     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
+    __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+
+    __m256 t0 = _mm256_add_ps(a0, a3);
+    __m256 t1 = _mm256_add_ps(a1, a2);
+    __m256 t2 = _mm256_sub_ps(a0, a3);
+    __m256 t3 = _mm256_sub_ps(a1, a2);
+    t2 = _mm256_permute_ps(t2, 0b10110001);
+    t2 = _mm256_xor_ps(t2, kneg1);
+    t3 = _mm256_permute_ps(t3, 0b10110001);
+    t3 = _mm256_xor_ps(t3, kneg1);
+
+    a0 = _mm256_add_ps(_mm256_add_ps(t1, t1), _mm256_add_ps(t0, t0));
+    a1 = _mm256_sub_ps(_mm256_add_ps(t2, t2), _mm256_add_ps(t3, t3));
+    a2 = _mm256_add_ps(_mm256_add_ps(t2, t2), _mm256_add_ps(t3, t3));
+    a3 = _mm256_sub_ps(_mm256_add_ps(t1, t1), _mm256_add_ps(t0, t0));
+
+    _mm256_store_ps(&t_amp[2*indices[0]], a0);
+    _mm256_store_ps(&t_amp[2*indices[1]], a1);
+    _mm256_store_ps(&t_amp[2*indices[2]], a2);
+    _mm256_store_ps(&t_amp[2*indices[3]], a3);
+}
+
+__attribute__((always_inline)) inline void
+ApplyXY12HHGateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
+{
+     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
+    __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+    
+    __m256 t0 = _mm256_sub_ps(a0, a1);
+    __m256 t1 = _mm256_sub_ps(a2, a3);
+    __m256 t2 = _mm256_add_ps(a0, a1);
+    __m256 t3 = _mm256_add_ps(a2, a3);
+
+    __m256 it0 = _mm256_permute_ps(t0, 0b10110001);
+    it0 = _mm256_xor_ps(it0, kneg1);
+    __m256 it1 = _mm256_permute_ps(t1, 0b10110001);
+    it1 = _mm256_xor_ps(it1, kneg1);
+    __m256 it2 = _mm256_permute_ps(t2, 0b10110001);
+    it2 = _mm256_xor_ps(it2, kneg1);
+    __m256 it3 = _mm256_permute_ps(t3, 0b10110001);
+    it3 = _mm256_xor_ps(it3, kneg1);
+
+    a0 = _mm256_add_ps(it0, t1);
+    a1 = _mm256_add_ps(it2, t3);
+    a2 = _mm256_add_ps(t0, it1);
+    a3 = _mm256_add_ps(t2, it3);
+    
+    t0 = _mm256_add_ps(a0, a3);
+    t1 = _mm256_sub_ps(a0, a3);
+    t2 = _mm256_add_ps(a1, a2);
+    t3 = _mm256_sub_ps(a1, a2);
+    
+    a0 = _mm256_sub_ps(t0, t2);
+    a1 = _mm256_add_ps(t1, t3);
+    a2 = _mm256_sub_ps(t1, t3);
+    a3 = _mm256_add_ps(t0, t2);
+    
+    _mm256_store_ps(&t_amp[2*indices[0]], a3);
+    _mm256_store_ps(&t_amp[2*indices[1]], a2);
+    _mm256_store_ps(&t_amp[2*indices[2]], a1);
+    _mm256_store_ps(&t_amp[2*indices[3]], a0);
+}
+
+__attribute__((always_inline)) inline void
+ApplyYX12HHGateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
+    __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
+
+    __m256 ia0 = _mm256_permute_ps(a0, 0b10110001);
+    ia0 = _mm256_xor_ps(ia0, kneg1);
+    __m256 ia1 = _mm256_permute_ps(a1, 0b10110001);
+    ia1 = _mm256_xor_ps(ia1, kneg1);
+    __m256 ia2 = _mm256_permute_ps(a2, 0b10110001);
+    ia2 = _mm256_xor_ps(ia2, kneg1);
+    __m256 ia3 = _mm256_permute_ps(a3, 0b10110001);
+    ia3 = _mm256_xor_ps(ia3, kneg1);
+
+    __m256 t0 = _mm256_add_ps(ia0, a1);
+    __m256 t1 = _mm256_add_ps(a0, ia1);
+    __m256 t2 = _mm256_add_ps(ia2, a3);
+    __m256 t3 = _mm256_add_ps(a2, ia3);
+
+    a0 = _mm256_sub_ps(t0, t2);
+    a1 = _mm256_sub_ps(t1, t3);
+    a2 = _mm256_add_ps(t0, t2);
+    a3 = _mm256_add_ps(t1, t3);
+    
+    t0 = _mm256_add_ps(a0, a3);
+    t1 = _mm256_sub_ps(a0, a3);
+    t2 = _mm256_add_ps(a1, a2);
+    t3 = _mm256_sub_ps(a1, a2);
+    
+    a0 = _mm256_sub_ps(t0, t2);
+    a1 = _mm256_add_ps(t1, t3);
+    a2 = _mm256_sub_ps(t1, t3);
+    a3 = _mm256_add_ps(t0, t2);
+    
+    _mm256_store_ps(&t_amp[2*indices[0]], a3);
+    _mm256_store_ps(&t_amp[2*indices[1]], a2);
+    _mm256_store_ps(&t_amp[2*indices[2]], a1);
+    _mm256_store_ps(&t_amp[2*indices[3]], a0);
+}
+
 __attribute__((always_inline)) inline bool
 ApplyxCZGateAVX(cmplx* __restrict amp,
                 int num_threads,
@@ -400,14 +535,15 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
     return all_zeros;
 }
 
-idx_size
+pair<idx_size, int>
 XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
+                    idx_size H_bitmask,
                     const int num_qubits,
                     const int num_threads);
 
-idx_size
+pair<idx_size, int>
 XYHFastTransformHighQ(cmplx* __restrict amp,
                       idx_size X_bitmask,
                       idx_size Y_bitmask,
@@ -435,7 +571,7 @@ ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
                                 const int num_threads,
                                 const ZeroOptMask& zero_opt_mask);
 
-idx_size
+pair<idx_size, int>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                  const int num_qubits_amp,
                                  const idx_size* __restrict CZ_bitmasks,

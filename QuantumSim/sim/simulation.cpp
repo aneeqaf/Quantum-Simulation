@@ -579,31 +579,7 @@ SimulationLoop(GenericQuantumState &amp,
             
             if (amp.book_keep)
                 amp.data_per_cycles.cycles.push_back(current_cycle);
-            
-            if (amp.book_keep) {
-#ifdef CosineSimilarityDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintProbabilities(config -> prob_outfile, current_cycle);
-                XE_time += misc_time.GetElapsedTime();
-                
-#endif
-#ifdef XEDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintProbabilities(config -> prob_outfile, current_cycle);
-                XE_time += misc_time.GetElapsedTime();
-                            xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
-                
-#endif
-#ifdef FidelityDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintStateVector(config -> amp_outfile, current_cycle);
-               XE_time += misc_time.GetElapsedTime();
-                
-#endif
-            }
+          
             if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
@@ -700,64 +676,19 @@ SimulationLoop(GenericQuantumState &amp,
                 --i;
                 
                 CZ_T_top_time += CZT_time.GetElapsedTime();
-        }
+            }
             else {
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
                                current_gate, (Gate::Type)current_gate.ids.back());
             }
         }
         else {
-            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
-                (current_gate.ids.back() == Gate::Type::X_1_2 ||
-                 current_gate.ids.back() == Gate::Type::Y_1_2) &&
-                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
-                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-                    cout << "BAD!\n\n";
-                    Time XY_time;
-                    XY_time.StartTime();
-                    
-                    idx_size prev_i = i;
-                    
-                    bitset<128> X_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::X_1_2);
-                    bitset<128> Y_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Y_1_2);
-                    amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config -> th);
-                    
-                    if (amp.book_keep) {
-                        amp.count_of_category.merged_XY1_2 += i - prev_i;
-                        amp.data_per_cycles.XY_gates.push_back(i - prev_i);
-                    }
-                    ++amp.count_of_category.XY_layers;
-
-                    --i;
-
-                    X_Y_top_time += XY_time.GetElapsedTime();
-                }
-            else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
+            if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 
                 ++amp.count_of_category.H_layers;
                 cycle_time.StartTime();
                 amp.ApplyHGateOnAllAmps(i != 0);
                 i += total_circuit_qubits - 1;
-            }
-            else {
-                Time single_xy_time;
-                single_xy_time.StartTime();
-                amp.ApplyNonCGate(current_gate.qubits[0],
-                                  (Gate::Type)current_gate.ids.back(),  current_gate);
-                double xy_single_elapsed_t = single_xy_time.GetElapsedTime();
-                
-                if (amp.book_keep)
-                    amp.data_per_cycles.XY_gates.push_back(1);
-                if (current_gate.ids.back() == Gate::Type::X_1_2) {
-                    ++amp.count_of_category.X1_2;
-                    amp.time_by_category.X1_2 += xy_single_elapsed_t;
-                }
-                if (current_gate.ids.back() == Gate::Type::Y_1_2) {
-                    ++amp.count_of_category.Y1_2;
-                    amp.time_by_category.Y1_2 += xy_single_elapsed_t;
-                }
-                ++amp.count_of_category.merged_XY1_2;
-                //TODO: Need to be able to count different types of non-control gates.
             }
         }
     }

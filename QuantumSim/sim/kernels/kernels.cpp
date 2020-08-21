@@ -193,63 +193,159 @@ ApplyCZDecomposition(cmplx* __restrict amp,
     }
 }
 
-void
-Apply1QXYHGates(cmplx* __restrict amp,
-               const int q,
-               const int num_qubits,
-               const Gate::Type gate_type,
-               const int num_threads)
+__attribute__((always_inline)) inline void
+Apply1QGatesToCachedAmps(cmplx* __restrict amp,
+                         const idx_size* indices,
+                         void (*gate_func)(cmplx*, const idx_size*))
 {
-    constexpr idx_size num_indices = 2;
-    const idx_size amp_size = 1ull << num_qubits, 
-    block_size = amp_size/(1ull << q),
-    num_iters = block_size/num_indices, gate_bitmask = (1ull << ((num_qubits - 1) - q));
-    const array<idx_size, num_indices> indices = {0, 1ull << ((num_qubits - 1) - q)};
-
-    idx_size add = 1;
-   
-    //AVX functions handles 4 amps at a time.
-    void (*gate_func)(cmplx* __restrict, const idx_size*) ;
-    if (gate_type == Gate::Type::X_1_2) {
-        if (q < num_qubits - 2) {
-            gate_func = ApplyX12GateAVX;
-            add = 4;
-        }
-        else
-            gate_func = ApplyX12Gate;
-    }
-    else if (gate_type == Gate::Type::Y_1_2) {
-        if (q < num_qubits - 2) {
-            gate_func = ApplyY12GateAVX;
-            add = 4;
-        }
-        else
-            gate_func = ApplyY12Gate;
-    }
-    else {
-        if (q < num_qubits - 2) {
-            gate_func = ApplyHGateAVX;
-            add = 4;
-        }
-        else
-            gate_func = ApplyHGate;
+    constexpr int num_indices = 2;
+    alignas(256) cmplx cached_amps[256] = {};
+    float* t_cached_amps = (float*)cached_amps;
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    for (int j = 0; j < 128; j += 4) {
+         __m256 a = _mm256_load_ps (&t_amp[2 * (indices[0] + j)]);
+         _mm256_store_ps(&t_cached_amps[2 * j], a);
+         a = _mm256_load_ps (&t_amp[2 * (indices[1] + j)]);
+        _mm256_store_ps(&t_cached_amps[2 * (128 + j)], a);
     }
     
-    amp = (cmplx*)__builtin_assume_aligned(amp, 64);
+    array<idx_size, num_indices> t_indices, c_indices = {0, 128};
+    
+    for (int i = 0; i < 128; i += 4)
+    {
+        for (int j = 0; j < num_indices; ++j)
+            t_indices[j] = c_indices[j] + i;
+        
+        gate_func(cached_amps, t_indices.data());
+    }
+    
+    for (int j = 0; j < 128; j += 4) {
+        __m256 a = _mm256_load_ps (&t_cached_amps[2 * j]);
+         _mm256_store_ps(&t_amp[2 * (indices[0] + j)], a);
+        a = _mm256_load_ps (&t_cached_amps[2 * (128 + j)]);
+        _mm256_store_ps(&t_amp[2 * (indices[1] + j)], a);
+    }
+}
+
+
+__attribute__((always_inline)) inline void
+Apply2QGatesToCachedAmps(cmplx* __restrict amp,
+                         const idx_size* indices,
+                         void (*gate_func)(cmplx*, const idx_size*))
+{
+    constexpr int num_indices = 4;
+    alignas(256) cmplx cached_amps[256] = {};
+    float* t_cached_amps = (float*)cached_amps;
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    for (int j = 0; j < 64; j += 4) {
+         __m256 a = _mm256_load_ps (&t_amp[2 * (indices[0] + j)]);
+         _mm256_store_ps(&t_cached_amps[2 * j], a);
+         a = _mm256_load_ps (&t_amp[2 * (indices[1] + j)]);
+        _mm256_store_ps(&t_cached_amps[2 * (64 + j)], a);
+         a = _mm256_load_ps (&t_amp[2 * (indices[2] + j)]);
+        _mm256_store_ps(&t_cached_amps[2 * (128 + j)], a);
+         a = _mm256_load_ps (&t_amp[2 * (indices[3] + j)]);
+        _mm256_store_ps(&t_cached_amps[2 * (192 + j)], a);
+    }
+    
+    array<idx_size, num_indices> t_indices, c_indices = {0, 64, 128, 192};
+    
+    for (int i = 0; i < 64; i += 4)
+    {
+        for (int j = 0; j < num_indices; ++j)
+            t_indices[j] = c_indices[j] + i;
+        
+        gate_func(cached_amps, t_indices.data());
+    }
+    
+    for (int j = 0; j < 64; j += 4) {
+        __m256 a = _mm256_load_ps (&t_cached_amps[2 * j]);
+         _mm256_store_ps(&t_amp[2 * (indices[0] + j)], a);
+        a = _mm256_load_ps (&t_cached_amps[2 * (64 + j)]);
+        _mm256_store_ps(&t_amp[2 * (indices[1] + j)], a);
+        a = _mm256_load_ps (&t_cached_amps[2 * (128 + j)]);
+        _mm256_store_ps(&t_amp[2 * (indices[2] + j)], a);
+        a = _mm256_load_ps (&t_cached_amps[2 * (192 + j)]);
+        _mm256_store_ps(&t_amp[2 * (indices[3] + j)], a);
+    }
+}
+
+__attribute__((always_inline)) inline void
+ApplyHighQGatesInBlocksTask(cmplx* __restrict amp,
+                        idx_size idx,
+                        const idx_size num_iters,
+                        const idx_size reverse_t_block,
+                        const idx_size gate_bitmask,
+                        const idx_size* indices,
+                        const idx_size starting_idx,
+                        const int num_indices,
+                        void (*gate_func)(cmplx*, const idx_size*))
+{
+    constexpr int max_indices = 4;
+//    const idx_size idx_add = num_indices == 2 ? 128 : 64,
+//    iter_add = idx_add / 4;
+    idx_size iter_count = 0;
+    array<idx_size, max_indices> temp_indices;
+    bool applied_block = false;
+    
+//    auto cache_efficient_func = num_indices == 2 ? Apply1QGatesToCachedAmps :  Apply2QGatesToCachedAmps;
+    
+    while(iter_count < num_iters) {
+        if (((idx + reverse_t_block) & gate_bitmask) == 0) {
+            ++iter_count;// += iter_add;
+          
+            for (idx_size i = 0; i < num_indices; ++i)
+                temp_indices[i] = indices[i] + idx;
+            
+            //cache_efficient_func(amp, temp_indices.data(), gate_func);
+            gate_func(amp, temp_indices.data());
+            
+            idx += 4;
+            applied_block = true;
+        }
+        else {
+            if (applied_block)
+            {
+                idx +=  reverse_t_block;
+                idx += (idx & gate_bitmask) + starting_idx;
+                applied_block = false;
+            }
+            else
+                idx += (idx & gate_bitmask);
+        }
+    }
+}
+
+__attribute__((always_inline)) inline void
+ApplyLowQGatesInBlocksTask(cmplx* __restrict amp,
+                           const idx_size amp_size,
+                           const idx_size block_size,
+                           const idx_size num_iters,
+                           const idx_size num_threads,
+                           const idx_size gate_bitmask,
+                           const idx_size* indices,
+                           const idx_size add,
+                           const int num_indices,
+                           void (*gate_func)(cmplx*, const idx_size*))
+{
+    constexpr int max_indices = 4;
+    
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size idx = 0; idx < amp_size; idx += block_size) {
         idx_size iter_count = 0, block_idx = idx;
-        array<idx_size, num_indices> temp_indices;
-        
+        array<idx_size, max_indices> temp_indices;
+
         while(iter_count < num_iters) {
             if ((block_idx & gate_bitmask) == 0) {
                 iter_count += add;
-      
+
                 for (idx_size i = 0; i < num_indices; ++i)
                     temp_indices[i] = indices[i] + block_idx;
-                
+
                 gate_func(amp, temp_indices.data());
-                
+
                 block_idx += add;
             }
             else
@@ -257,6 +353,70 @@ Apply1QXYHGates(cmplx* __restrict amp,
         }
     }
 }
+
+
+void
+Apply1QXYHGates(cmplx* __restrict amp,
+                int num_threads,
+                const int q,
+                const int num_qubits,
+                const Gate::Type gate_type)
+{
+    constexpr idx_size num_indices = 2;
+    const idx_size amp_size = 1ull << num_qubits,
+        gate_bitmask = (1ull << ((num_qubits - 1) - q));
+    const array<idx_size, num_indices> indices = {0, 1ull << ((num_qubits - 1) - q)};
+       
+    amp = (cmplx*)__builtin_assume_aligned(amp, 64);
+    
+    idx_size add = 1;
+    
+     //AVX functions handles 4 amps at a time.
+     void (*gate_func)(cmplx* __restrict, const idx_size*) ;
+     if (gate_type == Gate::Type::X_1_2) {
+         if (q < num_qubits - 2) {
+             gate_func = ApplyX12GateAVX;
+             add = 4;
+         }
+         else
+             gate_func = ApplyX12Gate;
+     }
+     else if (gate_type == Gate::Type::Y_1_2) {
+         if (q < num_qubits - 2) {
+             gate_func = ApplyY12GateAVX;
+             add = 4;
+         }
+         else
+             gate_func = ApplyY12Gate;
+     }
+     else {
+         if (q < num_qubits - 2) {
+             gate_func = ApplyHGateAVX;
+             add = 4;
+         }
+         else
+             gate_func = ApplyHGate;
+     }
+    
+    idx_size block_size = indices[1] / num_threads;
+    if (block_size > 128) {
+        const idx_size num_iters = amp_size/(num_indices * num_threads * add);
+        vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
+        #pragma omp parallel for num_threads(num_threads)
+        for (int t = 0; t < num_threads; ++t) {
+            parallel_starting_idxs[t][0] = indices[0] + t * block_size;
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], num_indices, gate_func);
+        }
+    }
+    else{
+        ApplyLowQGatesInBlocksTask(amp, amp_size, amp_size >> q,
+                                   amp_size >> (q + 1),
+                                   q < num_threads ? (q == 0 ? 1 : q) : num_threads,
+                                   gate_bitmask, indices.data(), add, num_indices,
+                                   gate_func);
+    }
+}
+
 
 template<typename function>
 void
@@ -295,98 +455,19 @@ Apply2MergedGatesHelper(cmplx* __restrict amp,
     }
 }
 
-__attribute__((always_inline)) inline void
-Apply2QGatesToCachedAmps(cmplx* __restrict amp,
-                         const idx_size* indices,
-                         const idx_size add,
-                         void (*gate_func)(cmplx*, const idx_size*))
-{
-    constexpr int num_indices = 4;
-    alignas(256) cmplx cached_amps[256] = {};
-    float* t_cached_amps = (float*)cached_amps;
-    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    
-    for (int i = 0; i < 4; ++i)
-    {
-        for (int j = 0; j < 64; j += 4) {
-             __m256 a = _mm256_load_ps (&t_amp[2 * (indices[i] + j)]);
-             _mm256_store_ps(&t_cached_amps[2 * ((i * 64) + j)], a);
-        }
-    }
-    
-    array<idx_size, num_indices> t_indices, c_indices = {0, 64, 128, 192};
-    
-    for (int i = 0; i < 64; i += add)
-    {
-        for (int j = 0; j < num_indices; ++j)
-            t_indices[j] = c_indices[j] + i;
-        
-        gate_func(cached_amps, t_indices.data());
-    }
-    
-    for (int i = 0; i < 4; ++i)
-    {
-        for (int j = 0; j < 64; j += 4) {
-            __m256 a = _mm256_load_ps (&t_cached_amps[2 * ((i * 64) + j)]);
-             _mm256_store_ps(&t_amp[2 * (indices[i] + j)], a);
-        }
-    }
-}
-
-__attribute__((always_inline)) inline void
-Apply2QGateInBlocksTask(cmplx* __restrict amp,
-                        idx_size iter_count,
-                        idx_size idx,
-                        const idx_size num_iters,
-                        const idx_size reverse_t_block,
-                        const idx_size gate_bitmask,
-                        const idx_size* indices,
-                        const idx_size starting_idx,
-                        const idx_size add,
-                        void (*gate_func)(cmplx*, const idx_size*))
-{
-    const int num_indices = 4;
-    array<idx_size, num_indices> temp_indices;
-    bool applied_block = false;
-    
-    while(iter_count < num_iters) {
-        if (((idx + reverse_t_block) & gate_bitmask) == 0) {
-            ++iter_count;
-          
-            for (idx_size i = 0; i < num_indices; ++i)
-                temp_indices[i] = indices[i] + idx;
-            
-            gate_func(amp, temp_indices.data());
-            
-            idx += 4;
-            applied_block = true;
-        }
-        else {
-            if (applied_block)
-            {
-                idx +=  reverse_t_block;
-                idx += (idx & gate_bitmask) + starting_idx;
-                applied_block = false;
-            }
-            else
-                idx += (idx & gate_bitmask);
-        }
-    }
-}
-
-
 void
-Apply2MergedGatesInParallel(cmplx* __restrict amp,
-                            const int num_threads,
-                            const idx_size gate_qubits,
-                            const int num_qubits_amp,
-                            void (*gate_func)(cmplx*, const idx_size*),
-                            const idx_size add)
+ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
+                                int num_threads,
+                                const idx_size gate_qubits,
+                                const int num_qubits_amp,
+                                void (*gate_func)(cmplx*, const idx_size*),
+                                const idx_size add)
 {
     constexpr idx_size num_indices = 4;
-    const idx_size amp_size = 1ull << num_qubits_amp,
-        gate_bitmask = (1ull << ((num_qubits_amp - 1) - __builtin_ctzl(gate_qubits))) |
-        (1ull << ((num_qubits_amp - 1) - (63 -  __builtin_clzl(gate_qubits))));
+    const idx_size amp_size = 1ull << num_qubits_amp, q1 = __builtin_ctzl(gate_qubits),
+        q2 = 63 -  __builtin_clzl(gate_qubits),
+        gate_bitmask = (1ull << (num_qubits_amp - 1 - q1)) |
+                       (1ull << (num_qubits_amp - 1 - q2));
     
     array<idx_size, num_indices> indices;
     ExtractIndicesForAmp(indices.data(), gate_qubits, num_qubits_amp);
@@ -395,21 +476,26 @@ Apply2MergedGatesInParallel(cmplx* __restrict amp,
     const idx_size block_size = indices[1] / num_threads ;
     const idx_size num_iters = amp_size/(num_indices * num_threads * add);
     
-    vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
-//    vector<thread*> execution_threads(num_threads);
-    for (int t = 0; t < num_threads; ++t)
-    {
-        idx_size t_block = t * block_size;
-        for (idx_size i = 0; i < num_indices; ++i)
-            parallel_starting_idxs[t][i] = indices[i] + t_block;
-        
+    if (block_size > 64) {
+        vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
+        #pragma omp parallel for num_threads(num_threads)
+        for (int t = 0; t < num_threads; ++t) {
+            parallel_starting_idxs[t][0] = indices[0] + t * block_size;
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], num_indices, gate_func);
+        }
+    }
+    else {
+        ApplyLowQGatesInBlocksTask(amp, amp_size, amp_size >> q1,
+            amp_size >> (q1 + 2), q1 < num_threads ? (q1 == 0 ? 1 : q1) : num_threads,
+            gate_bitmask, indices.data(), add, num_indices,
+            gate_func);
+    }
+    //    vector<thread*> execution_threads(num_threads);
+
+//
 //        thread* thread_obj = new thread(Apply2QGateInBlocksTask, amp, 0, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], 4, gate_func);
 //        execution_threads[t] = thread_obj;
-    }
-    
-    #pragma omp parallel for num_threads(num_threads)
-    for (int t = 0; t < num_threads; ++t)
-        Apply2QGateInBlocksTask(amp, 0, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], 4, gate_func);
+        
 
 //    for (int t = 0; t < num_threads; ++t)
 //        execution_threads[t] -> join();
@@ -493,36 +579,27 @@ UpdateXYBitmask(idx_size& X_bitmask,
 }
 
 
-__attribute__((always_inline)) inline idx_size
+__attribute__((always_inline)) inline pair<idx_size, int>
 XYHBitmaskApplicationHelper(cmplx* __restrict amp,
                            idx_size& X_bitmask,
                            idx_size& Y_bitmask,
+                           idx_size H_bitmask,
                            const int num_qubits,
-                           idx_size H_bitmask = 0,
                            const int num_threads = 0,
                            bool parallel = false,
                            bool zero_block = false)
 {
     idx_size gates_bitmask = 0, i_count = 0;
     int gate_type = UpdateXYBitmask(X_bitmask, Y_bitmask, gates_bitmask, i_count);
+    int factor_power = 0;
     
-    if (!zero_block) {
-        int num_gates_collected = ApplyMergedXYGates(amp, gates_bitmask, gate_type, num_qubits, num_threads, parallel);
-        void (*HApplicationToUse)(cmplx* , const idx_size*) = num_gates_collected == 4 ? ApplyHHGateAVX : ApplyHGate;
-        
-        if (gates_bitmask && H_bitmask && (H_bitmask & gates_bitmask) == gates_bitmask) {
-            if (parallel)
-                Apply2MergedGatesInParallel(amp, num_threads, gates_bitmask, num_qubits,
-                                            HApplicationToUse, num_gates_collected);
-            else
-                Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
-                                        HApplicationToUse, num_gates_collected);
-        }
-    }
-    return i_count;
+    if (!zero_block)
+        factor_power = ApplyMergedXYGates(amp, gate_type, gates_bitmask, num_qubits, num_threads, H_bitmask,  parallel);
+
+    return pair<idx_size, idx_size>(i_count, factor_power);
 }
 
-idx_size
+pair<idx_size, int>
 XYFastTransform(cmplx* __restrict amp,
                 idx_size X_bitmask,
                 idx_size Y_bitmask,
@@ -533,45 +610,45 @@ XYFastTransform(cmplx* __restrict amp,
     idx_size H_bitmask = 0;
     //base case
     if (num_qubits <= th)
-        return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, num_qubits, num_threads);
+        return XYFastTransformLowQ(amp, X_bitmask, Y_bitmask, H_bitmask, num_qubits, num_threads);
     
     return XYHFastTransformHighQ(amp, X_bitmask, Y_bitmask, H_bitmask, num_qubits, num_threads);
 }
 
-idx_size
-XYFastTransformIterative(cmplx* __restrict amp,
-                         idx_size X_bitmask,
-                         idx_size Y_bitmask,
-                         const int num_qubits,
-                         const int num_threads,
-                         const int th)
-{
-    idx_size i_count = 0;
-    while (X_bitmask || Y_bitmask) {
-        
-        const idx_size Xunused_qubits = X_bitmask ? __builtin_ctzl(X_bitmask) : kRT;
-        const idx_size Yunused_qubits = Y_bitmask ? __builtin_ctzl(Y_bitmask) : kRT;
-        const idx_size k = min(Yunused_qubits, Xunused_qubits);
-        const idx_size num_iters = 1ull << k, stride = (1ull << num_qubits)/num_iters;
-        idx_size gates_bitmask = 0;
-        
-        X_bitmask >>= k;
-        Y_bitmask >>= k;
-        
-        int gate_type = UpdateXYBitmask(X_bitmask, Y_bitmask, gates_bitmask, i_count);
-        
-        #pragma omp parallel for schedule(guided) num_threads(num_threads)
-        for (idx_size i = 0; i < num_iters ; ++i)
-            ApplyMergedXYGates(amp + (i * stride), gates_bitmask, gate_type, (int)(num_qubits - k));
-        
-        X_bitmask <<= k;
-        Y_bitmask <<= k;
-    }
+//idx_size
+//XYFastTransformIterative(cmplx* __restrict amp,
+//                         idx_size X_bitmask,
+//                         idx_size Y_bitmask,
+//                         const int num_qubits,
+//                         const int num_threads,
+//                         const int th)
+//{
+//    idx_size i_count = 0;
+//    while (X_bitmask || Y_bitmask) {
+//
+//        const idx_size Xunused_qubits = X_bitmask ? __builtin_ctzl(X_bitmask) : kRT;
+//        const idx_size Yunused_qubits = Y_bitmask ? __builtin_ctzl(Y_bitmask) : kRT;
+//        const idx_size k = min(Yunused_qubits, Xunused_qubits);
+//        const idx_size num_iters = 1ull << k, stride = (1ull << num_qubits)/num_iters;
+//        idx_size gates_bitmask = 0;
+//
+//        X_bitmask >>= k;
+//        Y_bitmask >>= k;
+//
+//        int gate_type = UpdateXYBitmask(X_bitmask, Y_bitmask, gates_bitmask, i_count);
+//
+//        #pragma omp parallel for schedule(guided) num_threads(num_threads)
+//        for (idx_size i = 0; i < num_iters ; ++i)
+//            ApplyMergedXYGates(amp + (i * stride), gate_type, gates_bitmask, (int)(num_qubits - k));
+//
+//        X_bitmask <<= k;
+//        Y_bitmask <<= k;
+//    }
+//
+//    return i_count;
+//}
 
-    return i_count;
-}
-
-idx_size
+pair<idx_size, int>
 XYHFastTransformHighQ(cmplx* __restrict amp,
                       idx_size X_bitmask,
                       idx_size Y_bitmask,
@@ -580,9 +657,13 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
                       const int num_threads)
 {
     idx_size i_count = 0;
+    int factor_power = 0;
    
-    if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1)
-        i_count += XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask, num_qubits, H_bitmask);
+    if ((X_bitmask & 1) == 1 || (Y_bitmask & 1) == 1) {
+        auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask, H_bitmask, num_qubits);
+        i_count += phases.first;
+        factor_power += phases.second;
+    }
     
     const int Xunused_qubits = GetNextUsedQubitIndex(X_bitmask);
     const int Yunused_qubits = GetNextUsedQubitIndex(Y_bitmask);
@@ -595,24 +676,29 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
         Y_bitmask >>= k;
         H_bitmask >>= k;
         idx_size temp_i = 0;
+        int temp_factor_power = 0;
         
-    #pragma omp parallel for schedule(guided) reduction(+:temp_i) num_threads(num_threads)
+    #pragma omp parallel for schedule(guided) reduction(+:temp_i, temp_factor_power) num_threads(num_threads)
         for (idx_size i = 0; i < num_iters ; ++i) {
 //            bool zero_block = false;
 //            if (!zero_opt_mask.CheckIfAllNonZeroes() &&
 //                !zero_opt_mask.CheckIfBlockIsNotZero(i * stride, stride))
 //                zero_block = true;
     
-            temp_i += XYHFastTransformHighQ(amp + (i * stride), X_bitmask,
+            auto phases = XYHFastTransformHighQ(amp + (i * stride), X_bitmask,
                                                Y_bitmask, H_bitmask, num_qubits - k, num_threads);
+            temp_i += phases.first;
+            temp_factor_power += phases.second;
+            
         }
         i_count += temp_i / num_iters;
+        factor_power += temp_factor_power / num_iters;
     }
     
-    return i_count;
+    return pair<idx_size, int>(i_count, factor_power);
 }
 
-idx_size
+pair<idx_size, int>
 ApplyXYHIterativelyInParallel(cmplx* __restrict amp,
                              idx_size X_bitmask,
                              idx_size Y_bitmask,
@@ -621,19 +707,22 @@ ApplyXYHIterativelyInParallel(cmplx* __restrict amp,
                              const int num_threads)
 {
     idx_size i_count = 0;
+    int factor_power = 0;
     while (X_bitmask || Y_bitmask) {
-        
-        i_count += XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask,
-                                               num_qubits, H_bitmask, num_threads, true);
+        auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask, H_bitmask,
+                                               num_qubits, num_threads, true);
+        i_count += phases.first;
+        factor_power += phases.second;
     }
 
-    return i_count;
+    return pair<idx_size, int>(i_count, factor_power);
 }
 
-idx_size
+pair<idx_size, int>
 XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
+                    idx_size H_bitmask,
                     const int num_qubits,
                     const int num_threads)
 {
@@ -657,13 +746,18 @@ XYFastTransformLowQ(cmplx* __restrict amp,
 //    return i_count;
     
     idx_size i_count = 0;
+    int factor_power = 0;
     
     for (int i = 0; i < num_qubits; ++i) {
-        if (X_bitmask || Y_bitmask)
-            i_count += XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask, num_qubits);
+        if (X_bitmask || Y_bitmask) {
+            auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask,
+                                                      H_bitmask, num_qubits);
+            i_count += phases.first;
+            factor_power += phases.second;
+        }
         else break;
     }
-    return i_count;
+    return pair<idx_size, int>(i_count, factor_power);
 }
 
 void ApplyHGatesRecursively(cmplx* __restrict amp,
@@ -699,6 +793,22 @@ void ApplyHGatesRecursively(cmplx* __restrict amp,
             ApplyHGatesRecursively(amp + (i * stride), num_qubits - k, num_threads,
                                        gate_bm);
         }
+    }
+}
+
+void ApplyHighHGatesIterativelyInParallel(cmplx* __restrict amp,
+                                        int num_qubits,
+                                        int num_threads,
+                                        idx_size gate_bm)
+{
+    while (gate_bm) {
+        int q1 = __builtin_ctzl(gate_bm);
+        int q2 = __builtin_ctzl(gate_bm ^ (1ull << q1));
+        idx_size gates_bitmask = (1ull << q1) | (1ull << q2);
+        gate_bm ^= gates_bitmask;
+        
+        ApplyHighQ2MergedGatesInParallel(amp, num_threads, gates_bitmask, num_qubits,
+          ApplyHHGateAVX, 4);
     }
 }
 
@@ -744,15 +854,17 @@ void ApplyHGatesIteratively(cmplx* __restrict amp,
         int q1 = __builtin_ctzl(gate_bm);
         int q2 = __builtin_ctzl(gate_bm ^ (1ull << q1));
         idx_size gates_bitmask = (1ull << q1) | (1ull << q2);
-        gate_bm ^= gates_bitmask;
         
         if (parity == 1)
         {
-            Apply1QXYHGates(amp, q1 > q2 ? q1 : q2, num_qubits, Gate::Type::Hadamard, num_threads);
+            int q = q1 > q2 ? q1 : q2;
+            gate_bm ^= 1ull << q;
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
             return;
         }
-    
-        bool AVX = ((q1 < num_qubits - 1) && (q2 < num_qubits - 2));
+        
+        gate_bm ^= gates_bitmask;
+        bool AVX = (q1 < num_qubits - 1) && (q2 < num_qubits - 2);
 
         if (AVX)
             Apply2MergedGatesHelper(amp, gates_bitmask, num_qubits,
@@ -830,7 +942,7 @@ void CacheOptimalBitReversePermutation(cmplx* __restrict amp,
     }
 }
 
-idx_size
+pair<idx_size, int>
 ApplyHighXYHGatesByBitReversal(cmplx* __restrict amp,
                                idx_size X_bitmask,
                                idx_size Y_bitmask,
@@ -862,19 +974,24 @@ ApplyHighXYHGatesByBitReversal(cmplx* __restrict amp,
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits;
         
     idx_size i_count = 0;
+    int factor_power = 0;
     
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
         idx_size num_iters = block_begin/block_size;
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
 
-        i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), X_bitmask,
-                                      Y_bitmask, block_bits, num_threads);
-        if (H_bitmask)
-            ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits, num_threads, H_bitmask);
+        auto phases = XYFastTransformLowQ(amp + (offset_idx * block_size), X_bitmask,
+                                         Y_bitmask, H_bitmask, block_bits, num_threads);
+        i_count = phases.first;
+        factor_power = phases.second;
+        
+        idx_size new_H_bitmask =  H_bitmask ^ (H_bitmask & (Y_bitmask | X_bitmask));
+        if (new_H_bitmask)
+            ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits, num_threads, new_H_bitmask);
     }
     
     CacheOptimalBitReversePermutation(amp, num_threads, num_qubits);
     
-    return i_count;
+    return pair<idx_size, int>(i_count, factor_power);
 }

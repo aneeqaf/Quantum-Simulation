@@ -189,12 +189,12 @@ ApplyBlockOfDiagGates(string& cz_bits,
         
         if (__builtin_popcountll(hiH_bitmask) % 2 != 0) {
             int q = __builtin_ctzl(hiH_bitmask);
-            Apply1QXYHGates(amp, q, num_qubits, Gate::Type::Hadamard, num_threads);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
             hiH_bitmask ^= 1ull << q;
             ++single_H;
         }
         
-        ApplyHGatesRecursively(amp, num_qubits, num_threads, hiH_bitmask);
+        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiH_bitmask);
         time_by_category.last_H += time1.GetElapsedTime();
         
         if (book_keep) {
@@ -263,7 +263,7 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
     else {
         idx_size H_bm = (1ull << num_qubits) - 1;
         if (num_qubits % 2 != 0) {
-            Apply1QXYHGates(amp, 0, num_qubits, Gate::Type::Hadamard, num_threads);
+            Apply1QXYHGates(amp, num_threads, 0, num_qubits, Gate::Type::Hadamard);
             H_bm ^= 1;
         }
         ApplyHGatesRecursively(amp, num_qubits, num_threads, H_bm);
@@ -427,9 +427,9 @@ ApplyOddGates(idx_size& X_bitmask,
     //        const int X_q = X_bitmask_64 ? 63 - __builtin_clzl(X_bitmask_64) : 1000;
     //        const int Y_q = Y_bitmask_64 ? 63 - __builtin_clzl(Y_bitmask_64): 1000;
     
-    if (!(X_q == 1000 && Y_q == 1000)) {
+    if (!(X_q == kRT && Y_q == kRT)) {
         if (X_q < Y_q) {
-            Apply1QXYHGates(amp, X_q, num_qubits, Gate::Type::X_1_2, num_threads);
+            Apply1QXYHGates(amp, num_threads, X_q, num_qubits, Gate::Type::X_1_2);
             X_bitmask ^= 1ull << X_q;
             --num_X_bits;
             global_factor_power += 2;
@@ -438,7 +438,7 @@ ApplyOddGates(idx_size& X_bitmask,
                 ++count_of_category.X1_2;
         }
         else {
-            Apply1QXYHGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
+            Apply1QXYHGates(amp, num_threads, Y_q, num_qubits, Gate::Type::Y_1_2);
             Y_bitmask ^= 1ull << Y_q;
             --num_Y_bits;
             global_factor_power += 2;
@@ -524,10 +524,12 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     time.StartTime();
     if (X_bitmask_64 || Y_bitmask_64) {
         //Process low qubits first,
-        global_i_counter += XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask,
+        auto phase = XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask, 0,
                                                 num_qubits, num_threads);
-        global_i_counter += XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask,
+        auto phase1 = XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask,
                                             num_qubits, num_threads, th);
+        global_i_counter += phase.first + phase1.first;
+        global_factor_power += phase.second + phase1.second;
     }
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
 }
@@ -591,10 +593,12 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         }
     }
     
-    global_i_counter += ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
+    auto phase = ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                          T_bitmasks_64, loq_X_bitmask >> th,
                                                          loq_Y_bitmask >> th, loq_H_bitmask >> th,
-                                                          num_threads,th, zero_opt_mask);
+                                                         num_threads, th, zero_opt_mask);
+    global_i_counter += phase.first;
+    global_factor_power += phase.second;
     
     int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
     if (odd_bit_low_XY.second == 0) {
@@ -616,10 +620,13 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         if (book_keep && last_cycle)
             count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
 
-//        global_i_counter += ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
-//                                                          num_qubits, num_threads);
+        auto phase1 = ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask,
+                                                    hiq_Y_bitmask, hiq_H_bitmask,
+                                                    num_qubits, num_threads);
+        global_i_counter += phase1.first;
+        global_factor_power += phase1.second;
         
-        global_i_counter += ApplyHighXYHGatesByBitReversal(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask, num_qubits, th, num_threads);
+//        global_i_counter += ApplyHighXYHGatesByBitReversal(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask, num_qubits, th, num_threads);
         
         hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }
@@ -631,17 +638,17 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                 UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     }
     
-//    if (last_cycle && hiq_H_bitmask) {
-//        time.StartTime();
-//        if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
-//            int q = __builtin_ctzl(hiq_H_bitmask);
-//            Apply1QXYHGates(amp, q, num_qubits, Gate::Type::Hadamard, num_threads);
-//            hiq_H_bitmask ^= 1ull << q;
-//            ++single_H;
-//        }
-//        ApplyHGatesRecursively(amp, num_qubits, num_threads, hiq_H_bitmask);
-//        time_by_category.last_H += time.GetElapsedTime();
-//    }
+    if (last_cycle && hiq_H_bitmask) {
+        time.StartTime();
+        if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
+            int q = __builtin_ctzl(hiq_H_bitmask);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
+            hiq_H_bitmask ^= 1ull << q;
+            ++single_H;
+        }
+        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiq_H_bitmask);
+        time_by_category.last_H += time.GetElapsedTime();
+    }
 
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
     
