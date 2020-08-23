@@ -83,13 +83,17 @@ public:
                           const idx_size gate_i);
     void Phase1Simulation(GenericQuantumState& amp,
                           Circuit& circuit,
-                          string cz_path,
-                          idx_size gate_i);
-    bool SimulationLoop(GenericQuantumState& amp,
-                        Circuit& circuit,
-                        string& cz_path,
-                        idx_size prefix_size = 0,
-                        const idx_size gate_i = 0);
+                          idx_size gate_i,
+                          int& remaining_cz_bits,
+                          idx_size& cz_path,
+                          const idx_size cz_path_len);
+    bool SimulationLoop(GenericQuantumState &amp,
+                        Circuit &circuit,
+                        int& remaining_cz_bits,
+                        idx_size& cz_path,
+                        const idx_size cz_path_len,
+                        const idx_size suffix_size,
+                        const idx_size gate_i);
     void ReportingAfterSim(GenericQuantumState& amp,
                            Circuit& circuit);
     void WriteMmapToASCIIFile() const;

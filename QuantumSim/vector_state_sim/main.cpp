@@ -475,11 +475,11 @@ int main(int argc, char *argv[])
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
                                        config -> verbose);
         
-//        if (threshold == 0) {
-//            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
-//            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
-//            sim.SetThreshold(num_q/2);
-//        }
+        if (threshold == 0) {
+            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
+            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
+            sim.SetThreshold(num_q/2);
+        }
         
         sim.Simulate(amp, cir);
     }
@@ -490,11 +490,11 @@ int main(int argc, char *argv[])
         if (!config -> indices.empty())
             amp.PopulateGlobalToLocalMap(config -> indices);
         
-//        if (threshold == 0) {
-//            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
-//            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
-//            sim.SetThreshold(num_q/2);
-//        }
+        if (threshold == 0) {
+            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
+            amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
+            sim.SetThreshold(num_q/2);
+        }
         
         sim.Simulate(amp, cir);
         if (!config -> indices.empty())

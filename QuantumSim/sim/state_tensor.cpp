@@ -238,23 +238,25 @@ HandleCZApprox(const bitset<128> *CZ_bitmasks)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
     else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
              && book_keep){
-        idx_size count = CountXCZGates(CZ_bitmasks);
-        data_per_cycles.memory.push_back(GetMemUsage());
-        data_per_cycles.addends.push_back(1);
-        if (cut_type == QubitPartition::Cuts::Horizontal) {
-            data_per_cycles.xCZ_H.push_back(count);
-            data_per_cycles.xCZ_V.push_back(0);
-        }
-        else {
-            data_per_cycles.xCZ_H.push_back(count);
-            data_per_cycles.xCZ_H.push_back(0);
-        }
+//        idx_size count = CountXCZGates(CZ_bitmasks);
+//        data_per_cycles.memory.push_back(GetMemUsage());
+//        data_per_cycles.addends.push_back(1);
+//        if (cut_type == QubitPartition::Cuts::Horizontal) {
+//            data_per_cycles.xCZ_H.push_back(count);
+//            data_per_cycles.xCZ_V.push_back(0);
+//        }
+//        else {
+//            data_per_cycles.xCZ_H.push_back(count);
+//            data_per_cycles.xCZ_H.push_back(0);
+//        }
     }
 }
 
 int TensorProductStateVector::
-ApplyBlockOfDiagGates(string& cz_bits,
-                      idx_size prefix_size,
+ApplyBlockOfDiagGates(int& remaining_cz_bits,
+                      idx_size& cz_path,
+                      const idx_size cz_path_len,
+                      const idx_size suffix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2],
                       const bitset<128>& H_bitmask,
@@ -281,7 +283,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         time_by_category.CZ_T += time.GetElapsedTime();
         
         if (applyCZ_a || T_bitmasks_a[0] != 0 || stateA_Hbitmask != 0)
-            state_a -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_a, T_bitmasks_a,
+            state_a -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
+                                             cz_path_len, suffix_size,
+                                             CZ_bitmasks_a, T_bitmasks_a,
                                              stateA_Hbitmask, last_cycle);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
@@ -302,7 +306,9 @@ ApplyBlockOfDiagGates(string& cz_bits,
         time_by_category.CZ_T += time.GetElapsedTime();
 
         if (applyCZ_b || T_bitmasks_b[0] != 0 || stateB_Hbitmask != 0)
-            state_b -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks_b, T_bitmasks_b,
+            state_b -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
+                                             cz_path_len, suffix_size,
+                                             CZ_bitmasks_b, T_bitmasks_b,
                                              stateB_Hbitmask, last_cycle);
     }
 //    state_a -> PrintStateVector() ; cout << endl;
@@ -352,7 +358,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks);
     
     const int modified_num_q_B = num_q_a + num_q_b - 1;
-    const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
+//    const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             const idx_size first_half = __builtin_ctzl(((xCZ_bitmask[i] << 64) >> 64).to_ulong());
@@ -368,19 +374,19 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-    if (book_keep &&
-        (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
-        data_per_cycles.memory.push_back(GetMemUsage());
-        data_per_cycles.addends.push_back(1);
-        if (cut_type == QubitPartition::Cuts::Horizontal) {
-            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-            data_per_cycles.xCZ_V.push_back(0);
-        }
-        else {
-            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-            data_per_cycles.xCZ_H.push_back(0);
-        }
-    }
+//    if (book_keep &&
+//        (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
+//        data_per_cycles.memory.push_back(GetMemUsage());
+//        data_per_cycles.addends.push_back(1);
+//        if (cut_type == QubitPartition::Cuts::Horizontal) {
+//            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+//            data_per_cycles.xCZ_V.push_back(0);
+//        }
+//        else {
+//            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+//            data_per_cycles.xCZ_H.push_back(0);
+//        }
+//    }
 }
 
 void TensorProductStateVector::
@@ -462,8 +468,10 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 int TensorProductStateVector::
-ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                           idx_size prefix_size,
+ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
+                           idx_size& cz_path,
+                           const idx_size cz_path_len,
+                           const idx_size suffix_size,
                            const bitset<128>& X_bitmask,
                            const bitset<128>& Y_bitmask,
                            const bitset<128>& H_bitmask,
@@ -489,9 +497,11 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
         
-        state_a -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateA_Xbitmask, stateA_Ybitmask,
-                                              stateA_Hbitmask, CZ_bitmasks_a, T_bitmasks_a, th,
-                                              last_cycle);
+        state_a -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                              cz_path_len, suffix_size,
+                                              stateA_Xbitmask, stateA_Ybitmask,
+                                              stateA_Hbitmask, CZ_bitmasks_a,
+                                              T_bitmasks_a, th, last_cycle);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
@@ -508,9 +518,11 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
         
-        state_b -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, stateB_Xbitmask, stateB_Ybitmask,
-                                              stateB_Hbitmask, CZ_bitmasks_b, T_bitmasks_b, th,
-                                              last_cycle);
+        state_b -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                              cz_path_len, suffix_size,
+                                              stateB_Xbitmask, stateB_Ybitmask,
+                                              stateB_Hbitmask, CZ_bitmasks_b,
+                                              T_bitmasks_b, th, last_cycle);
     }
     
     return -1;

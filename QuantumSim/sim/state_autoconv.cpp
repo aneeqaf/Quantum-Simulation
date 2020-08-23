@@ -56,8 +56,10 @@ AdaptiveStateVector::
 }
 
 int AdaptiveStateVector::
-ApplyBlockOfDiagGates(string& cz_bits,
-                      idx_size prefix_size,
+ApplyBlockOfDiagGates(int& remaining_cz_bits,
+                      idx_size& cz_path,
+                      const idx_size cz_path_len,
+                      const idx_size suffix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2],
                       const bitset<128>& H_bitmask,
@@ -65,17 +67,20 @@ ApplyBlockOfDiagGates(string& cz_bits,
 {
     int last_xCZ_idx = -1;
     if (full_state) {
-        if (book_keep) {
-            data_per_cycles.xCZ_H.push_back(0);
-            data_per_cycles.xCZ_V.push_back(0);
-            data_per_cycles.addends.push_back(0);
-            data_per_cycles.memory.push_back(GetMemUsage());
-        }
-        full_state -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks, last_cycle);
+//        if (book_keep) {
+//            data_per_cycles.xCZ_H.push_back(0);
+//            data_per_cycles.xCZ_V.push_back(0);
+//            data_per_cycles.addends.push_back(0);
+//            data_per_cycles.memory.push_back(GetMemUsage());
+//        }
+        full_state -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
+                                            cz_path_len, suffix_size,
+                                            CZ_bitmasks, T_bitmasks, last_cycle);
     }
     else {
-        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks,
-                                                             T_bitmasks, H_bitmask, last_cycle);
+        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
+                                                            cz_path_len, suffix_size, CZ_bitmasks,
+                                                            T_bitmasks, H_bitmask, last_cycle);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
             Time time;
@@ -151,8 +156,10 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 int AdaptiveStateVector::
-ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                           idx_size prefix_size,
+ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
+                           idx_size& cz_path,
+                           const idx_size cz_path_len,
+                           const idx_size suffix_size,
                            const bitset<128>& X_bitmask,
                            const bitset<128>& Y_bitmask,
                            const bitset<128>& H_bitmask,
@@ -163,18 +170,30 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
 {
     int last_xCZ_idx = -1;
     if (full_state) {
-        if (book_keep) {
-            data_per_cycles.xCZ_H.push_back(0);
-            data_per_cycles.xCZ_V.push_back(0);
-            data_per_cycles.addends.push_back(0);
-            data_per_cycles.memory.push_back(GetMemUsage());
-        }
-        full_state -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask, H_bitmask,
-                                                 CZ_bitmasks, T_bitmasks, th, last_cycle);
+//        if (book_keep) {
+//            data_per_cycles.xCZ_H.push_back(0);
+//            data_per_cycles.xCZ_V.push_back(0);
+//            data_per_cycles.addends.push_back(0);
+//            data_per_cycles.memory.push_back(GetMemUsage());
+//        }
+        full_state -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                                 cz_path_len, suffix_size,
+                                                 X_bitmask,Y_bitmask,
+                                                 H_bitmask, CZ_bitmasks,
+                                                 T_bitmasks, th, last_cycle);
     }
     else {
-        last_xCZ_idx = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask,
-                                                                  H_bitmask, CZ_bitmasks, T_bitmasks, th, last_cycle);
+        if (cz_path_len == 0)
+            sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                                       cz_path_len, suffix_size,
+                                                       X_bitmask, Y_bitmask,
+                                                        H_bitmask, CZ_bitmasks,
+                                                        T_bitmasks, th, last_cycle);
+        else
+            last_xCZ_idx = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+                                                                      suffix_size, X_bitmask, Y_bitmask,
+                                                                      H_bitmask, CZ_bitmasks,
+                                                                      T_bitmasks, th, last_cycle);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
             Time time;
