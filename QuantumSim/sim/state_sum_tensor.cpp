@@ -306,8 +306,8 @@ FormGatesBitmaskXCZ(bool& terminate,
                     const idx_size suffix_size,
                     const bitset<128>* __restrict CZ_bitmasks)
 {
-    const QubitPartition qp = tensor_addends[0] -> GetQp();
-    const int num_q_a = qp.getNumQubitsInBlock(0);
+    static const QubitPartition qp = tensor_addends[0] -> GetQp();
+    static const int num_q_a = qp.getNumQubitsInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
     int last_xCZ_idx = 0;
     
@@ -461,7 +461,8 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
 void SumOfTensorsProductsStateVector::
 CopyState(const SumOfTensorsProductsStateVector& rhs)
 {
-    num_addends = rhs.GetNumAddends();
+    sim_type = rhs.sim_type;
+    num_addends = rhs.num_addends;
     
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i] -> CopyState(*rhs.tensor_addends[i]);
@@ -470,7 +471,8 @@ CopyState(const SumOfTensorsProductsStateVector& rhs)
 void SumOfTensorsProductsStateVector::
 CopyMemberVars(const SumOfTensorsProductsStateVector& rhs)
 {
-    num_addends = rhs.GetNumAddends();
+    sim_type = rhs.sim_type;
+    num_addends = rhs.num_addends;
     
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i] -> CopyMemberVars(*rhs.tensor_addends[i]);

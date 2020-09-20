@@ -477,7 +477,7 @@ ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
     const idx_size num_iters = amp_size/(num_indices * num_threads * add);
     
     if (block_size > 64) {
-        vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
+        static vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
         #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t) {
             parallel_starting_idxs[t][0] = indices[0] + t * block_size;

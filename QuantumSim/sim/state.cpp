@@ -672,6 +672,10 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
 void FullAmpStateVector::
 CopyState(const FullAmpStateVector& rhs)
 {
+    max_prob = rhs.max_prob;
+    min_prob = rhs. min_prob;
+    amp_size = rhs.amp_size;
+    num_qubits = rhs.num_qubits;
     global_factor_power = rhs.global_factor_power;
     global_i_counter = rhs.global_i_counter;
     zero_opt_mask = rhs.zero_opt_mask;
@@ -682,7 +686,7 @@ CopyState(const FullAmpStateVector& rhs)
     float* __restrict rhs_t_amp = (float*)__builtin_assume_aligned(rhs.amp, 64);
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-#pragma omp parallel for num_threads(num_threads)
+    #pragma omp parallel for num_threads(num_threads)
     for (idx_size i = 0; i < size; i+=8) {
         const __m256 temp_amp = _mm256_load_ps (&rhs_t_amp[i]);
         _mm256_store_ps(&t_amp[i], temp_amp);

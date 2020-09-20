@@ -24,6 +24,7 @@ total_time(0), branch_time(0), prefix_time(0), XE_time(0), mmap_time(0), config(
     
     if (config -> proc_prefix_bits)
         adjustment_factor = 2;
+    
 }
 
 void SequentialSimulation::
@@ -235,26 +236,38 @@ CheckpointWithoutFile(bool branch,
 {
     
     Time copy_time;
-    copy_time.StartTime();
-    SumOfTensorsProductsStateVector temp_amp ((SumOfTensorsProductsStateVector&)amp);
-    double time_copying = copy_time.GetElapsedTime();
-    amp.time_by_category.copying += time_copying;
-    ++amp.count_of_category.copying;
-    prefix_time += time_copying;
     
     if (branch) {
+        copy_time.StartTime();
+        static SumOfTensorsProductsStateVector temp_amp1  =
+        SumOfTensorsProductsStateVector(circuit.GetNumQubits(), config -> sim_type,
+                                            config -> hcut, config -> vcut, config -> row_major,
+                                            config -> first_part_smaller, config -> verbose);
+        CopyOrRead(false, false, temp_amp1, amp);
+        amp.time_by_category.copying += copy_time.GetElapsedTime();
+        ++amp.count_of_category.copying;
         if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
         }
-        MainLoopForBranching(temp_amp, circuit, amp, gate_i);
+        MainLoopForBranching(temp_amp1, circuit, amp, gate_i);
     }
     else {
+        copy_time.StartTime();
+        static SumOfTensorsProductsStateVector temp_amp2  =
+        SumOfTensorsProductsStateVector(circuit.GetNumQubits(), config -> sim_type,
+                                            config -> hcut, config -> vcut, config -> row_major,
+                                            config -> first_part_smaller, config -> verbose);
+        CopyOrRead(false, false, temp_amp2, amp);
+        double time_copying = copy_time.GetElapsedTime();
+        amp.time_by_category.copying += time_copying;
+        ++amp.count_of_category.copying;
+        prefix_time += time_copying;
         if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
         }
-        MainLoopForRanges(temp_amp, circuit, amp);
+        MainLoopForRanges(temp_amp2, circuit, amp);
     }
 }
 
@@ -450,7 +463,7 @@ Simulate(GenericQuantumState& amp,
     }
     
     total_time += time.GetElapsedTime() - XE_time;
-    total_time = circuit_loop_time;
+//    total_time = circuit_loop_time;
     
     ReportingAfterSim(amp, circuit);
 }
@@ -568,15 +581,14 @@ SimulationLoop(GenericQuantumState &amp,
     Time loop_time;
     loop_time.StartTime();
     
-    idx_size size = circuit.GetTotalNumGates();
-    int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
-    auto gates = circuit.GetGates();
-    bool terminate = false;
-    int last_layers_of_H = config -> last_layers_H;
+    static const idx_size size = circuit.GetTotalNumGates();
+    static const int total_circuit_qubits = circuit.GetNumQubits();
+    static const auto gates = circuit.GetGates();
     
+    bool terminate = false;
+    int current_cycle = 0, last_layers_of_H = config -> last_layers_H;
     Time time, cycle_time;
-    idx_size i = gate_i;
-    for (; i < size; ++i) {
+    for (idx_size i = gate_i; i < size; ++i) {
         
         if (amp.book_keep)
             ++num_layers;

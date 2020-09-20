@@ -161,10 +161,10 @@ int TensorProductStateVector::
 FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
                              const bitset<128>* __restrict gate_bitmasks)
 {
-    const int qubits_a = state_a -> GetNumQubits(), qubits_a_1 = qubits_a - 1,
+    static const int qubits_a = state_a -> GetNumQubits(), qubits_a_1 = qubits_a - 1,
     num_q_1 = qp.getNumQubits() - 1;
-    const bitset<128> block0_bitmask = qp.getBlockBitmask(0);
-    const bitset<128> block1_bitmask = qp.getBlockBitmask(1);
+    static const bitset<128> block0_bitmask = qp.getBlockBitmask(0);
+    static const bitset<128> block1_bitmask = qp.getBlockBitmask(1);
     int count = 0;
     
     // CZ bitmasks array is numbered in the opposite direction
@@ -531,6 +531,10 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
 void TensorProductStateVector::
 CopyState(const TensorProductStateVector& rhs)
 {
+    qp = rhs.qp;
+    cut_type = rhs.cut_type;
+    sim_type = rhs.sim_type;
+    
     state_a -> CopyState(*rhs.state_a);
     state_b -> CopyState(*rhs.state_b);
 }
@@ -540,6 +544,7 @@ CopyMemberVars(const TensorProductStateVector& rhs)
 {
     qp = rhs.qp;
     cut_type = rhs.cut_type;
+    sim_type = rhs.sim_type;
     
     state_a -> CopyMemberVars(*rhs.state_a);
     state_b -> CopyMemberVars(*rhs.state_b);
