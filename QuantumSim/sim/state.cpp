@@ -243,12 +243,12 @@ ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 }
 
 void FullAmpStateVector::
-ApplyHGateOnAllAmps(bool not_cycle_0)
+ApplyHGateOnAllAmps(bool not_initialize_amp)
 {
     Time time;
     time.StartTime();
     
-    if (!not_cycle_0) {
+    if (!not_initialize_amp) {
         float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
         constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
         
