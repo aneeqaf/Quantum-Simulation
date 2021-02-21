@@ -48,11 +48,7 @@ $(INPUT):
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(TARGETDIR) $(OUTPUT) $(INPUT) $(EXE) $(OBJECTS) 
-<<<<<<< HEAD
 	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) $(SZFLAG) -fopenmp -o $@
-=======
-	$(CC) $(EXE) $(OBJECTS) -Wall $(INC) $(LIBS) -lomp -o $@
->>>>>>> master
 
 clean:
 	-rm -f $(SRCDIR)/*.o sim/*.o libs/*.o sim/kernels/*.o benchmark/*.o bin/rr
