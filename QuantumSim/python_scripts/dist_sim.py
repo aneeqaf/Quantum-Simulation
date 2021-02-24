@@ -33,7 +33,7 @@ from math import sqrt, floor, ceil
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--num_idx", nargs=1, required=False, default=1000)
 @click.option("--print_idxs", nargs=1, required=False, is_flag=True)
-@click.option("--print_all", nargs=1, required=False, default=-1)
+@click.option("--num_q", nargs=1, required=False, default=-1)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
@@ -45,18 +45,23 @@ from math import sqrt, floor, ceil
 @click.option("--binary_vectors_only", nargs=1, required=False, is_flag=True)
 @click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
 @click.option("--count_zeros", nargs=1, required=False, is_flag=True)
+@click.option("--compress_cw_bits", nargs=1, required=True, default=0)
+@click.option("--compress_p_rejection", nargs=1, required=True, default=0.0)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
- idx_file, print_idxs, num_batches, num_threads, print_all, max_procs, ranges_bits, trial, \
+ idx_file, print_idxs, num_batches, num_threads, num_q, max_procs, ranges_bits, trial, \
  approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
  layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only, save_checkpoint_to_file,
- count_zeros):
+ count_zeros, compress_cw_bits, compress_p_rejection):
 
 	dist_util.CheckInputFile(circuit)
 
 	epsilon = 1
 	max_threads = cpu_count()
 	binary = "./bin/rr "
-	command = binary + "-i " + circuit 
+	command = binary + "-i " + circuit
+
+	if compress_p_rejection and not compress_cw_bits:
+		compress_cw_bits = 11;
 
 	if not num_batches:
 		num_batches = int(max_threads/num_threads);
@@ -67,9 +72,10 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	# If the entire state vector needs to be printed, specify this command.
 	# The value is the number of qubits in the circuit
-	if int(print_all) != -1:
+	if int(num_q) != -1:
+		num_idx = 1 << int(num_q)
 		with open(idx_file, "w") as f:
-			for q in range(1 << int(print_all)):
+			for q in range(1 << int(num_q)):
 				f.write(str(q) + "\n")
 
 	# cir_name = circuit + "_" + str(depth) + "_"
@@ -77,10 +83,10 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	commandH = dist_util.BuildDistCommand(command, 0, num_threads, num_highq, approx, column_major,
 	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
-	count_zeros, h_cut = h_cut) 
+	count_zeros, compress_cw_bits, compress_p_rejection, h_cut = h_cut) 
 	commandV = dist_util.BuildDistCommand(command, 1, num_threads, num_highq, approx, column_major,
 	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
-	count_zeros, v_cut = v_cut) 
+	count_zeros, compress_cw_bits, compress_p_rejection, v_cut = v_cut) 
 		
 	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command, depth = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
@@ -168,6 +174,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		post_launch_cmd += " --binary_vectors_only"
 	if save_checkpoint_to_file:
 		post_launch_cmd += " --save_checkpoint_to_file " + str(save_checkpoint_to_file)
+	if compress_cw_bits:
+		post_launch_cmd += " --compress"
 	if multiple_nodes:
 		post_launch_cmd += " --not_final_amps"
 		post_launch_cmd += "\033[1m --batch_range <inclusive start, exclusive end> \033[0m"

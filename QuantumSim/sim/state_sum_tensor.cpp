@@ -88,6 +88,7 @@ SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs)
 {
     sim_type = rhs.sim_type;
     num_addends = rhs.num_addends;
+    compressed = rhs.compressed;
     
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends.push_back(new TensorProductStateVector(*rhs.tensor_addends[i]));
@@ -100,6 +101,8 @@ operator=(const SumOfTensorsProductsStateVector& rhs)
     swap(tensor_addends, temp.tensor_addends);
     sim_type = rhs.sim_type;
     num_addends = rhs.num_addends;
+    compressed = rhs.compressed;
+    
     return *this;
 }
 
@@ -458,26 +461,6 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     return last_xCZ_idx;
 }
 
-void SumOfTensorsProductsStateVector::
-CopyState(const SumOfTensorsProductsStateVector& rhs)
-{
-    sim_type = rhs.sim_type;
-    num_addends = rhs.num_addends;
-    
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CopyState(*rhs.tensor_addends[i]);
-}
-
-void SumOfTensorsProductsStateVector::
-CopyMemberVars(const SumOfTensorsProductsStateVector& rhs)
-{
-    sim_type = rhs.sim_type;
-    num_addends = rhs.num_addends;
-    
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CopyMemberVars(*rhs.tensor_addends[i]);
-}
-
 FullAmpStateVector* SumOfTensorsProductsStateVector::
 ConvertSumOfTensorsToStateAVX()
 {
@@ -785,7 +768,7 @@ CalculateMeanEntropy2Cuts() const
     double entropy = 0.0;
     
     auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
-    idx_size range = sampling_factor , num_ranges = amp_size / range;
+    idx_size range = SAMPLING_FACTOR , num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
         cmplx ampl =  t0[idx] + t1[idx];
@@ -910,7 +893,7 @@ PrintStateVector(const string& outfile,
                 file << imag(amp) << "j";
             file << "\n";
             
-            off = 1 + rand() % sampling_factor;
+            off = 1 + rand() % SAMPLING_FACTOR;
         }
     }
     else {
@@ -961,7 +944,7 @@ PrintProbabilities(const string& out_file,
             
             file << prob << "\n";
             
-            off = 1 + rand() % sampling_factor;
+            off = 1 + rand() % SAMPLING_FACTOR;
         }
     }
     else {
@@ -984,10 +967,55 @@ ReadFromDisk(const string& filename)
 }
 
 void SumOfTensorsProductsStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const SumOfTensorsProductsStateVector& amp = (const SumOfTensorsProductsStateVector&)rhs;
-    num_addends = amp.num_addends;
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.GetNumAddends();
+    
     for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> SetMemberVariables(*amp.tensor_addends[i]);
+        tensor_addends[i] -> CopyState(*t_rhs.tensor_addends[i]);
+}
+
+void SumOfTensorsProductsStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.num_addends;
+    compressed = t_rhs.compressed;
+    sim_type = t_rhs.sim_type;
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CopyMemberVars(*t_rhs.tensor_addends[i]);
+}
+
+void SumOfTensorsProductsStateVector::
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CompressStateVector(num_codewords, p_rejection);
+    
+    compressed = true;
+}
+
+void SumOfTensorsProductsStateVector::
+DecompressStateVector()
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void SumOfTensorsProductsStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.num_addends;
+    sim_type = t_rhs.sim_type;
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> DecompressAndCopyAnotherState(*t_rhs.tensor_addends[i]);
+    
+    compressed = false;
 }

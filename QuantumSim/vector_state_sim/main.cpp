@@ -100,20 +100,22 @@ int main(int argc, char *argv[])
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
         { "first_partition_smaller",    no_argument,       nullptr, 'f' },
         { "save_checkpoint_to_file",    required_argument,       nullptr, 'r' },
-        { "count_zeros",    no_argument,       nullptr, 'z' },
+        { "count_zeros",    no_argument,       nullptr, '0' },
+        { "Cramer",    required_argument,       nullptr, 'z' },
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false;
+    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
     save_cp_to_file = 0;
     float norm_perc = 0;
-    idx_size cz_path = 0, epsilon = 0;
+    idx_size cz_path = 0, epsilon = 0, cramer_cw = 0;
+    double cramer_p_reject = 0;
     int sim_type = -1;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
@@ -122,7 +124,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:z", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -351,8 +353,21 @@ int main(int argc, char *argv[])
                 
                 break;
             }
-            case 'z': {
+            case '0': {
                 count_zeros = true;
+                break;
+            }
+            case 'z': {
+                compress = true;
+                string args = string(optarg);
+                if (args.find(",") != string::npos) {
+                    string num_cw = args.substr(0, args.find_first_of(","));
+                    string p_reject = args.substr(args.find_first_of(",") + 1, args.size());
+                    cramer_cw = (1ull << stoul(args)) - 1;
+                    p_reject = stod(p_reject);
+                }
+                else
+                    cramer_cw = (1ull << stoul(args)) - 1;
                 break;
             }
             case '|': {
@@ -440,7 +455,7 @@ int main(int argc, char *argv[])
                                  print_amp, print_idx, (Config::SimType)sim_type, verbose, vcut, hcut,
                                  depth, threshold, num_threads, true, nearest_neighbors, row_major,
                                  layers_H_gates, store_checkpoint_range, first_partition_smaller,
-                                 count_zeros, save_cp_to_file);
+                                 count_zeros, save_cp_to_file, compress, cramer_cw, cramer_p_reject);
     
     if (print_amp) {
         if (seed != -1)

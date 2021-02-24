@@ -80,9 +80,7 @@ public:
                                    bool last_cycle = false);
     void PopulateGlobalToLocalMap(vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
-    void CopyState(const TensorProductStateVector& rhs);
-    void CopyMemberVars(const TensorProductStateVector& rhs);
-
+    
     cmplx operator[](bitset<128> i);
     cmplx GetAmpFromGlobalState(const idx_size a,
                                 const idx_size b) const;
@@ -111,6 +109,12 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -119,7 +123,6 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
     TensorProductStateVector(): qp(0, 0) {
         state_a = new FullAmpStateVector();

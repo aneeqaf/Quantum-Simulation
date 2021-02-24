@@ -350,6 +350,7 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
 void Circuit::
 PrintGates() const
 {
+    cout << endl;
     for (auto& g : gates) {
         if(g.ids.back() == Gate::Type::Z)
             cout << "CZ ";

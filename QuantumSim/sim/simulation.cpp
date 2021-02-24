@@ -13,7 +13,7 @@ double circuit_loop_time = 0;
 
 SequentialSimulation::
 SequentialSimulation(Config* c): curr_gate(0), num_layers(0), adjustment_factor(1),
-total_time(0), branch_time(0), prefix_time(0), XE_time(0), mmap_time(0), config(c)
+memory_usage(0), total_time(0), branch_time(0), prefix_time(0), XE_time(0), mmap_time(0), config(c)
 {
     if (config -> norm_depth) {
         idx_size num_norms = config -> norm_depth ? 1ull << config -> norm_depth : 1ull << config -> ranges_bits;
@@ -77,20 +77,40 @@ CopyOrRead(bool file_back_up,
            GenericQuantumState& amp,
            const GenericQuantumState& copy_amp)
 {
-    Time copy_time;
-    copy_time.StartTime();
+    
     if (file_back_up) {
+        Time file_io_time;
+        file_io_time.StartTime();
+        
         amp.ReadFromDisk(config -> temp_dir + "checkpoint" + to_string(branch));
-        amp.SetMemberVariables(copy_amp);
+        amp.CopyMemberVars(copy_amp);
+        
+        double time_file_io = file_io_time.GetElapsedTime();
+        amp.time_by_category.copying += time_file_io;
+        phase1_time += time_file_io;
+        ++amp.count_of_category.copying;
     }
     else {
-        SumOfTensorsProductsStateVector& temp_amp = (SumOfTensorsProductsStateVector&)amp;
-        temp_amp.CopyState((SumOfTensorsProductsStateVector&)copy_amp);
+        Time c_time;
+        c_time.StartTime();
+        
+        if (config -> compress) {
+            amp.DecompressAndCopyAnotherState(copy_amp);
+            
+            double time = c_time.GetElapsedTime();
+            amp.time_by_category.decompress += time;
+            phase1_time += time;
+            ++amp.count_of_category.decompress;
+        }
+        else {
+            amp.CopyState(copy_amp);
+            
+            double time_copying = c_time.GetElapsedTime();
+            amp.time_by_category.copying += time_copying;
+            phase1_time += time_copying;
+            ++amp.count_of_category.copying;
+        }
     }
-    double time_copying = copy_time.GetElapsedTime();
-    amp.time_by_category.copying += time_copying;
-    prefix_time += time_copying;
-    ++amp.count_of_category.copying;
 }
 
 void SequentialSimulation::
@@ -120,6 +140,18 @@ MainLoopForRanges(GenericQuantumState& amp,
         
         auto& idx = config -> indices;
         if (config -> dfs_length == 0) {
+            if (amp.compressed) {
+                Time decompress_time;
+                decompress_time.StartTime();
+                
+                amp.DecompressStateVector();
+                
+                double time_decompress = decompress_time.GetElapsedTime();
+                amp.time_by_category.decompress += time_decompress;
+                phase1_time += time_decompress;
+                ++amp.count_of_category.decompress;
+            }
+            
             Time amp_st_time;
             amp_st_time.StartTime();
             for(idx_size i = 0; i < idx.size(); ++i)
@@ -129,8 +161,21 @@ MainLoopForRanges(GenericQuantumState& amp,
             prefix_time += time_storage;
         }
         
-        if (config -> norm_perc)
+        if (config -> norm_perc) {
+            if (amp.compressed) {
+                Time decompress_time;
+                decompress_time.StartTime();
+                
+                amp.DecompressStateVector();
+                
+                double time_decompress = decompress_time.GetElapsedTime();
+                amp.time_by_category.decompress += time_decompress;
+                phase1_time += time_decompress;
+                ++amp.count_of_category.decompress;
+            }
+            
             norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
+        }
         amp.book_keep = false;
         
         config -> curr_mode = Config::SimMode::Ranges;
@@ -169,9 +214,11 @@ MainLoopForBranching(GenericQuantumState& amp,
         SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_p_2, config -> dfs_length, 0, gate_i);
         amp.partition_to_sim = 'x';
         
-        Time amp_st_time;
-        amp_st_time.StartTime();
-        for(idx_size i = 0; i < idxs_len; ++i)
+        auto& idx = config -> indices;
+        for(idx_size i = 0; i < idxs_len; ++i) {
+            assert(amp.compressed == false);
+            Time amp_st_time;
+            amp_st_time.StartTime();
             amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
          amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
         
@@ -203,7 +250,7 @@ CheckpointWithFile(bool branch,
     copy_time.StartTime();
     amp.WriteAmpToDisk(config -> temp_dir + "checkpoint" + to_string(branch));
     SumOfTensorsProductsStateVector temp_amp;
-    temp_amp.CopyMemberVars((SumOfTensorsProductsStateVector&)amp);
+    temp_amp.CopyMemberVars(amp);
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
     ++amp.count_of_category.copying;
@@ -214,6 +261,8 @@ CheckpointWithFile(bool branch,
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
         }
+        if (amp.book_keep)
+            memory_usage += amp.GetMemUsage();
         MainLoopForBranching(amp, circuit, temp_amp, gate_i);
     }
     else {
@@ -234,41 +283,66 @@ CheckpointWithoutFile(bool branch,
                       Circuit& circuit,
                       const idx_size gate_i)
 {
+    SumOfTensorsProductsStateVector temp_amp;
     
-    Time copy_time;
-    
-    if (branch) {
+    if (config -> compress) {
+        Time compress_time, decompress_time;
+        compress_time.StartTime();
+        
+        amp.CompressStateVector(config -> cramer_num_codewords, config -> cramer_p_rejection);
+        
+        double time_compress = compress_time.GetElapsedTime();
+        amp.time_by_category.compress += time_compress;
+        
+        decompress_time.StartTime();
+        
+        temp_amp.DecompressAndCopyAnotherState(amp);
+        
+        double time_decompress = decompress_time.GetElapsedTime();
+        amp.time_by_category.decompress += time_decompress;
+        
+        phase1_time += time_compress + time_decompress;
+        ++amp.count_of_category.decompress;
+        ++amp.count_of_category.compress;
+        
+        if (amp.book_keep)
+            memory_usage += amp.GetMemUsage();
+    }
+    else {
+        Time copy_time;
         copy_time.StartTime();
-        static SumOfTensorsProductsStateVector temp_amp1  =
-        SumOfTensorsProductsStateVector(circuit.GetNumQubits(), config -> sim_type,
-                                            config -> hcut, config -> vcut, config -> row_major,
-                                            config -> first_part_smaller, config -> verbose);
-        CopyOrRead(false, false, temp_amp1, amp);
-        amp.time_by_category.copying += copy_time.GetElapsedTime();
+        
+        temp_amp.CopyState(amp);
+        temp_amp.CopyMemberVars(amp);
+        
+        double time_copying = copy_time.GetElapsedTime();
+        amp.time_by_category.copying += time_copying;
+        phase1_time += time_copying;
         ++amp.count_of_category.copying;
+        
+        if (amp.book_keep)
+            memory_usage += amp.GetMemUsage();
+    }
+    
+  if (branch) {
         if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
         }
-        MainLoopForBranching(temp_amp1, circuit, amp, gate_i);
+        MainLoopForBranching(temp_amp, circuit, amp, gate_i);
     }
     else {
-        copy_time.StartTime();
-        static SumOfTensorsProductsStateVector temp_amp2  =
-        SumOfTensorsProductsStateVector(circuit.GetNumQubits(), config -> sim_type,
-                                            config -> hcut, config -> vcut, config -> row_major,
-                                            config -> first_part_smaller, config -> verbose);
-        CopyOrRead(false, false, temp_amp2, amp);
-        double time_copying = copy_time.GetElapsedTime();
-        amp.time_by_category.copying += time_copying;
-        ++amp.count_of_category.copying;
-        prefix_time += time_copying;
         if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
         }
-        MainLoopForRanges(temp_amp2, circuit, amp);
+        MainLoopForRanges(temp_amp, circuit, amp);
     }
+    
+    //Should not need to decompress vector. State vector is useless at this point.
+//    assert(amp.compressed == false);
+//    if (config -> SZ_compress)
+//        amp.DecompressStateVector();
 }
 
 void SequentialSimulation::
@@ -386,6 +460,8 @@ Simulate(GenericQuantumState& amp,
 //        amp.approx = config -> proc_prefix_bits + ceil(log2(config -> approx_epsilon));
 //        
     PopulateBenchmarkMap();
+    
+    memory_usage += amp.GetMemUsage();
    
     pair<int, int> twoq_gate_count(0, 0);
 
@@ -447,8 +523,10 @@ Simulate(GenericQuantumState& amp,
         auto& idx = config -> indices;
         Time amp_st_time;
         amp_st_time.StartTime();
-        for(idx_size i = 0; i < idx.size(); ++i)
+        for(idx_size i = 0; i < idx.size(); ++i) {
+            assert(amp.compressed == false);
             amps_of_interest[i] += amp[idx[i]];
+        }
         amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
     }
 
@@ -749,7 +827,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-//    amp.PrintStateVector();
+    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config -> prob_outfile, circuit.GetNumCycles() - 1);
@@ -765,41 +843,11 @@ ReportingAfterSim(GenericQuantumState& amp,
         PrintSimReport(amp, circuit);
 #endif
     
-    amp.RescaleAndApplyGlobalICounter();
+    if (config -> proc_prefix_bits == 0)
+        amp.RescaleAndApplyGlobalICounter();
     
-    if (config -> print_idx) {
-//        sort(config -> indices.begin(), config -> indices.end(), [](bitset<128>& first, bitset<128>& second) {
-//            for (int i = 127; i >= 0; i--) {
-//                if (first[i] ^ second[i]) return (bool)second[i];
-//            }
-//            return false;
-//        });
-        
-        string dir = "output/amp_vectors/" + config -> infile + "_" + to_string(config -> depth)
-        + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
-        if (config -> approx)
-            dir += "_approx_" + to_string(config -> approx_epsilon);
-        string idx_outfile = dir + config -> amp_outfile.substr(config -> amp_outfile.find_last_of("/")) + ".idx";
-        ofstream  idx_out;
-        idx_out.open(idx_outfile);
-        
-        auto& idx_print = config -> indices;
-         
-        //print numbers larger than 64 bits?
-        for (idx_size i = 0; i < idx_print.size(); ++i) {
-            try {
-                idx_out << config -> indices[i].to_ullong() << "\n";
-            }
-            catch (runtime_error) {
-                string dec_binary = "";
-                bitset<128> idx = config -> indices[i];
-                __int128 temp_idx = ((((__int128)((idx >> 64)).to_ullong())) << 64) + ((idx << 64) >> 64).to_ullong();
-                print_u128_u(temp_idx, dec_binary);
-                idx_out << dec_binary << "\n";
-            }
-        }
-        idx_out.close();
-    }
+    if (config -> print_idx)
+        PrintIdxsToFile();
     
     if (config -> norm_perc) {
         ofstream norm_out;
@@ -816,34 +864,51 @@ ReportingAfterSim(GenericQuantumState& amp,
     }
    
     if (config -> print_amp) {
-        
-//        if ((config -> proc_prefix_bits && config -> ascii) || !config -> proc_prefix_bits) {
-//            vector<pair<bitset<128>, cmplx>> amps_with_idx (config -> indices.size(), pair<bitset<128>, cmplx>(0, 0));
-//            for (idx_size i = 0; i < config -> indices.size(); ++i)
-//                amps_with_idx[i] = pair<bitset<128>, cmplx>(config -> indices[i], amps_of_interest[i]);
-//
-//            sort(amps_with_idx.begin(), amps_with_idx.end(),
-//                 [](pair<bitset<128>, cmplx>& first, pair<bitset<128>, cmplx>& second) {
-//                     for (int i = 127; i >= 0; i--) {
-//                         if (first.first[i] ^ second.first[i])
-//                             return (bool)second.first[i];
-//                     }
-//                     return false;
-//                 });
-//
-//            for (idx_size i = 0; i < config -> indices.size(); ++i)
-//                amps_of_interest[i] = amps_with_idx[i].second;
-//        }
-        
       if (config -> proc_prefix_bits) {
           if (!config -> ascii) 
               config -> mmap_obj -> WriteToDisk();
          else
             WriteMmapToASCIIFile();
       }
-     else
+      else
         WriteAmpToASCIIFile(amp);
     }    
+}
+
+void SequentialSimulation::
+PrintIdxsToFile() const
+{
+    //        sort(config -> indices.begin(), config -> indices.end(), [](bitset<128>& first, bitset<128>& second) {
+    //            for (int i = 127; i >= 0; i--) {
+    //                if (first[i] ^ second[i]) return (bool)second[i];
+    //            }
+    //            return false;
+    //        });
+    
+    string dir = "output/amp_vectors/" + config -> infile + "_" + to_string(config -> depth)
+    + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
+    if (config -> approx)
+        dir += "_approx_" + to_string(config -> approx_epsilon);
+    string idx_outfile = dir + config -> amp_outfile.substr(config -> amp_outfile.find_last_of("/")) + ".idx";
+    ofstream  idx_out;
+    idx_out.open(idx_outfile);
+    
+    auto& idx_print = config -> indices;
+    
+    //print numbers larger than 64 bits?
+    for (idx_size i = 0; i < idx_print.size(); ++i) {
+        try {
+            idx_out << config -> indices[i].to_ullong() << "\n";
+        }
+        catch (runtime_error) {
+            string dec_binary = "";
+            bitset<128> idx = config -> indices[i];
+            __int128 temp_idx = ((((__int128)((idx >> 64)).to_ullong())) << 64) + ((idx << 64) >> 64).to_ullong();
+            print_u128_u(temp_idx, dec_binary);
+            idx_out << dec_binary << "\n";
+        }
+    }
+    idx_out.close();
 }
 
 void SequentialSimulation::
@@ -1241,7 +1306,7 @@ PrintSimReport(GenericQuantumState& amp,
         ostringstream ss (ostringstream::ate);
         ss << setprecision(3);
 
-        double memory = amp.GetMemUsage();
+        double memory =  sizeof(cmplx) * amp.GetSize();
         ss << "State representation size : ";
 
         if (memory >= (1 << 30)) {
@@ -1284,7 +1349,7 @@ PrintSimReport(GenericQuantumState& amp,
         }
         
         
-        if (config -> verbose >= Config::Verbose::Default) {
+        if (config -> verbose >= Config::Verbose::Default && config -> proc_prefix_bits == 0) {
             double norm = amp.CalculateNormSquared();
             ss << "Norm";
             if (amp.GetNumAddends() > 1)
@@ -1296,7 +1361,7 @@ PrintSimReport(GenericQuantumState& amp,
             double min = amp.GetMinProb();
             if (sqrt(norm) > 0.9) {
                 ss << "Mean entropy : " <<  amp.CalculateMeanEntropy() << " ";
-                ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(sampling_factor) << "\n";
+                ss << "Cross entropy : " <<  amp.CalculateCrossEntropy(SAMPLING_FACTOR) << "\n";
             }
             ss << "Probabilities : " << amp.GetMinProb() << "(min), "
                  << amp.GetMaxProb() << "(max), "
@@ -1328,7 +1393,7 @@ PrintSimReport(GenericQuantumState& amp,
         cout << ss.str();
     }
     
-    if (!config -> proc_prefix_bits) {
+    if (config -> proc_prefix_bits == 0) {
         
         string key = config -> infile.substr(0, config -> infile.find_first_of('.')) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
@@ -1432,7 +1497,7 @@ PrintSimReport(GenericQuantumState& amp,
             
             cout << "\n";
         }
-        else {
+        else if (config -> proc_prefix_bits == 0) {
             cout << "amp[3]  \t= " << real(amp[3]);
             if (imag(amp[3]) < 0)
                 cout << " - " << abs(imag(amp[3])) << "j\n";
@@ -1464,6 +1529,10 @@ PrintSimReport(GenericQuantumState& amp,
                 cout << " + " << imag(amp[temp_amp_size - 3]) << "j\n";
             
             cout << "\n";
+        }
+        else {
+            cerr << "Can't print state vector without amp_of_interest vector for xCZ path simulation\n";
+            exit(1);
         }
     }
     
@@ -1556,6 +1625,22 @@ PrintSimReport(GenericQuantumState& amp,
             sum_percen += (amp.time_by_category.copying/(total_time)) * 100;
         }
         
+        if (amp.time_by_category.compress) {
+            string RP_s = "\tCompression (" + to_string(amp.count_of_category.compress) + ")";
+            ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
+            << amp.time_by_category.compress << " s  \t\t  =  "
+            << (amp.time_by_category.compress/(total_time)) * 100 << "%\n";
+            sum_percen += (amp.time_by_category.compress/(total_time)) * 100;
+        }
+        
+        if (amp.time_by_category.decompress) {
+            string RP_s = "\tDecompression (" + to_string(amp.count_of_category.decompress) + ")";
+            ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
+            << amp.time_by_category.decompress << " s  \t\t  =  "
+            << (amp.time_by_category.decompress/(total_time)) * 100 << "%\n";
+            sum_percen += (amp.time_by_category.decompress/(total_time)) * 100;
+        }
+        
         if(amp.time_by_category.norm && config -> norm_depth) {
             string RP_n = "\tNorm ";
             ss <<  RP_n << setw(width - (int)RP_n.size()) << right << ": "
@@ -1591,6 +1676,20 @@ PrintSimReport(GenericQuantumState& amp,
             ss << "\tMemory mapped I/O : " << mmap_time << " s = "
             << (mmap_time/(total_time)) * 100 << "%\n";
         }
+        
+        ss << "Simulation memory usage : " ;
+        if (memory_usage >= (1 << 30)) {
+            ss << memory_usage / (1 << 30) << " GiB \n";
+        }
+        else if (memory_usage >= (1 << 20)) {
+            ss << memory_usage / (1 << 20) << " MiB \n";
+        }
+        else if (memory_usage >= (1 << 10)) {
+            ss << memory_usage / (1 << 10) << " KiB \n";
+        }
+        else
+            ss << memory_usage << " B \n";
+        
         cout << ss.str() << "\n";
     }
     

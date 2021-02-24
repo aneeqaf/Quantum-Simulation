@@ -11,6 +11,7 @@
 Times GenericQuantumState::time_by_category({});
 Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
+vector<array<complex<float>*, 2>> GenericQuantumState::compressed_vector_ptrs({});
 Data GenericQuantumState::data_per_cycles({});
 bool GenericQuantumState::book_keep = true;
 Config::SimType GenericQuantumState::sim_type = Config::SimType::FullState;
@@ -28,7 +29,7 @@ ostream& operator<<(ostream& o, const vector<int>& v) {
 }
 
 GenericQuantumState::
-GenericQuantumState(int n_threads){
+GenericQuantumState(int n_threads): compressed(false){
     num_threads = n_threads;
 }
 

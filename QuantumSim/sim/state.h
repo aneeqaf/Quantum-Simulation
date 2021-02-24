@@ -25,6 +25,7 @@ private:
     int num_qubits;
     ZeroOptMask zero_opt_mask; //0 is most significant
     bool all_zeros;
+    Cramer* cramer;
 
     bitset<128> FormBitmask(const vector<int>& qubits);
     void TransferOddBitsFromHiQubitsBM(int& th,
@@ -98,8 +99,6 @@ public:
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);
-    void CopyState(const FullAmpStateVector& rhs);
-    void CopyMemberVars(const FullAmpStateVector& rhs);
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
@@ -133,6 +132,12 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -141,12 +146,11 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
     FullAmpStateVector(): max_prob(numeric_limits<double>::min()),
         min_prob(numeric_limits<double>::max()), amp(nullptr), amp_size(0),
         global_factor_power(0), global_i_counter(0),
-        num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false) {}
+        num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false), cramer(nullptr) {}
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);

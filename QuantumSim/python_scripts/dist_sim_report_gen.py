@@ -14,8 +14,9 @@ from math import ceil
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
 @click.option("--save_checkpoint_to_file", nargs=1, required=False, default=0)
+@click.option("--compress", required=False, is_flag=True)
 def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
-	save_checkpoint_to_file):
+	save_checkpoint_to_file, compress):
 
 	log_dir = os.path.join("output", "log", cir_file)
 
@@ -29,7 +30,8 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 	qubits = 0
 	print_line = False
 	categories = {'I_H':0, 'L_H':0, 'CZ & T':0, 'xCZ':0, 'Single X':0, 'Single Y':0, 'H_lo':0, 'H_hi':0,\
-	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0, 'High XY': 0 , 'Low XY': 0}
+	'Merged X & Y':0, 'Rescaling passes':0, 'Copying':0, 'High XY': 0 , 'Low XY': 0, 'Compression': 0,\
+	'Decompression':0}
 	num_threads = 0
 	cz_path_len = 0
 	cz_path_ranges = 0
@@ -105,9 +107,9 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						print_line_out += line
 					elif "State representation size" in line:
 						mem_line = line
-						mem_usage = line.split(":")[1].replace('\n', '')
-						mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
-						unit = mem_usage.split(" ")[2].replace(' ','')
+						# mem_usage = line.split(":")[1].replace('\n', '')
+						# mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
+						# unit = mem_usage.split(" ")[2].replace(' ','')
 						print_line = False
 					elif "Layers simulated" in line:
 						num_layers_stats = line.replace("\n", "")
@@ -143,6 +145,14 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
 					elif "Copying" in line:
 						categories['Copying'] = int(line.split()[1].replace("(","").replace(")",""))
+					elif "Compression" in line:
+						categories['Compression'] = int(line.split()[1].replace("(","").replace(")",""))
+					elif "Decompression" in line:
+						categories['Decompression'] = int(line.split()[1].replace("(","").replace(")",""))
+					elif "Simulation memory usage" in line:
+						mem_usage = line.split(":")[1].replace('\n', '')
+						mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
+						unit = mem_usage.split(" ")[2].replace(' ','')
 					
 					elif "¯\_(ツ)_/¯ " in line and \
 					categories['I_H'] + categories['L_H'] + categories['CZ & T'] + categories['Low XY'] + \
@@ -157,7 +167,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 	num_CZ_paths = 0 # 1 << cz_path_len if max_procs == 0 else max_procs
 	avg_time_per_category = {'I_H':0.0, 'L_H':0.0, 'CZ & T, Low XY & H':0.0, 'xCZ':0.0, 'Single X & Y':0.0, \
 		 'Merged X & Y':0.0, 'Rescaling passes':0.0, 'Copying':0.0, 'Storing amps':0.0,\
-		  'High XY':0.0}
+		  'High XY':0.0, 'Compression':0.0, 'Decompression':0.0 }
 	
 	amp = {'3':0.0+0.0j, '1/4':0.0+0.0j, '1/2':0.0+0.0j, '3/4':0.0+0.0j, '-3':0.0+0.0j}
 	avg_time_per_process = 0.0
@@ -241,6 +251,10 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Copying" in line:
 						avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Compression" in line:
+						avg_time_per_category['Compression'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
+					elif "Decompression" in line:
+						avg_time_per_category['Decompression'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Storing amps" in line:
 						avg_time_per_category['Storing amps'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Prefix" in line:
@@ -335,13 +349,13 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 
 	print("\t" + mem_line, end='')
 
-	if not save_checkpoint_to_file :
-		if not no_checkpoint_with_ranges and dfs and cz_path_ranges:
-			mem_val *= 3
-		elif cz_path_ranges or dfs:
-			mem_val += mem_val  
-	elif save_checkpoint_to_file == 1 and dfs:
-		mem_val *= 2
+	# if not save_checkpoint_to_file :
+	# 	if not no_checkpoint_with_ranges and dfs and cz_path_ranges:
+	# 		mem_val *= 3
+	# 	elif cz_path_ranges or dfs:
+	# 		mem_val += mem_val  
+	# elif save_checkpoint_to_file == 1 and dfs:
+	# 	mem_val *= 2
 
 	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit, end="")
 
@@ -478,6 +492,16 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 		print("\tCopying (" + str(categories['Copying']) + ")\t\t\t\t: "\
 		 + str(round(avg_time_per_category['Copying'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Copying'])/avg_time_per_process)*100, 3)) + "%")
+
+	if avg_time_per_category['Compression']:
+		print("\tCompression (" + str(categories['Compression']) + ")\t\t\t: "\
+		 + str(round(avg_time_per_category['Compression'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['Compression'])/avg_time_per_process)*100, 3)) + "%")
+
+	if avg_time_per_category['Decompression']:
+		print("\tDecompression (" + str(categories['Decompression']) + ")\t\t\t: "\
+		 + str(round(avg_time_per_category['Decompression'], 3)) + " s  \t= " +\
+		str(round(((avg_time_per_category['Decompression'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Storing amps']:
 		print("\tStoring amps \t\t\t\t: "\

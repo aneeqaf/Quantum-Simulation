@@ -81,9 +81,7 @@ public:
     void UnpopulateGlobalToLocalMap();
     FullAmpStateVector* ConvertSumOfTensorsToState();
     FullAmpStateVector* ConvertSumOfTensorsToStateAVX();
-    void CopyState(const SumOfTensorsProductsStateVector& rhs);
-    void CopyMemberVars(const SumOfTensorsProductsStateVector& rhs);
-
+    
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     double GetMinProb();
@@ -113,6 +111,12 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -121,10 +125,9 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
-    SumOfTensorsProductsStateVector(): num_addends(0) {
-        tensor_addends.push_back(new TensorProductStateVector()); }
+    SumOfTensorsProductsStateVector(): num_addends(1) {
+        tensor_addends.push_back(new TensorProductStateVector());}
     SumOfTensorsProductsStateVector(const int qubits,
                                     const Config::SimType type,
                                     const int hcut = 0,

@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 
+#include <array>
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
@@ -22,10 +23,11 @@
 #include "kernels1.h"
 #include "profile.h"
 #include "config.h"
+#include "Cramer.h"
 
 using namespace std;
 
-constexpr int sampling_factor = 1;
+constexpr int SAMPLING_FACTOR = 1;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;
@@ -125,6 +127,8 @@ inline ostream& operator<<(ostream& o, const QubitPartition& qp) {
 
 class GenericQuantumState {    
 public:
+    static vector<array<complex<float>*, 2>> compressed_vector_ptrs;
+    
     static Data data_per_cycles;
     static vector<string> log;
     static Counts count_of_category;
@@ -133,7 +137,8 @@ public:
     static Config::SimType sim_type;
     static char partition_to_sim;
     static bool book_keep;
-    
+    bool compressed;
+  
     virtual int ApplyBlockOfDiagGates(int& remaining_cz_bits,
                                       idx_size& cz_path,
                                       const idx_size cz_path_len,
@@ -203,6 +208,12 @@ public:
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
     virtual void RescaleAndApplyGlobalICounter() = 0;
+    virtual void CopyState(const GenericQuantumState& rhs) = 0;
+    virtual void CopyMemberVars(const GenericQuantumState& rhs) = 0;
+    virtual void CompressStateVector(idx_size num_codewords,
+                                     double p_rejection) = 0;
+    virtual void DecompressStateVector() = 0;
+    virtual void DecompressAndCopyAnotherState(const GenericQuantumState& rhs) = 0;
     
     virtual void PrintStateVector(const string& outfile,
                                   const int cycle_num) = 0;
@@ -211,9 +222,8 @@ public:
                                     const int cycle_num)  = 0;
     virtual void WriteAmpToDisk(const string& filename) = 0;
     virtual void ReadFromDisk(const string& filename) = 0;
-    virtual void SetMemberVariables(const GenericQuantumState& amp) = 0;
         
-    GenericQuantumState(){}
+    GenericQuantumState(): compressed(false){}
     GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };

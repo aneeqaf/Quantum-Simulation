@@ -32,6 +32,7 @@ AdaptiveStateVector(const AdaptiveStateVector& rhs)
         sumOfTensors = new SumOfTensorsProductsStateVector(*(rhs.sumOfTensors));
     }
     
+    compressed = rhs.compressed;
     total_q = rhs.total_q;
 }
 
@@ -44,6 +45,7 @@ operator=(const AdaptiveStateVector& rhs)
     else
         swap(sumOfTensors, temp.sumOfTensors);
     
+    compressed = rhs.compressed;
     total_q = rhs.total_q;
     return *this;
 }
@@ -208,21 +210,6 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         }
     }
     return last_xCZ_idx;
-}
-
-void AdaptiveStateVector::
-CopyState(const AdaptiveStateVector& rhs)
-{
-    if (rhs.full_state) {
-        full_state -> CopyState(*rhs.full_state);
-        sumOfTensors = nullptr;
-    }
-    else {
-        full_state = nullptr;
-        sumOfTensors -> CopyState(*(rhs.sumOfTensors));
-    }
-    
-    total_q = rhs.total_q;
 }
 
 cmplx AdaptiveStateVector::
@@ -482,12 +469,67 @@ ReadFromDisk(const string& filename)
 }
 
 void AdaptiveStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const AdaptiveStateVector& amp = (const AdaptiveStateVector&)rhs;
-    total_q = amp.total_q;
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    if (t_rhs.full_state) {
+        full_state -> CopyState(*t_rhs.full_state);
+        sumOfTensors = nullptr;
+    }
+    else {
+        full_state = nullptr;
+        sumOfTensors -> CopyState(*(t_rhs.sumOfTensors));
+    }
+    
+    total_q = t_rhs.total_q;
+}
+
+void AdaptiveStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    total_q = t_rhs.total_q;
+    compressed = rhs.compressed;
+    
     if (full_state)
-        full_state -> SetMemberVariables(*amp.full_state);
+        full_state -> CopyMemberVars(*t_rhs.full_state);
     else
-        sumOfTensors -> SetMemberVariables(*amp.sumOfTensors);
+        sumOfTensors -> CopyMemberVars(*t_rhs.sumOfTensors);
+}
+
+void AdaptiveStateVector::
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
+{
+    if (full_state)
+        full_state -> CompressStateVector(num_codewords, p_rejection);
+    else
+        sumOfTensors -> CompressStateVector(num_codewords, p_rejection);
+    
+    compressed = true;
+}
+
+void AdaptiveStateVector::
+DecompressStateVector()
+{
+    if (full_state)
+        full_state -> DecompressStateVector();
+    else
+        sumOfTensors -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void AdaptiveStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    total_q = t_rhs.total_q;
+    
+    if (full_state)
+        full_state -> DecompressAndCopyAnotherState(*t_rhs.full_state);
+    else
+        sumOfTensors -> DecompressAndCopyAnotherState(*t_rhs.sumOfTensors);
+    
+    compressed = false;
 }
