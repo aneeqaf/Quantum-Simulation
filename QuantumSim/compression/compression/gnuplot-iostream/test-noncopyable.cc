@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 Daniel Stahlke
+Copyright (c) 2020 Daniel Stahlke
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,29 +32,29 @@ THE SOFTWARE.
 template <typename T>
 class NonCopyable : boost::noncopyable, public std::vector<T> {
 public:
-	NonCopyable() { }
+    NonCopyable() { }
 };
 
 int main() {
-	Gnuplot gp;
-	NonCopyable<double> nc_x, nc_y;
-	for(int i=0; i<100; i++) {
-		nc_x.push_back(-i);
-		nc_y.push_back(i*i);
-	}
-	gp << "plot '-', '-'\n";
+    Gnuplot gp;
+    NonCopyable<double> nc_x, nc_y;
+    for(int i=0; i<100; i++) {
+        nc_x.push_back(-i);
+        nc_y.push_back(i*i);
+    }
+    gp << "plot '-', '-'\n";
 
-	// These don't work because they make copies.
-	//gp.send1d(std::make_pair(nc_x, nc_y));
-	//gp.send1d(boost::make_tuple(nc_x, nc_y));
-	// These work because they make references:
+    // These don't work because they make copies.
+    //gp.send1d(std::make_pair(nc_x, nc_y));
+    //gp.send1d(boost::make_tuple(nc_x, nc_y));
+    // These work because they make references:
 #if USE_CXX
-	std::cout << "using std::tie" << std::endl;
-	gp.send1d(std::tie(nc_y));
-	gp.send1d(std::forward_as_tuple(nc_x, std::move(nc_y)));
+    std::cout << "using std::tie" << std::endl;
+    gp.send1d(std::tie(nc_y));
+    gp.send1d(std::forward_as_tuple(nc_x, std::move(nc_y)));
 #else
-	std::cout << "using boost::tie" << std::endl;
-	gp.send1d(nc_y);
-	gp.send1d(boost::tie(nc_x, nc_y));
+    std::cout << "using boost::tie" << std::endl;
+    gp.send1d(nc_y);
+    gp.send1d(boost::tie(nc_x, nc_y));
 #endif
 }

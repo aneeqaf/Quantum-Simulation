@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2013 Daniel Stahlke
+Copyright (c) 2020 Daniel Stahlke
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,13 +25,13 @@ THE SOFTWARE.
 #include "gnuplot-iostream.h"
 
 int main() {
-	Gnuplot gp;
+    Gnuplot gp;
 
-	std::vector<int> pts;
-	// This should be okay.
-	gp << gp.sendBinary1d(pts);
-	// This should throw a compilation error.
-	gp << gp.sendBinary2d(pts);
+    std::vector<int> pts;
+    // This should be okay.
+    gp.sendBinary1d(pts);
+    // This should throw a compilation error.
+    gp.sendBinary2d(pts);
 
-	return 0;
+    return 0;
 }

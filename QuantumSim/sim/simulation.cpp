@@ -87,7 +87,6 @@ CopyOrRead(bool file_back_up,
         
         double time_file_io = file_io_time.GetElapsedTime();
         amp.time_by_category.copying += time_file_io;
-        phase1_time += time_file_io;
         ++amp.count_of_category.copying;
     }
     else {
@@ -99,7 +98,6 @@ CopyOrRead(bool file_back_up,
             
             double time = c_time.GetElapsedTime();
             amp.time_by_category.decompress += time;
-            phase1_time += time;
             ++amp.count_of_category.decompress;
         }
         else {
@@ -107,7 +105,6 @@ CopyOrRead(bool file_back_up,
             
             double time_copying = c_time.GetElapsedTime();
             amp.time_by_category.copying += time_copying;
-            phase1_time += time_copying;
             ++amp.count_of_category.copying;
         }
     }
@@ -148,7 +145,6 @@ MainLoopForRanges(GenericQuantumState& amp,
                 
                 double time_decompress = decompress_time.GetElapsedTime();
                 amp.time_by_category.decompress += time_decompress;
-                phase1_time += time_decompress;
                 ++amp.count_of_category.decompress;
             }
             
@@ -170,7 +166,6 @@ MainLoopForRanges(GenericQuantumState& amp,
                 
                 double time_decompress = decompress_time.GetElapsedTime();
                 amp.time_by_category.decompress += time_decompress;
-                phase1_time += time_decompress;
                 ++amp.count_of_category.decompress;
             }
             
@@ -220,7 +215,8 @@ MainLoopForBranching(GenericQuantumState& amp,
             Time amp_st_time;
             amp_st_time.StartTime();
             amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-         amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
+        }
         
         amp.book_keep = false;
         
@@ -301,7 +297,6 @@ CheckpointWithoutFile(bool branch,
         double time_decompress = decompress_time.GetElapsedTime();
         amp.time_by_category.decompress += time_decompress;
         
-        phase1_time += time_compress + time_decompress;
         ++amp.count_of_category.decompress;
         ++amp.count_of_category.compress;
         
@@ -317,7 +312,6 @@ CheckpointWithoutFile(bool branch,
         
         double time_copying = copy_time.GetElapsedTime();
         amp.time_by_category.copying += time_copying;
-        phase1_time += time_copying;
         ++amp.count_of_category.copying;
         
         if (amp.book_keep)
