@@ -125,8 +125,10 @@ FormBitmask(const vector<int>& qubits)
 }
 
 int FullAmpStateVector::
-ApplyBlockOfDiagGates(string& cz_bits,
-                      idx_size prefix_size,
+ApplyBlockOfDiagGates(int& remaining_cz_bits,
+                      idx_size& cz_path,
+                      const idx_size cz_path_len,
+                      const idx_size suffix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128>  T_bitmasks[2],
                       const bitset<128>& H_bitmask,
@@ -197,12 +199,12 @@ ApplyBlockOfDiagGates(string& cz_bits,
         
         if (__builtin_popcountll(hiH_bitmask) % 2 != 0) {
             int q = __builtin_ctzl(hiH_bitmask);
-            Apply1QXYHGates(amp, q, num_qubits, Gate::Type::Hadamard, num_threads);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
             hiH_bitmask ^= 1ull << q;
             ++single_H;
         }
         
-        ApplyHGatesRecursively(amp, num_qubits, num_threads, hiH_bitmask);
+        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiH_bitmask);
         time_by_category.last_H += time1.GetElapsedTime();
         
         if (book_keep) {
@@ -249,12 +251,12 @@ ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 }
 
 void FullAmpStateVector::
-ApplyHGateOnAllAmps(bool not_cycle_0)
+ApplyHGateOnAllAmps(bool not_initialize_amp)
 {
     Time time;
     time.StartTime();
     
-    if (!not_cycle_0) {
+    if (!not_initialize_amp) {
         float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
         constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
         
@@ -271,7 +273,7 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
     else {
         idx_size H_bm = (1ull << num_qubits) - 1;
         if (num_qubits % 2 != 0) {
-            Apply1QXYHGates(amp, 0, num_qubits, Gate::Type::Hadamard, num_threads);
+            Apply1QXYHGates(amp, num_threads, 0, num_qubits, Gate::Type::Hadamard);
             H_bm ^= 1;
         }
         ApplyHGatesRecursively(amp, num_qubits, num_threads, H_bm);
@@ -435,9 +437,9 @@ ApplyOddGates(idx_size& X_bitmask,
     //        const int X_q = X_bitmask_64 ? 63 - __builtin_clzl(X_bitmask_64) : 1000;
     //        const int Y_q = Y_bitmask_64 ? 63 - __builtin_clzl(Y_bitmask_64): 1000;
     
-    if (!(X_q == 1000 && Y_q == 1000)) {
+    if (!(X_q == kRT && Y_q == kRT)) {
         if (X_q < Y_q) {
-            Apply1QXYHGates(amp, X_q, num_qubits, Gate::Type::X_1_2, num_threads);
+            Apply1QXYHGates(amp, num_threads, X_q, num_qubits, Gate::Type::X_1_2);
             X_bitmask ^= 1ull << X_q;
             --num_X_bits;
             global_factor_power += 2;
@@ -446,7 +448,7 @@ ApplyOddGates(idx_size& X_bitmask,
                 ++count_of_category.X1_2;
         }
         else {
-            Apply1QXYHGates(amp, Y_q, num_qubits, Gate::Type::Y_1_2, num_threads);
+            Apply1QXYHGates(amp, num_threads, Y_q, num_qubits, Gate::Type::Y_1_2);
             Y_bitmask ^= 1ull << Y_q;
             --num_Y_bits;
             global_factor_power += 2;
@@ -532,17 +534,21 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
     time.StartTime();
     if (X_bitmask_64 || Y_bitmask_64) {
         //Process low qubits first,
-        global_i_counter += XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask,
+        auto phase = XYFastTransformLowQ(amp, loq_X_bitmask, loq_Y_bitmask, 0,
                                                 num_qubits, num_threads);
-        global_i_counter += XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask,
+        auto phase1 = XYFastTransform(amp, hiq_X_bitmask, hiq_Y_bitmask,
                                             num_qubits, num_threads, th);
+        global_i_counter += phase.first + phase1.first;
+        global_factor_power += phase.second + phase1.second;
     }
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
 }
 
 int FullAmpStateVector::
-ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                           idx_size prefix_size,
+ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
+                           idx_size& cz_path,
+                           const idx_size cz_path_len,
+                           const idx_size suffix_size,
                            const bitset<128>& X_bitmask,
                            const bitset<128>& Y_bitmask,
                            const bitset<128>& H_bitmask,
@@ -599,10 +605,12 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         }
     }
     
-    global_i_counter += ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
+    auto phase = ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                          T_bitmasks_64, loq_X_bitmask >> th,
                                                          loq_Y_bitmask >> th, loq_H_bitmask >> th,
-                                                          num_threads,th, zero_opt_mask);
+                                                         num_threads, th, zero_opt_mask);
+    global_i_counter += phase.first;
+    global_factor_power += phase.second;
     
     int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
     if (odd_bit_low_XY.second == 0) {
@@ -624,8 +632,13 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         if (book_keep && last_cycle)
             count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
 
-        global_i_counter += XYHFastTransformHighQ(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask,
-                                                 num_qubits, num_threads);
+        auto phase1 = ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask,
+                                                    hiq_Y_bitmask, hiq_H_bitmask,
+                                                    num_qubits, num_threads);
+        global_i_counter += phase1.first;
+        global_factor_power += phase1.second;
+        
+//        global_i_counter += ApplyHighXYHGatesByBitReversal(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask, num_qubits, th, num_threads);
         
         hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }
@@ -641,11 +654,11 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
         time.StartTime();
         if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
             int q = __builtin_ctzl(hiq_H_bitmask);
-            Apply1QXYHGates(amp, q, num_qubits, Gate::Type::Hadamard, num_threads);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
             hiq_H_bitmask ^= 1ull << q;
             ++single_H;
         }
-        ApplyHGatesRecursively(amp, num_qubits, num_threads, hiq_H_bitmask);
+        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiq_H_bitmask);
         time_by_category.last_H += time.GetElapsedTime();
     }
 
@@ -944,6 +957,9 @@ IncrementGlobalICounter()
 void FullAmpStateVector::
 Rescale()
 {
+    Time rescale_time;
+    rescale_time.StartTime();
+    
     const float rescaling_factor = (global_factor_power % 2) ? 1.0/(pow(2,(global_factor_power/2)) * sqrt(2.0))
                             : 1.0/pow(2,(global_factor_power/2));
 
@@ -961,11 +977,16 @@ Rescale()
         t = _mm256_mul_ps(t, rescaling);
         _mm256_store_ps(t_amp + (2 * i), t);
     }
+    
+    time_by_category.rescale += rescale_time.GetElapsedTime();
 }
 
 void FullAmpStateVector::
 RescaleAndApplyGlobalICounter()
 {
+    Time rescale_time;
+    rescale_time.StartTime();
+    
     float rescaling_factor = 1.0/pow(2,(global_factor_power/2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0/sqrt(2.0);
@@ -989,7 +1010,7 @@ RescaleAndApplyGlobalICounter()
         t = _mm256_mul_ps(t, rescaling);
         _mm256_store_ps(t_amp + (2 * i), t);
     }
-
+    time_by_category.rescale += rescale_time.GetElapsedTime();
 }
 
 void FullAmpStateVector::
@@ -1139,6 +1160,9 @@ CopyState(const GenericQuantumState& rhs)
     all_zeros = t_rhs.all_zeros;
     compressed = t_rhs.compressed;
     amp_size = t_rhs.amp_size;
+    max_prob = t_rhs.max_prob;
+    min_prob = t_rhs. min_prob;
+    num_qubits = t_rhs.num_qubits;
     
     idx_size size = 2 * rhs.GetSize();
     

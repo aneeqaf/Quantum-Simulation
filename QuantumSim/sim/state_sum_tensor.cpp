@@ -130,47 +130,56 @@ UnpopulateGlobalToLocalMap()
 }
 
 int  SumOfTensorsProductsStateVector::
-HandlexCZApplication(string& cz_bits,
-                     idx_size prefix_size,
+HandlexCZApplication(int& remaining_cz_bits,
+                     idx_size& cz_path,
+                     const idx_size cz_path_len,
+                     const idx_size suffix_size,
                      const bitset<128>* __restrict CZ_bitmasks)
 {
     int last_xCZ_idx = -1;
     
     if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV
         || sim_type == Config::SimType::ApproxCZPathH2011 || sim_type == Config::SimType::ApproxCZPathV2011) {
-        if (cz_bits != "-")
-            last_xCZ_idx = ApplyXCZGatesForDist(cz_bits, prefix_size, CZ_bitmasks);
+        if (remaining_cz_bits != -1)
+            last_xCZ_idx = ApplyXCZGatesForDist(remaining_cz_bits, cz_path, cz_path_len,
+                                                suffix_size, CZ_bitmasks);
         else
             last_xCZ_idx = ApplyXCZGatesExact(CZ_bitmasks);
     }
-    else if (book_keep &&
-     (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
-      sim_type == Config::SimType::Approx2011OWT)){
-         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
-         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
-     }
     
-    if (book_keep) {
-        data_per_cycles.memory.push_back(GetMemUsage());
-        data_per_cycles.addends.push_back(GetNumAddends());
-    }
+//    else if (book_keep &&
+//     (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
+//      sim_type == Config::SimType::Approx2011OWT)){
+//         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
+//         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
+//     }
+//
+//    if (book_keep) {
+//        data_per_cycles.memory.push_back(GetMemUsage());
+//        data_per_cycles.addends.push_back(GetNumAddends());
+//    }
     
     return last_xCZ_idx;
 }
 
 int SumOfTensorsProductsStateVector::
-ApplyBlockOfDiagGates(string& cz_bits,
-                      idx_size prefix_size,
+ApplyBlockOfDiagGates(int& remaining_cz_bits,
+                      idx_size& cz_path,
+                      const idx_size cz_path_len,
+                      const idx_size suffix_size,
                       const bitset<128>* __restrict CZ_bitmasks,
                       const bitset<128> T_bitmasks[2],
                       const bitset<128>& H_bitmask,
                       const bool last_cycle)
 {
-    int last_xCZ_idx = HandlexCZApplication(cz_bits, prefix_size, CZ_bitmasks);
+    int last_xCZ_idx = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
     
     if (last_xCZ_idx == -1) {
         for (auto& t : tensor_addends)
-            t -> ApplyBlockOfDiagGates(cz_bits, prefix_size, CZ_bitmasks, T_bitmasks, H_bitmask, last_cycle);
+            t -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
+                                       cz_path_len, suffix_size,
+                                       CZ_bitmasks, T_bitmasks,
+                                       H_bitmask, last_cycle);
     }
     
     return last_xCZ_idx;
@@ -221,14 +230,14 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (book_keep) {
-        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
-            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-            data_per_cycles.xCZ_V.push_back(0);
-        }
-        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
-            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-            data_per_cycles.xCZ_H.push_back(0);
-        }
+//        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
+//            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+//            data_per_cycles.xCZ_V.push_back(0);
+//        }
+//        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
+//            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+//            data_per_cycles.xCZ_H.push_back(0);
+//        }
         count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
             - (count_of_category.decomposed_CZ - prev_CZ_count);
     }
@@ -237,8 +246,10 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
 }
 
 inline int SumOfTensorsProductsStateVector::
-ApplyXCZGatesForDist(string& cz_bits,
-                     idx_size prefix_size,
+ApplyXCZGatesForDist(int& remaining_cz_bits,
+                     idx_size& cz_path,
+                     const idx_size cz_path_len,
+                     const idx_size suffix_size,
                      const bitset<128>* __restrict CZ_bitmasks)
 {
     //int represents qubit in block A and idx_size represents bitmask of qubits in block B
@@ -248,7 +259,7 @@ ApplyXCZGatesForDist(string& cz_bits,
     Time time;
     time.StartTime();
     
-    const ul prev_CZ_count = count_of_category.decomposed_CZ;
+//    const ul prev_CZ_count = count_of_category.decomposed_CZ;
     const idx_size num_q_a = tensor_addends[0] -> GetNumQInBlock(0);
     bitset<128> xCZ_bitmasks_path0_D1D2[num_q_a], xCZ_bitmasks_path1_D3D4[num_q_a],
     xCZ_bitmasks_path0_D2D1[num_q_a], xCZ_bitmasks_path1_D4D3[num_q_a];
@@ -258,25 +269,28 @@ ApplyXCZGatesForDist(string& cz_bits,
         xCZ_bitmasks_path0_D2D1[i] = 0;
         xCZ_bitmasks_path1_D4D3[i] = 0;
     }
-    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, cz_bits, prefix_size, xCZ_bitmasks_path0_D1D2,
-                                                 xCZ_bitmasks_path0_D2D1, xCZ_bitmasks_path1_D3D4,
-                                                 xCZ_bitmasks_path1_D4D3, CZ_bitmasks);
+    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, remaining_cz_bits, cz_path,
+                                                 xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
+                                                 xCZ_bitmasks_path1_D3D4,xCZ_bitmasks_path1_D4D3,
+                                                 cz_path_len, suffix_size, CZ_bitmasks);
     if (last_xCZ_idx != -1)
-        tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
-                                                            xCZ_bitmasks_path1_D3D4, xCZ_bitmasks_path1_D4D3);
+        tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2,
+                                                            xCZ_bitmasks_path0_D2D1,
+                                                            xCZ_bitmasks_path1_D3D4,
+                                                            xCZ_bitmasks_path1_D4D3);
       
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-    if (last_xCZ_idx && book_keep) {
-        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
-            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-            data_per_cycles.xCZ_V.push_back(0);
-        }
-        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
-            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-            data_per_cycles.xCZ_H.push_back(0);
-        }
-    }
+//    if (last_xCZ_idx && book_keep) {
+//        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
+//            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+//            data_per_cycles.xCZ_V.push_back(0);
+//        }
+//        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
+//            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+//            data_per_cycles.xCZ_H.push_back(0);
+//        }
+//    }
     
     if (terminate)
         return last_xCZ_idx;
@@ -285,19 +299,21 @@ ApplyXCZGatesForDist(string& cz_bits,
 
 int SumOfTensorsProductsStateVector::
 FormGatesBitmaskXCZ(bool& terminate,
-                    string& cz_bits,
-                    idx_size prefix_size,
+                    int& remaining_cz_bits,
+                    idx_size& cz_path,
                     bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
                     bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
                     bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                     bitset<128>* __restrict xCZ_bitmasks_path1_D4D3,
+                    const idx_size cz_path_len,
+                    const idx_size suffix_size,
                     const bitset<128>* __restrict CZ_bitmasks)
 {
-    const QubitPartition qp = tensor_addends[0] -> GetQp();
-    const int num_q_a = qp.getNumQubitsInBlock(0);
+    static const QubitPartition qp = tensor_addends[0] -> GetQp();
+    static const int num_q_a = qp.getNumQubitsInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
     int last_xCZ_idx = 0;
-   
+    
     for (int i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
     
@@ -306,7 +322,7 @@ FormGatesBitmaskXCZ(bool& terminate,
     
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
-            if (cz_bits == "") {
+            if (remaining_cz_bits == 0) {
                 terminate = true;
                 break;
             }
@@ -319,40 +335,40 @@ FormGatesBitmaskXCZ(bool& terminate,
 
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
-            if (tensor_addends[0] -> GetNumQInBlock(0) <= tensor_addends[0] -> GetNumQInBlock(1)) {
-                if (cz_bits[0] == '0')
+            if (tensor_addends[0] -> GetNumQInBlock(0) < tensor_addends[0] -> GetNumQInBlock(1)) {
+                if ((cz_path & 1) == 0)
                     xCZ_bitmasks_path0_D1D2[i][q] = 1;
                 else
                     xCZ_bitmasks_path1_D3D4[i][q] = 1;
             }
             else if (tensor_addends[0] -> GetNumQInBlock(0) > tensor_addends[0] -> GetNumQInBlock(1)) {
-                if (cz_bits[0] == '0')
+                if ((cz_path & 1) == 0 == 0)
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
                 else
                    xCZ_bitmasks_path1_D4D3[i][q] = 1;
             }
             else {
-                if (cz_bits[0] == '0') {
-                    if ((cz_bits.size() + prefix_size) % 2 == 0)
+                if ((cz_path & 1) == 0) {
+                    if ((cz_path_len + suffix_size) % 2 == 0)
                         xCZ_bitmasks_path0_D1D2[i][q] = 1;
                     else
                         xCZ_bitmasks_path0_D2D1[i][q] = 1;
                 }
                 else {
-                    if ((cz_bits.size() + prefix_size) % 2 == 0)
+                    if ((cz_path_len + suffix_size) % 2 == 0)
                         xCZ_bitmasks_path1_D3D4[i][q] = 1;
                     else
                         xCZ_bitmasks_path1_D4D3[i][q] = 1;
                 }
             }
             
-            cz_bits.erase(0, 1);
+            cz_path >>= 1;
+            --remaining_cz_bits;
             xCZ_bitmask[i][q] = 0;
         }
         if (terminate)
             break;
     }
-    
     return last_xCZ_idx;
 }
 
@@ -411,8 +427,10 @@ ApplyXYRecursiveTransform(bitset<128> X_bitmask,
 }
 
 int SumOfTensorsProductsStateVector::
-ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                           idx_size prefix_size,
+ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
+                           idx_size& cz_path,
+                           const idx_size cz_path_len,
+                           const idx_size suffix_size,
                            const bitset<128>& X_bitmask,
                            const bitset<128>& Y_bitmask,
                            const bitset<128>& H_bitmask,
@@ -422,13 +440,14 @@ ApplyLoXYHAndCZTInSamePass(string& cz_bits,
                            bool last_cycle)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
-    int last_xCZ_idx = HandlexCZApplication(cz_bits, prefix_size, CZ_bitmasks);
+    int last_xCZ_idx = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
     
-    if (last_xCZ_idx == -1) {
+    if (last_xCZ_idx == -1)
         for (auto& t : tensor_addends)
-            t -> ApplyLoXYHAndCZTInSamePass(cz_bits, prefix_size, X_bitmask, Y_bitmask, H_bitmask,
+            t -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                            cz_path_len, suffix_size,
+                                            X_bitmask, Y_bitmask, H_bitmask,
                                             CZ_bitmasks, T_bitmasks, th, last_cycle);
-    }
     
     if (book_keep) {
         if (count_of_category.X1_2 - prev_X_count)

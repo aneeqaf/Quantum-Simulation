@@ -247,14 +247,14 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
     }
 }
 
-idx_size
+pair<idx_size, int>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                  const int num_qubits_amp,
                                  const idx_size* __restrict CZ_bitmasks,
                                  const idx_size* __restrict T_bitmasks,
                                  const idx_size Lo_X_bitmask,
                                  const idx_size Lo_Y_bitmask,
-                                  const idx_size Lo_H_bitmask,
+                                 const idx_size Lo_H_bitmask,
                                  const int num_threads,
                                  const int num_high_qubits,
                                  const ZeroOptMask& zero_opt_mask)
@@ -265,7 +265,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits_amp;
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-    idx_size i_count = 0;
+    pair<idx_size, int> phases;
     
     #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
@@ -276,14 +276,18 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
             zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
             ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                   num_threads, block_begin, block_size, zero_opt_mask);
-
-            if  (Lo_X_bitmask || Lo_Y_bitmask)
-                   i_count = XYFastTransformLowQ(amp + (offset_idx * block_size), Lo_X_bitmask,
-                                              Lo_Y_bitmask, block_bits, num_threads);
-                
-            if (Lo_H_bitmask)
+           
+            if  (Lo_X_bitmask || Lo_Y_bitmask) {
+                phases = XYFastTransformLowQ(amp + (offset_idx * block_size),
+                                             Lo_X_bitmask, Lo_Y_bitmask, Lo_H_bitmask,
+                                             block_bits, num_threads);
+            }
+            
+            idx_size H_bitmask =  Lo_H_bitmask ^ (Lo_H_bitmask &
+                                                  (Lo_X_bitmask | Lo_Y_bitmask));
+            if (H_bitmask)
                 ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
-                                       num_threads, Lo_H_bitmask);
+                                       num_threads, H_bitmask);
         }
 //        else {
 //            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
@@ -295,5 +299,5 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
 //        }
    }
     
-    return i_count;
+    return pair<idx_size, int>(phases.first, phases.second);
 }

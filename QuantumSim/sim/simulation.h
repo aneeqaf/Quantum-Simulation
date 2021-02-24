@@ -33,8 +33,7 @@ private:
     ostringstream log;
     idx_size curr_gate, num_layers;
     idx_size adjustment_factor;
-    double memory_usage;
-    double total_time, dfs_time, phase1_time, XE_time, CZ_T_top_time, X_Y_top_time, mmap_time;
+    double memory_usage, total_time, branch_time, prefix_time, XE_time, CZ_T_top_time, mmap_time;
     Config* config;
     vector<double> norms_CZ_paths;
     vector<cmplx> amps_of_interest;
@@ -84,13 +83,17 @@ public:
                           const idx_size gate_i);
     void Phase1Simulation(GenericQuantumState& amp,
                           Circuit& circuit,
-                          string cz_path,
-                          idx_size gate_i);
-    bool SimulationLoop(GenericQuantumState& amp,
-                        Circuit& circuit,
-                        string& cz_path,
-                        idx_size prefix_size = 0,
-                        const idx_size gate_i = 0);
+                          idx_size gate_i,
+                          int& remaining_cz_bits,
+                          idx_size& cz_path,
+                          const idx_size cz_path_len);
+    bool SimulationLoop(GenericQuantumState &amp,
+                        Circuit &circuit,
+                        int& remaining_cz_bits,
+                        idx_size& cz_path,
+                        const idx_size cz_path_len,
+                        const idx_size suffix_size,
+                        const idx_size gate_i);
     void ReportingAfterSim(GenericQuantumState& amp,
                            Circuit& circuit);
     void PrintIdxsToFile() const;

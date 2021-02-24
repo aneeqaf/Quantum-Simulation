@@ -18,28 +18,36 @@ private:
     vector<TensorProductStateVector*> tensor_addends;
     idx_size num_addends;
     
-    int HandlexCZApplication(string& cz_bits,
-                             idx_size prefix_size,
+    int HandlexCZApplication(int& remaining_cz_bits,
+                             idx_size& cz_path,
+                             const idx_size cz_path_len,
+                             const idx_size suffix_size,
                              const bitset<128>* __restrict CZ_bitmasks);
     
 public:
-    int ApplyBlockOfDiagGates(string& cz_bits,
-                              idx_size prefix_size,
+    int ApplyBlockOfDiagGates(int& remaining_cz_bits,
+                              idx_size& cz_path,
+                              const idx_size cz_path_len,
+                              const idx_size suffix_size,
                               const bitset<128>* __restrict CZ_bitmasks,
                               const bitset<128> T_bitmasks[2],
                               const bitset<128>& H_bitmask,
                               const bool last_cycle);
     inline int ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks);
-    inline int ApplyXCZGatesForDist(string& cz_bits,
-                                    idx_size prefix_size,
+    inline int ApplyXCZGatesForDist(int& remaining_cz_bits,
+                                    idx_size& cz_path,
+                                    const idx_size cz_path_len,
+                                    const idx_size suffix_size,
                                     const bitset<128>* __restrict CZ_bitmasks);
     int FormGatesBitmaskXCZ(bool& terminate,
-                            string& cz_bits,
-                            idx_size prefix_size,
+                            int& remaining_cz_bits,
+                            idx_size& cz_path,
                             bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
                             bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
                             bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                             bitset<128>* __restrict xCZ_bitmasks_path1_D4D3,
+                            const idx_size cz_path_len,
+                            const idx_size suffix_size,
                             const bitset<128>* __restrict CZ_bitmasks);
     void ApplyNonCGate(const int gate_qubit,
                        const Gate::Type gate_type,
@@ -58,8 +66,10 @@ public:
     void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
                                    bitset<128> Y_bitmask,
                                    int th);
-    int ApplyLoXYHAndCZTInSamePass(string& cz_bits,
-                                   idx_size prefix_size,
+    int ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
+                                   idx_size& cz_path,
+                                   const idx_size cz_path_len,
+                                   const idx_size suffix_size,
                                    const bitset<128>& X_bitmask,
                                    const bitset<128>& Y_bitmask,
                                    const bitset<128>& H_bitmask,

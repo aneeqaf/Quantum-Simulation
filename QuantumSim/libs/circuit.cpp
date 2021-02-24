@@ -159,7 +159,7 @@ GroupSimilarGates()
     PrintGates();
 #endif
     
-    return count_CZ;
+    return (int)count_CZ;
 }
 
 pair<int, int> Circuit::

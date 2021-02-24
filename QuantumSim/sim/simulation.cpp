@@ -9,9 +9,11 @@
 
 unordered_map<string, array<cmplx, 5>> SequentialSimulation::benchmark = {};
 
+double circuit_loop_time = 0;
+
 SequentialSimulation::
 SequentialSimulation(Config* c): curr_gate(0), num_layers(0), adjustment_factor(1),
-memory_usage(0), total_time(0), dfs_time(0), phase1_time(0), XE_time(0), mmap_time(0), config(c)
+memory_usage(0), total_time(0), branch_time(0), prefix_time(0), XE_time(0), mmap_time(0), config(c)
 {
     if (config -> norm_depth) {
         idx_size num_norms = config -> norm_depth ? 1ull << config -> norm_depth : 1ull << config -> ranges_bits;
@@ -22,6 +24,7 @@ memory_usage(0), total_time(0), dfs_time(0), phase1_time(0), XE_time(0), mmap_ti
     
     if (config -> proc_prefix_bits)
         adjustment_factor = 2;
+    
 }
 
 void SequentialSimulation::
@@ -108,8 +111,6 @@ CopyOrRead(bool file_back_up,
             ++amp.count_of_category.copying;
         }
     }
-    
-    
 }
 
 void SequentialSimulation::
@@ -121,19 +122,21 @@ MainLoopForRanges(GenericQuantumState& amp,
     
     Time time;
     time.StartTime();
-    string cz_path = bitset<128>(config -> cz_path).to_string().substr(128 - config -> proc_prefix_bits);
-    idx_size cz_paths_ex = config -> proc_prefix_bits ? 1ull << config -> ranges_bits : 1ull << config -> norm_depth,
-    num_bits = config -> proc_prefix_bits ? config -> ranges_bits : config -> norm_depth;
+    static const idx_size cz_paths_ex = config -> proc_prefix_bits ?
+            1ull << config -> ranges_bits : 1ull << config -> norm_depth;
+    int total_cz_bits = config -> proc_prefix_bits ?
+            config -> ranges_bits : config -> norm_depth;
     
     if (config -> ranges_bits)
         config -> curr_mode = Config::SimMode::Ranges;
     
-    phase1_time += time.GetElapsedTime();
+    prefix_time += time.GetElapsedTime();
     
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
-        cz_path = bitset<128>(cz_p).to_string().substr(128 - num_bits);
+        int remaining_cz_bits = total_cz_bits;
+        idx_size cz_p_1 = cz_p;
         
-        Phase1Simulation(amp, circuit, cz_path, gate_num);
+        Phase1Simulation(amp, circuit, gate_num, remaining_cz_bits, cz_p_1, total_cz_bits);
         
         auto& idx = config -> indices;
         if (config -> dfs_length == 0) {
@@ -155,7 +158,7 @@ MainLoopForRanges(GenericQuantumState& amp,
                 amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
             double time_storage = amp_st_time.GetElapsedTime();
             amp.time_by_category.amp_storage += time_storage;
-            phase1_time += time_storage;
+            prefix_time += time_storage;
         }
         
         if (config -> norm_perc) {
@@ -189,34 +192,35 @@ MainLoopForBranching(GenericQuantumState& amp,
                      const idx_size gate_i)
 {
     static int exec = 0; ++exec;
+    static const idx_size num_CZ_paths = 1ull << config -> dfs_length,
+    idxs_len = config -> indices.size();
+    static const int block0_th = amp.GetNumQInBlock(0) >> 1, block1_th = amp.GetNumQInBlock(1) >> 1;
     
     config -> curr_mode = Config::SimMode::Branch;
     
-    string cz_path = "-";
-    idx_size num_CZ_paths = 1ull << config -> dfs_length;
+    int remaining_cz_bits = config -> dfs_length, remaining_cz_bits_copy = remaining_cz_bits;
+
     for (idx_size i = 0; i < num_CZ_paths; ++i) {
-        cz_path = bitset<100>(i).to_string();
-        cz_path = cz_path.substr(cz_path.size() - config -> dfs_length);
+        remaining_cz_bits = config -> dfs_length;
+        remaining_cz_bits_copy = remaining_cz_bits;
+        idx_size cz_p_1 = i, cz_p_2 = cz_p_1;
         
-        //        config -> th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
-        config -> th = amp.GetNumQInBlock(0) >> 1;
-        string cz_path_copy = cz_path;
+        config -> th = block0_th;
         amp.partition_to_sim = 'a';
-        SimulationLoop(amp, circuit, cz_path, 0, gate_i);
-        //        config -> th = amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15;
-        config -> th = amp.GetNumQInBlock(1) >> 1;
+        SimulationLoop(amp, circuit, remaining_cz_bits, cz_p_1, config -> dfs_length, 0, gate_i);
+        
+        config -> th = block1_th;
         amp.partition_to_sim = 'b';
-        SimulationLoop(amp, circuit, cz_path_copy, 0, gate_i);
+        SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_p_2, config -> dfs_length, 0, gate_i);
         amp.partition_to_sim = 'x';
         
         auto& idx = config -> indices;
-        for(idx_size i = 0; i < idx.size(); ++i) {
+        for(idx_size i = 0; i < idxs_len; ++i) {
             assert(amp.compressed == false);
             Time amp_st_time;
             amp_st_time.StartTime();
             amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
-        }
+         amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
         
         amp.book_keep = false;
         
@@ -225,14 +229,14 @@ MainLoopForBranching(GenericQuantumState& amp,
     }
     
     if (exec == 1) {
-        if (!cz_path.size()) {
+        if (remaining_cz_bits == 0) {
             if (circuit.GetTotalNumGates() != curr_gate)
                 cout << "DFS path exhausted early\n";
             else
                 cout << "No xCZ gates left\n";
         }
         else
-            cout << "Truncated DFS length : " << cz_path.size() << "\n";
+            cout << "Truncated DFS length : " << remaining_cz_bits << "\n";
     }
 }
 
@@ -249,7 +253,8 @@ CheckpointWithFile(bool branch,
     temp_amp.CopyMemberVars(amp);
     double time_copying = copy_time.GetElapsedTime();
     amp.time_by_category.copying += time_copying;
-    phase1_time += time_copying;
+    ++amp.count_of_category.copying;
+    prefix_time += time_copying;
     
     if (branch) {
         if (config -> count_zeros) {
@@ -278,9 +283,6 @@ CheckpointWithoutFile(bool branch,
                       Circuit& circuit,
                       const idx_size gate_i)
 {
-    
-    
-    
     SumOfTensorsProductsStateVector temp_amp;
     
     if (config -> compress) {
@@ -322,8 +324,7 @@ CheckpointWithoutFile(bool branch,
             memory_usage += amp.GetMemUsage();
     }
     
-    
-    if (branch) {
+  if (branch) {
         if (config -> count_zeros) {
             amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
             amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
@@ -350,7 +351,10 @@ CheckpointWithRanges(GenericQuantumState& amp,
 {
     Time time;
     time.StartTime();
-    string cz_path = bitset<128>(config -> cz_path).to_string().substr(128 - config -> proc_prefix_bits);
+    int remaining_cz_bits = config -> proc_prefix_bits,
+        remaining_cz_bits_copy = remaining_cz_bits;
+    idx_size cz_p_1 = config -> cz_path, cz_p_2 = cz_p_1;
+    
     if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1)) {
         config -> th = amp.GetNumQInBlock(0) >> 1;
         amp.partition_to_sim = 'a';
@@ -359,9 +363,9 @@ CheckpointWithRanges(GenericQuantumState& amp,
         config -> th = amp.GetNumQInBlock(1) >> 1;
         amp.partition_to_sim = 'b';
     }
-
-    string cz_path_copy = cz_path;
-    SimulationLoop(amp, circuit, cz_path, config -> dfs_length, 0);
+    
+    SimulationLoop(amp, circuit, remaining_cz_bits, cz_p_1,
+                   config -> proc_prefix_bits, config -> dfs_length, 0);
 
     if (amp.AreAllAmpsZero()) {
         if (config -> count_zeros) {
@@ -373,7 +377,7 @@ CheckpointWithRanges(GenericQuantumState& amp,
         adjustment_factor = 1;
         return;
     }
-
+    
     if (amp.GetNumQInBlock(0) >= amp.GetNumQInBlock(1)) {
         config -> th = amp.GetNumQInBlock(1) >> 1;
         amp.partition_to_sim = 'b';
@@ -383,7 +387,8 @@ CheckpointWithRanges(GenericQuantumState& amp,
         amp.partition_to_sim = 'a';
     }
     
-    SimulationLoop(amp, circuit, cz_path_copy, config -> dfs_length, 0);
+     SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_p_2,
+                      config -> proc_prefix_bits, config -> dfs_length, 0);
     amp.partition_to_sim = 'x';
     
     if (amp.AreAllAmpsZero()) {
@@ -395,7 +400,7 @@ CheckpointWithRanges(GenericQuantumState& amp,
     }
     
     amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
-    phase1_time += time.GetElapsedTime();
+    prefix_time += time.GetElapsedTime();
     
     if (config -> save_cp_file > 0) {
         CheckpointWithFile(false, amp, circuit);
@@ -414,18 +419,20 @@ NoCheckpointWithRanges(GenericQuantumState& amp,
     amps_of_interest.resize(config -> indices.size(), 0);
     
     config -> cz_path <<= config -> ranges_bits;
-    idx_size cz_paths_ex = config -> proc_prefix_bits ? 1ull << config -> ranges_bits : 1ull << config -> norm_depth,
-    total_bits = config -> proc_prefix_bits ? config -> proc_prefix_bits + config -> ranges_bits : config -> norm_depth;
+    idx_size cz_paths_ex = config -> proc_prefix_bits ?
+            1ull << config -> ranges_bits : 1ull << config -> norm_depth;
+    int total_cz_bits = config -> proc_prefix_bits ?
+            config -> proc_prefix_bits + config -> ranges_bits : config -> norm_depth;
     
     if (config -> ranges_bits)
         config -> curr_mode = Config::SimMode::Ranges;
     
     for (idx_size cz_p = 0; cz_p < cz_paths_ex; ++cz_p) {
-        string cz_path = bitset<128>(config -> cz_path + cz_p).to_string();
-        cz_path = cz_path.substr(cz_path.size() - total_bits);
+        int remaining_cz_bits = total_cz_bits;
+        idx_size cz_p_1 = config -> cz_path + cz_p;
         
         amp.ResetAmpVector();
-        Phase1Simulation(amp, circuit, cz_path, 0);
+        Phase1Simulation(amp, circuit, 0, remaining_cz_bits, cz_p_1, total_cz_bits);
         
         auto& idx = config -> indices;
         if (config -> dfs_length == 0) {
@@ -435,7 +442,7 @@ NoCheckpointWithRanges(GenericQuantumState& amp,
                 amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
             double time_storage = amp_st_time.GetElapsedTime();
             amp.time_by_category.amp_storage += time_storage;
-            phase1_time += time_storage;
+            prefix_time += time_storage;
         }
         
         config -> curr_mode = Config::SimMode::Ranges;
@@ -488,7 +495,6 @@ Simulate(GenericQuantumState& amp,
     
     Time time;
     time.StartTime();
-    string cz_path = "-";
     if (config -> ranges_bits || config -> norm_perc) {
         if (config -> store_checkpoint_range)
             CheckpointWithRanges(amp, circuit);
@@ -496,8 +502,9 @@ Simulate(GenericQuantumState& amp,
             NoCheckpointWithRanges(amp, circuit);
     }
     else if (config -> proc_prefix_bits) {
-        cz_path = bitset<128>(config -> cz_path).to_string().substr(128 - config -> proc_prefix_bits);
-        Phase1Simulation(amp, circuit, cz_path, curr_gate);
+        int remaining_cz_bits = config -> proc_prefix_bits;
+        Phase1Simulation(amp, circuit, curr_gate, remaining_cz_bits,
+                         config -> cz_path, config -> proc_prefix_bits);
                 
         auto& idx = config -> indices;
         if (config -> dfs_length == 0) {
@@ -507,10 +514,12 @@ Simulate(GenericQuantumState& amp,
                 amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
             double storage_time = amp_st_time.GetElapsedTime();
             amp.time_by_category.amp_storage += storage_time;
-            mmap_time += storage_time;        }
+            mmap_time += storage_time;
+        }
     }
     else {
-        Phase1Simulation(amp, circuit, cz_path, curr_gate);
+        int remaining_cz_bits = -1;
+        Phase1Simulation(amp, circuit, curr_gate, remaining_cz_bits, config -> cz_path, 0);
         auto& idx = config -> indices;
         Time amp_st_time;
         amp_st_time.StartTime();
@@ -532,6 +541,7 @@ Simulate(GenericQuantumState& amp,
     }
     
     total_time += time.GetElapsedTime() - XE_time;
+//    total_time = circuit_loop_time;
     
     ReportingAfterSim(amp, circuit);
 }
@@ -539,30 +549,35 @@ Simulate(GenericQuantumState& amp,
 void SequentialSimulation::
 Phase1Simulation(GenericQuantumState& amp,
                  Circuit& circuit,
-                 string cz_path,
-                 idx_size gate_i)
+                 idx_size gate_i,
+                 int& remaining_cz_bits,
+                 idx_size& cz_path,
+                 const idx_size cz_path_len)
 {
     static int exec = 0; ++exec;
+    static const idx_size total_cz_bits = config -> proc_prefix_bits +
+       config -> ranges_bits + config -> dfs_length;
     
     Time cz_path_time;
     cz_path_time.StartTime();
     
     bool terminate = false;
     
-    if (cz_path != "-" && cz_path != "") {
-//        config -> th = amp.GetNumQInBlock(0) / 2 < 18 ? amp.GetNumQInBlock(0) / 2 : 15;
+    if (total_cz_bits != 0 && remaining_cz_bits > 0) {
         config -> th = amp.GetNumQInBlock(0) >> 1;
         amp.partition_to_sim = 'a';
-        string cz_path_copy = cz_path;
-        terminate = SimulationLoop(amp, circuit, cz_path, config -> dfs_length, gate_i);
-//        config -> th = amp.GetNumQInBlock(1) / 2 < 18 ? amp.GetNumQInBlock(1) / 2 : 15;
+        idx_size cz_path_copy = cz_path;
+        int remaining_cz_bits_copy = remaining_cz_bits;
+        terminate = SimulationLoop(amp, circuit, remaining_cz_bits, cz_path, cz_path_len,
+                                   config -> dfs_length, gate_i);
         config -> th = amp.GetNumQInBlock(1) >> 1;
         amp.partition_to_sim = 'b';
-        SimulationLoop(amp, circuit, cz_path_copy, config -> dfs_length, gate_i);
+        SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_path_copy, cz_path_len,
+                       config -> dfs_length, gate_i);
         amp.partition_to_sim = 'x';
     }
-    else if (cz_path != "")
-        SimulationLoop(amp, circuit, cz_path, config -> dfs_length);
+    else if (remaining_cz_bits == -1)
+        SimulationLoop(amp, circuit, remaining_cz_bits, cz_path, cz_path_len, config -> dfs_length, 0);
     
     if (exec == 1) {
         if (config -> ranges_bits != 0)
@@ -570,7 +585,7 @@ Phase1Simulation(GenericQuantumState& amp,
         else if (config -> proc_prefix_bits != 0)
             amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
     }
-    phase1_time += cz_path_time.GetElapsedTime();
+    prefix_time += cz_path_time.GetElapsedTime();
 
     if (terminate && config -> dfs_length != 0) {
         Phase2Simulation(amp, circuit, curr_gate);
@@ -580,7 +595,7 @@ Phase1Simulation(GenericQuantumState& amp,
     else if (!terminate &&  config -> dfs_length != 0)
         config -> dfs_length = 0;
     else if (exec == 1) {
-        if (terminate && config -> dfs_length == 0 && cz_path == "" && cz_path != "-") {
+        if (terminate && config -> dfs_length == 0 && remaining_cz_bits == 0 && total_cz_bits != 0) {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
             + to_string(amp.count_of_category.decomposed_CZ / adjustment_factor) + " xCZ gates. ";
             
@@ -589,17 +604,17 @@ Phase1Simulation(GenericQuantumState& amp,
             
             else {
                 cout << "No xCZ gates left\n";
-                cout << "Truncated CZ path : " << cz_path.size() << "\n";
+                cout << "Truncated CZ path : " << remaining_cz_bits << "\n";
             }
         }
-        else if (!terminate && cz_path == "") {
+        else if (!terminate && remaining_cz_bits == 0) {
             cout << "Simulated " + to_string(curr_gate) + " gates, including "
             + to_string(amp.count_of_category.decomposed_CZ / adjustment_factor) + " xCZ gates. No xCZ gates left.\n";
             if (config -> dfs_length != 0)
                 cout << "Truncated DFS length : " << config -> dfs_length << "\n";
         }
-        else if (!terminate && cz_path != "-") {
-            cout << "Truncated CZ path : " << cz_path.size() << "\n";
+        else if (!terminate && total_cz_bits != 0) {
+            cout << "Truncated CZ path : " << remaining_cz_bits << "\n";
             if (config -> dfs_length != 0)
                 cout << "Truncated DFS length : " << config -> dfs_length << "\n";
         }
@@ -615,7 +630,8 @@ Phase2Simulation(GenericQuantumState& amp,
     phase2_time.StartTime();
     
     //    bool terminate = false;
-    amp.RescaleAndApplyGlobalICounter();
+//    ++amp.count_of_category.rescale;
+//    amp.RescaleAndApplyGlobalICounter();
     
     if (config -> save_cp_file > 1 && config -> ranges_bits != 0)
         CheckpointWithFile(true, amp, circuit, gate_i);
@@ -627,26 +643,30 @@ Phase2Simulation(GenericQuantumState& amp,
     }
     else CheckpointWithoutFile(true, amp, circuit, gate_i);
     
-    dfs_time += phase2_time.GetElapsedTime();
+    branch_time += phase2_time.GetElapsedTime();
 }
 
 
 bool SequentialSimulation::
 SimulationLoop(GenericQuantumState &amp,
                Circuit &circuit,
-               string& cz_path,
-               const idx_size prefix_size,
+               int& remaining_cz_bits,
+               idx_size& cz_path,
+               const idx_size cz_path_len,
+               const idx_size suffix_size,
                const idx_size gate_i)
 {
-    idx_size size = circuit.GetTotalNumGates();
-    int total_circuit_qubits = circuit.GetNumQubits(), current_cycle = 0;
-    auto gates = circuit.GetGates();
-    bool terminate = false;
-    int last_layers_of_H = config -> last_layers_H;
+    Time loop_time;
+    loop_time.StartTime();
     
+    static const idx_size size = circuit.GetTotalNumGates();
+    static const int total_circuit_qubits = circuit.GetNumQubits();
+    static const auto gates = circuit.GetGates();
+    
+    bool terminate = false;
+    int current_cycle = 0, last_layers_of_H = config -> last_layers_H;
     Time time, cycle_time;
-    idx_size i = gate_i;
-    for (; i < size; ++i) {
+    for (idx_size i = gate_i; i < size; ++i) {
         
         if (amp.book_keep)
             ++num_layers;
@@ -658,11 +678,8 @@ SimulationLoop(GenericQuantumState &amp,
             ++amp.count_of_category.branch_layers;
         
         if (amp.GetGlobalFactorPower() > 100) {
-            Time rescale_time;
-            rescale_time.StartTime();
             ++amp.count_of_category.rescale;
             amp.Rescale();
-            amp.time_by_category.rescale += rescale_time.GetElapsedTime();
         }
         
         curr_gate = i;
@@ -673,33 +690,9 @@ SimulationLoop(GenericQuantumState &amp,
             double cycle_elapsed_t = time.GetElapsedTime();
             current_cycle = circuit.GetCycleNumForGateIdx(i);
             
-            if (amp.book_keep)
-                amp.data_per_cycles.cycles.push_back(current_cycle);
-            
-            if (amp.book_keep) {
-#ifdef CosineSimilarityDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintProbabilities(config -> prob_outfile, current_cycle);
-                XE_time += misc_time.GetElapsedTime();
-                
-#endif
-#ifdef XEDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintProbabilities(config -> prob_outfile, current_cycle);
-                XE_time += misc_time.GetElapsedTime();
-                            xe_t_e.tv_usec - xe_t_b.tv_usec) / 1.e6;
-                
-#endif
-#ifdef FidelityDoubled
-                Time misc_time;
-                misc_time.StartTime();
-                amp.PrintStateVector(config -> amp_outfile, current_cycle);
-               XE_time += misc_time.GetElapsedTime();
-                
-#endif
-            }
+//            if (amp.book_keep)
+//                amp.data_per_cycles.cycles.push_back(current_cycle);
+          
             if (current_gate.ids.back() == Gate::Type::T ||
                 current_gate.ids.back() == Gate::Type::Z) {
                 
@@ -755,37 +748,40 @@ SimulationLoop(GenericQuantumState &amp,
 
                 int last_xCZ_idx = -1;
                 if (X_bitmask != 0 || Y_bitmask != 0) {
-                    last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(cz_path, prefix_size, X_bitmask, Y_bitmask, H_bitmask,
-                                                                 CZ_bitmasks, T_bitmasks, config -> th, last_cycle);
+                    last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+                                                                  suffix_size, X_bitmask,
+                                                                  Y_bitmask, H_bitmask, CZ_bitmasks,
+                                                                  T_bitmasks, config -> th, last_cycle);
                     ++amp.count_of_category.CZT_layers;
                     ++amp.count_of_category.XY_layers;
                 }
                 else {
-                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(cz_path, prefix_size, CZ_bitmasks,
-                                                             T_bitmasks, H_bitmask, last_cycle);
+                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(remaining_cz_bits, cz_path, cz_path_len,
+                                                             suffix_size, CZ_bitmasks, T_bitmasks, H_bitmask,
+                                                             last_cycle);
                     ++amp.count_of_category.CZT_layers;
                 }
                 
                 terminate = last_xCZ_idx != -1 ? true : false;
                 
                 if (amp.book_keep) {
-                    if (config -> sim_type == Config::SimType::FullState) {
-                        amp.data_per_cycles.xCZ_H.push_back(0);
-                        amp.data_per_cycles.xCZ_V.push_back(0);
-                    }
+//                    if (config -> sim_type == Config::SimType::FullState) {
+//                        amp.data_per_cycles.xCZ_H.push_back(0);
+//                        amp.data_per_cycles.xCZ_V.push_back(0);
+//                    }
                     
                     if (!terminate) {
                         amp.count_of_category.CZ_T += prev_i_XY - prev_i_CZT - amp.count_of_category.xCZ_not_applied;
-                        amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
-                        amp.data_per_cycles.CZ_gates.push_back(prev_i_XY - prev_i_CZT -
-                                                               amp.data_per_cycles.T_gates.back() -
-                                                               amp.count_of_category.xCZ_not_applied);
+//                        amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
+//                        amp.data_per_cycles.CZ_gates.push_back(prev_i_XY - prev_i_CZT -
+//                                                               amp.data_per_cycles.T_gates.back() -
+//                                                               amp.count_of_category.xCZ_not_applied);
                     }
                     else if (last_xCZ_idx) {
                         amp.count_of_category.CZ_T += last_xCZ_idx;
-                        amp.data_per_cycles.CZ_gates.push_back(last_xCZ_idx); //not accurate
+//                        amp.data_per_cycles.CZ_gates.push_back(last_xCZ_idx); //not accurate
                     }
-                    amp.data_per_cycles.XY_gates.push_back(i - prev_i_XY);
+//                    amp.data_per_cycles.XY_gates.push_back(i - prev_i_XY);
                 }
                 
                 if (terminate) {
@@ -796,64 +792,19 @@ SimulationLoop(GenericQuantumState &amp,
                 --i;
                 
                 CZ_T_top_time += CZT_time.GetElapsedTime();
-        }
+            }
             else {
                 amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
                                current_gate, (Gate::Type)current_gate.ids.back());
             }
         }
         else {
-            if (circuit.google && i < circuit.GetTotalNumGates() - 1 &&
-                (current_gate.ids.back() == Gate::Type::X_1_2 ||
-                 current_gate.ids.back() == Gate::Type::Y_1_2) &&
-                (circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::Y_1_2 ||
-                 circuit.GetGateFromIndex(i + 1).ids.back() == Gate::Type::X_1_2)) {
-                    cout << "BAD!\n\n";
-                    Time XY_time;
-                    XY_time.StartTime();
-                    
-                    idx_size prev_i = i;
-                    
-                    bitset<128> X_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::X_1_2);
-                    bitset<128> Y_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Y_1_2);
-                    amp.ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, config -> th);
-                    
-                    if (amp.book_keep) {
-                        amp.count_of_category.merged_XY1_2 += i - prev_i;
-                        amp.data_per_cycles.XY_gates.push_back(i - prev_i);
-                    }
-                    ++amp.count_of_category.XY_layers;
-
-                    --i;
-
-                    X_Y_top_time += XY_time.GetElapsedTime();
-                }
-            else if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
+            if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
                 
                 ++amp.count_of_category.H_layers;
                 cycle_time.StartTime();
                 amp.ApplyHGateOnAllAmps(i != 0);
                 i += total_circuit_qubits - 1;
-            }
-            else {
-                Time single_xy_time;
-                single_xy_time.StartTime();
-                amp.ApplyNonCGate(current_gate.qubits[0],
-                                  (Gate::Type)current_gate.ids.back(),  current_gate);
-                double xy_single_elapsed_t = single_xy_time.GetElapsedTime();
-                
-                if (amp.book_keep)
-                    amp.data_per_cycles.XY_gates.push_back(1);
-                if (current_gate.ids.back() == Gate::Type::X_1_2) {
-                    ++amp.count_of_category.X1_2;
-                    amp.time_by_category.X1_2 += xy_single_elapsed_t;
-                }
-                if (current_gate.ids.back() == Gate::Type::Y_1_2) {
-                    ++amp.count_of_category.Y1_2;
-                    amp.time_by_category.Y1_2 += xy_single_elapsed_t;
-                }
-                ++amp.count_of_category.merged_XY1_2;
-                //TODO: Need to be able to count different types of non-control gates.
             }
         }
     }
@@ -865,6 +816,8 @@ SimulationLoop(GenericQuantumState &amp,
     }
     
     curr_gate = circuit.GetTotalNumGates();
+    
+    circuit_loop_time += loop_time.GetElapsedTime();
     return terminate;
 }
 
@@ -1275,13 +1228,13 @@ PrintSimSpecReport(const GenericQuantumState& amp,
         if (config -> ranges_bits) {
             cout << "xCZ paths: ";
             
-            const int total_bits = config -> proc_prefix_bits + config -> ranges_bits + config -> dfs_length;
+            const int total_cz_bits = config -> proc_prefix_bits + config -> ranges_bits + config -> dfs_length;
             const idx_size czb_v = config -> cz_path << (config -> ranges_bits + config -> dfs_length);
             const idx_size cze_v = czb_v + (1ull << (config -> ranges_bits + config -> dfs_length)) - 1;
             const string czb = bitset<128>(czb_v).to_string();
             const string cze = bitset<128>(cze_v).to_string();
-            cout << "[" << czb.substr(czb.size() - total_bits) << " (" << czb_v << "), "
-            << cze.substr(cze.size() - total_bits) << " (" << cze_v << "))";
+            cout << "[" << czb.substr(czb.size() - total_cz_bits) << " (" << czb_v << "), "
+            << cze.substr(cze.size() - total_cz_bits) << " (" << cze_v << "))";
         }
         else {
             const string czp = bitset<128>(config -> cz_path).to_string();
@@ -1301,7 +1254,6 @@ void SequentialSimulation::
 PrintSimReport(GenericQuantumState& amp,
                const Circuit& circuit) const
 {
-    
     if (config -> sim_type == Config::SimType::ApproxOWT || config -> sim_type == Config::SimType::Approx2011OWT
         || config -> sim_type == Config::SimType::Approx_i11iOWT)
         amp.Normalize();
@@ -1443,7 +1395,7 @@ PrintSimReport(GenericQuantumState& amp,
     
     if (config -> proc_prefix_bits == 0) {
         
-        string key = config -> infile + "_" + to_string(circuit.GetNumCycles());
+        string key = config -> infile.substr(0, config -> infile.find_first_of('.')) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
     
         if (benchmark.count(key)) {
@@ -1713,12 +1665,12 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "\nAverage time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
         
         if (config -> proc_prefix_bits) {
-            ss << "Simulation runtime breakdown : \n\tPrefix    \t\t : " << phase1_time << " s = "
-             << (phase1_time/(total_time)) * 100 << "%\n";
+            ss << "Simulation runtime breakdown : \n\tPrefix    \t\t : " << prefix_time << " s = "
+             << (prefix_time/(total_time)) * 100 << "%\n";
         }
         if (config -> dfs_length != 0) {
-            ss << "\tBranches  \t\t : " << dfs_time << " s = "
-            << (dfs_time/(total_time)) * 100 << "%\n";
+            ss << "\tBranches  \t\t : " << branch_time << " s = "
+            << (branch_time/(total_time)) * 100 << "%\n";
         }
         if (mmap_time != 0) {
             ss << "\tMemory mapped I/O : " << mmap_time << " s = "
