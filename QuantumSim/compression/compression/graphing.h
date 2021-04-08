@@ -247,7 +247,7 @@ static pair<float, float> CalculateKAndLambda(const complex<float>* amps,
     }
     
     variance /= (double)(size - 1);
-    cout << mean << endl;
+//    cout << mean << endl;
     double k = (mean * mean)/variance;
     double lambda = mean/variance;
     

@@ -15,6 +15,17 @@
 
 using namespace std;
 
+inline bool DoesFileExists (const char *fileName) {
+    ifstream infile(fileName);
+    return (bool)infile.good();
+}
+
+inline bool IsFileEmpty(const char *fileName)
+{
+    ifstream infile(fileName);
+    return infile.peek() == std::ifstream::traits_type::eof();
+}
+
 int main(int argc, char * argv[]) {
     
     static const struct option longopts[] = {
@@ -78,6 +89,11 @@ int main(int argc, char * argv[]) {
     if (posix_memalign((void**)&amp, 64, sizeof(complex<float>) * amp_size) != 0)
         throw "Unable to allocate";
     memset(amp, 0, amp_size * sizeof(complex<float>));
+    
+    if (!DoesFileExists(input_filename.c_str()) || IsFileEmpty(input_filename.c_str())) {
+        cout << "File is empty or does not exist \n";
+        throw 1;
+    }
     
     ifstream infile;
     infile.open(input_filename);

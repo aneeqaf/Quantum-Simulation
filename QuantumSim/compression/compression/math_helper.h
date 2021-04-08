@@ -528,6 +528,7 @@ static inline float gser(const double a,
     }
 }
 
+// Gamma series approximation
 static inline __m256 _mm256_gser_ps(__m256 a,
                                     __m256 x,
                                     __m256 mask)
@@ -550,6 +551,7 @@ static inline __m256 _mm256_gser_ps(__m256 a,
     return _mm256_mul_ps(sum, _mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_mul_ps(a, _mm256_log_ps(x)), x), gln)));
 }
 
+// Gamma continued fractions
 static inline float gcf(const double a,
                          const double x)
 {
@@ -608,6 +610,7 @@ static inline __m256 _mm256_gcf_ps(__m256 a,
     return _mm256_mul_ps(_mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_mul_ps(a, _mm256_log_ps(x)), x), gln)), h);
 }
 
+// lower incomplete gamma approx
 static inline float gammpapprox(double a,
                                  double x)
 {

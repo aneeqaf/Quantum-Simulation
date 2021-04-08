@@ -19,6 +19,11 @@ Cramer(size_t vector_size,
 num_codewords(num_cw), num_threads(num_th), num_zero_amps(0), lambda(0), k(0),
 projection_vector(projection_v), dist_type(exponential)
 {
+    /*
+     The probability of rejection are the smaller amps that we map to 0.
+     Since the range of the radius of the spiral is from [0,1], the probability of rejection
+     defines the lower limit or inner radius of the spiral.
+    */
     r = CalcCInMagnitudeUniformSpiral(probabilty_rejection) + INNER_R_SHIFT;
     magnitude_r = CalcMagnitudeForC(r);
     R = CalcCInMagnitudeUniformSpiral(CDF_MAX_P);
