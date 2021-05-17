@@ -8,6 +8,7 @@
 #include "circuit.h"
 
 vector<string> Circuit::quiddpro_func;
+unordered_map<string, gate_generator_ptr> Circuit::google_gate_funcs;
 
 Circuit::
 Circuit() : gates({}),clock_cycles({}), qubits(0)
@@ -21,6 +22,13 @@ Circuit() : gates({}),clock_cycles({}), qubits(0)
     quiddpro_func.push_back("ry");
     quiddpro_func.push_back("rz");
     quiddpro_func.push_back("phase");
+    
+    google_gate_funcs["h"] = create_Hadamard;
+    google_gate_funcs["t"] = create_T;
+    google_gate_funcs["y_1_2"] = create_Y_1_2;
+    google_gate_funcs["x_1_2"] = create_X_1_2;
+    google_gate_funcs["cz"] = create_CZ;
+    google_gate_funcs["rz"] = create_Z_rotation;
 }
 
 Circuit::
@@ -423,9 +431,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
     //Start by applying Hadamard Gates
     for (int i = 0; i < qubits; ++i) {
         classical_bits.push_back(0);
-        Gate temp = create_hadamard();
-        temp.qubits.push_back(i);
-        gates.push_back(move(temp));
+        gates.push_back(create_Hadamard({static_cast<float>(i)}));
         qubit_to_gates[i].push_back(gates.size());
     }
     
@@ -453,19 +459,11 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
         
         //control phase Gate
         int k = 0;
-        for (idx_size j = 0; j < current_CZ_pairs.size()/2; ++j) {
-            Gate temp = create_Z();
-            temp.ids.insert(temp.ids.begin()
-                                            , Gate::Type::Control);
-            temp.num_controls = 1;
-            temp.qubits.push_back(current_CZ_pairs[k++]);
-            temp.qubits.push_back(current_CZ_pairs[k++]);
-            gates.push_back(move(temp));
-        }
+        for (idx_size j = 0; j < current_CZ_pairs.size()/2; ++j)
+            gates.push_back(create_CZ({static_cast<float>(current_CZ_pairs[k++]), static_cast<float>(current_CZ_pairs[k++])}));
         
-        if (current_CZ_pairs.size() > 0) {
+        if (current_CZ_pairs.size() > 0)
             clock_cycles.push_back(gates.size());
-        }
         
         /*
          • Place a Gate at qubit q only if this qubit is occupied by a CZ Gate in the previous cycle.
@@ -507,16 +505,12 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
             
             Gate temp;
             
-            if (gate_to_apply == 0) {
-                temp = create_X_1_2();
-            }
-            else if (gate_to_apply == 1) {
-                temp = create_Y_1_2();
-            }
-            else if (gate_to_apply == 2) {
-                temp = create_T();
-            }
-            temp.qubits.push_back(CZ_pairs[q]);
+            if (gate_to_apply == 0)
+                temp = create_X_1_2({static_cast<float>(CZ_pairs[q])});
+            else if (gate_to_apply == 1)
+                temp = create_Y_1_2({static_cast<float>(CZ_pairs[q])});
+            else if (gate_to_apply == 2)
+                temp = create_T({static_cast<float>(CZ_pairs[q])});
             qubit_to_gates[CZ_pairs[q]].push_back(gates.size());
             gates.push_back(move(temp));
         }
@@ -543,9 +537,8 @@ CreateQuiddProScript(const string& out_file,
     
     file << "state = cb(\"" + to_string((int)real(classical_bits[0]))<< "\");\n";;
     
-    for (idx_size q = 1; q < classical_bits.size(); ++q) {
+    for (idx_size q = 1; q < classical_bits.size(); ++q)
         file << "state = kron(state, cb(\"" + to_string(classical_bits[q]) << "\"));\n";
-    }
     
     for (idx_size i = 0; i < gates.size(); ++i) {
         if(i != 0) {
@@ -696,6 +689,7 @@ WriteGeneratedCircuitFile(const string& out_file,
     file.close();
 }
 
+[[deprecated]]
 //TO DO:add support for clock ccyles
 void Circuit::
 ReadCustomInputFiles(cmplx*& amp,
@@ -802,14 +796,10 @@ ReadCustomInputFiles(cmplx*& amp,
         gates.push_back(g);
     }
     
-    if (add_layer_H != 0) {
-        for (int i = 0; i < add_layer_H; ++i) {
-            for (int q = 0; q < qubits; ++q)  {
-                gates.push_back(create_hadamard());
-                gates[gates.size() - 1].qubits.push_back(q);
-            }
-        }
-    }
+    if (add_layer_H != 0)
+        for (int i = 0; i < add_layer_H; ++i)
+            for (int q = 0; q < qubits; ++q)
+                gates.push_back(create_Hadamard({static_cast<float>(q)}));
 }
 
 void Circuit::
@@ -828,7 +818,7 @@ ReadGoogleCircuitFile(const string& input_file,
     
     short current_cycle = 0, prev_cycle = 0;
     string gate_type;
-    short q1, q2;
+    
     while (file >> current_cycle >> gate_type) {
         
         if (current_cycle >= depth && depth != 0)
@@ -838,41 +828,27 @@ ReadGoogleCircuitFile(const string& input_file,
             prev_cycle = current_cycle;
         }
         
-        if(gate_type == "h")
-            gates.push_back(create_hadamard());
-        
-        else if (gate_type == "t")
-            gates.push_back(create_T());
-        
-        else if (gate_type == "y_1_2")
-            gates.push_back(create_Y_1_2());
-        
-        else if (gate_type == "x_1_2")
-            gates.push_back(create_X_1_2());
-        
-        else {
+        if (gate_type == "cz") {
+            short q1, q2;
             file >> q1 >> q2;
-            gates.push_back(create_Z());
-            gates[gates.size() - 1].
-            ids.insert(gates[gates.size() - 1].ids.begin(),
-                                       Gate::Type::Control);
-            gates[gates.size() - 1].num_controls = 1;
-            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q2);
-            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
+            gates.push_back(google_gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q1), static_cast<float>(qubits - 1 - q2)}));
         }
-        
-        if (gate_type != "cz") {
+        else if(gate_type == "rz") {
+            float q, p;
+            file >> q >> p;
+            gates.push_back(google_gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q), static_cast<float>(p)}));
+        }
+        else {
+            short q1;
             file >> q1;
-            gates[gates.size() - 1].qubits.push_back(qubits - 1 - q1);
+            gates.push_back(google_gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q1)}));
         }
     }
     clock_cycles.push_back(gates.size());
     if (add_layer_H != 0) {
         for (int i = 0; i < add_layer_H; ++i) {
-            for (int q = 0; q < qubits; ++q)  {
-                gates.push_back(create_hadamard());
-                gates[gates.size() - 1].qubits.push_back(q);
-            }
+            for (int q = 0; q < qubits; ++q)
+                gates.push_back(create_Hadamard({static_cast<float>(q)}));
             clock_cycles.push_back(gates.size());
         }
     }

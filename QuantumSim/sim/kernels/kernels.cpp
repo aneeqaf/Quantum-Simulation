@@ -10,7 +10,7 @@
 void
 GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
              const int num_qubits_amp,
-             const vector<int>& gate_qubits)
+             const vector<size_t>& gate_qubits)
 {
     bitset<128> bits = 0;
     const int new_q = num_qubits_amp - 1;
@@ -26,7 +26,7 @@ GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
 void
 GroupTGates(bitset<128>* __restrict T_bitmasks,
             const int num_qubits_amp,
-            const vector<int>& gate_qubits)
+            const vector<size_t>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
     bitset<128> t_mask;

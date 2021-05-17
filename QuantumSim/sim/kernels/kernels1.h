@@ -163,7 +163,7 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
 void
 ApplyControlGate(cmplx* __restrict amp,
                  const int num_controls,
-                 const vector<int>& gate_qubits,
+                 const vector<size_t>& gate_qubits,
                  const int num_qubits_amp,
                  const Gate& g,
                  const Gate::Type gate_type);

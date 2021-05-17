@@ -392,7 +392,7 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 //TODO
 void SumOfTensorsProductsStateVector::
 ApplyCGate(const int num_controls,
-           const vector<int>& gate_qubits,
+           const vector<size_t>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {

@@ -152,7 +152,7 @@ public:
                                const Gate& g = {}) = 0;
     virtual void ApplyHGateOnAllAmps(bool not_cycle_0 = false) = 0;
     virtual void ApplyCGate(const int num_controls,
-                            const vector<int>& gate_qubits,
+                            const vector<size_t>& gate_qubits,
                             const Gate& g,
                             const Gate::Type gate_type) = 0;
     virtual void ApplyMergedXYGate(const Gate& gate1,

@@ -39,6 +39,7 @@
 #include "gates.h"
 #include "profile.h"
 #include "zero_opt_mask.h"
+#include "math_helper.h"
 
 using namespace std;
 
@@ -437,7 +438,7 @@ ApplyXY12HHGateAVX(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyYX12HHGateAVX(cmplx* __restrict amp,
-                 const idx_size* indices /*4*/)
+                   const idx_size* indices /*4*/)
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
@@ -535,6 +536,51 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
     return all_zeros;
 }
 
+__attribute__((always_inline)) inline float
+CalculatePhaseToApplyOnIdxForRz(const idx_size idx,
+                                const idx_size num_qubits,
+                                const double* phases /*num qubits*/)
+{
+    double acc_phase = 0;
+    for (idx_size i = 0; i < num_qubits; ++i) {
+        if ((idx & (1 << i)) == (1 << i))
+            acc_phase += phases[i];
+        else
+            acc_phase -= phases[i];
+        
+    }
+    
+    return acc_phase;
+}
+
+__attribute__((always_inline)) inline
+void ApplyRzGatesAVX(cmplx* __restrict amp,
+                     const idx_size num_qubits,
+                     const idx_size idx /* starting idx of 8 contiguous idxs */,
+                     const double* phases /* num qubits */)
+{
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    
+    __m256 phases_idx = {0};
+    
+    for (idx_size i = 0; i < 8; ++i)
+        phases_idx[i] = CalculatePhaseToApplyOnIdxForRz(idx + i, num_qubits, phases);
+    
+    const __m256 exp_vals = _mm256_exp_ps(phases_idx);
+    __m256 first_4_multiples = _mm256_permute2f128_ps(exp_vals, exp_vals, 0b00000000);
+    __m256 second_4_multiples = _mm256_permute2f128_ps(exp_vals, exp_vals, 0b10001000);
+    first_4_multiples = _mm256_permute_ps(first_4_multiples, 0b00001010);
+    second_4_multiples = _mm256_permute_ps(second_4_multiples, 0b00001010);
+    
+    __m256 a0 = _mm256_load_ps(&t_amp[2 * idx]);
+    __m256 a1 = _mm256_load_ps(&t_amp[2 * (idx + 4)]);
+    a0 = _mm256_mul_ps(a0, first_4_multiples);
+    a1 = _mm256_mul_ps(a1, second_4_multiples);
+    
+    _mm256_store_ps(&t_amp[2 * idx], a0);
+    _mm256_store_ps(&t_amp[2 * (idx + 4)], a0);
+}
+
 pair<idx_size, int>
 XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
@@ -551,7 +597,8 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
                       const int num_qubits,
                       const int num_threads);
 
-void ApplyHGatesIteratively(cmplx* __restrict amp,
+void
+ApplyHGatesIteratively(cmplx* __restrict amp,
                             int num_qubits,
                             int num_threads,
                             idx_size gate_bm);
@@ -582,4 +629,5 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                  const int num_threads,
                                  const int num_high_qubits,
                                  const ZeroOptMask& zero_opt_mask);
+
 #endif /* kernelsAVX_h */

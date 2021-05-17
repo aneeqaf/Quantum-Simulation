@@ -287,7 +287,7 @@ ApplyHGateOnAllAmps(bool not_initialize_amp)
 
 void FullAmpStateVector::
 ApplyCGate(const int num_controls,
-           const vector<int>& gate_qubits,
+           const vector<size_t>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {
