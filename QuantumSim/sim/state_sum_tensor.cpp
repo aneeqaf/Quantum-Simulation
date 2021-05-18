@@ -373,13 +373,12 @@ FormGatesBitmaskXCZ(bool& terminate,
 }
 
 void SumOfTensorsProductsStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
     const int num_q_1 = tensor_addends[0] -> GetNumQInBlock(0) + tensor_addends[0] -> GetNumQInBlock(1) - 1;
     for (auto& t : tensor_addends)
-        t -> ApplyNonCGate(num_q_1 - gate_qubit, gate_type, g);
+        t -> ApplyNonCGate(num_q_1 - gate_qubit, gate_type);
 }
 
 void SumOfTensorsProductsStateVector::
@@ -391,8 +390,8 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 
 //TODO
 void SumOfTensorsProductsStateVector::
-ApplyCGate(const int num_controls,
-           const vector<size_t>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {

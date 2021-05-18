@@ -106,9 +106,8 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
 }
 
 void AdaptiveStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
     if (full_state)
         full_state -> ApplyNonCGate(gate_qubit, gate_type);
@@ -127,8 +126,8 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 
 //TODO
 void AdaptiveStateVector::
-ApplyCGate(const int num_controls,
-           const vector<size_t>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {

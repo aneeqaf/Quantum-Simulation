@@ -391,18 +391,17 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
 }
 
 void TensorProductStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
     int block = qp.globalToBlock(gate_qubit);
     int num_q_1_partition = qp.getNumQubitsInBlock(block) - 1;
 
     const int projected_gate_q = num_q_1_partition - qp.globalToLocal(gate_qubit);
     if (qp.globalToBlock(gate_qubit) == 0)
-        state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
+        state_a -> ApplyNonCGate(projected_gate_q, gate_type);
     else
-        state_b -> ApplyNonCGate(projected_gate_q, gate_type, g);
+        state_b -> ApplyNonCGate(projected_gate_q, gate_type);
 }
 
 void TensorProductStateVector::
@@ -416,8 +415,8 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 
 //TODO
 void TensorProductStateVector::
-ApplyCGate(const int num_controls,
-           const vector<size_t>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {
@@ -429,8 +428,8 @@ ApplyMergedXYGate(const Gate& gate1,
                   const Gate& gate2)
 {
     bitset<128> temp1 = 0, temp2 = 0;
-    temp1[gate1.qubits[0]] = 1;
-    temp2[gate2.qubits[0]] = 1;
+    temp1[gate1.GetQubits()[0]] = 1;
+    temp2[gate2.GetQubits()[0]] = 1;
     
     const bitset<128> a_qubits_bitmask = qp.getBlockBitmask(0), b_qubits_bitmask = qp.getBlockBitmask(1);
 
@@ -440,14 +439,14 @@ ApplyMergedXYGate(const Gate& gate1,
         state_b -> ApplyMergedXYGate(gate1, gate2);
     else {
         if ((temp1 & a_qubits_bitmask) != 0)
-            state_a -> ApplyNonCGate(gate1.qubits[0], (Gate::Type)gate1.ids.back());
+            state_a -> ApplyNonCGate(gate1.GetQubits()[0], gate1.GetType());
         else
-            state_b -> ApplyNonCGate(gate1.qubits[0], (Gate::Type)gate1.ids.back());
+            state_b -> ApplyNonCGate(gate1.GetQubits()[0], gate1.GetType());
 
         if ((temp2 & b_qubits_bitmask) != 0)
-            state_a -> ApplyNonCGate(gate2.qubits[0], (Gate::Type)gate2.ids.back());
+            state_a -> ApplyNonCGate(gate2.GetQubits()[0], gate2.GetType());
         else
-            state_b -> ApplyNonCGate(gate2.qubits[0], (Gate::Type)gate2.ids.back());
+            state_b -> ApplyNonCGate(gate2.GetQubits()[0], gate2.GetType());
     }
 }
 

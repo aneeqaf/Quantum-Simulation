@@ -27,12 +27,11 @@ public:
                                const bitset<128> T_bitmasks[2],
                                const bitset<128>& H_bitmask,
                                const bool last_cycle);
-    void ApplyNonCGate(const int gate_qubit,
-                       const Gate::Type gate_type,
-                       const Gate& g = {});
+    void ApplyNonCGate(const idx_size gate_qubit,
+                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
-    void ApplyCGate(const int num_controls,
-                    const vector<size_t>& gate_qubits,
+    void ApplyCGate(const idx_size num_controls,
+                    const vector<idx_size>& gate_qubits,
                     const Gate& g,
                     const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,

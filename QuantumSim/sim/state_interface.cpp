@@ -44,8 +44,8 @@ FormXYHGatesBitmask(idx_size& gate_i,
     for(;gate_i < all_gates.size(); ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
-        if(gt.ids.back() == gate_type)
-            bitmask[gt.qubits.back()] = 1;
+        if(gt.GetType() == gate_type)
+            bitmask[gt.GetQubits().back()] = 1;
         else break;
     }
 //    for (idx_size i = 0; i < cluster_qubits.size(); ++i)
@@ -199,7 +199,7 @@ void QubitPartition::InitMappings() {
 
 idx_size QubitPartition::
 IndexScatter(const bitset<128>& idx,
-             const int block_idx)
+             const idx_size block_idx)
 {
     idx_size local_idx = 0;
     int total_qubits = getNumQubits();

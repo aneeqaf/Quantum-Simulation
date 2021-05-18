@@ -209,7 +209,6 @@ MainLoopForBranching(GenericQuantumState& amp,
         SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_p_2, config -> dfs_length, 0, gate_i);
         amp.partition_to_sim = 'x';
         
-        auto& idx = config -> indices;
         for(idx_size i = 0; i < idxs_len; ++i) {
             assert(amp.compressed == false);
             Time amp_st_time;
@@ -678,8 +677,8 @@ SimulationLoop(GenericQuantumState &amp,
         
         curr_gate = i;
         Gate& current_gate = circuit.GetGateFromIndex(i);
-        if(current_gate.ids.front() == Gate::Type::Control ||
-           current_gate.ids.back() == Gate::Type::T) {
+        if(current_gate.GetType() == Gate::Type::ControlZ ||
+           current_gate.GetType() == Gate::Type::T) {
 
             double cycle_elapsed_t = time.GetElapsedTime();
             current_cycle = circuit.GetCycleNumForGateIdx(i);
@@ -687,8 +686,8 @@ SimulationLoop(GenericQuantumState &amp,
 //            if (amp.book_keep)
 //                amp.data_per_cycles.cycles.push_back(current_cycle);
           
-            if (current_gate.ids.back() == Gate::Type::T ||
-                current_gate.ids.back() == Gate::Type::Z) {
+            if (current_gate.GetType() == Gate::Type::T ||
+                current_gate.GetType() == Gate::Type::ControlZ) {
                 
                 Time CZT_time;
                 CZT_time.StartTime();
@@ -732,7 +731,7 @@ SimulationLoop(GenericQuantumState &amp,
                 bitset<128> H_bitmask = 0;
                 bool last_cycle = false;
                 
-                if (i < size && circuit.GetGateFromIndex(i).ids.back() == Gate::Type::Hadamard) {
+                if (i < size && circuit.GetGateFromIndex(i).GetType() == Gate::Type::Hadamard) {
                     last_cycle = true;
                     H_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Hadamard);
                     if (config -> last_layers_H)
@@ -788,12 +787,12 @@ SimulationLoop(GenericQuantumState &amp,
                 CZ_T_top_time += CZT_time.GetElapsedTime();
             }
             else {
-                amp.ApplyCGate(current_gate.num_controls, current_gate.qubits,
-                               current_gate, (Gate::Type)current_gate.ids.back());
+                amp.ApplyCGate(current_gate.GetNumControls(), current_gate.GetQubits(),
+                               current_gate, (Gate::Type)current_gate.GetType());
             }
         }
         else {
-            if(circuit.google && current_gate.ids.back() == Gate::Type::Hadamard) {
+            if(circuit.google && current_gate.GetType() == Gate::Type::Hadamard) {
                 
                 ++amp.count_of_category.H_layers;
                 cycle_time.StartTime();

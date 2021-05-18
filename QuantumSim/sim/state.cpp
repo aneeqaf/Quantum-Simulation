@@ -115,7 +115,7 @@ FullAmpStateVector::
 }
 
 bitset<128> FullAmpStateVector::
-FormBitmask(const vector<int>& qubits)
+FormBitmask(const vector<idx_size>& qubits)
 {
     bitset<128> qubits_bitmask = 0;
     for (idx_size i = 0; i < qubits.size(); ++i)
@@ -217,11 +217,10 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
 }
 
 void FullAmpStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
-    ApplyNonControl1QGates(amp, gate_qubit, num_qubits, gate_type, g);
+    ApplyNonControl1QGates(amp, gate_qubit, num_qubits, gate_type);
     if (gate_type == Gate::Type::X_1_2 || gate_type == Gate::Type::Y_1_2)
         global_factor_power += 2;
 }
@@ -286,8 +285,8 @@ ApplyHGateOnAllAmps(bool not_initialize_amp)
 }
 
 void FullAmpStateVector::
-ApplyCGate(const int num_controls,
-           const vector<size_t>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {
@@ -305,7 +304,7 @@ ApplyMergedXYGate(const Gate& gate1,
     
     global_factor_power += 2;
     
-    if (gate1.ids.back() == Gate::Type::Y_1_2 && gate2.ids.back() == Gate::Type::Y_1_2)
+    if (gate1.GetType() == Gate::Type::Y_1_2 && gate2.GetType() == Gate::Type::Y_1_2)
         ++global_i_counter;
     
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
@@ -318,9 +317,9 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
                        idx_size& odd_Yi,
                        const vector<Gate>& all_gates)
 {
-    vector<int> qubits_in_cluster1 , qubits_in_cluster2;
+    vector<idx_size> qubits_in_cluster1 , qubits_in_cluster2;
     
-    if ((Gate::Type)all_gates[gate_i].ids.back() == Gate::Type::X_1_2)
+    if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::X_1_2)
         qubits_in_cluster1 = FormBlockOfXYHGates(gate_i, Gate::Type::X_1_2, all_gates);
     
     if (qubits_in_cluster1.size() % 2 == 1) {
@@ -328,7 +327,7 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
         odd_Xi = gate_i - 1;
     }
     
-    if ((Gate::Type)all_gates[gate_i].ids.back() == Gate::Type::Y_1_2)
+    if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::Y_1_2)
         qubits_in_cluster2 = FormBlockOfXYHGates(gate_i, Gate::Type::Y_1_2, all_gates);
     
     if (qubits_in_cluster2.size() % 2 == 1) {

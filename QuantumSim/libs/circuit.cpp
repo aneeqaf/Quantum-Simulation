@@ -67,8 +67,8 @@ GroupAlternateCycles()
             if (i % 2 == 1)
                 k = -j;
             
-            if (gates[g_i + k].ids.back() == Gate::Type::T ||
-                gates[g_i + k].ids.back() == Gate::Type::Z) {
+            if (gates[g_i + k].GetType() == Gate::Type::T ||
+                gates[g_i + k].GetType() == Gate::Type::ControlZ) {
                 
                 if (i % 2 == 1) {
                     if(saw_xy)
@@ -98,7 +98,7 @@ GroupSimilarGates()
     for (idx_size j = qubits; j < gates.size()
          && (g_i + last_Y + last_X + last_T + last_CZ) < gates.size(); ++j) {
         
-        if (gates[j].ids.back() == Gate::Type::Z) {
+        if (gates[j].GetType() == Gate::Type::ControlZ) {
             ++count_CZ;
             if(saw_Y || saw_X || saw_H) {
                 g_i = j;
@@ -117,7 +117,7 @@ GroupSimilarGates()
             
             ++last_CZ;
         }
-        else if (gates[j].ids.back() == Gate::Type::T) {
+        else if (gates[j].GetType() == Gate::Type::T) {
             if(saw_Y || saw_X) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
@@ -135,7 +135,7 @@ GroupSimilarGates()
             
             ++last_T;
         }
-        else if (gates[j].ids.back() == Gate::Type::X_1_2) {
+        else if (gates[j].GetType() == Gate::Type::X_1_2) {
             saw_X = true;
             if (saw_T || saw_CZ || saw_Y || saw_H) {
                 if (!saw_H)
@@ -148,7 +148,7 @@ GroupSimilarGates()
             
             ++last_X;
         }
-        else if (gates[j].ids.back() == Gate::Type::Y_1_2) {
+        else if (gates[j].GetType() == Gate::Type::Y_1_2) {
             saw_Y = true;
             if (saw_T || saw_X || saw_CZ || saw_H) {
                 if (!saw_H)
@@ -161,7 +161,8 @@ GroupSimilarGates()
             
             ++last_Y;
         }
-        else if (gates[j].ids.back() == Gate::Type::Hadamard) saw_H = true;
+        else if (gates[j].GetType() == Gate::Type::Hadamard)
+            saw_H = true;
     }
 #ifdef PrintG
     PrintGates();
@@ -184,15 +185,15 @@ MovexCZGates(idx_size proc_prefix_bits,
     int curr_path = 0;
   
     for (idx_size i = qubits; i < gates.size(); ++i) {
-         if (gates[i].ids.back() == Gate::Type::Z) {
+         if (gates[i].GetType() == Gate::Type::ControlZ) {
              idx_size count_xCZ = 0;
              idx_size j = i;
-             for (; j < gates.size() && gates[j].ids.back() == Gate::Type::Z; ++j) {
+             for (; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
                  ++count_CZ;
-                 int q0 = num_q_1 - gates[j].qubits.front(), q1 = num_q_1 - gates[j].qubits.back();
+                 idx_size q0 = num_q_1 - gates[j].GetQubits().front(), q1 = num_q_1 - gates[j].GetQubits().back();
                  
                  if (nearest_neigbors) {
-                     int x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
+                     idx_size x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
                      x1 = q1 % qp.GetColumns(), y1 = q1 / qp.GetColumns();
                      
                      if (!((x0 == x1 && (y0 + 1 == y1 || y0 - 1 == y1))
@@ -223,21 +224,21 @@ MovexCZGates(idx_size proc_prefix_bits,
              }
              
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,
-                  [](Gate& g1, Gate& g2){ return g1.qubits.front() < g2.qubits.front();});
+                  [](Gate& g1, Gate& g2){ return g1.GetQubits().front() < g2.GetQubits().front();});
              sort(gates.begin() + i, gates.begin() + i + count_xCZ,
                   [](Gate& g1, Gate& g2) {
-                        if (g1.qubits.front() == g2.qubits.front())
-                            return g1.qubits.back() > g2.qubits.back();
+                        if (g1.GetQubits().front() == g2.GetQubits().front())
+                            return g1.GetQubits().back() > g2.GetQubits().back();
                         else
                             return false;
                   });
              
              if (transition_cycle && count_xCZ) {
                  idx_size xCZ_counter = 0, move_count = 0;
-                 vector<int> xCZ_q;
+                 vector<idx_size> xCZ_q;
                  for (idx_size k = i + count_xCZ - 1; xCZ_counter != count_xCZ; --k) {
-                     xCZ_q.push_back(gates[k].qubits.front());
-                     xCZ_q.push_back(gates[k].qubits.back());
+                     xCZ_q.push_back(gates[k].GetQubits().front());
+                     xCZ_q.push_back(gates[k].GetQubits().back());
                      swap(gates[k], gates[j - 1 - move_count++]);
                      ++xCZ_counter;
                  }
@@ -261,21 +262,23 @@ MovexCZGates(idx_size proc_prefix_bits,
                  idx_size last_CZ = j - 1;
                  idx_size next_CZ = last_CZ;
             
-                 for (idx_size k = j; k < gates.size() && gates[k].ids.back() != Gate::Type::Z; ++k)
+                 for (idx_size k = j; k < gates.size()
+                      && gates[k].GetType() != Gate::Type::ControlZ; ++k)
                      ++next_CZ;
                  
                  idx_size T_gates_idx = 0;
                  for (; i < gates.size(); ++i) {
                      idx_size XYH_count = 0;
                      move_count = 0;
-                     if (gates[i].ids.back() == Gate::Type::T && T_gates_idx == 0)
+                     if (gates[i].GetType() == Gate::Type::T && T_gates_idx == 0)
                          T_gates_idx = i;
                      
-                     if (gates[i].ids.back() == Gate::Type::X_1_2 || gates[i].ids.back() == Gate::Type::Y_1_2 ||
-                         gates[i].ids.back() == Gate::Type::Hadamard) {
-                         for (j = i; j < gates.size() && gates[j].ids.back() != Gate::Type::Z; ++j) {
+                     if (gates[i].GetType() == Gate::Type::X_1_2
+                         || gates[i].GetType() == Gate::Type::Y_1_2
+                         || gates[i].GetType() == Gate::Type::Hadamard) {
+                         for (j = i; j < gates.size() && gates[j].GetType() != Gate::Type::ControlZ; ++j) {
                              for (idx_size k = 0; k < xCZ_q.size(); ++k) {
-                                 if (gates[j].qubits.back() == xCZ_q[k]) {
+                                 if (gates[j].GetQubits().back() == xCZ_q[k]) {
                                      if (j < (next_CZ - move_count)) {
                                          swap(gates[next_CZ - move_count++], gates[j]);
                                         --j;
@@ -288,11 +291,11 @@ MovexCZGates(idx_size proc_prefix_bits,
                              if (XYH_count != 0) break;
                          }
                          for (idx_size k = 0; k < xCZ_counter
-                              && gates[next_CZ - XYH_count - k].ids.back() != Gate::Type::Z ; ++k)
+                              && gates[next_CZ - XYH_count - k].GetType() != Gate::Type::ControlZ ; ++k)
                              swap(gates[last_CZ - k], gates[next_CZ - XYH_count - k]);
                          
                          if (T_gates_idx != 0) {
-                             for (int k = 0; gates[T_gates_idx + k].ids.back() == Gate::Type::T ; ++k)
+                             for (int k = 0; gates[T_gates_idx + k].GetType() == Gate::Type::T ; ++k)
                                  swap(gates[last_CZ - xCZ_counter + k + 1], gates[T_gates_idx + k]);
                          }
                          
@@ -340,9 +343,9 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
     double num_XY_gates = 0;
     vector<int> XY_gates_per_qubit(qubits, 0);
     for (idx_size i = qubits; i < gates.size(); ++i) {
-        if (gates[i].ids.back() == Gate::Type::X_1_2 || gates[i].ids.back() == Gate::Type::Y_1_2) {
+        if (gates[i].GetType() == Gate::Type::X_1_2 || gates[i].GetType() == Gate::Type::Y_1_2) {
             ++num_XY_gates;
-            ++XY_gates_per_qubit[gates[i].qubits.back()];
+            ++XY_gates_per_qubit[gates[i].GetQubits().back()];
         }
     }
     
@@ -360,15 +363,15 @@ PrintGates() const
 {
     cout << endl;
     for (auto& g : gates) {
-        if(g.ids.back() == Gate::Type::Z)
+        if(g.GetType() == Gate::Type::ControlZ)
             cout << "CZ ";
-        else if (g.ids.back() == Gate::Type::X_1_2)
+        else if (g.GetType() == Gate::Type::X_1_2)
             cout << "X ";
-        else if (g.ids.back() == Gate::Type::Y_1_2)
+        else if (g.GetType() == Gate::Type::Y_1_2)
             cout << "Y ";
-        else if (g.ids.back() == Gate::Type::T)
+        else if (g.GetType() == Gate::Type::T)
             cout << "T ";
-        else if (g.ids.back() == Gate::Type::Hadamard)
+        else if (g.GetType() == Gate::Type::Hadamard)
             cout << "H ";
     }
     cout << "\n\n";
@@ -383,15 +386,15 @@ PrintGatesAndCycles() const
         
         for(;j < clock_cycles[i]; ++j) {
             auto& g = gates[j];
-            if(g.ids.back() == Gate::Type::Z)
+            if(g.GetType() == Gate::Type::ControlZ)
                 cout << "CZ ";
-            else if (g.ids.back() == Gate::Type::X_1_2)
+            else if (g.GetType() == Gate::Type::X_1_2)
                 cout << "X ";
-            else if (g.ids.back() == Gate::Type::Y_1_2)
+            else if (g.GetType() == Gate::Type::Y_1_2)
                 cout << "Y ";
-            else if (g.ids.back() == Gate::Type::T)
+            else if (g.GetType() == Gate::Type::T)
                 cout << "T ";
-            else if (g.ids.back() == Gate::Type::Hadamard)
+            else if (g.GetType() == Gate::Type::Hadamard)
                 cout << "H ";
         }
         cout << "\n";
@@ -417,8 +420,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
     auto count_wires_gate = [&](vector<short>& CZ_pairs) {
         int count = 0;
         for (idx_size i = 0; i < qubit_to_gates.size(); ++i) {
-            if (gates[qubit_to_gates[i].back()].
-                ids[0] == Gate::Type::Control) {
+            if (gates[qubit_to_gates[i].back()].GetType() == Gate::Type::ControlZ) {
                 CZ_pairs.push_back(i);
                 count += 1;
             }
@@ -478,8 +480,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
         
         for (int j = 0; j < qubits_for_gates; ++j) {
             int q = rand() % qubits_for_gates;
-            while(gates[qubit_to_gates[CZ_pairs[q]].back()].ids[0]
-                  != Gate::Type::Control) {
+            while(gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() != Gate::Type::ControlZ) {
                 q = rand() % qubits_for_gates;
             }
             complied_qubits[j] = CZ_pairs[q];
@@ -487,8 +488,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
             short gate_to_apply;
             if (T_gate_allowed[CZ_pairs[q]]) {
                 gate_to_apply = rand() % GS_gates_num;
-                while (gates[qubit_to_gates[CZ_pairs[q]].back()].ids[0]
-                       == GS_gates[gate_to_apply]) {
+                while (gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() == GS_gates[gate_to_apply]) {
                     gate_to_apply = rand() % GS_gates_num;
                 }
                 if (gate_to_apply == 2) {
@@ -497,22 +497,18 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
             }
             else {
                 gate_to_apply = rand() % (GS_gates_num - 1);
-                while (gates[qubit_to_gates[CZ_pairs[q]].back()].
-                       ids[0] == GS_gates[gate_to_apply]) {
+                while (gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() == GS_gates[gate_to_apply]) {
                     gate_to_apply = rand() % (GS_gates_num - 1);
                 }
             }
-            
-            Gate temp;
-            
+                        
             if (gate_to_apply == 0)
-                temp = create_X_1_2({static_cast<float>(CZ_pairs[q])});
+                gates.push_back(create_X_1_2({static_cast<float>(CZ_pairs[q])}));
             else if (gate_to_apply == 1)
-                temp = create_Y_1_2({static_cast<float>(CZ_pairs[q])});
+                gates.push_back(create_Y_1_2({static_cast<float>(CZ_pairs[q])}));
             else if (gate_to_apply == 2)
-                temp = create_T({static_cast<float>(CZ_pairs[q])});
+                gates.push_back(create_T({static_cast<float>(CZ_pairs[q])}));
             qubit_to_gates[CZ_pairs[q]].push_back(gates.size());
-            gates.push_back(move(temp));
         }
         if(qubits_for_gates > 0)
            clock_cycles.push_back(gates.size());
@@ -541,65 +537,57 @@ CreateQuiddProScript(const string& out_file,
         file << "state = kron(state, cb(\"" + to_string(classical_bits[q]) << "\"));\n";
     
     for (idx_size i = 0; i < gates.size(); ++i) {
-        if(i != 0) {
+        if(i != 0)
             file << ";\n";
-        }
         int op_count = 0;
         bool control = false;
-        bool continue_ = false;
-        for (idx_size gt = 0; gt < gates[i].ids.size(); ++gt) {
-            auto g = gates[i].ids[gt];
+        
+        if (gates[i].GetType() == Gate::Type::Measurement) {
+            file << "measure_sv(" + to_string(gates[i].GetQubits()[0] + 1)
+            + ", state)";
+            continue;
+        }
+        
+        if (gates[i].GetType() == Gate::Type::T) {
+            file << "T = [1 0 ; 0 " + to_string(0.707106781) + "+i*" + to_string(0.707106781) + "];\n";
+            file << "op" + to_string(op_count++) + " = cu_gate (T, \"";
+        }
+        else if (gates[i].GetType() == Gate::Type::X_1_2) {
+            file << "X_1_2 = [0.5+i*0.5 0.5-i*0.5 ; 0.5-i*0.5 0.5+i*0.5];\n";
+            file << "op" + to_string(op_count++) + " = cu_gate (X_1_2, \"";
+        }
+        else if (gates[i].GetType() == Gate::Type::Y_1_2) {
+            file << "Y_1_2 = [0.5+i*0.5 -0.5-i*0.5 ; 0.5+i*0.5 0.5+i*0.5];\n";
+            file << "op" + to_string(op_count++) + " = cu_gate (Y_1_2, \"";
+        }
+        else if (gates[i].GetType() != Gate::Type::ControlZ) {
+            file << "op" + to_string(op_count++)  + " = cu_gate(" + quiddpro_func[gates[i].GetType()] + "(";
             
-            if ( g == Gate::Type::Measurement) {
-                file << "measure_sv(" + to_string(gates[i].qubits[0] + 1)
-                + ", state)";
-                continue_ = true;
-                continue;
+            if (gates[i].GetType() < Gate::Type::X_rotation || gates[i].GetType() == Gate::Type::Phase) {
+                file << "1), \"";
             }
-            
-            if (g == Gate::Type::T) {
-                file << "T = [1 0 ; 0 " + to_string(0.707106781) + "+i*" + to_string(0.707106781) + "];\n";
-                file << "op" + to_string(op_count++) + " = cu_gate (T, \"";
-            }
-            else if (g == Gate::Type::X_1_2) {
-                file << "X_1_2 = [0.5+i*0.5 0.5-i*0.5 ; 0.5-i*0.5 0.5+i*0.5];\n";
-                file << "op" + to_string(op_count++) + " = cu_gate (X_1_2, \"";
-            }
-            else if (g == Gate::Type::Y_1_2) {
-                file << "Y_1_2 = [0.5+i*0.5 -0.5-i*0.5 ; 0.5+i*0.5 0.5+i*0.5];\n";
-                file << "op" + to_string(op_count++) + " = cu_gate (Y_1_2, \"";
-            }
-            else if (g != Gate::Type::Control ) {
-                file << "op" + to_string(op_count++)  + " = cu_gate(" + quiddpro_func[g] + "(";
-                
-                if (g < Gate::Type::X_rotation || g == Gate::Type::Phase) {
-                    file << "1), \"";
-                }
-                else if (g < Gate::Type::Control) {
-                    file << to_string(gates[i].theta[gt]) + " * pi, 1), \"";
-                }
-            }
-            
-            if (g != Gate::Type::Control) {
-                int q = 0;
-                if (control) {
-                    for (; q < gates[i].num_controls; ++q) {
-                        file << "c" + to_string(gates[i].qubits[q] + 1);
-                    }
-                }
-                for (; q < (int)gates[i].qubits.size(); ++q) {
-                    file << "x" + to_string(gates[i].qubits[q] + 1);
-                }
-                file << "\", " + to_string(qubits) << ");\n";
-            }
-            else {
-                control = true;
+            else if (gates[i].GetType() < Gate::Type::ControlZ) {
+                file << to_string(gates[i].GetTheta()[0]) + " * pi, 1), \"";
             }
         }
         
-        if (continue_) {
-            continue;
+        if (gates[i].GetType() != Gate::Type::ControlZ) {
+            int q = 0;
+            if (control) {
+                for (; q < gates[i].GetNumControls(); ++q) {
+                    file << "c" + to_string(gates[i].GetQubits()[q] + 1);
+                }
+            }
+            
+            auto num_qubits = (int)gates[i].GetQubits().size();
+            for (; q < num_qubits; ++q) {
+                file << "x" + to_string(gates[i].GetQubits()[q] + 1);
+            }
+            file << "\", " + to_string(qubits) << ");\n";
         }
+        else
+            control = true;
+        
         if(op_count > 1) {
             file << "op = ";
             for (int n = 0; n < op_count; ++n) {
@@ -611,11 +599,11 @@ CreateQuiddProScript(const string& out_file,
             file << ";\n";
             file << "state = op * state";
         }
-        else {
+        else
             file << "state = op0 * state";
-        }
     }
-    if (layers_last_H && gates.back().ids.back() != Gate::Type::Hadamard) {
+    
+    if (layers_last_H && gates.back().GetType() != Gate::Type::Hadamard) {
         for (int j = 0; j < layers_last_H; ++j) {        
             for (int i = 0; i < qubits; ++i) {
                 file << ";\nop0 = cu_gate(hadamard(1), \"x" << i + 1 << "\" ," << qubits
@@ -652,14 +640,14 @@ WriteGeneratedCircuitFile(const string& out_file,
         throw "Create Circuit first by entering gates";
     
     for (idx_size i = 0; i < size_g; ++i) {
-        idx_size size_r = gates[i].rows.size();
+        idx_size size_r = gates[i].GetMatrix().size();
         for(size_t j = 0; j < size_r; ++j) {
-            int size_c = (int)gates[i].rows[j].size();
+            int size_c = (int)gates[i].GetMatrix()[j].size();
             for (int k = 0; k < size_c; ++k) {
-                file << real(gates[i].rows[j][k]);
+                file << real(gates[i].GetMatrix()[j][k]);
                 
-                if (imag(gates[i].rows[j][k]) != 0)
-                    file << " + " << imag(gates[i].rows[j][k]) << " i";
+                if (imag(gates[i].GetMatrix()[j][k]) != 0)
+                    file << " + " << imag(gates[i].GetMatrix()[j][k]) << " i";
                 
                 if (k != size_c-1)
                     file << " , ";
@@ -669,137 +657,22 @@ WriteGeneratedCircuitFile(const string& out_file,
         }
         file << "\n";
         file << "g ";
-        for ( auto gate_num : gates[i].ids)
-            file << gate_num << " ";
+        file << gates[i].GetType() << " ";
         
         file << "\nt ";
-        for ( auto theta : gates[i].theta)
+        for ( auto theta : gates[i].GetTheta())
             file << theta << " ";
         
         
         file << "\n";
         file << "q ";
-        for (const auto& q : gates[i].qubits) {
+        for (const auto& q : gates[i].GetQubits())
             file << q << " ";
-        }
         
         file << "\n";
-        file << "c " << gates[i].num_controls << "\n";
+        file << "c " << gates[i].GetNumControls() << "\n";
     }
     file.close();
-}
-
-[[deprecated]]
-//TO DO:add support for clock ccyles
-void Circuit::
-ReadCustomInputFiles(cmplx*& amp,
-                     idx_size& size,
-                     const string& input_file,
-                     const int add_layer_H)
-{
-    google = true;
-    ifstream file;
-    file.open(input_file);
-    string input;
-    
-    file >> qubits;
-    
-    getline(file, input);
-    getline(file, input);
-    int classical;
-    istringstream css(input);
-    while (css >> classical)
-        classical_bits.push_back(classical);
-    
-    amp = new cmplx [1ull << qubits];
-    size = 1ull << qubits;
-    getline(file, input);
-    cmplx amp_temp(0,0);
-    double theta;
-    int q, gt;
-    char delim = '_';
-    istringstream ss(input);
-    int vi = 0;
-    while (ss >> amp_temp) {
-        amp[vi] = amp_temp;
-        ++vi;
-    }
-    
-    while(getline(file, input)) {
-        istringstream iss(input);
-        
-        double re, im;
-        char sign = '_' , i;
-        delim = '_';
-        Gate g = Gate();
-        
-        vector<cmplx> row;
-        while(iss >> re) {
-            
-            if(delim == '&' || sign == '&') {
-                g.rows.push_back(row);
-                row.clear();
-            }
-            
-            iss >> sign;
-            if (sign != '+') {
-                im = 0;
-            }
-            else {
-                iss >> im >> i;
-                iss >> delim;
-            }
-            
-            cmplx c1(re, im);
-            row.push_back(c1);
-        }
-        
-        if(delim == '&' || sign == '&') {
-            g.rows.push_back(row);
-        }
-        
-        char type;
-        getline(file, input);
-        istringstream gis(input);
-        gis >> type;
-        if (type == 'g') {
-            while(gis >> gt) {
-                g.ids.push_back(gt);
-            }
-        }
-        
-        getline(file, input);
-        istringstream tis(input);
-        tis >> type;
-        if (type == 't') {
-            while(tis >> theta) {
-                g.theta.push_back(theta);
-            }
-        }
-        
-        
-        getline(file, input);
-        istringstream qis(input);
-        qis >> type;
-        if (type == 'q') {
-            while(qis >> q) {
-                g.qubits.push_back(q);
-            }
-        }
-        
-        getline(file, input);
-        istringstream cis(input);
-        cis >> type;
-        if (type == 'c') {
-            cis >> g.num_controls;
-        }
-        gates.push_back(g);
-    }
-    
-    if (add_layer_H != 0)
-        for (int i = 0; i < add_layer_H; ++i)
-            for (int q = 0; q < qubits; ++q)
-                gates.push_back(create_Hadamard({static_cast<float>(q)}));
 }
 
 void Circuit::

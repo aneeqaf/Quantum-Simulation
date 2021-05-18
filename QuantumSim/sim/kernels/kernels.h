@@ -309,7 +309,7 @@ ApplyGateOnAmps(cmplx* __restrict amp,
             }
             default: {
                 vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
-                m_temp = matrix_v_mult(q_gate.rows, m_temp);
+                m_temp = matrix_v_mult(q_gate.GetMatrix(), m_temp);
                 for (idx_size i = 0; i < indices_size; ++i)
                     amp[indices[i]] = temp_amp[i];
                 break;
@@ -318,7 +318,7 @@ ApplyGateOnAmps(cmplx* __restrict amp,
     }
     else {
         vector<cmplx> m_temp(temp_amp, temp_amp + sizeof(temp_amp) / sizeof(temp_amp[0]));
-        m_temp = matrix_v_mult(q_gate.rows, m_temp);
+        m_temp = matrix_v_mult(q_gate.GetMatrix(), m_temp);
         for (idx_size i = 0; i < indices_size; ++i)
             amp[indices[i]] = temp_amp[i];
     }
@@ -375,12 +375,12 @@ ApplyMergedXYGates(cmplx* __restrict amp,
 void
 GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
              const int num_qubits_amp,
-             const vector<int>& gate_qubits);
+             const vector<idx_size>& gate_qubits);
 
 void
 GroupTGates(idx_size* __restrict T_bitmasks,
             const int num_qubits_amp,
-            const vector<int>& gate_qubits);
+            const vector<idx_size>& gate_qubits);
 
 void
 ExtractIndicesForAmp(idx_size* strides,
@@ -395,7 +395,7 @@ FormBlockOfCZTGates(idx_size& gate_i,
                     const vector<Gate>& cluster,
                     const int num_qubits_amp);
 
-vector<int>
+vector<idx_size>
 FormBlockOfXYHGates(idx_size& gate_i,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates);

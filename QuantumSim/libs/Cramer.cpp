@@ -489,7 +489,7 @@ PackCWIn256BitsAVXReg(const unsigned int* codewords) const
         
         __m256i temp_cw = _mm256_or_si256(temp1_cw, temp2_cw);
         temp_cw = _mm256_sllv_epi32(temp_cw, BITS_TO_STARTING_OF_UI[num_bits_codewords]);
-        temp_cw = _mm256_shift_left(temp_cw, i * num_bits_codewords);
+        temp_cw = _mm256_shift_left(temp_cw, static_cast<unsigned int>(i * num_bits_codewords));
         cw = _mm256_or_si256(cw, temp_cw);
         
         idxs = _mm256_add_epi64(idxs, INCREMENT_1_UI);

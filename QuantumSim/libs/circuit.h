@@ -40,19 +40,16 @@ public:
     
     void GroupAlternateCycles();
     int GroupSimilarGates();
-    pair<int, int> MovexCZGates(idx_size prox_prefix_bits,
-                     idx_size range_bits,
-                     idx_size branch_bits,
-                     const QubitPartition& bitmasks,
-                     const bool nearest_neigbors = true);
+//    int ClusterSimilarGates();
+    pair<int, int> MovexCZGates(idx_size proc_prefix_bits,
+                                idx_size range_bits,
+                                idx_size branch_bits,
+                                const QubitPartition& bitmasks,
+                                const bool nearest_neigbors = true);
     int ComputeNumberOfHighValuedQubits(int num_qubits);
     void ReadGoogleCircuitFile(const string& input_file,
                                const int depth,
                                const int add_layer_H = 0);
-    void ReadCustomInputFiles(cmplx*& amp,
-                              idx_size& amp_size,
-                              const string& input_file,
-                              const int add_layer_H = 0);
     void CreateGoogleCircuit(int qubits,
                              int clock_cycles);
     void WriteGeneratedCircuitFile(const string& out_file,

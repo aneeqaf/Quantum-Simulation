@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool rollrightInput = false, googleInput = false, create = false, to_write = false, print_amp = false,
+    bool googleInput = false, create = false, to_write = false, print_amp = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
     store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
@@ -249,20 +249,16 @@ int main(int argc, char *argv[])
                 
                 googleInput = CheckIfGoogleFile(input_filename);
                 if (!googleInput)
-                    rollrightInput = CheckIfRollRightFile(input_filename);
-                if (!googleInput && !rollrightInput) {
+                {
                     ifstream infile(string(input_filename).c_str());
                     if (!infile.good()) {
                         cerr << "Cannot find circuit file.\n";
                         exit(1);
                     }
-                    else googleInput = true;
+                    
+                    googleInput = true;
                 }
-                else if (googleInput)
-                    input_filename = "input/random_circuits_google/" + input_filename;
-                else if (rollrightInput)
-                    input_filename = "input/random_circuits_rollright/" + input_filename;
-                
+                input_filename = "input/random_circuits_google/" + input_filename;
                 break;
             }
             case 'm': {
@@ -411,19 +407,9 @@ int main(int argc, char *argv[])
     }
     
     Circuit cir;
-    if (rollrightInput || googleInput) {
-        cmplx* amp_v = nullptr;
-        idx_size size = 0;
-        //write a function for printing google files.
-        if (rollrightInput) {
-            cir.ReadCustomInputFiles(amp_v, size, input_filename, layers_H_gates);
-            delete [] amp_v;
-            amp_v = nullptr;
-        }
-        else {
-            cir.ReadGoogleCircuitFile(input_filename, depth, layers_H_gates);
-            depth = (int)cir.GetNumCycles();
-        }
+    if (googleInput) {
+        cir.ReadGoogleCircuitFile(input_filename, depth, layers_H_gates);
+        depth = (int)cir.GetNumCycles();
     }
     else if(create) {
         for (idx_size i = 0; i < num_qubits.size(); ++i){

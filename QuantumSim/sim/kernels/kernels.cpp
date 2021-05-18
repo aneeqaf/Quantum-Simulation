@@ -10,7 +10,7 @@
 void
 GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
              const int num_qubits_amp,
-             const vector<size_t>& gate_qubits)
+             const vector<idx_size>& gate_qubits)
 {
     bitset<128> bits = 0;
     const int new_q = num_qubits_amp - 1;
@@ -26,7 +26,7 @@ GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
 void
 GroupTGates(bitset<128>* __restrict T_bitmasks,
             const int num_qubits_amp,
-            const vector<size_t>& gate_qubits)
+            const vector<idx_size>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
     bitset<128> t_mask;
@@ -82,27 +82,25 @@ FormBlockOfCZTGates(idx_size& gate_i,
                     const int num_qubits_amp)
 {
     for(;gate_i < cluster.size(); ++gate_i) {
-        const auto gt = cluster[gate_i].ids.back();
-        
-        if (gt == Gate::Type::Z)
-            GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].qubits);
-        else if (gt == Gate::Type::T)
-            GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].qubits);
+        if (cluster[gate_i].GetType() == Gate::Type::ControlZ)
+            GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
+        else if (cluster[gate_i].GetType() == Gate::Type::T)
+            GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
         else break;
     }
 }
 
-vector<int>
+vector<idx_size>
 FormBlockOfXYHGates(idx_size& gate_i,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
-    vector<int> qubits_in_cluster;
+    vector<idx_size> qubits_in_cluster;
     for(;gate_i < all_gates.size(); ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
-        if(gt.ids.back() == gate_type)
-            qubits_in_cluster.push_back(gt.qubits.back());
+        if(gt.GetType() == gate_type)
+            qubits_in_cluster.push_back(gt.GetQubits().back());
         else break;
     }
     return qubits_in_cluster;
@@ -117,7 +115,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
     for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
-        if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
+        if(gt.GetType() == Gate::Type::X_1_2 ||  gt.GetType() == Gate::Type::Y_1_2)
             cluster.push_back(all_gates[gate_i]);
         else break;
     }
@@ -510,10 +508,10 @@ Apply2MergedXY12Gates(Gate gate1,
                       cmplx* __restrict amp,
                       const int num_qubits_amp)
 {
-    const idx_size qubits = (1ull << gate1.qubits.back()) | (1ull << gate2.qubits.back());
+    const idx_size qubits = (1ull << gate1.GetQubits().back()) | (1ull << gate2.GetQubits().back());
 
-    const Gate::Type g1t = (Gate::Type)gate1.ids.back();
-    const Gate::Type g2t = (Gate::Type)gate2.ids.back();
+    const Gate::Type g1t = (Gate::Type)gate1.GetType();
+    const Gate::Type g2t = (Gate::Type)gate2.GetType();
 
     if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyXX12Gate);

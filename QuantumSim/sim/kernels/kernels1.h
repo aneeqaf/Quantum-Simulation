@@ -157,13 +157,13 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const int q,
                        const int num_qubits_amp,
                        const Gate::Type gate_type,
-                       const Gate& g = {});
+                       const Gate custom_gate = create_I({0}));
 
 //TODO: Test this
 void
 ApplyControlGate(cmplx* __restrict amp,
                  const int num_controls,
-                 const vector<size_t>& gate_qubits,
+                 const vector<idx_size>& gate_qubits,
                  const int num_qubits_amp,
                  const Gate& g,
                  const Gate::Type gate_type);

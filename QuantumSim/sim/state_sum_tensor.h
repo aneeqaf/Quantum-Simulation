@@ -49,12 +49,11 @@ public:
                             const idx_size cz_path_len,
                             const idx_size suffix_size,
                             const bitset<128>* __restrict CZ_bitmasks);
-    void ApplyNonCGate(const int gate_qubit,
-                       const Gate::Type gate_type,
-                       const Gate& g = {});
+    void ApplyNonCGate(const idx_size gate_qubit,
+                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
-    void ApplyCGate(const int num_controls,
-                    const vector<size_t>& gate_qubits,
+    void ApplyCGate(const idx_size num_controls,
+                    const vector<idx_size>& gate_qubits,
                     const Gate& g,
                     const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,

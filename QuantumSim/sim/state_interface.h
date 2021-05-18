@@ -89,21 +89,21 @@ public:
     int GetColumns() const { return _cols; }
     int getNumQubits() const { return _rows * _cols; }
     int getNumBlocks() const { return static_cast<int>(_blocks.size()); }
-    int getNumQubitsInBlock(int i) const { return (int)_blocks[i].count(); }
+    int getNumQubitsInBlock(idx_size i) const { return (int)_blocks[i].count(); }
     int getNumX() const { return _numX; }
     bitset<128> getBlockBitmask(int i) const { return _blocks[i]; }
     
-    int globalToBlock(int q) const { return _global_to_block[q]; }
-    int globalToLocal(int q) const { return _global_to_local[q]; }
-    int localToGlobal(int block,
-                      int q) const {
+    int globalToBlock(idx_size q) const { return _global_to_block[q]; }
+    int globalToLocal(idx_size q) const { return _global_to_local[q]; }
+    int localToGlobal(idx_size block,
+                      idx_size q) const {
         return _local_to_global[block][q];
     }
     
     // Scatters the global amp index into local amp indices.
     vector<idx_size> IndexScatter(const bitset<128>& i);
     idx_size IndexScatter(const bitset<128>& i,
-                          const int block_idx);
+                          const idx_size block_idx);
     // move up boundary qubits up front in each block
     void RenumberLocalQubits();
     
@@ -147,12 +147,11 @@ public:
                                       const bitset<128> T_bitmasks[2],
                                       const bitset<128>& H_bitmask,
                                       const bool last_cycle = false) = 0;
-    virtual void ApplyNonCGate(const int gate_qubit,
-                               const Gate::Type gate_type,
-                               const Gate& g = {}) = 0;
+    virtual void ApplyNonCGate(const idx_size gate_qubit,
+                               const Gate::Type gate_type) = 0;
     virtual void ApplyHGateOnAllAmps(bool not_cycle_0 = false) = 0;
-    virtual void ApplyCGate(const int num_controls,
-                            const vector<size_t>& gate_qubits,
+    virtual void ApplyCGate(const idx_size num_controls,
+                            const vector<idx_size>& gate_qubits,
                             const Gate& g,
                             const Gate::Type gate_type) = 0;
     virtual void ApplyMergedXYGate(const Gate& gate1,
