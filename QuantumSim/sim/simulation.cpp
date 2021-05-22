@@ -726,24 +726,23 @@ SimulationLoop(GenericQuantumState &amp,
                 bitset<128> CZ_bitmasks[total_circuit_qubits];
                 amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
                 idx_size prev_i_XY = i;
-                bitset<128> X_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::X_1_2);
-                bitset<128> Y_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Y_1_2);
+                unordered_map<Gate::Type, bitset<128>> bitmasks = amp.Form1QGatesBitmask(i, gates, {Gate::Type::X_1_2, Gate::Type::Y_1_2});
                 bitset<128> H_bitmask = 0;
                 bool last_cycle = false;
                 
                 if (i < size && circuit.GetGateFromIndex(i).GetType() == Gate::Type::Hadamard) {
                     last_cycle = true;
-                    H_bitmask = amp.FormXYHGatesBitmask(i, gates, Gate::Type::Hadamard);
+                    H_bitmask = amp.Form1QGatesBitmask(i, gates, {Gate::Type::Hadamard})[Gate::Type::Hadamard];
                     if (config -> last_layers_H)
                         last_layers_of_H--;
                     ++amp.count_of_category.H_layers;
                 }
 
                 int last_xCZ_idx = -1;
-                if (X_bitmask != 0 || Y_bitmask != 0) {
+                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
                     last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
-                                                                  suffix_size, X_bitmask,
-                                                                  Y_bitmask, H_bitmask, CZ_bitmasks,
+                                                                  suffix_size, bitmasks[Gate::Type::X_1_2],
+                                                                  bitmasks[Gate::Type::Y_1_2], H_bitmask, CZ_bitmasks,
                                                                   T_bitmasks, config -> th, last_cycle);
                     ++amp.count_of_category.CZT_layers;
                     ++amp.count_of_category.XY_layers;

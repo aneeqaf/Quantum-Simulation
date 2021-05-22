@@ -11,7 +11,7 @@ vector<string> Circuit::quiddpro_func;
 unordered_map<string, gate_generator_ptr> Circuit::google_gate_funcs;
 
 Circuit::
-Circuit() : gates({}),clock_cycles({}), qubits(0)
+Circuit() : gates({}), clock_cycles({}), qubits(0)
 {
     quiddpro_func.push_back("hadamard");
     quiddpro_func.push_back("sigma_x");
@@ -33,11 +33,7 @@ Circuit() : gates({}),clock_cycles({}), qubits(0)
 
 Circuit::
 Circuit(const Circuit& g)
-{
-    qubits = g.qubits;
-    gates = g.gates;
-    clock_cycles = g.clock_cycles;
-}
+: gates(g.gates), clock_cycles(g.clock_cycles), qubits(g.qubits) {}
 
 Circuit& Circuit::
 operator=(const Circuit& g)
@@ -87,7 +83,7 @@ GroupAlternateCycles()
     }
 }
 
-int Circuit::
+idx_size Circuit::
 GroupSimilarGates()
 {
     idx_size last_CZ = 0, last_T = 0, last_X = 0, last_Y = 0;
@@ -169,6 +165,97 @@ GroupSimilarGates()
 #endif
     
     return (int)count_CZ;
+}
+
+idx_size Circuit::
+ClusterSimilarGates()
+{
+#ifdef PrintG
+    PrintGates();
+#endif
+    const idx_size num_gates = gates.size();
+    idx_size count_2q_gates = 0;
+    bool qs_obstructed[qubits];
+    memset(qs_obstructed, 0, qubits * sizeof(bool));
+        
+    idx_size last_swap = 1;
+    for (idx_size i = 0; i < num_gates; i = last_swap++) {
+        Gate curr_gate = gates[i];
+        idx_size num_q_obstructed = 0;
+        
+        for (idx_size j = i + 1; j < num_gates && num_q_obstructed < qubits; ++j) {
+            assert(last_swap <= j);
+            
+            bool q_obstructed = false;
+            for (auto q : gates[j].GetQubits())
+                if (qs_obstructed[q]) {
+                    q_obstructed = true;
+                    break;
+                }
+            
+            if (!q_obstructed && curr_gate.GetType() == gates[j].GetType()) {
+//                for (auto q : gates[j].GetQubits()) {
+//                    if (!qs_obstructed[q]) {
+//                        qs_obstructed[q] = true;
+//                        ++num_q_obstructed;
+//                    }
+//                }
+                if (j > last_swap) {
+                    gates.insert(gates.begin() + last_swap, gates[j]);
+                    gates.erase(gates.begin() + j + 1);
+                }
+                ++last_swap;
+            }
+            else if (curr_gate.IsDiagonal() && !gates[j].IsDiagonal()) {
+                /*
+                 If the current gate is diagonal, then the qubit is only obstructed if the gate is not diagonal.
+                 */
+                for (auto q : gates[j].GetQubits()) {
+                    if (!qs_obstructed[q]) {
+                        qs_obstructed[q] = true;
+                        ++num_q_obstructed;
+                    }
+                }
+            }
+            else if (!curr_gate.IsDiagonal() && curr_gate.GetType() != gates[j].GetType()) {
+                /*
+                 If the current gate is not diagonal, then only move similar gates towards current gate.
+                 The similar gate should appear before other types of gates on a qubit.
+                 */
+                for (auto q : gates[j].GetQubits()) {
+                    if (!qs_obstructed[q]) {
+                        qs_obstructed[q] = true;
+                        ++num_q_obstructed;
+                    }
+                }
+            }
+        }
+        memset(qs_obstructed, 0, qubits * sizeof(bool));
+        if (curr_gate.GetQubits().size() == 2)
+            count_2q_gates += last_swap - i;
+    }
+    
+#ifdef PrintG
+    PrintGates();
+#endif
+    
+    return count_2q_gates;
+}
+
+void Circuit::
+ReorderClusteredDiagGatesTobeInorderOfQubits()
+{
+    const idx_size num_gates = gates.size();
+    
+    for (idx_size i = 0; i < num_gates; ++i) {
+        
+    }
+}
+
+void Circuit::
+MoveDiagGatesBeforeNonDiagGatesInCycle()
+{
+    
 }
 
 pair<int, int> Circuit::
@@ -362,17 +449,67 @@ void Circuit::
 PrintGates() const
 {
     cout << endl;
-    for (auto& g : gates) {
+    for (idx_size q = 0; q < qubits; ++q) {
+        cout << q << " | ";
+        for (idx_size i = 0; i < gates.size(); ++i) {
+            const Gate& g = gates[i];
+            if (g.GetQubits().size() == 1 && g.GetQubits()[0] == q) {
+                if (g.GetType() == Gate::Type::X_1_2)
+                    cout << "X ";
+                else if (g.GetType() == Gate::Type::Y_1_2)
+                    cout << "Y ";
+                else if (g.GetType() == Gate::Type::T)
+                    cout << "T ";
+                else if (g.GetType() == Gate::Type::Hadamard)
+                    cout << "H ";
+            }
+            else if (g.GetQubits().size() == 2 && (g.GetQubits()[0] == q || g.GetQubits()[1] == q)) {
+                if(g.GetType() == Gate::Type::ControlZ)
+                    cout << "CZ ";
+            }
+        }
+        cout << "\n";
+    }
+    cout << endl;
+    for (idx_size q = 0; q < qubits; ++q) {
+        cout << q << " | ";
+        for (idx_size i = 0; i < gates.size(); ++i) {
+            const Gate& g = gates[i];
+            if (g.GetQubits().size() == 1 && g.GetQubits()[0] == q) {
+                if (g.GetType() == Gate::Type::X_1_2)
+                    cout << i << ":X ";
+                else if (g.GetType() == Gate::Type::Y_1_2)
+                    cout << i << ":Y ";
+                else if (g.GetType() == Gate::Type::T)
+                    cout << i << ":T ";
+                else if (g.GetType() == Gate::Type::Hadamard)
+                    cout << i << ":H ";
+            }
+            else if (g.GetQubits().size() == 2 && (g.GetQubits()[0] == q || g.GetQubits()[1] == q)) {
+                if(g.GetType() == Gate::Type::ControlZ)
+                    cout << i << ":CZ ";
+            }
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+    Gate::Type prev_type = gates[0].GetType();
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        if (prev_type != gates[i].GetType()) {
+            cout << endl;
+            prev_type = gates[i].GetType();
+        }
+        const Gate& g = gates[i];
         if(g.GetType() == Gate::Type::ControlZ)
-            cout << "CZ ";
+            cout << i << ":CZ(" << g.GetQubits()[0] << "," << g.GetQubits()[1] << ") ";
         else if (g.GetType() == Gate::Type::X_1_2)
-            cout << "X ";
+            cout << i << ":X(" << g.GetQubits()[0] << ") ";
         else if (g.GetType() == Gate::Type::Y_1_2)
-            cout << "Y ";
+            cout << i << ":Y(" << g.GetQubits()[0] << ") ";
         else if (g.GetType() == Gate::Type::T)
-            cout << "T ";
+            cout << i << ":T(" << g.GetQubits()[0] << ") ";
         else if (g.GetType() == Gate::Type::Hadamard)
-            cout << "H ";
+            cout << i << ":H(" << g.GetQubits()[0] << ") ";
     }
     cout << "\n\n";
 }

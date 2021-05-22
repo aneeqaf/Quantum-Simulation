@@ -33,21 +33,10 @@ GroupTGates(bitset<128>* __restrict T_bitmasks,
     t_mask[(num_qubits_amp - 1) - gate_qubits[0]] = 1;
     if ((T_bitmasks[0] & t_mask) != t_mask)
         T_bitmasks[0] |= t_mask;
-    
-    else {
-        if ((T_bitmasks[1] & t_mask) == t_mask)
-            throw "More than 2 T gates incident on a qubit.";
-        
-        bool found = false;
-        for (int t = 0; t < 2; ++t)
-            if ((T_bitmasks[t] & t_mask) != t_mask) {
-                T_bitmasks[t] |= t_mask;
-                found = true;
-            }
-        if (!found) {
-            T_bitmasks[1] = t_mask;
-        }
-    }
+    else if ((T_bitmasks[1] & t_mask) != t_mask)
+        T_bitmasks[1] |= t_mask;
+    else
+        throw "More than 2 T gates incident on a qubit.";
 }
 
 void

@@ -10,6 +10,7 @@
 
 #include <fstream>
 #include <map>
+#include <memory>
 #include <iostream>
 #include <string>
 #include <stdio.h>
@@ -39,8 +40,10 @@ public:
     bool google ;
     
     void GroupAlternateCycles();
-    int GroupSimilarGates();
-//    int ClusterSimilarGates();
+    idx_size GroupSimilarGates();
+    idx_size ClusterSimilarGates();
+    void ReorderClusteredDiagGatesTobeInorderOfQubits();
+    void MoveDiagGatesBeforeNonDiagGatesInCycle();
     pair<int, int> MovexCZGates(idx_size proc_prefix_bits,
                                 idx_size range_bits,
                                 idx_size branch_bits,
