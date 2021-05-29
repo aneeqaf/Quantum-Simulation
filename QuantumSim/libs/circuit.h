@@ -8,15 +8,17 @@
 #ifndef circuit_h
 #define circuit_h
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <memory>
 #include <iostream>
+#include <set>
 #include <string>
 #include <stdio.h>
-#include <valarray>
 #include <vector>
 
+#include "circuit_kernels.h"
 #include "gates.h"
 #include "state_interface.h"
 
@@ -32,9 +34,6 @@ private:
     vector<idx_size> clock_cycles;
     vector<int> classical_bits;
     int qubits;
-    
-    void PrintGatesAndCycles() const;
-    void PrintGates() const;
  
 public:
     bool google ;
@@ -42,8 +41,16 @@ public:
     void GroupAlternateCycles();
     idx_size GroupSimilarGates();
     idx_size ClusterSimilarGates();
-    void ReorderClusteredDiagGatesTobeInorderOfQubits();
-    void MoveDiagGatesBeforeNonDiagGatesInCycle();
+    idx_size RearrangexCZForPathConcludingCycle(idx_size gate_idx,
+                                                idx_size marked_crossing_gates,
+                                                int remaining_cz_path_bits,
+                                                GateMovementUnorderedMap& gates_to_insert,
+                                                const QubitPartition& qp);
+    pair<int, int> MovexCZGatesRewrite(idx_size proc_prefix_bits,
+                                       idx_size range_bits,
+                                       idx_size branch_bits,
+                                       const QubitPartition& qp,
+                                       const bool nearest_neigbors);
     pair<int, int> MovexCZGates(idx_size proc_prefix_bits,
                                 idx_size range_bits,
                                 idx_size branch_bits,

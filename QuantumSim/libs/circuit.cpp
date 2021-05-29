@@ -161,7 +161,7 @@ GroupSimilarGates()
             saw_H = true;
     }
 #ifdef PrintG
-    PrintGates();
+    PrintGates(gates, qubits);
 #endif
     
     return (int)count_CZ;
@@ -170,93 +170,234 @@ GroupSimilarGates()
 idx_size Circuit::
 ClusterSimilarGates()
 {
-#ifdef PrintG
-    PrintGates();
-#endif
-    const idx_size num_gates = gates.size();
-    idx_size count_2q_gates = 0;
-    bool qs_obstructed[qubits];
-    memset(qs_obstructed, 0, qubits * sizeof(bool));
-        
-    idx_size last_swap = 1;
-    for (idx_size i = 0; i < num_gates; i = last_swap++) {
-        Gate curr_gate = gates[i];
-        idx_size num_q_obstructed = 0;
-        
-        for (idx_size j = i + 1; j < num_gates && num_q_obstructed < qubits; ++j) {
-            assert(last_swap <= j);
+    return ::ClusterSimilarGates(gates, qubits);
+}
+
+// Inserts the new gates to the relevant clusters in the next cycles
+idx_size Circuit::
+RearrangexCZForPathConcludingCycle(idx_size gate_idx,
+                                   idx_size marked_crossing_gates,
+                                   int remaining_cz_path_bits,
+                                   GateMovementUnorderedMap& gates_to_insert,
+                                   const QubitPartition& qp)
+{
+    assert(remaining_cz_path_bits <= 0);
+    
+    typedef map<ObstructedQubit, idx_size, ObstructedQubit> QubitObstructionMap;
+    set<Qubit> obstructed_qubits;
+    QubitObstructionMap qubit_obstruction_idx;
+    
+    // Find the obstruction indexes to move out the xCZ gates as far as possible
+    for (idx_size i = gate_idx; i < gates.size()
+                && qubit_obstruction_idx.size() != marked_crossing_gates; ++i) {
+        if (gates[i].IsDiagonal()
+            && qubit_obstruction_idx.size() != marked_crossing_gates) {
+            const auto& gate_qubits = gates[i].GetQubits();
             
-            bool q_obstructed = false;
-            for (auto q : gates[j].GetQubits())
-                if (qs_obstructed[q]) {
-                    q_obstructed = true;
+            for (const auto& q : gate_qubits) {
+                if (obstructed_qubits.count(q) == 0 &&
+                    gates_to_insert.count(q) > 0
+                     && gates_to_insert[q] -> IsObstructed) {
+                    const auto& insertion_gate_qubits =
+                                gates_to_insert[q] -> gates_list[0].first.GetQubits();
+                    
+                    for (const auto q1 : insertion_gate_qubits)
+                        obstructed_qubits.insert(q1);
+                    qubit_obstruction_idx[{insertion_gate_qubits, i}] = i;
                     break;
-                }
-            
-            if (!q_obstructed && curr_gate.GetType() == gates[j].GetType()) {
-//                for (auto q : gates[j].GetQubits()) {
-//                    if (!qs_obstructed[q]) {
-//                        qs_obstructed[q] = true;
-//                        ++num_q_obstructed;
-//                    }
-//                }
-                if (j > last_swap) {
-                    gates.insert(gates.begin() + last_swap, gates[j]);
-                    gates.erase(gates.begin() + j + 1);
-                }
-                ++last_swap;
-            }
-            else if (curr_gate.IsDiagonal() && !gates[j].IsDiagonal()) {
-                /*
-                 If the current gate is diagonal, then the qubit is only obstructed if the gate is not diagonal.
-                 */
-                for (auto q : gates[j].GetQubits()) {
-                    if (!qs_obstructed[q]) {
-                        qs_obstructed[q] = true;
-                        ++num_q_obstructed;
-                    }
-                }
-            }
-            else if (!curr_gate.IsDiagonal() && curr_gate.GetType() != gates[j].GetType()) {
-                /*
-                 If the current gate is not diagonal, then only move similar gates towards current gate.
-                 The similar gate should appear before other types of gates on a qubit.
-                 */
-                for (auto q : gates[j].GetQubits()) {
-                    if (!qs_obstructed[q]) {
-                        qs_obstructed[q] = true;
-                        ++num_q_obstructed;
-                    }
                 }
             }
         }
-        memset(qs_obstructed, 0, qubits * sizeof(bool));
-        if (curr_gate.GetQubits().size() == 2)
-            count_2q_gates += last_swap - i;
+        else if (!gates[i].IsDiagonal()
+                 && qubit_obstruction_idx.size() != marked_crossing_gates) {
+            const auto& gate_qubits = gates[i].GetQubits();
+            
+            for (const auto& q : gate_qubits) {
+                if (obstructed_qubits.count(q) == 0 && gates_to_insert.count(q) > 0) {
+                    const auto& insertion_gate_qubits = gates_to_insert[q] -> gates_list[0].first.GetQubits();
+                    
+                    for (const auto q1 : insertion_gate_qubits)
+                        obstructed_qubits.insert(q1);
+                    qubit_obstruction_idx[{insertion_gate_qubits, i}] = i;
+                    break;
+                }
+            }
+        }
     }
     
+    // If an obstruction does not exist, append it to the end.
+    for (const auto& g : gates_to_insert) {
+        const auto& gate_qubits = g.second -> gates_list[0].first.GetQubits();
+        for (const auto& q : gate_qubits) {
+            if (obstructed_qubits.count(q) == 0) {
+                const auto& insertion_gate_qubits = gates_to_insert[q] -> gates_list[0].first.GetQubits();
+                
+                for (const auto q1 : insertion_gate_qubits)
+                    obstructed_qubits.insert(q1);
+                qubit_obstruction_idx[{insertion_gate_qubits, gates.size()}] = gates.size();
+                break;
+            }
+        }
+    }
+
+    // The xCZ gates need to be moved out in order since we are only interested
+    // in moving the final gate in the path the farthest. Ordered map helps with that.
+    vector<idx_size> gates_to_delete;
+    int starting_idx_for_movable_xCZ = static_cast<int>(qubit_obstruction_idx.size()) + (remaining_cz_path_bits - 1);
+    auto last_cycle_it = next(qubit_obstruction_idx.begin(), starting_idx_for_movable_xCZ);
+    vector<Gate> last_cycle_gates;
+    const GateAndIdx& list_of_gates = gates_to_insert[last_cycle_it -> first.qubits[0]] -> gates_list;
+    
+    for (auto g : list_of_gates) {
+        last_cycle_gates.push_back(g.first);
+        gates_to_delete.push_back(g.second);
+    }
+    if (last_cycle_gates.size() > 0)
+        InsertNewCycleOnClusteredCircuit(last_cycle_it -> second, qubits, gates, last_cycle_gates, qp);
+    
+    // Merge the remaining gates and insert them into the next cycle.
+    vector<Gate> remaining_gates;
+    for (int i = starting_idx_for_movable_xCZ + 1; i < qubit_obstruction_idx.size(); ++i) {
+        auto it = next(qubit_obstruction_idx.begin(),  i);
+        const GateAndIdx& list_of_gates = gates_to_insert[it -> first.qubits[0]] -> gates_list;
+        for (auto g : list_of_gates) {
+            remaining_gates.push_back(g.first);
+            gates_to_delete.push_back(g.second);
+        }
+    }
+    
+    idx_size result_idx = last_cycle_it -> second;
+    if (remaining_gates.size() > 0) {
+        auto next_cycle_it = next(qubit_obstruction_idx.begin(), starting_idx_for_movable_xCZ + 1);
+        InsertNewCycleOnClusteredCircuit(next_cycle_it -> second, qubits, gates, remaining_gates, qp);
+        ::ClusterSimilarGates(gates, qubits, next_cycle_it -> second);
+        result_idx = next_cycle_it -> second - 1;
+    }
+
+    // Deleting after is fine because all insertions are happening at or after the deletion idx.
+    // Deletion indices need to be be descending order.
+    sort(gates_to_delete.begin(), gates_to_delete.end(), greater<idx_size>());
+    for (const auto i : gates_to_delete) {
+        gates.erase(gates.begin() + i);
+        --result_idx;
+    }
+    
+    return result_idx;
+}
+
+// Generalize this to other >1q gates that cross
+pair<int, int> Circuit::
+MovexCZGatesRewrite(idx_size proc_prefix_bits,
+                    idx_size range_bits,
+                    idx_size branch_bits,
+                    const QubitPartition& qp,
+                    const bool nearest_neigbors)
+{
+    
+    const idx_size num_qubits_minus_1 = qp.getNumQubits() - 1;
+    int remaining_path_bits = static_cast<int>(proc_prefix_bits), total_CZ = 0, total_xCZ = 0;
+    Config::SimMode current_mode = Config::SimMode::ProcPrefix;
+    bool continue_rearranging = proc_prefix_bits != 0;
+    
+    for (idx_size i = 0; i < gates.size() && continue_rearranging; ++i) {
+        idx_size j = i;
+        int num_xCZ_in_cluster = 0;
+        
+        // Find all xCZ in cycle
+        for (; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
+            const auto& gate_qubits = gates[j].GetQubits();
+            idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
+            
+            if (nearest_neigbors) {
+                idx_size x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
+                x1 = q1 % qp.GetColumns(), y1 = q1 / qp.GetColumns();
+                
+                if (!((x0 == x1 && (y0 + 1 == y1 || y0 - 1 == y1))
+                      || ((x0 + 1 == x1 || x0 - 1 == x1) && (y0 == y1)))) {
+                    cerr << "\n\n2 qubit gates are not acting on nearest neighbors.\n";
+                    exit(1);
+                }
+            }
+            
+            if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) {
+//                swap(gates[j], gates[i + num_xCZ_in_cluster]);
+                ++num_xCZ_in_cluster;
+            }
+        }
+        
+        // Move the xCZ in the transitioning cycle further out to have more gates in preceding paths
+        // The number of gates in the branching path should be the least
+        remaining_path_bits -= num_xCZ_in_cluster;
+        if (remaining_path_bits <= 0 && num_xCZ_in_cluster > 0) {
+            GateMovementUnorderedMap gates_to_move;
+            idx_size marked_crossing_gates = 0;
+            
+            for (j = i; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
+                const auto& gate_qubits = gates[j].GetQubits();
+                idx_size q0 = gate_qubits[0], q1 = gate_qubits[1];
+                
+                if (qp.globalToBlock(num_qubits_minus_1 - q0) !=  qp.globalToBlock(num_qubits_minus_1 - q1)) {
+                    ++marked_crossing_gates;
+                    if (gates_to_move.count(q0) == 0) gates_to_move[q0] = shared_ptr<GateMovement>(
+                                                        new GateMovement{GateAndIdx(1, {gates[j], j}), false});
+                    if (gates_to_move.count(q1) == 0) gates_to_move[q1] = gates_to_move[q0];
+                }
+            }
+            // Assume all other gates are 1q
+            // TODO : for other gates there needs to be a loop over gate qubits here
+            for (; j < gates.size() && gates[j].GetType() != Gate::Type::ControlZ; ++j) {
+                const auto& gate_qubits = gates[j].GetQubits();
+                if (gates_to_move.count(gate_qubits[0]) > 0 && !gates[j].IsDiagonal()) {
+                    gates_to_move[gate_qubits[0]] -> gates_list.push_back({gates[j], j});
+                    gates_to_move[gate_qubits[0]] -> IsObstructed = true;
+                }
+            }
+            
+            // The index returned for j adds back the CZ path bits for the next part
+            j = RearrangexCZForPathConcludingCycle(j, marked_crossing_gates, remaining_path_bits, gates_to_move, qp);
+            switch (current_mode) {
+                case Config::SimMode::ProcPrefix:
+                    remaining_path_bits = static_cast<int>(range_bits);
+                    current_mode = Config::SimMode::Ranges;
+                    if (range_bits == 0) continue_rearranging = false;
+                    break;
+                case Config::SimMode::Ranges:
+                    remaining_path_bits = static_cast<int>(branch_bits);
+                    current_mode = Config::SimMode::Branch;
+                    if (range_bits == 0) continue_rearranging = false;
+                    break;
+                case Config::SimMode::Branch:
+                    break;
+            }
+        }
+        i = j;
+    }
+    
+    // This final loop is mainly for counting. Swapping is not necessary because order is not important
+    // since all gates are wrapped in bitmasks.
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        idx_size j = i;
+        idx_size count_xCZ_per_cycle = 0;
+        for (; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
+            ++total_CZ;
+            const auto& gate_qubits = gates[j].GetQubits();
+            idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
+
+            if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) {
+                swap(gates[j], gates[i + count_xCZ_per_cycle]);
+                ++count_xCZ_per_cycle;
+            }
+        }
+        total_xCZ += count_xCZ_per_cycle;
+        i = j;
+    }
 #ifdef PrintG
-    PrintGates();
+    PrintGates(gates, qubits);
 #endif
     
-    return count_2q_gates;
+    return pair<int, int> (total_CZ, total_xCZ);
 }
 
-void Circuit::
-ReorderClusteredDiagGatesTobeInorderOfQubits()
-{
-    const idx_size num_gates = gates.size();
-    
-    for (idx_size i = 0; i < num_gates; ++i) {
-        
-    }
-}
-
-void Circuit::
-MoveDiagGatesBeforeNonDiagGatesInCycle()
-{
-    
-}
 
 pair<int, int> Circuit::
 MovexCZGates(idx_size proc_prefix_bits,
@@ -443,100 +584,6 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
             break;
     }
     return th;
-}
-
-void Circuit::
-PrintGates() const
-{
-    cout << endl;
-    for (idx_size q = 0; q < qubits; ++q) {
-        cout << q << " | ";
-        for (idx_size i = 0; i < gates.size(); ++i) {
-            const Gate& g = gates[i];
-            if (g.GetQubits().size() == 1 && g.GetQubits()[0] == q) {
-                if (g.GetType() == Gate::Type::X_1_2)
-                    cout << "X ";
-                else if (g.GetType() == Gate::Type::Y_1_2)
-                    cout << "Y ";
-                else if (g.GetType() == Gate::Type::T)
-                    cout << "T ";
-                else if (g.GetType() == Gate::Type::Hadamard)
-                    cout << "H ";
-            }
-            else if (g.GetQubits().size() == 2 && (g.GetQubits()[0] == q || g.GetQubits()[1] == q)) {
-                if(g.GetType() == Gate::Type::ControlZ)
-                    cout << "CZ ";
-            }
-        }
-        cout << "\n";
-    }
-    cout << endl;
-    for (idx_size q = 0; q < qubits; ++q) {
-        cout << q << " | ";
-        for (idx_size i = 0; i < gates.size(); ++i) {
-            const Gate& g = gates[i];
-            if (g.GetQubits().size() == 1 && g.GetQubits()[0] == q) {
-                if (g.GetType() == Gate::Type::X_1_2)
-                    cout << i << ":X ";
-                else if (g.GetType() == Gate::Type::Y_1_2)
-                    cout << i << ":Y ";
-                else if (g.GetType() == Gate::Type::T)
-                    cout << i << ":T ";
-                else if (g.GetType() == Gate::Type::Hadamard)
-                    cout << i << ":H ";
-            }
-            else if (g.GetQubits().size() == 2 && (g.GetQubits()[0] == q || g.GetQubits()[1] == q)) {
-                if(g.GetType() == Gate::Type::ControlZ)
-                    cout << i << ":CZ ";
-            }
-        }
-        cout << "\n";
-    }
-    cout << "\n";
-    Gate::Type prev_type = gates[0].GetType();
-    for (idx_size i = 0; i < gates.size(); ++i) {
-        if (prev_type != gates[i].GetType()) {
-            cout << endl;
-            prev_type = gates[i].GetType();
-        }
-        const Gate& g = gates[i];
-        if(g.GetType() == Gate::Type::ControlZ)
-            cout << i << ":CZ(" << g.GetQubits()[0] << "," << g.GetQubits()[1] << ") ";
-        else if (g.GetType() == Gate::Type::X_1_2)
-            cout << i << ":X(" << g.GetQubits()[0] << ") ";
-        else if (g.GetType() == Gate::Type::Y_1_2)
-            cout << i << ":Y(" << g.GetQubits()[0] << ") ";
-        else if (g.GetType() == Gate::Type::T)
-            cout << i << ":T(" << g.GetQubits()[0] << ") ";
-        else if (g.GetType() == Gate::Type::Hadamard)
-            cout << i << ":H(" << g.GetQubits()[0] << ") ";
-    }
-    cout << "\n\n";
-}
-
-void Circuit::
-PrintGatesAndCycles() const
-{
-    idx_size j = 0;
-    for (idx_size i = 0; i < clock_cycles.size(); ++i) {
-        cout << i << endl;
-        
-        for(;j < clock_cycles[i]; ++j) {
-            auto& g = gates[j];
-            if(g.GetType() == Gate::Type::ControlZ)
-                cout << "CZ ";
-            else if (g.GetType() == Gate::Type::X_1_2)
-                cout << "X ";
-            else if (g.GetType() == Gate::Type::Y_1_2)
-                cout << "Y ";
-            else if (g.GetType() == Gate::Type::T)
-                cout << "T ";
-            else if (g.GetType() == Gate::Type::Hadamard)
-                cout << "H ";
-        }
-        cout << "\n";
-    }
-    cout << "\n\n";
 }
 
 void Circuit::

@@ -178,8 +178,12 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
     time.StartTime();
     if (CZ_app || T_bitmasks_64[0]) {
         if (num_qubits > 4)
-            ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64,
-                                            loH_bitmask >> (num_qubits - th), num_threads, zero_opt_mask);
+            ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
+                                             T_bitmasks_64, 0,
+                                             0, loH_bitmask >> th,
+                                             num_threads, th, zero_opt_mask);
+//            ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64,
+//                                            loH_bitmask >> (num_qubits - th), num_threads, zero_opt_mask);
         else
             ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64); //fix for H
     }

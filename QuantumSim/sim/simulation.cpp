@@ -475,7 +475,7 @@ Simulate(GenericQuantumState& amp,
                        config -> vcut, config -> first_part_smaller) ;
 //        qp.RenumberLocalQubits();
         
-        twoq_gate_count = circuit.MovexCZGates(config -> proc_prefix_bits,
+        twoq_gate_count = circuit.MovexCZGatesRewrite(config -> proc_prefix_bits,
                                                config -> ranges_bits, config -> dfs_length,
                                                qp, config -> nearest_neighbors);
     }
@@ -676,6 +676,7 @@ SimulationLoop(GenericQuantumState &amp,
         }
         
         curr_gate = i;
+//        cout << "Current gate: " << curr_gate << endl;
         Gate& current_gate = circuit.GetGateFromIndex(i);
         if(current_gate.GetType() == Gate::Type::ControlZ ||
            current_gate.GetType() == Gate::Type::T) {
@@ -739,20 +740,20 @@ SimulationLoop(GenericQuantumState &amp,
                 }
 
                 int last_xCZ_idx = -1;
-                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
+//                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
                     last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                   suffix_size, bitmasks[Gate::Type::X_1_2],
                                                                   bitmasks[Gate::Type::Y_1_2], H_bitmask, CZ_bitmasks,
                                                                   T_bitmasks, config -> th, last_cycle);
                     ++amp.count_of_category.CZT_layers;
-                    ++amp.count_of_category.XY_layers;
-                }
-                else {
-                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(remaining_cz_bits, cz_path, cz_path_len,
-                                                             suffix_size, CZ_bitmasks, T_bitmasks, H_bitmask,
-                                                             last_cycle);
-                    ++amp.count_of_category.CZT_layers;
-                }
+                    if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0)  ++amp.count_of_category.XY_layers;
+//                }
+//                else {
+//                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(remaining_cz_bits, cz_path, cz_path_len,
+//                                                             suffix_size, CZ_bitmasks, T_bitmasks, H_bitmask,
+//                                                             last_cycle);
+//                    ++amp.count_of_category.CZT_layers;
+//                }
                 
                 terminate = last_xCZ_idx != -1 ? true : false;
                 
@@ -819,7 +820,7 @@ ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
 #ifdef Print
-    amp.PrintStateVector();
+//    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config -> prob_outfile, circuit.GetNumCycles() - 1);

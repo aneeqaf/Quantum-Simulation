@@ -176,43 +176,43 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
     }
 }
 
-void
-ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
-                                const int num_qubits_amp,
-                                const idx_size* __restrict CZ_bitmasks,
-                                const idx_size* __restrict T_bitmasks /*2*/,
-                                const idx_size Lo_H_bitmask,
-                                const int num_threads,
-                                const ZeroOptMask& zero_opt_mask)
-{
-    const int block_bits = num_qubits_amp >= 8 ? ceil((float)num_qubits_amp/2.0) : num_qubits_amp;
-    const idx_size amp_size = 1ull << num_qubits_amp;
-    const idx_size block_size = 1ull << block_bits;
-    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-        
-    #pragma omp parallel for schedule(guided) num_threads(num_threads)
-    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
-        idx_size num_iters = block_begin/block_size;
-        idx_size offset_idx = num_iters ^ (num_iters >> 1);
-        
-        if (zero_opt_mask.CheckIfAllNonZeroes() ||
-            zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
-            ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
-                                                   num_threads, block_begin, block_size, zero_opt_mask);
-            if (Lo_H_bitmask != 0)
-                ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
-                                       num_threads, Lo_H_bitmask);
-        }
-//        else {
-//            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
-//            << " (" << bitset<15>(offset_idx * block_size).to_string() << ")" << endl;
-//            for (idx_size i = offset_idx * block_size; i < (offset_idx * block_size) + block_size ; ++i) {
-////                cout << amp[i] << ",";
-//                assert(amp[i] == cmplx(0,0));
-//            }
+//void
+//ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
+//                                const int num_qubits_amp,
+//                                const idx_size* __restrict CZ_bitmasks,
+//                                const idx_size* __restrict T_bitmasks /*2*/,
+//                                const idx_size Lo_H_bitmask,
+//                                const int num_threads,
+//                                const ZeroOptMask& zero_opt_mask)
+//{
+//    const int block_bits = num_qubits_amp >= 8 ? ceil((float)num_qubits_amp/2.0) : num_qubits_amp;
+//    const idx_size amp_size = 1ull << num_qubits_amp;
+//    const idx_size block_size = 1ull << block_bits;
+//    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+//        
+//    #pragma omp parallel for schedule(guided) num_threads(num_threads)
+//    for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
+//        idx_size num_iters = block_begin/block_size;
+//        idx_size offset_idx = num_iters ^ (num_iters >> 1);
+//        
+//        if (zero_opt_mask.CheckIfAllNonZeroes() ||
+//            zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
+//            ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+//                                  num_threads, block_begin, block_size, zero_opt_mask);
+//            if (Lo_H_bitmask != 0)
+//                ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
+//                                       num_threads, Lo_H_bitmask);
 //        }
-    }
-}
+////        else {
+////            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
+////            << " (" << bitset<15>(offset_idx * block_size).to_string() << ")" << endl;
+////            for (idx_size i = offset_idx * block_size; i < (offset_idx * block_size) + block_size ; ++i) {
+////                cout << amp[i] << ",";
+////                assert(amp[i] == cmplx(0,0));
+////            }
+////        }
+//    }
+//}
 
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,

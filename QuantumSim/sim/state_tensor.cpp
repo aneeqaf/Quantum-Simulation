@@ -60,8 +60,10 @@ state_a(new FullAmpStateVector(*(rhs.state_a))), state_b(new FullAmpStateVector(
 TensorProductStateVector::
 ~TensorProductStateVector()
 {
-    delete state_a;
-    delete state_b;
+    if (state_a != nullptr)
+        delete state_a;
+    if (state_b != nullptr)
+        delete state_b;
 }
 
 void TensorProductStateVector::
