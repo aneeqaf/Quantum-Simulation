@@ -39,12 +39,13 @@ public:
     bool google ;
     
     void GroupAlternateCycles();
+    void RecalibrateGoogleClockCycles();
     idx_size GroupSimilarGates();
     idx_size ClusterSimilarGates();
     idx_size RearrangexCZForPathConcludingCycle(idx_size gate_idx,
                                                 idx_size marked_crossing_gates,
-                                                int remaining_cz_path_bits,
-                                                GateMovementUnorderedMap& gates_to_insert,
+                                                gate_movement_unordered_map_t& gates_to_insert,
+                                                const vector<idx_size>& gates_to_delete,
                                                 const QubitPartition& qp);
     pair<int, int> MovexCZGatesRewrite(idx_size proc_prefix_bits,
                                        idx_size range_bits,

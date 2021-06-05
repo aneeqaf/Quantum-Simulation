@@ -103,6 +103,21 @@ PrintGatesAndCycles(const vector<Gate>& gates,
     cout << "\n\n";
 }
 
+void
+CheckIfNearestNeighbor(idx_size q0,
+                       idx_size q1,
+                       const QubitPartition& qp)
+{
+    idx_size x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
+    x1 = q1 % qp.GetColumns(), y1 = q1 / qp.GetColumns();
+    
+    if (!((x0 == x1 && (y0 + 1 == y1 || y0 - 1 == y1))
+          || ((x0 + 1 == x1 || x0 - 1 == x1) && (y0 == y1)))) {
+        cerr << "\n\n2 qubit gates are not acting on nearest neighbors.\n";
+        exit(1);
+    }
+}
+
 idx_size
 ClusterSimilarGates(vector<Gate>& gates,
                     idx_size num_qubits,
@@ -220,15 +235,15 @@ InsertNewCycleOnClusteredCircuit(idx_size gate_idx,
      Rearrange sub-circuit into the desired order xCZ->diag gates->non-diag gates
      */
     ClusterSimilarGates(gates_to_insert, num_qubits);
-    for (idx_size i = 0; i < gates_to_insert.size(); ++i) {
-        for (idx_size j = i; j < gates_to_insert.size() && gates_to_insert[j].GetType() == Gate::Type::ControlZ; ++j) {
-            const auto& gate_qubits = gates_to_insert[j].GetQubits();
-
-            if (gate_qubits.size() > 1
-                &&  (qp.globalToBlock(num_qubits - 1 - gate_qubits[0]) !=  qp.globalToBlock(num_qubits - 1 - gate_qubits[1])))
-                swap(gates_to_insert[j], gates_to_insert[i]);
-        }
-    }
+//    for (idx_size i = 0; i < gates_to_insert.size(); ++i) {
+//        for (idx_size j = i; j < gates_to_insert.size() && gates_to_insert[j].GetType() == Gate::Type::ControlZ; ++j) {
+//            const auto& gate_qubits = gates_to_insert[j].GetQubits();
+//
+//            if (gate_qubits.size() > 1
+//                &&  (qp.globalToBlock(num_qubits - 1 - gate_qubits[0]) !=  qp.globalToBlock(num_qubits - 1 - gate_qubits[1])))
+//                swap(gates_to_insert[j], gates_to_insert[i]);
+//        }
+//    }
 
     for (idx_size i = 0; i < gates_to_insert.size(); ++i)
         circuit_gates.insert(circuit_gates.begin() + gate_idx + i, gates_to_insert[i]);

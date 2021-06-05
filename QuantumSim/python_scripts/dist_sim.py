@@ -88,10 +88,11 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	depth, no_nearest_neighbors, layers_hgates_b4_meas, no_checkpoint_with_ranges, save_checkpoint_to_file,
 	count_zeros, compress_cw_bits, compress_p_rejection, v_cut = v_cut) 
 		
-	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command, depth = \
+	proc_prefix_bits, branch_bits, t_time, mem, ranges_bits, cut, command, _ = \
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
 		ranges_bits, branch_bits, trial, v_cut, h_cut, approx)
 
+	depth = int(circuit.split("_")[2]) + 1;
 	num_bit_strings = (1 << int(proc_prefix_bits)) 
 
 	if t_time > 100 and max_procs:

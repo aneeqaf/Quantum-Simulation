@@ -9,24 +9,24 @@
 #ifndef circuit_kernels_h
 #define circuit_kernels_h
 
-#include <boost/container_hash/hash.hpp>
 #include <algorithm>
+#include <boost/container_hash/hash.hpp>
 #include <iterator>
+#include <unordered_set>
 
 #include "gates.h"
 #include "state_interface.h"
 
-using QubitsList = vector<idx_size>;
-using GateAndIdx = vector<pair<Gate, idx_size>>;
-using Qubit = idx_size;
+typedef vector<idx_size> qubits_list_t;
+typedef vector<pair<Gate, idx_size>> gate_idx_t;
 
 struct GateMovement {
-    GateAndIdx gates_list;
+    vector<Gate> gates_list;
     bool IsObstructed;
 };
 
 struct ObstructedQubit {
-    QubitsList qubits;
+    qubits_list_t qubits;
     idx_size obstruction_idx;
     
     bool operator() (const ObstructedQubit& lhs, const ObstructedQubit& rhs) const {
@@ -60,7 +60,7 @@ struct QubitsListKeyCmp {
     }
 };
 
-using GateMovementUnorderedMap = unordered_map<Qubit, shared_ptr<GateMovement>>;
+typedef unordered_map<idx_size, shared_ptr<GateMovement>> gate_movement_unordered_map_t;
 
 void
 PrintGates(const vector<Gate>& gates, idx_size num_qubits);
@@ -68,6 +68,10 @@ PrintGates(const vector<Gate>& gates, idx_size num_qubits);
 void
 PrintGatesAndCycles(const vector<Gate>& gates,
                     const vector<idx_size>& clock_cycles);
+
+void CheckIfNearestNeighbor(idx_size q0,
+                            idx_size q1,
+                            const QubitPartition& qp);
 
 idx_size
 ClusterSimilarGates(vector<Gate>& gates,

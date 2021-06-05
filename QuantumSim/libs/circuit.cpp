@@ -83,6 +83,27 @@ GroupAlternateCycles()
     }
 }
 
+void Circuit::
+RecalibrateGoogleClockCycles()
+{
+    unordered_map<idx_size, Gate::Type> gate_obstruction;
+    
+    clock_cycles.clear();
+        
+    // Assume a non-diag gate incident on same qubit initiates a new cycle
+    for (idx_size i = qubits; i < gates.size(); ++i) {
+        if (gates[i].GetType() == Gate::ControlZ || gates[i].GetType() == Gate::Hadamard) {
+            clock_cycles.push_back(i);
+            
+            for (; i < gates.size() && gates[i].GetType() == Gate::Type::ControlZ; ++i) {}
+            for (; i < gates.size() && gates[i].GetType() != Gate::Type::ControlZ; ++i) {}
+            --i;
+        }
+    }
+    
+    clock_cycles.push_back(gates.size());
+}
+
 idx_size Circuit::
 GroupSimilarGates()
 {
@@ -177,48 +198,48 @@ ClusterSimilarGates()
 idx_size Circuit::
 RearrangexCZForPathConcludingCycle(idx_size gate_idx,
                                    idx_size marked_crossing_gates,
-                                   int remaining_cz_path_bits,
-                                   GateMovementUnorderedMap& gates_to_insert,
+                                   gate_movement_unordered_map_t& gates_to_insert,
+                                   const vector<idx_size>& gates_to_delete,
                                    const QubitPartition& qp)
 {
-    assert(remaining_cz_path_bits <= 0);
+    if (gates_to_insert.size() == 0) return gate_idx;
     
-    typedef map<ObstructedQubit, idx_size, ObstructedQubit> QubitObstructionMap;
-    set<Qubit> obstructed_qubits;
-    QubitObstructionMap qubit_obstruction_idx;
+    set<idx_size> obstructed_qubits;
+    set<ObstructedQubit, ObstructedQubit> qubit_obstruction_idx;
     
-    // Find the obstruction indexes to move out the xCZ gates as far as possible
-    for (idx_size i = gate_idx; i < gates.size()
+    idx_size i = gate_idx;
+    // Find the obstruction indices to move out the xCZ gates as far as possible
+    for (; i < gates.size()
                 && qubit_obstruction_idx.size() != marked_crossing_gates; ++i) {
-        if (gates[i].IsDiagonal()
-            && qubit_obstruction_idx.size() != marked_crossing_gates) {
+        if (gates[i].IsDiagonal()) {
             const auto& gate_qubits = gates[i].GetQubits();
-            
+                        
+            // A diagonal gate impedes the movement of another diagonal gate
+            // if it has been already been obstructed
             for (const auto& q : gate_qubits) {
                 if (obstructed_qubits.count(q) == 0 &&
                     gates_to_insert.count(q) > 0
                      && gates_to_insert[q] -> IsObstructed) {
                     const auto& insertion_gate_qubits =
-                                gates_to_insert[q] -> gates_list[0].first.GetQubits();
+                                gates_to_insert[q] -> gates_list[0].GetQubits();
                     
                     for (const auto q1 : insertion_gate_qubits)
                         obstructed_qubits.insert(q1);
-                    qubit_obstruction_idx[{insertion_gate_qubits, i}] = i;
+                    qubit_obstruction_idx.insert({insertion_gate_qubits, i});
                     break;
                 }
             }
         }
-        else if (!gates[i].IsDiagonal()
-                 && qubit_obstruction_idx.size() != marked_crossing_gates) {
+        else if (!gates[i].IsDiagonal()) {
             const auto& gate_qubits = gates[i].GetQubits();
             
             for (const auto& q : gate_qubits) {
                 if (obstructed_qubits.count(q) == 0 && gates_to_insert.count(q) > 0) {
-                    const auto& insertion_gate_qubits = gates_to_insert[q] -> gates_list[0].first.GetQubits();
+                    const auto& insertion_gate_qubits = gates_to_insert[q] -> gates_list[0].GetQubits();
                     
                     for (const auto q1 : insertion_gate_qubits)
                         obstructed_qubits.insert(q1);
-                    qubit_obstruction_idx[{insertion_gate_qubits, i}] = i;
+                    qubit_obstruction_idx.insert({insertion_gate_qubits, i});
                     break;
                 }
             }
@@ -227,62 +248,56 @@ RearrangexCZForPathConcludingCycle(idx_size gate_idx,
     
     // If an obstruction does not exist, append it to the end.
     for (const auto& g : gates_to_insert) {
-        const auto& gate_qubits = g.second -> gates_list[0].first.GetQubits();
+        const auto& gate_qubits = g.second -> gates_list[0].GetQubits();
         for (const auto& q : gate_qubits) {
             if (obstructed_qubits.count(q) == 0) {
-                const auto& insertion_gate_qubits = gates_to_insert[q] -> gates_list[0].first.GetQubits();
+                const auto& insertion_gate_qubits = gates_to_insert[q] -> gates_list[0].GetQubits();
                 
                 for (const auto q1 : insertion_gate_qubits)
                     obstructed_qubits.insert(q1);
-                qubit_obstruction_idx[{insertion_gate_qubits, gates.size()}] = gates.size();
+                qubit_obstruction_idx.insert({insertion_gate_qubits, gates.size()});
                 break;
             }
         }
     }
 
-    // The xCZ gates need to be moved out in order since we are only interested
-    // in moving the final gate in the path the farthest. Ordered map helps with that.
-    vector<idx_size> gates_to_delete;
-    int starting_idx_for_movable_xCZ = static_cast<int>(qubit_obstruction_idx.size()) + (remaining_cz_path_bits - 1);
-    auto last_cycle_it = next(qubit_obstruction_idx.begin(), starting_idx_for_movable_xCZ);
-    vector<Gate> last_cycle_gates;
-    const GateAndIdx& list_of_gates = gates_to_insert[last_cycle_it -> first.qubits[0]] -> gates_list;
-    
-    for (auto g : list_of_gates) {
-        last_cycle_gates.push_back(g.first);
-        gates_to_delete.push_back(g.second);
-    }
-    if (last_cycle_gates.size() > 0)
-        InsertNewCycleOnClusteredCircuit(last_cycle_it -> second, qubits, gates, last_cycle_gates, qp);
-    
-    // Merge the remaining gates and insert them into the next cycle.
-    vector<Gate> remaining_gates;
-    for (int i = starting_idx_for_movable_xCZ + 1; i < qubit_obstruction_idx.size(); ++i) {
-        auto it = next(qubit_obstruction_idx.begin(),  i);
-        const GateAndIdx& list_of_gates = gates_to_insert[it -> first.qubits[0]] -> gates_list;
-        for (auto g : list_of_gates) {
-            remaining_gates.push_back(g.first);
-            gates_to_delete.push_back(g.second);
+    int rearrangement_gate = -1;
+    for (const auto& q : qubit_obstruction_idx) {
+        vector<Gate>& gates_list = gates_to_insert[q.qubits[0]] -> gates_list;
+        if (gates_to_insert.size() > 0) {
+            ++rearrangement_gate;
+            InsertNewCycleOnClusteredCircuit(q.obstruction_idx, qubits, gates, gates_list, qp);
         }
     }
     
-    idx_size result_idx = last_cycle_it -> second;
-    if (remaining_gates.size() > 0) {
-        auto next_cycle_it = next(qubit_obstruction_idx.begin(), starting_idx_for_movable_xCZ + 1);
-        InsertNewCycleOnClusteredCircuit(next_cycle_it -> second, qubits, gates, remaining_gates, qp);
-        ::ClusterSimilarGates(gates, qubits, next_cycle_it -> second);
-        result_idx = next_cycle_it -> second - 1;
-    }
+    if (rearrangement_gate != -1)
+        ::ClusterSimilarGates(gates, qubits, gate_idx);
 
+    
     // Deleting after is fine because all insertions are happening at or after the deletion idx.
     // Deletion indices need to be be descending order.
-    sort(gates_to_delete.begin(), gates_to_delete.end(), greater<idx_size>());
-    for (const auto i : gates_to_delete) {
-        gates.erase(gates.begin() + i);
-        --result_idx;
+    for (int i = (int)gates_to_delete.size() - 1; i >=0; --i) {
+        gates.erase(gates.begin() + gates_to_delete[i]);
+        --gate_idx;
     }
     
-    return result_idx;
+#ifdef PrintG
+    PrintGates(gates, qubits);
+#endif
+    
+    idx_size xGate_count = 0;
+    for (; gate_idx < gates.size() && xGate_count < marked_crossing_gates; ++gate_idx) {
+        const auto& gate_qubits = gates[gate_idx].GetQubits();
+
+        if (gate_qubits.size() > 1) {
+            idx_size q0 = qubits - 1 - gate_qubits[0], q1 =  qubits - 1  - gate_qubits[1];
+            
+            if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1))
+                ++xGate_count;
+        }
+    }
+    
+    return gate_idx - 1;
 }
 
 // Generalize this to other >1q gates that cross
@@ -294,7 +309,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     const bool nearest_neigbors)
 {
     
-    const idx_size num_qubits_minus_1 = qp.getNumQubits() - 1;
+    const idx_size num_qubits_minus_1 = qp.getNumQubits() - 1, num_crossing_q = qp.getNumX();
     int remaining_path_bits = static_cast<int>(proc_prefix_bits), total_CZ = 0, total_xCZ = 0;
     Config::SimMode current_mode = Config::SimMode::ProcPrefix;
     bool continue_rearranging = proc_prefix_bits != 0;
@@ -302,26 +317,88 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
     for (idx_size i = 0; i < gates.size() && continue_rearranging; ++i) {
         idx_size j = i;
         int num_xCZ_in_cluster = 0;
+        vector<idx_size> gates_to_delete;
+        unordered_map<idx_size, bool> recorded_qubit;
+        vector<Gate> gates_to_move;
         
         // Find all xCZ in cycle
-        for (; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
+        for (; j < gates.size(); ++j) {
+           
             const auto& gate_qubits = gates[j].GetQubits();
-            idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
             
-            if (nearest_neigbors) {
-                idx_size x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
-                x1 = q1 % qp.GetColumns(), y1 = q1 / qp.GetColumns();
-                
-                if (!((x0 == x1 && (y0 + 1 == y1 || y0 - 1 == y1))
-                      || ((x0 + 1 == x1 || x0 - 1 == x1) && (y0 == y1)))) {
-                    cerr << "\n\n2 qubit gates are not acting on nearest neighbors.\n";
-                    exit(1);
+            if (nearest_neigbors && gate_qubits.size() > 2) {
+                idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
+                CheckIfNearestNeighbor(q0, q1, qp);
+            }
+            
+            bool add_gate = false;
+            idx_size q0 = gate_qubits[0];
+            if (gate_qubits.size() > 0) {
+                if ((recorded_qubit.count(q0) > 0  && recorded_qubit[q0])
+                    || (recorded_qubit.count(q0) > 0  && !gates[j].IsDiagonal())) {
+                    add_gate = true;
+                    recorded_qubit[q0] = true;
+                }
+            }
+            if (gate_qubits.size() == 2) {
+                idx_size q1 = gate_qubits[1];
+
+                if (qp.globalToBlock(num_qubits_minus_1 - q0) !=  qp.globalToBlock(num_qubits_minus_1 - q1)) {
+                    if (num_xCZ_in_cluster >= num_crossing_q || remaining_path_bits - num_xCZ_in_cluster <= 0)
+                        goto exit_inner_loop;
+                    
+                    ++num_xCZ_in_cluster;
+                    if (recorded_qubit.count(q0) == 0) {
+                        recorded_qubit[q0] = false;
+                        recorded_qubit[q1] = false;
+                    }
+                    add_gate = true;
+                }
+                else if ((recorded_qubit.count(q1) > 0 && recorded_qubit[q1])
+                         || (recorded_qubit.count(q1) > 0 && !gates[j].IsDiagonal())) {
+                    add_gate = true;
+                    recorded_qubit[q1] = true;
                 }
             }
             
-            if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) {
-//                swap(gates[j], gates[i + num_xCZ_in_cluster]);
-                ++num_xCZ_in_cluster;
+            if (add_gate) {
+                for (const auto& q : gate_qubits) {
+                    if (recorded_qubit.count(q) == 0)
+                        recorded_qubit[q] = false;
+                }
+                
+                gates_to_move.push_back(gates[j]);
+                gates_to_delete.push_back(j);
+            }
+        }
+        
+        exit_inner_loop:;
+        
+        if (num_xCZ_in_cluster) {
+            
+            InsertNewCycleOnClusteredCircuit(j, qubits, gates, gates_to_move, qp);
+            
+            for (int k = (int)gates_to_delete.size() - 1; k >=0; --k) {
+                gates.erase(gates.begin() + gates_to_delete[k]);
+                --j;
+            }
+            
+            ::ClusterSimilarGates(gates, qubits, j);
+            
+        #ifdef PrintG
+            PrintGates(gates, qubits);
+        #endif
+            
+            idx_size xGate_count = 0;
+            for (; j < gates.size() && xGate_count < num_xCZ_in_cluster; ++j) {
+                const auto& gate_qubits = gates[j].GetQubits();
+
+                if (gate_qubits.size() > 1) {
+                    idx_size q0 = qubits - 1 - gate_qubits[0], q1 =  qubits - 1  - gate_qubits[1];
+                    
+                    if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1))
+                        ++xGate_count;
+                }
             }
         }
         
@@ -329,32 +406,6 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
         // The number of gates in the branching path should be the least
         remaining_path_bits -= num_xCZ_in_cluster;
         if (remaining_path_bits <= 0 && num_xCZ_in_cluster > 0) {
-            GateMovementUnorderedMap gates_to_move;
-            idx_size marked_crossing_gates = 0;
-            
-            for (j = i; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
-                const auto& gate_qubits = gates[j].GetQubits();
-                idx_size q0 = gate_qubits[0], q1 = gate_qubits[1];
-                
-                if (qp.globalToBlock(num_qubits_minus_1 - q0) !=  qp.globalToBlock(num_qubits_minus_1 - q1)) {
-                    ++marked_crossing_gates;
-                    if (gates_to_move.count(q0) == 0) gates_to_move[q0] = shared_ptr<GateMovement>(
-                                                        new GateMovement{GateAndIdx(1, {gates[j], j}), false});
-                    if (gates_to_move.count(q1) == 0) gates_to_move[q1] = gates_to_move[q0];
-                }
-            }
-            // Assume all other gates are 1q
-            // TODO : for other gates there needs to be a loop over gate qubits here
-            for (; j < gates.size() && gates[j].GetType() != Gate::Type::ControlZ; ++j) {
-                const auto& gate_qubits = gates[j].GetQubits();
-                if (gates_to_move.count(gate_qubits[0]) > 0 && !gates[j].IsDiagonal()) {
-                    gates_to_move[gate_qubits[0]] -> gates_list.push_back({gates[j], j});
-                    gates_to_move[gate_qubits[0]] -> IsObstructed = true;
-                }
-            }
-            
-            // The index returned for j adds back the CZ path bits for the next part
-            j = RearrangexCZForPathConcludingCycle(j, marked_crossing_gates, remaining_path_bits, gates_to_move, qp);
             switch (current_mode) {
                 case Config::SimMode::ProcPrefix:
                     remaining_path_bits = static_cast<int>(range_bits);
@@ -394,6 +445,8 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
 #ifdef PrintG
     PrintGates(gates, qubits);
 #endif
+    
+    RecalibrateGoogleClockCycles();
     
     return pair<int, int> (total_CZ, total_xCZ);
 }
@@ -935,7 +988,7 @@ GateIndexForCycle(int cycle_num) const
     if (cycle_num < 0 || cycle_num > (int)clock_cycles.size())
         return -1;
     
-    return (int)clock_cycles[cycle_num] - 1;
+    return (int)clock_cycles[cycle_num];
 }
 
 Gate& Circuit::

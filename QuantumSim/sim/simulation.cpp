@@ -457,6 +457,9 @@ Simulate(GenericQuantumState& amp,
     memory_usage += amp.GetMemUsage();
    
     pair<int, int> twoq_gate_count(0, 0);
+    
+    Time cir_time;
+    cir_time.StartTime();
 
     if (circuit.google) {
         if (!circuit.ClockCycleEmpty())
@@ -475,14 +478,16 @@ Simulate(GenericQuantumState& amp,
                        config -> vcut, config -> first_part_smaller) ;
 //        qp.RenumberLocalQubits();
         
-        twoq_gate_count = circuit.MovexCZGatesRewrite(config -> proc_prefix_bits,
+        twoq_gate_count = circuit.MovexCZGates(config -> proc_prefix_bits,
                                                config -> ranges_bits, config -> dfs_length,
                                                qp, config -> nearest_neighbors);
     }
     
+    cir_rearrangement_time = cir_time.GetElapsedTime() ;
     
     if (config -> verbose)
         PrintSimSpecReport(amp, circuit, twoq_gate_count);
+    
     
     log << "Cycle \tRuntime \tMemory\t\tXEntropy\n";
     
@@ -1655,7 +1660,8 @@ PrintSimReport(GenericQuantumState& amp,
         ss << "\t\t\t\t\t\t\t\t\t    -------\n";
         ss << "\tTotal \t\t\t\t\t\t\t\t    " << sum_percen << "%\n";
         
-        ss << "\nAverage time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
+        ss << "\nCircuit rearrangement time : " << cir_rearrangement_time << " s\n";
+        ss << "Average time per gate : " << total_time/(factor1 * circuit.GetTotalNumGates()) << " s\n";
         
         if (config -> proc_prefix_bits) {
             ss << "Simulation runtime breakdown : \n\tPrefix    \t\t : " << prefix_time << " s = "
