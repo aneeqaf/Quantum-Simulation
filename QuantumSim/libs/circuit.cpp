@@ -107,11 +107,13 @@ RecalibrateGoogleClockCycles()
 idx_size Circuit::
 GroupSimilarGates()
 {
+    static idx_size count_insert = 0;
+
     idx_size last_CZ = 0, last_T = 0, last_X = 0, last_Y = 0;
     bool saw_CZ = false, saw_T = false, saw_X = false, saw_Y = false, saw_H = false;
     idx_size g_i = (idx_size)qubits;
     idx_size count_CZ = 0;
-    
+        
     for (idx_size j = qubits; j < gates.size()
          && (g_i + last_Y + last_X + last_T + last_CZ) < gates.size(); ++j) {
         
@@ -127,6 +129,7 @@ GroupSimilarGates()
                 if (!saw_H)
                     swap(gates[j], gates[g_i + last_CZ]);
                 else {
+                    ++count_insert;
                     gates.insert(gates.begin() + g_i + last_CZ, gates[j]);
                     gates.erase(gates.begin() + j + 1);
                 }
@@ -145,6 +148,7 @@ GroupSimilarGates()
                 if (!saw_H)
                    swap(gates[g_i + last_T + last_CZ], gates[j]);
                 else {
+                    ++count_insert;
                     gates.insert(gates.begin() + g_i + last_T + last_CZ, gates[j]);
                     gates.erase(gates.begin() + j + 1);
                 }
@@ -158,6 +162,7 @@ GroupSimilarGates()
                 if (!saw_H)
                     swap(gates[g_i + last_X + last_T + last_CZ], gates[j]);
                 else {
+                    ++count_insert;
                     gates.insert(gates.begin() + g_i + last_X + last_T + last_CZ, gates[j]);
                     gates.erase(gates.begin() + j + 1);
                 }
@@ -171,6 +176,7 @@ GroupSimilarGates()
                 if (!saw_H)
                     swap(gates[g_i + last_Y + last_X + last_T + last_CZ], gates[j]);
                 else {
+                    ++count_insert;
                     gates.insert(gates.begin() + g_i + last_X + last_T + last_CZ + last_Y, gates[j]);
                     gates.erase(gates.begin() + j + 1);
                 }
@@ -183,6 +189,7 @@ GroupSimilarGates()
     }
 #ifdef PrintG
     PrintGates(gates, qubits);
+    cout << "\nGate insert count: " << count_insert << endl;
 #endif
     
     return (int)count_CZ;
@@ -383,6 +390,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                 --j;
             }
             
+//            idx_size end_idx = clock_cycles[GetCycleNumForGateIdx(j) + 5];
             ::ClusterSimilarGates(gates, qubits, j);
             
         #ifdef PrintG
@@ -424,6 +432,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
         i = j;
     }
     
+    
     // This final loop is mainly for counting. Swapping is not necessary because order is not important
     // since all gates are wrapped in bitmasks.
     for (idx_size i = 0; i < gates.size(); ++i) {
@@ -445,9 +454,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
 #ifdef PrintG
     PrintGates(gates, qubits);
 #endif
-    
-    RecalibrateGoogleClockCycles();
-    
+        
     return pair<int, int> (total_CZ, total_xCZ);
 }
 

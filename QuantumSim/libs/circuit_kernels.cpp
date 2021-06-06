@@ -124,29 +124,27 @@ ClusterSimilarGates(vector<Gate>& gates,
                     idx_size start_idx,
                     idx_size end_idx)
 {
+    static idx_size count_insert = 0;
 #ifdef PrintG
     PrintGates(gates, num_qubits);
 #endif
     idx_size count_2q_gates = 0;
-    bool qs_obstructed[num_qubits];
-    memset(qs_obstructed, 0, num_qubits * sizeof(bool));
-    
+        
     if (end_idx == 0) end_idx = gates.size();
         
     idx_size last_swap = start_idx + 1;
     for (idx_size i = start_idx; i < end_idx; i = last_swap++) {
         const Gate& curr_gate = gates[i];
         idx_size num_q_obstructed = 0;
+        bitset<128> qs_obstructed = 0;
         
         for (idx_size j = i + 1; j < end_idx && num_q_obstructed < num_qubits; ++j) {
             assert(last_swap <= j);
+            const auto& gate_qubits = gates[j].GetQubits();
+            idx_size num_gate_qubits = gate_qubits.size();
             
-            bool q_obstructed = false;
-            for (auto q : gates[j].GetQubits())
-                if (qs_obstructed[q]) {
-                    q_obstructed = true;
-                    break;
-                }
+            bool q_obstructed = qs_obstructed[gate_qubits[0]]
+                                || (num_gate_qubits == 2 && qs_obstructed[gate_qubits[1]]);
             
             if (!q_obstructed && curr_gate.GetType() == gates[j].GetType()) {
 //                for (auto q : gates[j].GetQubits()) {
@@ -156,6 +154,7 @@ ClusterSimilarGates(vector<Gate>& gates,
 //                    }
 //                }
                 if (j > last_swap) {
+                    ++count_insert;
                     gates.insert(gates.begin() + last_swap, gates[j]);
                     gates.erase(gates.begin() + j + 1);
                 }
@@ -167,6 +166,7 @@ ClusterSimilarGates(vector<Gate>& gates,
                  If the gate is diagonal and the qubit is obstructed move it closer to the diagonal cluster but don't increase last swap.
                  */
                 if (j > last_swap) {
+                    ++count_insert;
                     gates.insert(gates.begin() + last_swap, gates[j]);
                     gates.erase(gates.begin()  + j + 1);
                 }
@@ -175,11 +175,13 @@ ClusterSimilarGates(vector<Gate>& gates,
                 /*
                  If the current gate is diagonal, then the qubit is only obstructed if the gate is not diagonal.
                  */
-                for (auto q : gates[j].GetQubits()) {
-                    if (!qs_obstructed[q]) {
-                        qs_obstructed[q] = true;
-                        ++num_q_obstructed;
-                    }
+                if (!qs_obstructed[gate_qubits[0]]) {
+                    qs_obstructed[gate_qubits[0]] = true;
+                    ++num_q_obstructed;
+                }
+                if (num_gate_qubits == 2 && !qs_obstructed[gate_qubits[1]]) {
+                    qs_obstructed[gate_qubits[1]] = true;
+                    ++num_q_obstructed;
                 }
             }
             else if (!curr_gate.IsDiagonal() && curr_gate.GetType() != gates[j].GetType()) {
@@ -187,15 +189,16 @@ ClusterSimilarGates(vector<Gate>& gates,
                  If the current gate is not diagonal, then only move similar gates towards current gate.
                  The similar gate should appear before other types of gates on a qubit.
                  */
-                for (auto q : gates[j].GetQubits()) {
-                    if (!qs_obstructed[q]) {
-                        qs_obstructed[q] = true;
-                        ++num_q_obstructed;
-                    }
+                if (!qs_obstructed[gate_qubits[0]]) {
+                    qs_obstructed[gate_qubits[0]] = true;
+                    ++num_q_obstructed;
+                }
+                if (num_gate_qubits == 2 && !qs_obstructed[gate_qubits[1]]) {
+                    qs_obstructed[gate_qubits[1]] = true;
+                    ++num_q_obstructed;
                 }
             }
         }
-        memset(qs_obstructed, 0, num_qubits * sizeof(bool));
         if (curr_gate.GetQubits().size() == 2)
             count_2q_gates += last_swap - i;
     }
@@ -219,6 +222,7 @@ ClusterSimilarGates(vector<Gate>& gates,
     
 #ifdef PrintG
     PrintGates(gates, num_qubits);
+    cout << "\nGate insert count: " << count_insert << endl;
 #endif
     
     return count_2q_gates;

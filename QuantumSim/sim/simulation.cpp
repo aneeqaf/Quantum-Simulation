@@ -462,9 +462,9 @@ Simulate(GenericQuantumState& amp,
     cir_time.StartTime();
 
     if (circuit.google) {
-        if (!circuit.ClockCycleEmpty())
-            circuit.GroupAlternateCycles();
-        twoq_gate_count.first = circuit.GroupSimilarGates();
+//        if (!circuit.ClockCycleEmpty())
+//            circuit.GroupAlternateCycles();
+        twoq_gate_count.first = circuit.ClusterSimilarGates();
     }
     
     if (config -> sim_type != Config::SimType::FullState) {
@@ -478,11 +478,12 @@ Simulate(GenericQuantumState& amp,
                        config -> vcut, config -> first_part_smaller) ;
 //        qp.RenumberLocalQubits();
         
-        twoq_gate_count = circuit.MovexCZGates(config -> proc_prefix_bits,
+        twoq_gate_count = circuit.MovexCZGatesRewrite(config -> proc_prefix_bits,
                                                config -> ranges_bits, config -> dfs_length,
                                                qp, config -> nearest_neighbors);
     }
-    
+    circuit.RecalibrateGoogleClockCycles();
+
     cir_rearrangement_time = cir_time.GetElapsedTime() ;
     
     if (config -> verbose)

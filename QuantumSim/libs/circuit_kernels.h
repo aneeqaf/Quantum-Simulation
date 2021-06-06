@@ -18,7 +18,6 @@
 #include "state_interface.h"
 
 typedef vector<idx_size> qubits_list_t;
-typedef vector<pair<Gate, idx_size>> gate_idx_t;
 
 struct GateMovement {
     vector<Gate> gates_list;
