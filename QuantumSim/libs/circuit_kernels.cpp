@@ -163,7 +163,7 @@ ClusterSimilarGates(vector<Gate>& gates,
             else if (!q_obstructed && curr_gate.IsDiagonal() && gates[j].IsDiagonal())
             {
                 /*
-                 If the gate is diagonal and the qubit is obstructed move it closer to the diagonal cluster but don't increase last swap.
+                 If the gate is diagonal and the qubit is not obstructed move it closer to the diagonal cluster but don't increase last swap.
                  */
                 if (j > last_swap) {
                     ++count_insert;

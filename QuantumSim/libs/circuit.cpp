@@ -8,7 +8,7 @@
 #include "circuit.h"
 
 vector<string> Circuit::quiddpro_func;
-unordered_map<string, gate_generator_ptr> Circuit::google_gate_funcs;
+unordered_map<string, gate_generator_ptr> Circuit::gate_funcs;
 
 Circuit::
 Circuit() : gates({}), clock_cycles({}), qubits(0)
@@ -23,12 +23,12 @@ Circuit() : gates({}), clock_cycles({}), qubits(0)
     quiddpro_func.push_back("rz");
     quiddpro_func.push_back("phase");
     
-    google_gate_funcs["h"] = create_Hadamard;
-    google_gate_funcs["t"] = create_T;
-    google_gate_funcs["y_1_2"] = create_Y_1_2;
-    google_gate_funcs["x_1_2"] = create_X_1_2;
-    google_gate_funcs["cz"] = create_CZ;
-    google_gate_funcs["rz"] = create_Z_rotation;
+    gate_funcs["h"] = create_Hadamard;
+    gate_funcs["t"] = create_T;
+    gate_funcs["y_1_2"] = create_Y_1_2;
+    gate_funcs["x_1_2"] = create_X_1_2;
+    gate_funcs["cz"] = create_CZ;
+    gate_funcs["rz"] = create_Z_rotation;
 }
 
 Circuit::
@@ -948,17 +948,20 @@ ReadGoogleCircuitFile(const string& input_file,
         if (gate_type == "cz") {
             short q1, q2;
             file >> q1 >> q2;
-            gates.push_back(google_gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q1), static_cast<float>(qubits - 1 - q2)}));
+            const auto gate = gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q1), static_cast<float>(qubits - 1 - q2)});
+            gates.push_back(gate);
         }
         else if(gate_type == "rz") {
             float q, p;
             file >> q >> p;
-            gates.push_back(google_gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q), static_cast<float>(p)}));
+            const auto gate = gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q), static_cast<float>(p)});
+            gates.push_back(gate);
         }
         else {
             short q1;
             file >> q1;
-            gates.push_back(google_gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q1)}));
+            const auto gate = gate_funcs[gate_type]({static_cast<float>(qubits - 1 - q1)});
+            gates.push_back(gate);
         }
     }
     clock_cycles.push_back(gates.size());
