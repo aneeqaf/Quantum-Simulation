@@ -203,6 +203,7 @@ ClusterSimilarGates(vector<Gate>& gates,
             count_2q_gates += last_swap - i;
     }
     
+    // TODO : Move all diagonal gates to front. Order shouldn't matter.
     for (idx_size i = start_idx; i < end_idx; ++i) {
         idx_size j = i;
         if (gates[i].IsDiagonal()) {

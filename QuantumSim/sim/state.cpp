@@ -594,12 +594,14 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     
     pair<int, int> odd_bit_low_XY = GetMostSigOddBit(loq_X_bitmask, loq_Y_bitmask,
                                                      num_lo_X_bits, num_lo_Y_bits);
-    if (last_cycle) {
+    if (H_bitmask_64) {
         global_factor_power += __builtin_popcountll(H_bitmask_64);
 
         idx_size odd_bit_low = odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first;
-        loq_H_bitmask ^= odd_bit_low;
-        hiq_H_bitmask |= odd_bit_low;
+        if ((odd_bit_low & loq_H_bitmask) != 0) {
+            loq_H_bitmask ^= odd_bit_low;
+            hiq_H_bitmask |= odd_bit_low;
+        }
         
         if (__builtin_popcountll(loq_H_bitmask) % 2 != 0) {
             idx_size odd_H_bit = 1ull << __builtin_ctzl(loq_H_bitmask);
@@ -632,18 +634,22 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     
     time.StartTime();
     if (hiq_X_bitmask || hiq_Y_bitmask) {
-        if (book_keep && last_cycle)
-            count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
+        idx_size num_hiq_H_gates = __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
+        bool H_bitmask_viable = (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask)) == (hiq_X_bitmask | hiq_Y_bitmask);
+        if (book_keep && H_bitmask_viable)
+            count_of_category.H_merged_hi += num_hiq_H_gates;
 
+        // TODO : current scheme is all or nothing for H gates, which is not the most efficient
         auto phase1 = ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask,
-                                                    hiq_Y_bitmask, hiq_H_bitmask,
+                                                    hiq_Y_bitmask, H_bitmask_viable ? hiq_H_bitmask : 0,
                                                     num_qubits, num_threads);
         global_i_counter += phase1.first;
         global_factor_power += phase1.second;
         
 //        global_i_counter += ApplyHighXYHGatesByBitReversal(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask, num_qubits, th, num_threads);
         
-        hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
+        if (H_bitmask_viable)
+            hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
     
@@ -653,7 +659,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                 UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     }
     
-    if (last_cycle && hiq_H_bitmask) {
+    if (H_bitmask_64 && hiq_H_bitmask) {
         time.StartTime();
         if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
             int q = __builtin_ctzl(hiq_H_bitmask);

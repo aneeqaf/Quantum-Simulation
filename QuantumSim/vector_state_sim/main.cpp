@@ -437,6 +437,7 @@ int main(int argc, char *argv[])
     cir.InitializeCircuitConfig(config);
     
     if(write_circuit_mode) {
+        cout << "Rearranging and writing circuit to file\n";
         cir.OptimizeCircuitArrangement(config);
         cir.WriteCircuitToFile(input_filename + ".rearranged");
         delete config;

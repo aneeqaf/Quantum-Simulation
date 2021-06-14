@@ -342,6 +342,17 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
         i = j;
     }
     
+    // Move xCZ gates to front so that terminations in the middle of the cycle don't break.
+    // Alternative way could be more costly in critical simulation loop
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        idx_size count_xCZ = 0;
+        for (idx_size j = i; j < gates.size() && gates[j].GetType() == Gate::Type::cz; ++j) {
+            if (isCrossingGate(j))
+                swap(gates[i + count_xCZ++], gates[j]);
+        }
+    }
+
+    
 #ifdef PrintG
     PrintGates(gates, qubits);
 #endif
@@ -918,4 +929,12 @@ bool Circuit::
 isRearranged() const
 {
     return rearranged;
+}
+
+bool Circuit::
+isCrossingGate(idx_size gate_idx) const
+{
+    const auto& gate_qubits = gates[gate_idx].GetQubits();
+    return gate_qubits.size() > 1 &&
+        (qp -> globalToBlock(qubits - 1 - gate_qubits[0]) !=  qp -> globalToBlock(qubits - 1 - gate_qubits[1]));
 }

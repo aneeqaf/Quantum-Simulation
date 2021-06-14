@@ -67,7 +67,7 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
                       const bitset<128>& H_bitmask,
                       const bool last_cycle)
 {
-    int last_xCZ_idx = -1;
+    int xCZ_applied_in_cycle = -1;
     if (full_state) {
 //        if (book_keep) {
 //            data_per_cycles.xCZ_H.push_back(0);
@@ -80,7 +80,7 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
                                             CZ_bitmasks, T_bitmasks, last_cycle);
     }
     else {
-        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
+        xCZ_applied_in_cycle = sumOfTensors -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
                                                             cz_path_len, suffix_size, CZ_bitmasks,
                                                             T_bitmasks, H_bitmask, last_cycle);
         
@@ -102,7 +102,7 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
             sumOfTensors = nullptr;
         }
     }
-    return last_xCZ_idx;
+    return xCZ_applied_in_cycle;
 }
 
 void AdaptiveStateVector::
@@ -169,7 +169,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            int th,
                            bool last_cycle)
 {
-    int last_xCZ_idx = -1;
+    int xCZ_applied_in_cycle = -1;
     if (full_state) {
 //        if (book_keep) {
 //            data_per_cycles.xCZ_H.push_back(0);
@@ -191,7 +191,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                                         H_bitmask, CZ_bitmasks,
                                                         T_bitmasks, th, last_cycle);
         else
-            last_xCZ_idx = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+            xCZ_applied_in_cycle = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                       suffix_size, X_bitmask, Y_bitmask,
                                                                       H_bitmask, CZ_bitmasks,
                                                                       T_bitmasks, th, last_cycle);
@@ -208,7 +208,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
             sumOfTensors = nullptr;
         }
     }
-    return last_xCZ_idx;
+    return xCZ_applied_in_cycle;
 }
 
 cmplx AdaptiveStateVector::

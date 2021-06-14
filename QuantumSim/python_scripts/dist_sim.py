@@ -128,9 +128,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		cz_bits_strings = cz_bits_strings[:max_procs]
 		num_bit_strings = len(cz_bits_strings)
 
+	circuit, command = dist_util.RearrangeCicuit(circuit, command, " --CZ_path " + cz_bits_strings[0])
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, num_idx)
-	circuit, command = dist_util.RearrangeCicuit(circuit, command + " --CZ_path " + cz_bits_strings[0])
-	
+
 	cir_name = circuit + "_" + str(depth) + "_" + \
 	str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
 

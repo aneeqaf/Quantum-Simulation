@@ -724,9 +724,9 @@ SimulationLoop(GenericQuantumState &amp,
                     ++amp.count_of_category.H_layers;
                 }
 
-                int last_xCZ_idx = -1;
+                int xCZ_applied_in_cycle = -1;
 //                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
-                    last_xCZ_idx = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+                    xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                   suffix_size, bitmasks[Gate::Type::x_1_2],
                                                                   bitmasks[Gate::Type::y_1_2], H_bitmask, CZ_bitmasks,
                                                                   T_bitmasks, config -> th, last_cycle);
@@ -734,13 +734,13 @@ SimulationLoop(GenericQuantumState &amp,
                     if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
 //                }
 //                else {
-//                    last_xCZ_idx = amp.ApplyBlockOfDiagGates(remaining_cz_bits, cz_path, cz_path_len,
+//                    xCZ_applied_in_cycle = amp.ApplyBlockOfDiagGates(remaining_cz_bits, cz_path, cz_path_len,
 //                                                             suffix_size, CZ_bitmasks, T_bitmasks, H_bitmask,
 //                                                             last_cycle);
 //                    ++amp.count_of_category.CZT_layers;
 //                }
                 
-                terminate = last_xCZ_idx != -1 ? true : false;
+                terminate = xCZ_applied_in_cycle != -1 ? true : false;
                 
                 if (amp.book_keep) {
 //                    if (config -> sim_type == Config::SimType::FullState) {
@@ -755,15 +755,15 @@ SimulationLoop(GenericQuantumState &amp,
 //                                                               amp.data_per_cycles.T_gates.back() -
 //                                                               amp.count_of_category.xCZ_not_applied);
                     }
-                    else if (last_xCZ_idx) {
-                        amp.count_of_category.CZ_T += last_xCZ_idx;
+                    else if (xCZ_applied_in_cycle) {
+                        amp.count_of_category.CZ_T += xCZ_applied_in_cycle;
 //                        amp.data_per_cycles.CZ_gates.push_back(last_xCZ_idx); //not accurate
                     }
 //                    amp.data_per_cycles.XY_gates.push_back(i - prev_i_XY);
                 }
                 
                 if (terminate) {
-                    curr_gate = prev_i_CZT + last_xCZ_idx;
+                    curr_gate = prev_i_CZT + xCZ_applied_in_cycle;
                     return terminate;
                 }
                 

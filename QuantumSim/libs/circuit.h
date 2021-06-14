@@ -74,6 +74,7 @@ public:
     int GetCycleNumForGateIdx(idx_size gate_idx) const;
     pair<int, int> GetTwoQGateCount() const;
     bool isRearranged() const;
+    bool isCrossingGate(idx_size gate_idx) const;
     
     Circuit(const string input_filename, idx_size num_q, idx_size depth);
     Circuit(const Circuit& rhs);
