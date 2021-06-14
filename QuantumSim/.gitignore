@@ -49,3 +49,5 @@ sz-2.0.2.0/
 qsim/
 .vscode/*
 *.zip
+input/random_circuits_google/
+*.icloud

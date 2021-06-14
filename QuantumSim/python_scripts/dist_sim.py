@@ -55,6 +55,8 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	dist_util.CheckInputFile(circuit)
 
+	depth = int(circuit.split("_")[2]) + 1
+
 	epsilon = 1
 	max_threads = cpu_count()
 	binary = "./bin/rr "
@@ -92,14 +94,10 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	dist_util.PerformTrialRun(commandH, commandV, proc_prefix_bits, 
 		ranges_bits, branch_bits, trial, v_cut, h_cut, approx)
 
-	depth = int(circuit.split("_")[2]) + 1;
 	num_bit_strings = (1 << int(proc_prefix_bits)) 
 
 	if t_time > 100 and max_procs:
 		max_procs = num_batches
-
-	cir_name = circuit + "_" + str(depth) + "_" + \
-	str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
 
 	if approx:
 		fid = approx
@@ -108,15 +106,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		if cont_cz_paths:
 			num_bit_strings = ceil(num_bit_strings / approx)
 
-		cir_name += "_approx_" + str(approx)
-
 	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
 		print("Max processes exceed total number of processes. Setting to default.\033[0m./")
 		max_procs = 0
-		
-	cir_dir = os.path.join("output", "amp_vectors", cir_name)
-	if os.path.isdir(cir_dir):
-		shutil.rmtree(cir_dir, ignore_errors=True)
 	
 	# estimate runtime and peak memory usage before proceeding
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
@@ -137,7 +129,18 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		num_bit_strings = len(cz_bits_strings)
 
 	command += dist_util.AddPrintOptToCommand(idx_seed, command, idx_file, num_idx)
+	circuit, command = dist_util.RearrangeCicuit(circuit, command + " --CZ_path " + cz_bits_strings[0])
 	
+	cir_name = circuit + "_" + str(depth) + "_" + \
+	str(proc_prefix_bits + ranges_bits) + "_" + str(num_threads)
+
+	if approx:
+		cir_name += "_approx_" + str(approx)
+
+	cir_dir = os.path.join("output", "amp_vectors", cir_name)
+	if os.path.isdir(cir_dir):
+		shutil.rmtree(cir_dir, ignore_errors=True)
+
 	num_batches = len(cz_bits_strings) if len(cz_bits_strings) < num_batches else num_batches
 
 	num_batches = dist_util.LaunchDisParallelSim(proc_prefix_bits, num_batches, branch_bits, cir_name, \

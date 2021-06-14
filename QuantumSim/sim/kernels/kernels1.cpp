@@ -173,7 +173,7 @@ ApplyFWHT(cmplx* __restrict amp,
             for (idx_size i = 0; i < slice_size; ++i)
                 amp_slice[i] = amp[indices[i] + idx];
             
-            if (gate_type == Gate::Type::X_1_2)
+            if (gate_type == Gate::Type::x_1_2)
                 ApplyManyXOnSlice(amp_slice, num_qubits);
             else
                 ApplyManyYOnSlice(amp_slice, num_qubits);

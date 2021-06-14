@@ -33,7 +33,9 @@ private:
     vector<Gate> gates;
     vector<idx_size> clock_cycles;
     vector<int> classical_bits;
-    int qubits;
+    shared_ptr<QubitPartition> qp;
+    idx_size qubits;
+    bool rearranged;
  
 public:
     bool google ;
@@ -45,23 +47,22 @@ public:
     pair<int, int> MovexCZGatesRewrite(idx_size proc_prefix_bits,
                                        idx_size range_bits,
                                        idx_size branch_bits,
-                                       const QubitPartition& qp,
                                        const bool nearest_neigbors);
     pair<int, int> MovexCZGates(idx_size proc_prefix_bits,
                                 idx_size range_bits,
                                 idx_size branch_bits,
-                                const QubitPartition& bitmasks,
                                 const bool nearest_neigbors = true);
     int ComputeNumberOfHighValuedQubits(int num_qubits);
     void ReadGoogleCircuitFile(const string& input_file,
-                               const int depth,
-                               const int add_layer_H = 0);
-    void CreateGoogleCircuit(int qubits,
-                             int clock_cycles);
-    void WriteGeneratedCircuitFile(const string& out_file,
-                                   const idx_size size_q);
+                               const idx_size depth,
+                               const idx_size add_layer_H = 0);
+    void CreateGoogleCircuit(idx_size qubits,
+                             idx_size clock_cycles);
+    void WriteCircuitToFile(const string& out_file);
     void CreateQuiddProScript(const string& out_file,
-                              int layers_last_H = 0);
+                              idx_size layers_last_H = 0);
+    void OptimizeCircuitArrangement(const Config* config);
+    void InitializeCircuitConfig(const Config* config);
     
     int GetNumQubits() const;
     idx_size GetTotalNumGates() const;
@@ -71,8 +72,10 @@ public:
     Gate& GetGateFromIndex(idx_size i);
     const vector<Gate>& GetGates() const;
     int GetCycleNumForGateIdx(idx_size gate_idx) const;
+    pair<int, int> GetTwoQGateCount() const;
+    bool isRearranged() const;
     
-    Circuit();
+    Circuit(const string input_filename, idx_size num_q, idx_size depth);
     Circuit(const Circuit& rhs);
     Circuit& operator=(const Circuit& rhs);
 };

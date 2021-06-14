@@ -203,7 +203,7 @@ ApplyBlockOfDiagGates(int& remaining_cz_bits,
         
         if (__builtin_popcountll(hiH_bitmask) % 2 != 0) {
             int q = __builtin_ctzl(hiH_bitmask);
-            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
             hiH_bitmask ^= 1ull << q;
             ++single_H;
         }
@@ -225,7 +225,7 @@ ApplyNonCGate(const idx_size gate_qubit,
               const Gate::Type gate_type)
 {
     ApplyNonControl1QGates(amp, gate_qubit, num_qubits, gate_type);
-    if (gate_type == Gate::Type::X_1_2 || gate_type == Gate::Type::Y_1_2)
+    if (gate_type == Gate::Type::x_1_2 || gate_type == Gate::Type::y_1_2)
         global_factor_power += 2;
 }
 
@@ -233,9 +233,9 @@ void FullAmpStateVector::
 ApplyCZDecompositions(const int gate_qubit,
                       const Gate::Type gate_type)
 {
-    if (gate_type != Gate::Type::CZ_D3)
+    if (gate_type != Gate::Type::cz_d3)
         ApplyCZDecomposition(amp, num_qubits, gate_qubit, gate_type);
-    if (gate_type == Gate::Type::CZ_D5)
+    if (gate_type == Gate::Type::cz_d5)
         ++global_factor_power;
 }
 
@@ -276,7 +276,7 @@ ApplyHGateOnAllAmps(bool not_initialize_amp)
     else {
         idx_size H_bm = (1ull << num_qubits) - 1;
         if (num_qubits % 2 != 0) {
-            Apply1QXYHGates(amp, num_threads, 0, num_qubits, Gate::Type::Hadamard);
+            Apply1QXYHGates(amp, num_threads, 0, num_qubits, Gate::Type::h);
             H_bm ^= 1;
         }
         ApplyHGatesRecursively(amp, num_qubits, num_threads, H_bm);
@@ -308,7 +308,7 @@ ApplyMergedXYGate(const Gate& gate1,
     
     global_factor_power += 2;
     
-    if (gate1.GetType() == Gate::Type::Y_1_2 && gate2.GetType() == Gate::Type::Y_1_2)
+    if (gate1.GetType() == Gate::Type::y_1_2 && gate2.GetType() == Gate::Type::y_1_2)
         ++global_i_counter;
     
     time_by_category.merged_XY1_2 += time.GetElapsedTime();
@@ -323,16 +323,16 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
 {
     vector<idx_size> qubits_in_cluster1 , qubits_in_cluster2;
     
-    if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::X_1_2)
-        qubits_in_cluster1 = FormBlockOfXYHGates(gate_i, Gate::Type::X_1_2, all_gates);
+    if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::x_1_2)
+        qubits_in_cluster1 = FormBlockOfXYHGates(gate_i, Gate::Type::x_1_2, all_gates);
     
     if (qubits_in_cluster1.size() % 2 == 1) {
         qubits_in_cluster1.pop_back();
         odd_Xi = gate_i - 1;
     }
     
-    if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::Y_1_2)
-        qubits_in_cluster2 = FormBlockOfXYHGates(gate_i, Gate::Type::Y_1_2, all_gates);
+    if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::y_1_2)
+        qubits_in_cluster2 = FormBlockOfXYHGates(gate_i, Gate::Type::y_1_2, all_gates);
     
     if (qubits_in_cluster2.size() % 2 == 1) {
         qubits_in_cluster2.pop_back();
@@ -341,12 +341,12 @@ ApplyClusterOfXYHGates(idx_size& gate_i,
     
     if (qubits_in_cluster1.size()) {
         const bitset<128> clus1_q_bitmask = FormBitmask(qubits_in_cluster1);
-        ApplyFWHT(amp, clus1_q_bitmask.to_ulong(), num_qubits, Gate::Type::X_1_2);
+        ApplyFWHT(amp, clus1_q_bitmask.to_ulong(), num_qubits, Gate::Type::x_1_2);
         global_factor_power += qubits_in_cluster1.size();
     }
     if (qubits_in_cluster2.size()) {
         const bitset<128> clus2_q_bitmask = FormBitmask(qubits_in_cluster2);
-        ApplyFWHT(amp, clus2_q_bitmask.to_ulong(), num_qubits, Gate::Type::Y_1_2);
+        ApplyFWHT(amp, clus2_q_bitmask.to_ulong(), num_qubits, Gate::Type::y_1_2);
         global_factor_power += qubits_in_cluster2.size();
         global_i_counter += qubits_in_cluster2.size()/2;
     }
@@ -442,7 +442,7 @@ ApplyOddGates(idx_size& X_bitmask,
     
     if (!(X_q == kRT && Y_q == kRT)) {
         if (X_q < Y_q) {
-            Apply1QXYHGates(amp, num_threads, X_q, num_qubits, Gate::Type::X_1_2);
+            Apply1QXYHGates(amp, num_threads, X_q, num_qubits, Gate::Type::x_1_2);
             X_bitmask ^= 1ull << X_q;
             --num_X_bits;
             global_factor_power += 2;
@@ -451,7 +451,7 @@ ApplyOddGates(idx_size& X_bitmask,
                 ++count_of_category.X1_2;
         }
         else {
-            Apply1QXYHGates(amp, num_threads, Y_q, num_qubits, Gate::Type::Y_1_2);
+            Apply1QXYHGates(amp, num_threads, Y_q, num_qubits, Gate::Type::y_1_2);
             Y_bitmask ^= 1ull << Y_q;
             --num_Y_bits;
             global_factor_power += 2;
@@ -657,7 +657,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         time.StartTime();
         if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
             int q = __builtin_ctzl(hiq_H_bitmask);
-            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
             hiq_H_bitmask ^= 1ull << q;
             ++single_H;
         }

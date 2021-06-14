@@ -11,7 +11,8 @@ vector<string> Circuit::quiddpro_func;
 unordered_map<string, gate_generator_ptr> Circuit::gate_funcs;
 
 Circuit::
-Circuit() : gates({}), clock_cycles({}), qubits(0)
+Circuit(const string input_filename, idx_size num_q, idx_size depth)
+: qp(nullptr), qubits(num_q)
 {
     quiddpro_func.push_back("hadamard");
     quiddpro_func.push_back("sigma_x");
@@ -29,11 +30,26 @@ Circuit() : gates({}), clock_cycles({}), qubits(0)
     gate_funcs["x_1_2"] = create_X_1_2;
     gate_funcs["cz"] = create_CZ;
     gate_funcs["rz"] = create_Z_rotation;
+    
+    if (input_filename.find("rearranged") != string::npos)
+        rearranged = true;
+    
+    if (!input_filename.empty())
+        ReadGoogleCircuitFile(input_filename, depth);
+    else {
+        CreateGoogleCircuit(qubits, depth * 10);
+        
+        if(qubits <= 20) {
+//                cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file +
+//                                              to_string(i) + ".txt", cir.GetNumQubits());
+            CreateQuiddProScript("output/qpro_scripts/" + to_string(qubits) + "_" + to_string(depth * 10) + ".qpro");
+        }
+    }
 }
 
 Circuit::
 Circuit(const Circuit& g)
-: gates(g.gates), clock_cycles(g.clock_cycles), qubits(g.qubits) {}
+: gates(g.gates), clock_cycles(g.clock_cycles), qp(g.qp), qubits(g.qubits) {}
 
 Circuit& Circuit::
 operator=(const Circuit& g)
@@ -41,6 +57,7 @@ operator=(const Circuit& g)
     Circuit temp(g);
     swap(qubits, temp.qubits);
     swap(gates, temp.gates);
+    swap(qp, temp.qp);
     return *this;
 }
 
@@ -63,8 +80,8 @@ GroupAlternateCycles()
             if (i % 2 == 1)
                 k = -j;
             
-            if (gates[g_i + k].GetType() == Gate::Type::T ||
-                gates[g_i + k].GetType() == Gate::Type::ControlZ) {
+            if (gates[g_i + k].GetType() == Gate::Type::t ||
+                gates[g_i + k].GetType() == Gate::Type::cz) {
                 
                 if (i % 2 == 1) {
                     if(saw_xy)
@@ -92,11 +109,11 @@ RecalibrateGoogleClockCycles()
         
     // Assume a non-diag gate incident on same qubit initiates a new cycle
     for (idx_size i = qubits; i < gates.size(); ++i) {
-        if (gates[i].GetType() == Gate::ControlZ || gates[i].GetType() == Gate::Hadamard) {
+        if (gates[i].GetType() == Gate::cz || gates[i].GetType() == Gate::h) {
             clock_cycles.push_back(i);
             
-            for (; i < gates.size() && gates[i].GetType() == Gate::Type::ControlZ; ++i) {}
-            for (; i < gates.size() && gates[i].GetType() != Gate::Type::ControlZ; ++i) {}
+            for (; i < gates.size() && gates[i].GetType() == Gate::Type::cz; ++i) {}
+            for (; i < gates.size() && gates[i].GetType() != Gate::Type::cz; ++i) {}
             --i;
         }
     }
@@ -117,7 +134,7 @@ GroupSimilarGates()
     for (idx_size j = qubits; j < gates.size()
          && (g_i + last_Y + last_X + last_T + last_CZ) < gates.size(); ++j) {
         
-        if (gates[j].GetType() == Gate::Type::ControlZ) {
+        if (gates[j].GetType() == Gate::Type::cz) {
             ++count_CZ;
             if(saw_Y || saw_X || saw_H) {
                 g_i = j;
@@ -137,7 +154,7 @@ GroupSimilarGates()
             
             ++last_CZ;
         }
-        else if (gates[j].GetType() == Gate::Type::T) {
+        else if (gates[j].GetType() == Gate::Type::t) {
             if(saw_Y || saw_X) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
@@ -156,7 +173,7 @@ GroupSimilarGates()
             
             ++last_T;
         }
-        else if (gates[j].GetType() == Gate::Type::X_1_2) {
+        else if (gates[j].GetType() == Gate::Type::x_1_2) {
             saw_X = true;
             if (saw_T || saw_CZ || saw_Y || saw_H) {
                 if (!saw_H)
@@ -170,7 +187,7 @@ GroupSimilarGates()
             
             ++last_X;
         }
-        else if (gates[j].GetType() == Gate::Type::Y_1_2) {
+        else if (gates[j].GetType() == Gate::Type::y_1_2) {
             saw_Y = true;
             if (saw_T || saw_X || saw_CZ || saw_H) {
                 if (!saw_H)
@@ -184,7 +201,7 @@ GroupSimilarGates()
             
             ++last_Y;
         }
-        else if (gates[j].GetType() == Gate::Type::Hadamard)
+        else if (gates[j].GetType() == Gate::Type::h)
             saw_H = true;
     }
 #ifdef PrintG
@@ -206,11 +223,10 @@ pair<int, int> Circuit::
 MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     idx_size range_bits,
                     idx_size branch_bits,
-                    const QubitPartition& qp,
                     const bool nearest_neigbors)
 {
     
-    const idx_size num_qubits_minus_1 = qp.getNumQubits() - 1, num_crossing_q = qp.getNumX();
+    const idx_size num_qubits_minus_1 = qp -> getNumQubits() - 1, num_crossing_q = qp -> getNumX();
     int remaining_path_bits = static_cast<int>(proc_prefix_bits), total_CZ = 0, total_xCZ = 0;
     Config::SimMode current_mode = Config::SimMode::ProcPrefix;
     bool continue_rearranging = proc_prefix_bits != 0;
@@ -229,7 +245,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
             
             if (nearest_neigbors && gate_qubits.size() > 2) {
                 idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
-                CheckIfNearestNeighbor(q0, q1, qp);
+                CheckIfNearestNeighbor(q0, q1, *qp);
             }
             
             bool add_gate = false;
@@ -244,7 +260,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
             if (gate_qubits.size() == 2) {
                 idx_size q1 = gate_qubits[1];
 
-                if (qp.globalToBlock(num_qubits_minus_1 - q0) !=  qp.globalToBlock(num_qubits_minus_1 - q1)) {
+                if (qp -> globalToBlock(num_qubits_minus_1 - q0) !=  qp -> globalToBlock(num_qubits_minus_1 - q1)) {
                     if (num_xCZ_in_cluster >= num_crossing_q || remaining_path_bits - num_xCZ_in_cluster <= 0)
                         goto exit_inner_loop;
                     
@@ -277,7 +293,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
         
         if (num_xCZ_in_cluster) {
             
-            InsertNewCycleOnClusteredCircuit(j, qubits, gates, gates_to_move, qp);
+            InsertNewCycleOnClusteredCircuit(j, qubits, gates, gates_to_move, *qp);
             
             for (int k = (int)gates_to_delete.size() - 1; k >=0; --k) {
                 gates.erase(gates.begin() + gates_to_delete[k]);
@@ -298,7 +314,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                 if (gate_qubits.size() > 1) {
                     idx_size q0 = qubits - 1 - gate_qubits[0], q1 =  qubits - 1  - gate_qubits[1];
                     
-                    if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1))
+                    if (qp -> globalToBlock(q0) !=  qp -> globalToBlock(q1))
                         ++xGate_count;
                 }
             }
@@ -326,25 +342,6 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
         i = j;
     }
     
-    
-    // This final loop is mainly for counting. Swapping is not necessary because order is not important
-    // since all gates are wrapped in bitmasks.
-    for (idx_size i = 0; i < gates.size(); ++i) {
-        idx_size j = i;
-        idx_size count_xCZ_per_cycle = 0;
-        for (; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
-            ++total_CZ;
-            const auto& gate_qubits = gates[j].GetQubits();
-            idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
-
-            if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) {
-                swap(gates[j], gates[i + count_xCZ_per_cycle]);
-                ++count_xCZ_per_cycle;
-            }
-        }
-        total_xCZ += count_xCZ_per_cycle;
-        i = j;
-    }
 #ifdef PrintG
     PrintGates(gates, qubits);
 #endif
@@ -357,26 +354,25 @@ pair<int, int> Circuit::
 MovexCZGates(idx_size proc_prefix_bits,
              idx_size range_bits,
              idx_size branch_bits,
-             const QubitPartition& qp,
              const bool nearest_neigbors)
 {
     int total_xCZ_count = 0, count_CZ = 0;
-    int num_q_1 = qp.getNumQubits() - 1;
+    int num_q_1 = qp -> getNumQubits() - 1;
     idx_size curr_bit_counter = proc_prefix_bits;
     bool transition_cycle = false, last_cycle = false;
     int curr_path = 0;
   
     for (idx_size i = qubits; i < gates.size(); ++i) {
-         if (gates[i].GetType() == Gate::Type::ControlZ) {
+         if (gates[i].GetType() == Gate::Type::cz) {
              idx_size count_xCZ = 0;
              idx_size j = i;
-             for (; j < gates.size() && gates[j].GetType() == Gate::Type::ControlZ; ++j) {
+             for (; j < gates.size() && gates[j].GetType() == Gate::Type::cz; ++j) {
                  ++count_CZ;
                  idx_size q0 = num_q_1 - gates[j].GetQubits().front(), q1 = num_q_1 - gates[j].GetQubits().back();
                  
                  if (nearest_neigbors) {
-                     idx_size x0 = q0 % qp.GetColumns(), y0 = q0 / qp.GetColumns(),
-                     x1 = q1 % qp.GetColumns(), y1 = q1 / qp.GetColumns();
+                     idx_size x0 = q0 % qp -> GetColumns(), y0 = q0 / qp -> GetColumns(),
+                     x1 = q1 % qp -> GetColumns(), y1 = q1 / qp -> GetColumns();
                      
                      if (!((x0 == x1 && (y0 + 1 == y1 || y0 - 1 == y1))
                            || ((x0 + 1 == x1 || x0 - 1 == x1) && (y0 == y1)))) {
@@ -385,7 +381,7 @@ MovexCZGates(idx_size proc_prefix_bits,
                      }
                  }
                  
-                 if (qp.globalToBlock(q0) !=  qp.globalToBlock(q1)) {
+                 if (qp -> globalToBlock(q0) !=  qp -> globalToBlock(q1)) {
                      if (curr_bit_counter == 0 && !last_cycle) {
                          if (curr_path == 0) {
                              curr_bit_counter = range_bits;
@@ -445,20 +441,20 @@ MovexCZGates(idx_size proc_prefix_bits,
                  idx_size next_CZ = last_CZ;
             
                  for (idx_size k = j; k < gates.size()
-                      && gates[k].GetType() != Gate::Type::ControlZ; ++k)
+                      && gates[k].GetType() != Gate::Type::cz; ++k)
                      ++next_CZ;
                  
                  idx_size T_gates_idx = 0;
                  for (; i < gates.size(); ++i) {
                      idx_size XYH_count = 0;
                      move_count = 0;
-                     if (gates[i].GetType() == Gate::Type::T && T_gates_idx == 0)
+                     if (gates[i].GetType() == Gate::Type::t && T_gates_idx == 0)
                          T_gates_idx = i;
                      
-                     if (gates[i].GetType() == Gate::Type::X_1_2
-                         || gates[i].GetType() == Gate::Type::Y_1_2
-                         || gates[i].GetType() == Gate::Type::Hadamard) {
-                         for (j = i; j < gates.size() && gates[j].GetType() != Gate::Type::ControlZ; ++j) {
+                     if (gates[i].GetType() == Gate::Type::x_1_2
+                         || gates[i].GetType() == Gate::Type::y_1_2
+                         || gates[i].GetType() == Gate::Type::h) {
+                         for (j = i; j < gates.size() && gates[j].GetType() != Gate::Type::cz; ++j) {
                              for (idx_size k = 0; k < xCZ_q.size(); ++k) {
                                  if (gates[j].GetQubits().back() == xCZ_q[k]) {
                                      if (j < (next_CZ - move_count)) {
@@ -473,11 +469,11 @@ MovexCZGates(idx_size proc_prefix_bits,
                              if (XYH_count != 0) break;
                          }
                          for (idx_size k = 0; k < xCZ_counter
-                              && gates[next_CZ - XYH_count - k].GetType() != Gate::Type::ControlZ ; ++k)
+                              && gates[next_CZ - XYH_count - k].GetType() != Gate::Type::cz ; ++k)
                              swap(gates[last_CZ - k], gates[next_CZ - XYH_count - k]);
                          
                          if (T_gates_idx != 0) {
-                             for (int k = 0; gates[T_gates_idx + k].GetType() == Gate::Type::T ; ++k)
+                             for (int k = 0; gates[T_gates_idx + k].GetType() == Gate::Type::t ; ++k)
                                  swap(gates[last_CZ - xCZ_counter + k + 1], gates[T_gates_idx + k]);
                          }
                          
@@ -504,7 +500,7 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
     double num_XY_gates = 0;
     vector<int> XY_gates_per_qubit(qubits, 0);
     for (idx_size i = qubits; i < gates.size(); ++i) {
-        if (gates[i].GetType() == Gate::Type::X_1_2 || gates[i].GetType() == Gate::Type::Y_1_2) {
+        if (gates[i].GetType() == Gate::Type::x_1_2 || gates[i].GetType() == Gate::Type::y_1_2) {
             ++num_XY_gates;
             ++XY_gates_per_qubit[gates[i].GetQubits().back()];
         }
@@ -520,12 +516,12 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
 }
 
 void Circuit::
-CreateGoogleCircuit(int q, int num_clock_cycles)
+CreateGoogleCircuit(idx_size q, idx_size num_clock_cycles)
 {
     srand(time(NULL));
     google = true;
     
-    short GS_gates[3] = {Gate::Type::X_rotation, Gate::Type::Y_rotation, Gate::Type::T};
+    short GS_gates[3] = {Gate::Type::rx, Gate::Type::ry, Gate::Type::t};
     
     int GS_gates_num = 3;
     
@@ -537,7 +533,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
     auto count_wires_gate = [&](vector<short>& CZ_pairs) {
         int count = 0;
         for (idx_size i = 0; i < qubit_to_gates.size(); ++i) {
-            if (gates[qubit_to_gates[i].back()].GetType() == Gate::Type::ControlZ) {
+            if (gates[qubit_to_gates[i].back()].GetType() == Gate::Type::cz) {
                 CZ_pairs.push_back(i);
                 count += 1;
             }
@@ -561,7 +557,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
         current_CZ_pairs.resize((1 + (rand() % (qubits - 1))) * 2);
         
         int CZ_size = (int) current_CZ_pairs.size();
-        int CZ_q = abs(qubits - CZ_size/2);
+        int CZ_q = abs(qubits - (double)CZ_size/2.0);
         CZ_q = rand() % CZ_q;
         for (int j = 0; j < CZ_size; ++j) {
             //            int CZ_q = rand () % (qubits - 1) ;
@@ -597,7 +593,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
         
         for (int j = 0; j < qubits_for_gates; ++j) {
             int q = rand() % qubits_for_gates;
-            while(gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() != Gate::Type::ControlZ) {
+            while(gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() != Gate::Type::cz) {
                 q = rand() % qubits_for_gates;
             }
             complied_qubits[j] = CZ_pairs[q];
@@ -643,7 +639,7 @@ CreateGoogleCircuit(int q, int num_clock_cycles)
 
 void Circuit::
 CreateQuiddProScript(const string& out_file,
-                     int layers_last_H)
+                     idx_size layers_last_H)
 {
     ofstream file;
     file.open(out_file);
@@ -659,36 +655,36 @@ CreateQuiddProScript(const string& out_file,
         int op_count = 0;
         bool control = false;
         
-        if (gates[i].GetType() == Gate::Type::Measurement) {
+        if (gates[i].GetType() == Gate::Type::m) {
             file << "measure_sv(" + to_string(gates[i].GetQubits()[0] + 1)
             + ", state)";
             continue;
         }
         
-        if (gates[i].GetType() == Gate::Type::T) {
+        if (gates[i].GetType() == Gate::Type::t) {
             file << "T = [1 0 ; 0 " + to_string(0.707106781) + "+i*" + to_string(0.707106781) + "];\n";
             file << "op" + to_string(op_count++) + " = cu_gate (T, \"";
         }
-        else if (gates[i].GetType() == Gate::Type::X_1_2) {
+        else if (gates[i].GetType() == Gate::Type::x_1_2) {
             file << "X_1_2 = [0.5+i*0.5 0.5-i*0.5 ; 0.5-i*0.5 0.5+i*0.5];\n";
             file << "op" + to_string(op_count++) + " = cu_gate (X_1_2, \"";
         }
-        else if (gates[i].GetType() == Gate::Type::Y_1_2) {
+        else if (gates[i].GetType() == Gate::Type::y_1_2) {
             file << "Y_1_2 = [0.5+i*0.5 -0.5-i*0.5 ; 0.5+i*0.5 0.5+i*0.5];\n";
             file << "op" + to_string(op_count++) + " = cu_gate (Y_1_2, \"";
         }
-        else if (gates[i].GetType() != Gate::Type::ControlZ) {
+        else if (gates[i].GetType() != Gate::Type::cz) {
             file << "op" + to_string(op_count++)  + " = cu_gate(" + quiddpro_func[gates[i].GetType()] + "(";
             
-            if (gates[i].GetType() < Gate::Type::X_rotation || gates[i].GetType() == Gate::Type::Phase) {
+            if (gates[i].GetType() < Gate::Type::rx || gates[i].GetType() == Gate::Type::ph) {
                 file << "1), \"";
             }
-            else if (gates[i].GetType() < Gate::Type::ControlZ) {
+            else if (gates[i].GetType() < Gate::Type::cz) {
                 file << to_string(gates[i].GetTheta()[0]) + " * pi, 1), \"";
             }
         }
         
-        if (gates[i].GetType() != Gate::Type::ControlZ) {
+        if (gates[i].GetType() != Gate::Type::cz) {
             int q = 0;
             if (control) {
                 for (; q < gates[i].GetNumControls(); ++q) {
@@ -720,7 +716,7 @@ CreateQuiddProScript(const string& out_file,
             file << "state = op0 * state";
     }
     
-    if (layers_last_H && gates.back().GetType() != Gate::Type::Hadamard) {
+    if (layers_last_H && gates.back().GetType() != Gate::Type::h) {
         for (int j = 0; j < layers_last_H; ++j) {        
             for (int i = 0; i < qubits; ++i) {
                 file << ";\nop0 = cu_gate(hadamard(1), \"x" << i + 1 << "\" ," << qubits
@@ -731,71 +727,32 @@ CreateQuiddProScript(const string& out_file,
 }
 
 void Circuit::
-WriteGeneratedCircuitFile(const string& out_file,
-                          const idx_size size_q)
+WriteCircuitToFile(const string& out_file)
 {
-    if ( size_q == 0)
-        throw "Create Circuit first by entering qubits";
+    const idx_size qubit_minus_1 = qubits - 1;
     
     ofstream file;
     file.open(out_file);
     
     file << qubits << "\n";
     
-    for (idx_size i = 0; i < classical_bits.size(); ++i)
-        file << classical_bits[0] << " ";
-    file << "\n";
-    for (idx_size i = 0; i < size_q; ++i) {
-        file << 0;
-        file << " " ;
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        file << GetCycleNumForGateIdx(i) << " "
+        << gates[i].TypeToString() << " ";
+        
+        if (gates[i].GetQubits().size() == 2)
+            file << qubit_minus_1 - gates[i].GetQubits()[1] << " ";
+        
+        file << qubit_minus_1 - gates[i].GetQubits()[0] << "\n";
     }
-    file << "\n";
     
-    idx_size size_g = gates.size();
-    
-    if ( size_g == 0)
-        throw "Create Circuit first by entering gates";
-    
-    for (idx_size i = 0; i < size_g; ++i) {
-        idx_size size_r = gates[i].GetMatrix().size();
-        for(size_t j = 0; j < size_r; ++j) {
-            int size_c = (int)gates[i].GetMatrix()[j].size();
-            for (int k = 0; k < size_c; ++k) {
-                file << real(gates[i].GetMatrix()[j][k]);
-                
-                if (imag(gates[i].GetMatrix()[j][k]) != 0)
-                    file << " + " << imag(gates[i].GetMatrix()[j][k]) << " i";
-                
-                if (k != size_c-1)
-                    file << " , ";
-                
-            }
-            file << " & ";
-        }
-        file << "\n";
-        file << "g ";
-        file << gates[i].GetType() << " ";
-        
-        file << "\nt ";
-        for ( auto theta : gates[i].GetTheta())
-            file << theta << " ";
-        
-        
-        file << "\n";
-        file << "q ";
-        for (const auto& q : gates[i].GetQubits())
-            file << q << " ";
-        
-        file << "\n";
-        file << "c " << gates[i].GetNumControls() << "\n";
-    }
     file.close();
 }
 
 void Circuit::
 ReadGoogleCircuitFile(const string& input_file,
-                      const int depth,
-                      const int add_layer_H)
+                      const idx_size depth,
+                      const idx_size add_layer_H)
 {
     google = true;
     ifstream file;
@@ -845,6 +802,61 @@ ReadGoogleCircuitFile(const string& input_file,
             clock_cycles.push_back(gates.size());
         }
     }
+}
+
+void Circuit::
+OptimizeCircuitArrangement(const Config* config)
+{
+    if (!isRearranged()) {
+        if (google) {
+            if (!ClockCycleEmpty())
+                GroupAlternateCycles();
+            ClusterSimilarGates();
+        }
+        
+        if (config -> sim_type != Config::SimType::FullState)
+            MovexCZGatesRewrite(config -> proc_prefix_bits,
+                                config -> ranges_bits, config -> dfs_length,
+                                config -> nearest_neighbors);
+        
+        RecalibrateGoogleClockCycles();
+    }
+}
+
+void Circuit::
+InitializeCircuitConfig(const Config* config)
+{
+    bool H_sims = config -> sim_type == Config::SimType::LosslessH ||
+    config -> sim_type == Config::SimType::Approx1CutH || config -> sim_type == Config::SimType::ApproxCZPathH2011;
+    
+    qp = make_shared<QubitPartition>(H_sims ?
+    QubitPartition(QubitPartition::Cuts::Horizontal, GetNumQubits(),
+                   config -> row_major, config -> hcut, config -> first_part_smaller) :
+    QubitPartition(QubitPartition::Cuts::Vertical, GetNumQubits(), config -> row_major,
+                   config -> vcut, config -> first_part_smaller)) ;
+}
+
+pair<int, int> Circuit::
+GetTwoQGateCount() const
+{
+    const idx_size num_qubits_minus_1 = qubits - 1;
+    idx_size total_CZ = 0, total_xCZ = 0;
+    
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        idx_size j = i;
+        idx_size count_xCZ_per_cycle = 0;
+        for (; j < gates.size() && gates[j].GetType() == Gate::Type::cz; ++j) {
+            ++total_CZ;
+            const auto& gate_qubits = gates[j].GetQubits();
+            idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
+
+            if (qp -> globalToBlock(q0) !=  qp -> globalToBlock(q1)) ++count_xCZ_per_cycle;
+        }
+        total_xCZ += count_xCZ_per_cycle;
+        i = j;
+    }
+    
+    return pair<int, int>{total_CZ, total_xCZ};
 }
 
 int Circuit::
@@ -900,4 +912,10 @@ GetCycleNumForGateIdx(idx_size gate_idx) const
             return c;
     }
     return (int)clock_cycles.size();
+}
+
+bool Circuit::
+isRearranged() const
+{
+    return rearranged;
 }

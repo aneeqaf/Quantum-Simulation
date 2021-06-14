@@ -73,6 +73,14 @@ def AddPrintOptToCommand(seed, command, idx_file, num_idx):
 
 	return print_opt
 
+def RearrangeCicuit(input_filename, command):
+	if "rearranged" not in input_filename:
+		os.system(command + " -C")
+		command = command.replace(input_filename, input_filename + ".rearranged")
+		print ("Command after circuit rearrangement : " + command)
+		return input_filename + ".rearranged", command
+	return input_filename, command
+
 def BuildDistCommand(command, sim_type, num_threads, num_highq, approx, col_major ,\
  					depth , no_nearest_neighbors, layers_Hgates_b4_meas,\
  					no_checkpoint_with_ranges, save_checkpoint_to_file, count_zeros,\

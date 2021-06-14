@@ -265,44 +265,44 @@ ApplyGateOnAmps(cmplx* __restrict amp,
     
     if (indices_size <= 2 && !(amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0))) {
         switch (gate_type) {
-            case (Gate::Type::X_1_2):{
+            case (Gate::Type::x_1_2):{
                 amp[indices[0]] = (temp_amp[0]*X12[0][0]) + (temp_amp[1]*X12[0][1]);
                 amp[indices[1]] = (temp_amp[0]*X12[1][0]) + (temp_amp[1]*X12[1][1]);
                 break;
             }
-            case (Gate::Type::Y_1_2):{
+            case (Gate::Type::y_1_2):{
                 amp[indices[0]] = (temp_amp[0]*Y12[0][0]) + (temp_amp[1]*Y12[0][1]);
                 amp[indices[1]] = (temp_amp[0]*Y12[1][0]) + (temp_amp[1]*Y12[1][1]);
                 break;
             }
-            case (Gate::Type::Z):{
+            case (Gate::Type::z):{
                 amp[indices[1]] *= -1;
                 break;
             }
-            case (Gate::Type::CZ_D1):{
+            case (Gate::Type::cz_d1):{
                 amp[indices[1]] *= -1;
                 break;
             }
-            case (Gate::Type::CZ_D2):{
+            case (Gate::Type::cz_d2):{
                 amp[indices[0]] = 0;
                 break;
             }
-            case (Gate::Type::CZ_D3):{
+            case (Gate::Type::cz_d3):{
                 break;
             }
-            case (Gate::Type::CZ_D4):{
+            case (Gate::Type::cz_d4):{
                 amp[indices[1]] = 0;
                 break;
             }
-            case (Gate::Type::T):{
+            case (Gate::Type::t):{
                 amp[indices[1]] *= T[1][1];
                 break;
             }
-            case (Gate::Type::X):{
+            case (Gate::Type::x):{
                 swap(amp[indices[0]], amp[indices[1]]);
                 break;
             }
-            case (Gate::Type::Y):{
+            case (Gate::Type::y):{
                 amp[indices[0]] = temp_amp[1] * Y[0][1];
                 amp[indices[1]] = temp_amp[0] * Y[1][0];
                 break;

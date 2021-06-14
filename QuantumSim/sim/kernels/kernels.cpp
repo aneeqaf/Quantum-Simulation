@@ -71,9 +71,9 @@ FormBlockOfCZTGates(idx_size& gate_i,
                     const int num_qubits_amp)
 {
     for(;gate_i < cluster.size(); ++gate_i) {
-        if (cluster[gate_i].GetType() == Gate::Type::ControlZ)
+        if (cluster[gate_i].GetType() == Gate::Type::cz)
             GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
-        else if (cluster[gate_i].GetType() == Gate::Type::T)
+        else if (cluster[gate_i].GetType() == Gate::Type::t)
             GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
         else break;
     }
@@ -104,7 +104,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
     for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
-        if(gt.GetType() == Gate::Type::X_1_2 ||  gt.GetType() == Gate::Type::Y_1_2)
+        if(gt.GetType() == Gate::Type::x_1_2 ||  gt.GetType() == Gate::Type::y_1_2)
             cluster.push_back(all_gates[gate_i]);
         else break;
     }
@@ -155,25 +155,25 @@ ApplyCZDecomposition(cmplx* __restrict amp,
     idx_size count = 0, q = (int)gate_bitmask;
     cmplx multiplier1 = 0, multiplier2 = 1;
     
-    if (gate_type == Gate::Type::CZ_D1 || gate_type == Gate::Type::CZ_D6)
+    if (gate_type == Gate::Type::cz_d1 || gate_type == Gate::Type::cz_d6)
         multiplier1 = cmplx(-1, 0);
-    else if (gate_type == Gate::Type::CZ_D6)
+    else if (gate_type == Gate::Type::cz_d6)
         multiplier1 = cmplx(1, 0);
-    else if (gate_type == Gate::Type::CZ_D7)
+    else if (gate_type == Gate::Type::cz_d7)
         multiplier1 = cmplx(0, 1);
 
-    if (gate_type == Gate::Type::CZ_D5)
+    if (gate_type == Gate::Type::cz_d5)
         multiplier2 = 2;
-    else if (gate_type == Gate::Type::CZ_D6)
+    else if (gate_type == Gate::Type::cz_d6)
         multiplier2 = cmplx(0, -1);
 
-    if (gate_type == Gate::Type::CZ_D2)
+    if (gate_type == Gate::Type::cz_d2)
         q = 0;
     
     while (count < amp_size) {
         if ((count & gate_bitmask) == q)
             amp[count++] *= multiplier1;
-        else if (gate_type == Gate::Type::CZ_D5 || gate_type == Gate::Type::CZ_D6)
+        else if (gate_type == Gate::Type::cz_d5 || gate_type == Gate::Type::cz_d6)
             amp[count++] *= multiplier2;
         else
             count += gate_bitmask;
@@ -360,7 +360,7 @@ Apply1QXYHGates(cmplx* __restrict amp,
     
      //AVX functions handles 4 amps at a time.
      void (*gate_func)(cmplx* __restrict, const idx_size*) ;
-     if (gate_type == Gate::Type::X_1_2) {
+     if (gate_type == Gate::Type::x_1_2) {
          if (q < num_qubits - 2) {
              gate_func = ApplyX12GateAVX;
              add = 4;
@@ -368,7 +368,7 @@ Apply1QXYHGates(cmplx* __restrict amp,
          else
              gate_func = ApplyX12Gate;
      }
-     else if (gate_type == Gate::Type::Y_1_2) {
+     else if (gate_type == Gate::Type::y_1_2) {
          if (q < num_qubits - 2) {
              gate_func = ApplyY12GateAVX;
              add = 4;
@@ -502,16 +502,16 @@ Apply2MergedXY12Gates(Gate gate1,
     const Gate::Type g1t = (Gate::Type)gate1.GetType();
     const Gate::Type g2t = (Gate::Type)gate2.GetType();
 
-    if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
+    if(g1t == Gate::Type::x_1_2 && g2t == Gate::Type::x_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyXX12Gate);
 
-    else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
+    else if(g1t == Gate::Type::x_1_2 && g2t == Gate::Type::y_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyXY12Gate);
 
-    else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
+    else if(g1t == Gate::Type::y_1_2 && g2t == Gate::Type::y_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyYY12Gate);
 
-    else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
+    else if(g1t == Gate::Type::y_1_2 && g2t == Gate::Type::x_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyYX12Gate);
     
 }
@@ -846,7 +846,7 @@ void ApplyHGatesIteratively(cmplx* __restrict amp,
         {
             int q = q1 > q2 ? q1 : q2;
             gate_bm ^= 1ull << q;
-            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
             return;
         }
         

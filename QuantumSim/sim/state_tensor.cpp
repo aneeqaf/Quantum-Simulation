@@ -232,13 +232,13 @@ void TensorProductStateVector::
 HandleCZApprox(const bitset<128> *CZ_bitmasks)
 {
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d5, Gate::Type::cz_d3);
     else if (sim_type == Config::SimType::Approx1_101) //compute norm and divide by the norm
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D1, Gate::Type::CZ_D2);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d1, Gate::Type::cz_d2);
     else if (sim_type == Config::SimType::Approx1110)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d3, Gate::Type::cz_d4);
     else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d6, Gate::Type::cz_d7);
     else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
              && book_keep){
 //        idx_size count = CountXCZGates(CZ_bitmasks);

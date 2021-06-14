@@ -215,9 +215,9 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
                 ++count_of_category.decomposed_CZ;
             for (idx_size n = 0; n < num_addends; ++n) {
                 TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[n]);
-                tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::cz_d1, Gate::Type::cz_d2,
                                                                     (int)i, modified_num_q_B - q);
-                new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::cz_d3, Gate::Type::cz_d4,
                                                         (int)i, modified_num_q_B - q);
                 tensor_addends.push_back(new_t);
             }

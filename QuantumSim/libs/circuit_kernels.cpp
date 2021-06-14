@@ -17,17 +17,17 @@ PrintGates(const vector<Gate>& gates, idx_size num_qubits)
         for (idx_size i = 0; i < gates.size(); ++i) {
             const Gate& g = gates[i];
             if (g.GetQubits().size() == 1 && g.GetQubits()[0] == q) {
-                if (g.GetType() == Gate::Type::X_1_2)
+                if (g.GetType() == Gate::Type::x_1_2)
                     cout << "X ";
-                else if (g.GetType() == Gate::Type::Y_1_2)
+                else if (g.GetType() == Gate::Type::y_1_2)
                     cout << "Y ";
-                else if (g.GetType() == Gate::Type::T)
+                else if (g.GetType() == Gate::Type::t)
                     cout << "D ";
-                else if (g.GetType() == Gate::Type::Hadamard)
+                else if (g.GetType() == Gate::Type::h)
                     cout << "H ";
             }
             else if (g.GetQubits().size() == 2 && (g.GetQubits()[0] == q || g.GetQubits()[1] == q)) {
-                if(g.GetType() == Gate::Type::ControlZ)
+                if(g.GetType() == Gate::Type::cz)
                     cout << "D ";
             }
         }
@@ -63,15 +63,15 @@ PrintGates(const vector<Gate>& gates, idx_size num_qubits)
             prev_type = gates[i].GetType();
         }
         const Gate& g = gates[i];
-        if(g.GetType() == Gate::Type::ControlZ)
+        if(g.GetType() == Gate::Type::cz)
             cout << i << ":CZ(" << g.GetQubits()[0] << "," << g.GetQubits()[1] << ") ";
-        else if (g.GetType() == Gate::Type::X_1_2)
+        else if (g.GetType() == Gate::Type::x_1_2)
             cout << i << ":X(" << g.GetQubits()[0] << ") ";
-        else if (g.GetType() == Gate::Type::Y_1_2)
+        else if (g.GetType() == Gate::Type::y_1_2)
             cout << i << ":Y(" << g.GetQubits()[0] << ") ";
-        else if (g.GetType() == Gate::Type::T)
+        else if (g.GetType() == Gate::Type::t)
             cout << i << ":T(" << g.GetQubits()[0] << ") ";
-        else if (g.GetType() == Gate::Type::Hadamard)
+        else if (g.GetType() == Gate::Type::h)
             cout << i << ":H(" << g.GetQubits()[0] << ") ";
     }
     cout << "\n\n";
@@ -87,15 +87,15 @@ PrintGatesAndCycles(const vector<Gate>& gates,
         
         for(;j < clock_cycles[i]; ++j) {
             auto& g = gates[j];
-            if(g.GetType() == Gate::Type::ControlZ)
+            if(g.GetType() == Gate::Type::cz)
                 cout << "CZ ";
-            else if (g.GetType() == Gate::Type::X_1_2)
+            else if (g.GetType() == Gate::Type::x_1_2)
                 cout << "X ";
-            else if (g.GetType() == Gate::Type::Y_1_2)
+            else if (g.GetType() == Gate::Type::y_1_2)
                 cout << "Y ";
-            else if (g.GetType() == Gate::Type::T)
+            else if (g.GetType() == Gate::Type::t)
                 cout << "T ";
-            else if (g.GetType() == Gate::Type::Hadamard)
+            else if (g.GetType() == Gate::Type::h)
                 cout << "H ";
         }
         cout << "\n";
@@ -206,11 +206,11 @@ ClusterSimilarGates(vector<Gate>& gates,
     for (idx_size i = start_idx; i < end_idx; ++i) {
         idx_size j = i;
         if (gates[i].IsDiagonal()) {
-            if (gates[j].GetType() != Gate::Type::ControlZ) {
-                for (; j < end_idx && gates[j].GetType() != Gate::Type::ControlZ; ++j) {}
+            if (gates[j].GetType() != Gate::Type::cz) {
+                for (; j < end_idx && gates[j].GetType() != Gate::Type::cz; ++j) {}
                 
                 idx_size count_CZ = 0;
-                for (; j < end_idx && gates[j].GetType() == Gate::Type::ControlZ; ++j)
+                for (; j < end_idx && gates[j].GetType() == Gate::Type::cz; ++j)
                     swap(gates[i + count_CZ++], gates[j]);
             }
             else {

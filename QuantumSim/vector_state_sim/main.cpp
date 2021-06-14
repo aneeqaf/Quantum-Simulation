@@ -7,7 +7,7 @@
 
 /*
  * Input File Format:
- * 
+ *
  */
 
 #include <sstream>
@@ -96,17 +96,18 @@ int main(int argc, char *argv[])
         { "norm_est",    required_argument,       nullptr, 'e' },
         { "grid_type",    required_argument,       nullptr, 'm' },
         { "no_nearest_neighbors",    no_argument,       nullptr, 'n' },
-        { "layers_Hgates_b4_meas",    required_argument,       nullptr, 'H' },
+        { "add_concluding_H_gates",    required_argument,       nullptr, 'H' },
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
         { "first_partition_smaller",    no_argument,       nullptr, 'f' },
         { "save_checkpoint_to_file",    required_argument,       nullptr, 'r' },
         { "count_zeros",    no_argument,       nullptr, '0' },
         { "Cramer",    required_argument,       nullptr, 'z' },
+        { "circuit_reordering_mode", no_argument, nullptr, 'C'},
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool googleInput = false, create = false, to_write = false, print_amp = false,
+    bool googleInput = false, to_write = false, print_amp = false, write_circuit_mode = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
     store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
@@ -124,7 +125,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:C", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -159,8 +160,8 @@ int main(int argc, char *argv[])
                             cz_path = stoul(cz_path_temp.substr(pos1 + 1, pos2 - pos1));
                         }
                         else cz_path = stoul(cz_path_temp.substr(pos1 + 1));
-
-
+                        
+                        
                         if (count_commas == 2)
                             czp_app_len = stoi(cz_path_temp.substr(pos2 + 1));
                         else if (count_commas > 2)
@@ -204,7 +205,6 @@ int main(int argc, char *argv[])
             }
             case 'g': {
                 valid = true;
-                create = true;
                 if (argc < 3) {
                     cerr << "Please enter number of qubits and number of gates in circuit\n";
                     exit(1);
@@ -216,6 +216,8 @@ int main(int argc, char *argv[])
                     num_qubits.push_back(numQ);
                     num_gates.push_back(numG);
                 }
+                
+                input_filename = "";
                 break;
             }
             case 'H': {
@@ -340,8 +342,8 @@ int main(int argc, char *argv[])
                     string num_idx_str = idx_arg.substr(idx_arg.find_first_of(",") + 1, idx_arg.find_first_of("+"));
                     seed = stoi(seed_str);
                     num_idx = stoi(num_idx_str);
-//                    if (num_idx > 10000)
-//                        throw "Cannot print more than 10000 amps";
+                    //                    if (num_idx > 10000)
+                    //                        throw "Cannot print more than 10000 amps";
                     print_idx = idx_arg.find_first_of("+") != string::npos;
                 }
                 else
@@ -376,6 +378,10 @@ int main(int argc, char *argv[])
                 hcut = stoi(s_c);
                 break;
             }
+            case 'C' : {
+                write_circuit_mode = true;
+                break;
+            }
             default: {
                 cerr << "Unknown option " << c << '\n';
                 exit(1);
@@ -406,22 +412,7 @@ int main(int argc, char *argv[])
             system(string("mkdir -p " + pathname).c_str());
     }
     
-    Circuit cir;
-    if (googleInput) {
-        cir.ReadGoogleCircuitFile(input_filename, depth, layers_H_gates);
-        depth = (int)cir.GetNumCycles();
-    }
-    else if(create) {
-        for (idx_size i = 0; i < num_qubits.size(); ++i){
-            cir.CreateGoogleCircuit(num_qubits[i], num_gates[i]);
-            
-            if(to_write && num_qubits[0] <= 20) {
-                cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file +
-                                              to_string(i) + ".txt", cir.GetNumQubits());
-                cir.CreateQuiddProScript("output/qpro_scripts/" + out_file + to_string(i) + ".qpro", layers_H_gates);
-            }
-        }
-    }
+    Circuit cir(input_filename, num_qubits.size() > 0 ? num_qubits[0] : 0, depth);
     
     if (sim_type == -1) {
         if (cir.GetNumQubits() <= 32) sim_type = 5;
@@ -442,6 +433,15 @@ int main(int argc, char *argv[])
                                  depth, threshold, num_threads, true, nearest_neighbors, row_major,
                                  layers_H_gates, store_checkpoint_range, first_partition_smaller,
                                  count_zeros, save_cp_to_file, compress, cramer_cw, cramer_p_reject);
+    
+    cir.InitializeCircuitConfig(config);
+    
+    if(write_circuit_mode) {
+        cir.OptimizeCircuitArrangement(config);
+        cir.WriteCircuitToFile(input_filename + ".rearranged");
+        delete config;
+        return 0;
+    }
     
     if (print_amp) {
         if (seed != -1)
@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
         TensorProductStateVector amp (cir.GetNumQubits(),
                                       QubitPartition::Cuts::Vertical, hcut, vcut,
                                       (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                       config -> verbose);
+                                      config -> verbose);
         
         if (threshold == 0) {
             int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ?
@@ -487,7 +487,7 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
                                              hcut, vcut, row_major, first_partition_smaller,
-                                              config -> verbose);
+                                             config -> verbose);
         if (!config -> indices.empty())
             amp.PopulateGlobalToLocalMap(config -> indices);
         

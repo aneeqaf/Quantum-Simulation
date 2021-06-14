@@ -11,6 +11,8 @@
 
 unordered_map<Gate::Type, vector<vector<cmplx>>> Gate::constant_gate_matrices;
 unordered_map<Gate::Type, vector<vector<cmplx>> (*)(const vector<float>&)> Gate::phase_gate_matrices;
+const char * Gate::gate_enum_type_strings[NUM_GATES] = { "h", "x", "y", "z", "rx", "ry", "rz", "ph", "cz", "i",
+    "t", "m", "x_1_2", "y_1_2", "cz_d1", "cz_d2", "cz_d3", "cz_d4", "cz_d5", "cz_d6", "cz_d7"};
 
 Gate::
 Gate(Gate::Type type,
@@ -19,23 +21,23 @@ Gate(Gate::Type type,
      const vector<idx_size>& qubits,
      const vector<float>& thetas): qubits(qubits), thetas(thetas), type(type), num_controls(num_controls), diagonal(is_diag)
 {
-    Gate::constant_gate_matrices[Gate::Type::Hadamard] = {{cmplx(1, 0), cmplx(1, 0)}, {cmplx(1, 0), cmplx(-1, 0)}};
-    Gate::constant_gate_matrices[Gate::Type::X] = {{cmplx(0, 0), cmplx(1, 0)}, {cmplx(1, 0), cmplx(0, 0)}};
-    Gate::constant_gate_matrices[Gate::Type::Y] = {{cmplx(0, 0), cmplx(0, -1)}, {cmplx(0, 1), cmplx(0, 0)}};
-    Gate::constant_gate_matrices[Gate::Type::Z] = {{cmplx(1, 0), cmplx(0, 0)}, {cmplx(0, 0), cmplx(-1, 0)}};
-    Gate::constant_gate_matrices[Gate::Type::X_1_2] = {{cmplx(1, 1), cmplx(1, -1)}, {cmplx(1, -1), cmplx(1, 1)}};
-    Gate::constant_gate_matrices[Gate::Type::Y_1_2] = {{cmplx(1, 1), cmplx(-1, -1)}, {cmplx(1, 1), cmplx(1, 1)}};
-    Gate::constant_gate_matrices[Gate::Type::T] = {{cmplx(1, 0), cmplx(0, 0)}, {cmplx(0, 0), exp(cmplx(0, M_PI/4))}};
-    Gate::constant_gate_matrices[Gate::Type::Identity] = {{{1, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
-    Gate::constant_gate_matrices[Gate::Type::ControlZ] = {{cmplx(1, 0), cmplx(0, 0), cmplx(0, 0), cmplx(0, 0)},
+    Gate::constant_gate_matrices[Gate::Type::h] = {{cmplx(1, 0), cmplx(1, 0)}, {cmplx(1, 0), cmplx(-1, 0)}};
+    Gate::constant_gate_matrices[Gate::Type::x] = {{cmplx(0, 0), cmplx(1, 0)}, {cmplx(1, 0), cmplx(0, 0)}};
+    Gate::constant_gate_matrices[Gate::Type::y] = {{cmplx(0, 0), cmplx(0, -1)}, {cmplx(0, 1), cmplx(0, 0)}};
+    Gate::constant_gate_matrices[Gate::Type::z] = {{cmplx(1, 0), cmplx(0, 0)}, {cmplx(0, 0), cmplx(-1, 0)}};
+    Gate::constant_gate_matrices[Gate::Type::x_1_2] = {{cmplx(1, 1), cmplx(1, -1)}, {cmplx(1, -1), cmplx(1, 1)}};
+    Gate::constant_gate_matrices[Gate::Type::y_1_2] = {{cmplx(1, 1), cmplx(-1, -1)}, {cmplx(1, 1), cmplx(1, 1)}};
+    Gate::constant_gate_matrices[Gate::Type::t] = {{cmplx(1, 0), cmplx(0, 0)}, {cmplx(0, 0), exp(cmplx(0, M_PI/4))}};
+    Gate::constant_gate_matrices[Gate::Type::i] = {{{1, 0}, {0, 0}}, {{0, 0} , {1, 0}}};
+    Gate::constant_gate_matrices[Gate::Type::cz] = {{cmplx(1, 0), cmplx(0, 0), cmplx(0, 0), cmplx(0, 0)},
                                                     {cmplx(0, 0), cmplx(1, 0), cmplx(0, 0), cmplx(0, 0)},
                                                     {cmplx(0, 0), cmplx(0, 0), cmplx(1, 0), cmplx(0, 0)},
                                                     {cmplx(0, 0), cmplx(0, 0), cmplx(0, 0), cmplx(-1, 0)}};
     
-    Gate::phase_gate_matrices[Gate::Type::X_rotation] = create_X_rotation_matrix;
-    Gate::phase_gate_matrices[Gate::Type::Y_rotation] = create_X_rotation_matrix;
-    Gate::phase_gate_matrices[Gate::Type::Z_rotation] = create_X_rotation_matrix;
-    Gate::phase_gate_matrices[Gate::Type::Phase] = create_X_rotation_matrix;
+    Gate::phase_gate_matrices[Gate::Type::rx] = create_X_rotation_matrix;
+    Gate::phase_gate_matrices[Gate::Type::ry] = create_Y_rotation_matrix;
+    Gate::phase_gate_matrices[Gate::Type::rz] = create_X_rotation_matrix;
+    Gate::phase_gate_matrices[Gate::Type::ph] = create_Ph_matrix;
 }
 
 Gate& Gate::

@@ -22,8 +22,8 @@
 
 using namespace std;
 
-const int NUM_GATES = 10;
-const int NUM_BASIS_STATES = 2;
+constexpr idx_size NUM_GATES = 21;
+constexpr idx_size NUM_BASIS_STATES = 2;
 
 constexpr cmplx H[2][2] = {{{1, 0}, {1, 0}}, {{1, 0} , {-1, 0}}};
 constexpr cmplx X[2][2] = {{{0, 0}, {1, 0}}, {{1, 0} , {0, 0}}};
@@ -48,11 +48,10 @@ constexpr cmplx CZ[4][4] = {{cmplx(1, 0), cmplx(0, 0), cmplx(0, 0), cmplx(0, 0)}
 
 struct Gate {
 public:
-    enum Type : size_t {Hadamard, X, Y, Z, X_rotation, Y_rotation,
-        Z_rotation, Phase, ControlZ, Identity, T, Measurement, X_1_2, Y_1_2,
-        CZ_D1, CZ_D2, CZ_D3, CZ_D4, CZ_D5, CZ_D6, CZ_D7
+    enum Type : size_t {h, x, y, z, rx, ry, rz, ph, cz, i, t, m, x_1_2, y_1_2,
+        cz_d1, cz_d2, cz_d3, cz_d4, cz_d5, cz_d6, cz_d7
     };
-    
+
 private:
     vector<idx_size> qubits;
     vector<float> thetas;
@@ -65,6 +64,8 @@ private:
     
     static vector<vector<cmplx>> GetGateMatrix(Type gate_type, const vector<float>& args);
     
+    static const char * gate_enum_type_strings[NUM_GATES];
+
 public:
     Gate(Gate::Type type,
          idx_size num_controls,
@@ -78,6 +79,7 @@ public:
     Gate& operator=(const Gate& rhs);
     
     Type GetType() const { return type; }
+    const char* TypeToString() const { return gate_enum_type_strings[type]; };
     const vector<vector<cmplx>> GetMatrix() const { return GetGateMatrix(type, thetas); }
     const vector<idx_size>& GetQubits() const { return qubits; }
     const vector<float>& GetTheta() const { return thetas; }
@@ -112,7 +114,7 @@ inline vector<vector<cmplx>> create_Ph_matrix(const vector<float>& args)
 
 inline Gate create_Hadamard(const vector<float>& args)
 {
-    return Gate(Gate::Type::Hadamard,
+    return Gate(Gate::Type::h,
                0,
                false,
                {static_cast<size_t>(args[0])},
@@ -121,7 +123,7 @@ inline Gate create_Hadamard(const vector<float>& args)
 
 inline Gate create_X(const vector<float>& args)
 {
-    return Gate(Gate::Type::X,
+    return Gate(Gate::Type::x,
                0,
                false,
                {static_cast<size_t>(args[0])},
@@ -130,7 +132,7 @@ inline Gate create_X(const vector<float>& args)
 
 inline Gate create_Y(const vector<float>& args)
 {
-    return Gate(Gate::Type::Y,
+    return Gate(Gate::Type::y,
                0,
                false,
                {static_cast<size_t>(args[0])},
@@ -139,7 +141,7 @@ inline Gate create_Y(const vector<float>& args)
 
 inline Gate create_X_1_2(const vector<float>& args)
 {
-    return Gate(Gate::Type::X_1_2,
+    return Gate(Gate::Type::x_1_2,
                0,
                false,
                {static_cast<size_t>(args[0])},
@@ -148,7 +150,7 @@ inline Gate create_X_1_2(const vector<float>& args)
 
 inline Gate create_Y_1_2(const vector<float>& args)
 {
-    return Gate(Gate::Type::Y_1_2,
+    return Gate(Gate::Type::y_1_2,
                 0,
                 false,
                 {static_cast<size_t>(args[0])},
@@ -157,7 +159,7 @@ inline Gate create_Y_1_2(const vector<float>& args)
 
 inline Gate create_Z(const vector<float>& args)
 {
-    return Gate(Gate::Type::Z,
+    return Gate(Gate::Type::z,
                 0,
                 true,
                 {static_cast<size_t>(args[0])},
@@ -166,7 +168,7 @@ inline Gate create_Z(const vector<float>& args)
 
 inline Gate create_I(const vector<float>& args)
 {
-    return Gate(Gate::Type::Identity,
+    return Gate(Gate::Type::i,
                 0,
                 true,
                 {static_cast<size_t>(args[0])},
@@ -175,7 +177,7 @@ inline Gate create_I(const vector<float>& args)
 
 inline Gate create_X_rotation(const vector<float>& args)
 {
-    return Gate(Gate::Type::X_rotation,
+    return Gate(Gate::Type::rx,
                0,
                false,
                {static_cast<size_t>(args[0])},
@@ -184,7 +186,7 @@ inline Gate create_X_rotation(const vector<float>& args)
 
 inline Gate create_Y_rotation(const vector<float>& args)
 {
-    return Gate(Gate::Type::Y_rotation,
+    return Gate(Gate::Type::ry,
                 0,
                 false,
                 {static_cast<size_t>(args[0])},
@@ -193,7 +195,7 @@ inline Gate create_Y_rotation(const vector<float>& args)
 
 inline Gate create_Z_rotation(const vector<float>& args)
 {
-    return Gate(Gate::Type::Z_rotation,
+    return Gate(Gate::Type::rz,
                 0,
                 true,
                 {static_cast<size_t>(args[0])},
@@ -202,7 +204,7 @@ inline Gate create_Z_rotation(const vector<float>& args)
 
 inline Gate create_Ph(const vector<float>& args)
 {
-    return Gate(Gate::Type::Phase,
+    return Gate(Gate::Type::ph,
                 0,
                 true,
                 {static_cast<size_t>(args[0])},
@@ -211,7 +213,7 @@ inline Gate create_Ph(const vector<float>& args)
 
 inline Gate create_T(const vector<float>& args)
 {
-    return Gate(Gate::Type::T,
+    return Gate(Gate::Type::t,
                 0,
                 true,
                 {static_cast<size_t>(args[0])},
@@ -220,7 +222,7 @@ inline Gate create_T(const vector<float>& args)
 
 inline Gate create_CZ(const vector<float>& args)
 {
-    return Gate(Gate::Type::ControlZ,
+    return Gate(Gate::Type::cz,
                 1,
                 true,
                 {static_cast<size_t>(args[1]), static_cast<size_t>(args[0])},
