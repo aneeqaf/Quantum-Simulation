@@ -25,14 +25,7 @@ private:
                              const bitset<128>* __restrict CZ_bitmasks);
     
 public:
-    int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                              idx_size& cz_path,
-                              const idx_size cz_path_len,
-                              const idx_size suffix_size,
-                              const bitset<128>* __restrict CZ_bitmasks,
-                              const bitset<128> T_bitmasks[2],
-                              const bitset<128>& H_bitmask,
-                              const bool last_cycle);
+    
     inline int ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks);
     inline int ApplyXCZGatesForDist(int& remaining_cz_bits,
                                     idx_size& cz_path,
@@ -74,8 +67,7 @@ public:
                                    const bitset<128>& H_bitmask,
                                    const bitset<128>* __restrict CZ_bitmasks,
                                    const bitset<128> T_bitmasks[2],
-                                   int th,
-                                   bool last_cycle = false);
+                                   int th);
     void PopulateGlobalToLocalMap(vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
     FullAmpStateVector* ConvertSumOfTensorsToState();

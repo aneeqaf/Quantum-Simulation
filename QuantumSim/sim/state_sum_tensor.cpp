@@ -162,29 +162,6 @@ HandlexCZApplication(int& remaining_cz_bits,
     return xCZ_applied_in_cycle;
 }
 
-int SumOfTensorsProductsStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    int xCZ_applied_in_cycle = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
-    
-    if (xCZ_applied_in_cycle == -1) {
-        for (auto& t : tensor_addends)
-            t -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                       cz_path_len, suffix_size,
-                                       CZ_bitmasks, T_bitmasks,
-                                       H_bitmask, last_cycle);
-    }
-    
-    return xCZ_applied_in_cycle;
-}
-
 inline int SumOfTensorsProductsStateVector::
 ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
 {
@@ -435,8 +412,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
     int xCZ_applied_in_cycle = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
@@ -446,7 +422,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
             t -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
                                             cz_path_len, suffix_size,
                                             X_bitmask, Y_bitmask, H_bitmask,
-                                            CZ_bitmasks, T_bitmasks, th, last_cycle);
+                                            CZ_bitmasks, T_bitmasks, th);
     
     if (book_keep) {
         if (count_of_category.X1_2 - prev_X_count)

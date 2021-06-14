@@ -671,7 +671,8 @@ SimulationLoop(GenericQuantumState &amp,
             
 //            if (amp.book_keep)
 //                amp.data_per_cycles.cycles.push_back(current_cycle);
-          
+          // TODO: Change the way the cycles are read. What if CZ and T gates are not present?
+            // Maybe need a class that defines structure of cycles.
             if (current_gate.GetType() == Gate::Type::t ||
                 current_gate.GetType() == Gate::Type::cz) {
                 
@@ -714,10 +715,8 @@ SimulationLoop(GenericQuantumState &amp,
                 idx_size prev_i_XY = i;
                 unordered_map<Gate::Type, bitset<128>> bitmasks = amp.Form1QGatesBitmask(i, gates, {Gate::Type::x_1_2, Gate::Type::y_1_2});
                 bitset<128> H_bitmask = 0;
-                bool last_cycle = false;
                 
                 if (i < size && circuit.GetGateFromIndex(i).GetType() == Gate::Type::h) {
-                    last_cycle = true;
                     H_bitmask = amp.Form1QGatesBitmask(i, gates, {Gate::Type::h})[Gate::Type::h];
                     if (config -> last_layers_H)
                         last_layers_of_H--;
@@ -729,15 +728,9 @@ SimulationLoop(GenericQuantumState &amp,
                     xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                   suffix_size, bitmasks[Gate::Type::x_1_2],
                                                                   bitmasks[Gate::Type::y_1_2], H_bitmask, CZ_bitmasks,
-                                                                  T_bitmasks, config -> th, last_cycle);
+                                                                  T_bitmasks, config -> th);
                     ++amp.count_of_category.CZT_layers;
                     if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
-//                }
-//                else {
-//                    xCZ_applied_in_cycle = amp.ApplyBlockOfDiagGates(remaining_cz_bits, cz_path, cz_path_len,
-//                                                             suffix_size, CZ_bitmasks, T_bitmasks, H_bitmask,
-//                                                             last_cycle);
-//                    ++amp.count_of_category.CZT_layers;
 //                }
                 
                 terminate = xCZ_applied_in_cycle != -1 ? true : false;

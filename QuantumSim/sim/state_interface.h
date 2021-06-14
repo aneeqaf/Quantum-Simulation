@@ -139,14 +139,6 @@ public:
     static bool book_keep;
     bool compressed;
   
-    virtual int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                                      idx_size& cz_path,
-                                      const idx_size cz_path_len,
-                                      const idx_size suffix_size,
-                                      const bitset<128>* __restrict CZ_bitmasks,
-                                      const bitset<128> T_bitmasks[2],
-                                      const bitset<128>& H_bitmask,
-                                      const bool last_cycle = false) = 0;
     virtual void ApplyNonCGate(const idx_size gate_qubit,
                                const Gate::Type gate_type) = 0;
     virtual void ApplyHGateOnAllAmps(bool not_cycle_0 = false) = 0;
@@ -172,8 +164,7 @@ public:
                                            const bitset<128>& H_bitmask,
                                            const bitset<128>* __restrict CZ_bitmasks,
                                            const bitset<128> T_bitmasks[2],
-                                           int th,
-                                           bool last_cycle = false) = 0;
+                                           int th) = 0;
     virtual unordered_map<Gate::Type, bitset<128>> Form1QGatesBitmask(idx_size& gate_i,
                                                                        const vector<Gate>& all_gates,
                                                                        const vector<Gate::Type>& gate_type);

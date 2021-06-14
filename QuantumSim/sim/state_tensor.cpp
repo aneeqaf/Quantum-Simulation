@@ -255,74 +255,6 @@ HandleCZApprox(const bitset<128> *CZ_bitmasks)
     }
 }
 
-int TensorProductStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    
-    const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
-    
-    if (partition_to_sim == 'a' || partition_to_sim == 'x') {
-        Time time;
-        time.StartTime();
-        
-        bitset<128> CZ_bitmasks_a[num_q_a];
-        bitset<128> T_bitmasks_a[2] = {0};
-        
-        for (int i = 0; i < num_q_a; ++i)
-            CZ_bitmasks_a[i] = 0;
-        
-        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks);
-        for (int i = 0; i < 2; ++i)
-            T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
-        bitset<128> stateA_Hbitmask = Project1QBitmask(H_bitmask, qp, 0, true);
-
-        time_by_category.CZ_T += time.GetElapsedTime();
-        
-        if (applyCZ_a || T_bitmasks_a[0] != 0 || stateA_Hbitmask != 0)
-            state_a -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                             cz_path_len, suffix_size,
-                                             CZ_bitmasks_a, T_bitmasks_a,
-                                             stateA_Hbitmask, last_cycle);
-    }
-    if (partition_to_sim == 'b' || partition_to_sim == 'x') {
-        Time time;
-        time.StartTime();
-        
-        bitset<128> CZ_bitmasks_b[num_q_b];
-        bitset<128> T_bitmasks_b[2] = {0};
-        
-        for (int i = 0; i < num_q_b; ++i)
-            CZ_bitmasks_b[i] = 0;
-        
-        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks);
-        for (int i = 0; i < 2; ++i)
-            T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
-        bitset<128> stateB_Hbitmask = Project1QBitmask(H_bitmask, qp, 1, true);
-
-        time_by_category.CZ_T += time.GetElapsedTime();
-
-        if (applyCZ_b || T_bitmasks_b[0] != 0 || stateB_Hbitmask != 0)
-            state_b -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                             cz_path_len, suffix_size,
-                                             CZ_bitmasks_b, T_bitmasks_b,
-                                             stateB_Hbitmask, last_cycle);
-    }
-//    state_a -> PrintStateVector() ; cout << endl;
-//    state_b -> PrintStateVector() ; cout << endl;
-//    // TODO : Fix the book keeping for approximation
-    
-    HandleCZApprox(CZ_bitmasks);
-    
-    return -1;
-}
-
 idx_size TensorProductStateVector::
 CountXCZGates(const bitset<128>* __restrict CZ_bitmasks)
 {
@@ -479,8 +411,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
 
@@ -503,7 +434,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                               cz_path_len, suffix_size,
                                               stateA_Xbitmask, stateA_Ybitmask,
                                               stateA_Hbitmask, CZ_bitmasks_a,
-                                              T_bitmasks_a, th, last_cycle);
+                                              T_bitmasks_a, th);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
@@ -524,7 +455,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                               cz_path_len, suffix_size,
                                               stateB_Xbitmask, stateB_Ybitmask,
                                               stateB_Hbitmask, CZ_bitmasks_b,
-                                              T_bitmasks_b, th, last_cycle);
+                                              T_bitmasks_b, th);
     }
     
     return -1;

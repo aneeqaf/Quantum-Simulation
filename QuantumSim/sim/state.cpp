@@ -124,102 +124,6 @@ FormBitmask(const vector<idx_size>& qubits)
     return qubits_bitmask;
 }
 
-int FullAmpStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128>  T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    Time time, time1;
-    time.StartTime();
-    
-    if (all_zeros)
-        return -1;
-//
-//    if (last_cycle)
-//        for (int i = num_qubits - 1; i >= 0; --i)
-//            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
-//
-    int th = ceil((float)num_qubits/2.0);
-    idx_size H_bitmask_64 = H_bitmask.to_ulong();
-    idx_size hiH_bitmask = last_cycle ? (H_bitmask_64 & ((1ull << (num_qubits - th)) - 1)) : 0;
-    idx_size loH_bitmask = last_cycle ? H_bitmask_64 & ~((1ull << (num_qubits - th)) - 1) : 0;
-    idx_size CZ_bitmasks_64[num_qubits];
-    idx_size T_bitmasks_64[2] = {T_bitmasks[0].to_ulong(), T_bitmasks[1].to_ulong()};
-    bool CZ_app = false;
-    for (int i = 0; i < num_qubits; ++i) {
-        CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
-        if (CZ_bitmasks_64[i]) CZ_app = true;
-    }
-    time_by_category.low_q_XY_CZT += time.GetElapsedTime();
-    int single_H = 0;
-    
-    if (!zero_opt_mask.CheckIfAllNonZeroes()) {
-        for (int i = num_qubits - 1; i >= 0; --i)
-            if (loH_bitmask & (1ull << i))
-                UnsetZeroPatternAtQubit(num_qubits - 1 - i);
-    }
-    
-    if (last_cycle) {
-        global_factor_power +=  __builtin_popcountll(loH_bitmask) +  __builtin_popcountll(hiH_bitmask);
-        time1.StartTime();
-        if (__builtin_popcountll(loH_bitmask) % 2) {
-            idx_size odd_H_bit = 1ull << __builtin_ctzl(loH_bitmask);
-            hiH_bitmask |= odd_H_bit;
-            loH_bitmask ^= odd_H_bit;
-        }
-        time_by_category.last_H += time1.GetElapsedTime();
-    }
-    
-    time.StartTime();
-    if (CZ_app || T_bitmasks_64[0]) {
-        if (num_qubits > 4)
-            ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
-                                             T_bitmasks_64, 0,
-                                             0, loH_bitmask >> th,
-                                             num_threads, th, zero_opt_mask);
-//            ApplyBlockOfCZTGatesAVXParallel(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64,
-//                                            loH_bitmask >> (num_qubits - th), num_threads, zero_opt_mask);
-        else
-            ApplyBlockOfCZTGates(amp, num_qubits, CZ_bitmasks_64, T_bitmasks_64); //fix for H
-    }
-    else {
-        hiH_bitmask |= loH_bitmask;
-        loH_bitmask = 0;
-    }
-    
-    time_by_category.low_q_XY_CZT += time.GetElapsedTime();
-    
-    for (int i = num_qubits - 1; i >= 0; --i)
-        if (hiH_bitmask & (1ull << i))
-            UnsetZeroPatternAtQubit(num_qubits - 1 - i);
-    
-    if (last_cycle && hiH_bitmask) {
-        time1.StartTime();
-        
-        if (__builtin_popcountll(hiH_bitmask) % 2 != 0) {
-            int q = __builtin_ctzl(hiH_bitmask);
-            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
-            hiH_bitmask ^= 1ull << q;
-            ++single_H;
-        }
-        
-        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiH_bitmask);
-        time_by_category.last_H += time1.GetElapsedTime();
-        
-        if (book_keep) {
-            count_of_category.H_merged_lo += __builtin_popcountll(loH_bitmask);
-            count_of_category.last_H += __builtin_popcountll(hiH_bitmask) + single_H;
-        }
-    }
-    
-    return -1;
-}
-
 void FullAmpStateVector::
 ApplyNonCGate(const idx_size gate_qubit,
               const Gate::Type gate_type)
@@ -557,8 +461,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {    
     Time time;
     time.StartTime();
@@ -577,8 +480,8 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     idx_size hiq_Y_bitmask = Y_bitmask_64 & ((1ull << th) - 1);
     idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
     idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
-    idx_size hiq_H_bitmask = last_cycle ? H_bitmask_64 & ((1ull << th) - 1): 0;
-    idx_size loq_H_bitmask = last_cycle ? H_bitmask_64 & ~((1ull << th) - 1) : 0;
+    idx_size hiq_H_bitmask = H_bitmask_64 & ((1ull << th) - 1);
+    idx_size loq_H_bitmask =  H_bitmask_64 & ~((1ull << th) - 1);
     int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask);
     int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
     int single_H = 0;
@@ -677,7 +580,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         count_of_category.low_q_XY1_2 += num_lo_X_bits + num_lo_Y_bits;
         count_of_category.high_q_XY1_2 += num_hi_Y_bits + num_hi_X_bits;
         
-        if (last_cycle) {
+        if (H_bitmask_64) {
             count_of_category.H_merged_lo += __builtin_popcountll(loq_H_bitmask);
             count_of_category.last_H += __builtin_popcountll(hiq_H_bitmask) + single_H;
         }

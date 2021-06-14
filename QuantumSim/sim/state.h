@@ -60,14 +60,6 @@ private:
                                     int& num_Y_bits);
 public:
     
-    int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                              idx_size& cz_path,
-                              const idx_size cz_path_len,
-                              const idx_size suffix_size,
-                              const bitset<128>* __restrict CZ_bitmasks,
-                              const bitset<128> T_bitmasks[2],
-                              const bitset<128>& H_bitmask,
-                              const bool last_cycle = false);
     void ApplyNonCGate(const idx_size gate_qubit,
                        const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
@@ -93,8 +85,7 @@ public:
                                   const bitset<128>& H_bitmask,
                                   const bitset<128>* __restrict CZ_bitmasks,
                                   const bitset<128> T_bitmasks[2],
-                                  int th,
-                                  bool last_cycle = false);
+                                  int th);
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);

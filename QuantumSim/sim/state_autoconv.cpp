@@ -57,54 +57,6 @@ AdaptiveStateVector::
     delete sumOfTensors;
 }
 
-int AdaptiveStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    int xCZ_applied_in_cycle = -1;
-    if (full_state) {
-//        if (book_keep) {
-//            data_per_cycles.xCZ_H.push_back(0);
-//            data_per_cycles.xCZ_V.push_back(0);
-//            data_per_cycles.addends.push_back(0);
-//            data_per_cycles.memory.push_back(GetMemUsage());
-//        }
-        full_state -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                            cz_path_len, suffix_size,
-                                            CZ_bitmasks, T_bitmasks, last_cycle);
-    }
-    else {
-        xCZ_applied_in_cycle = sumOfTensors -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                                            cz_path_len, suffix_size, CZ_bitmasks,
-                                                            T_bitmasks, H_bitmask, last_cycle);
-        
-        if (sumOfTensors -> GetNumAddends() > 10) {
-            Time time;
-            time.StartTime();
-            
-            //Add support for finding the cut type
-
-//            if (sumOfTensors -> GetNumQInBlock(0) > 4 && sumOfTensors -> GetNumQInBlock(1) > 4
-//                && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
-//                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
-//            else
-                full_state = sumOfTensors -> ConvertSumOfTensorsToState();
-           
-            time_by_category.conversion += time.GetElapsedTime();
-            
-            delete sumOfTensors;
-            sumOfTensors = nullptr;
-        }
-    }
-    return xCZ_applied_in_cycle;
-}
-
 void AdaptiveStateVector::
 ApplyNonCGate(const idx_size gate_qubit,
               const Gate::Type gate_type)
@@ -166,8 +118,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {
     int xCZ_applied_in_cycle = -1;
     if (full_state) {
@@ -181,7 +132,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                                  cz_path_len, suffix_size,
                                                  X_bitmask,Y_bitmask,
                                                  H_bitmask, CZ_bitmasks,
-                                                 T_bitmasks, th, last_cycle);
+                                                 T_bitmasks, th);
     }
     else {
         if (cz_path_len == 0)
@@ -189,12 +140,12 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                                        cz_path_len, suffix_size,
                                                        X_bitmask, Y_bitmask,
                                                         H_bitmask, CZ_bitmasks,
-                                                        T_bitmasks, th, last_cycle);
+                                                        T_bitmasks, th);
         else
             xCZ_applied_in_cycle = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                       suffix_size, X_bitmask, Y_bitmask,
                                                                       H_bitmask, CZ_bitmasks,
-                                                                      T_bitmasks, th, last_cycle);
+                                                                      T_bitmasks, th);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
             Time time;

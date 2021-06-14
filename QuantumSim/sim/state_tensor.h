@@ -38,14 +38,6 @@ public:
                                         bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
                                         bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                                         bitset<128>* __restrict xCZ_bitmasks_path1_D4D3);
-    int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                              idx_size& cz_path,
-                              const idx_size cz_path_len,
-                              const idx_size suffix_size,
-                              const bitset<128>* __restrict CZ_bitmasks,
-                              const bitset<128>  T_bitmasks[2],
-                              const bitset<128>& H_bitmask,
-                              const bool last_cycle = false);
     idx_size CountXCZGates(const bitset<128>* __restrict CZ_bitmasks);
     void ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
                             const Gate::Type CZ_D_A,
@@ -75,8 +67,7 @@ public:
                                    const bitset<128>& H_bitmask,
                                    const bitset<128>* __restrict CZ_bitmasks,
                                    const bitset<128> T_bitmasks[2],
-                                   int th,
-                                   bool last_cycle = false);
+                                   int th);
     void PopulateGlobalToLocalMap(vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
     
