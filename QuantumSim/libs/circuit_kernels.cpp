@@ -118,6 +118,8 @@ CheckIfNearestNeighbor(idx_size q0,
     }
 }
 
+// TODO: The way the gates are arranged affects the clustering. Not sure if there is a way to overcome that
+// TODO: Currently, can only have one type of 1q non-diag gate incident on a qubit
 idx_size
 ClusterSimilarGates(vector<Gate>& gates,
                     idx_size num_qubits,
@@ -135,13 +137,13 @@ ClusterSimilarGates(vector<Gate>& gates,
     idx_size last_swap = start_idx + 1;
     for (idx_size i = start_idx; i < end_idx; i = last_swap++) {
         const Gate& curr_gate = gates[i];
-        idx_size num_q_obstructed = 0;
+        idx_size num_q_obstructed = 0, consecutive_gates = 0;
         bitset<128> qs_obstructed = 0;
         
         for (idx_size j = i + 1; j < end_idx && num_q_obstructed < num_qubits; ++j) {
             assert(last_swap <= j);
             const auto& gate_qubits = gates[j].GetQubits();
-            idx_size num_gate_qubits = gate_qubits.size();
+            const idx_size num_gate_qubits = gate_qubits.size();
             
             bool q_obstructed = qs_obstructed[gate_qubits[0]]
                                 || (num_gate_qubits == 2 && qs_obstructed[gate_qubits[1]]);
@@ -170,32 +172,45 @@ ClusterSimilarGates(vector<Gate>& gates,
                     gates.insert(gates.begin() + last_swap, gates[j]);
                     gates.erase(gates.begin()  + j + 1);
                 }
+                ++consecutive_gates;
             }
-            else if (curr_gate.IsDiagonal() && !gates[j].IsDiagonal()) {
-                /*
-                 If the current gate is diagonal, then the qubit is only obstructed if the gate is not diagonal.
-                 */
-                if (!qs_obstructed[gate_qubits[0]]) {
-                    qs_obstructed[gate_qubits[0]] = true;
-                    ++num_q_obstructed;
+            else {
+                idx_size q0 = gate_qubits[0], q1 = num_gate_qubits == 2 ? gate_qubits[1] : 0;
+               
+                if (curr_gate.IsDiagonal() && !gates[j].IsDiagonal()) {
+                    /*
+                     If the current gate is diagonal, then the qubit is only obstructed if the gate is not diagonal.
+                     */
+                    if (!qs_obstructed[q0]) {
+                        qs_obstructed[q0] = true;
+                        ++num_q_obstructed;
+                    }
+                    if (num_gate_qubits == 2 && !qs_obstructed[q1]) {
+                        qs_obstructed[q1] = true;
+                        ++num_q_obstructed;
+                    }
                 }
-                if (num_gate_qubits == 2 && !qs_obstructed[gate_qubits[1]]) {
-                    qs_obstructed[gate_qubits[1]] = true;
-                    ++num_q_obstructed;
-                }
-            }
-            else if (!curr_gate.IsDiagonal() && curr_gate.GetType() != gates[j].GetType()) {
-                /*
-                 If the current gate is not diagonal, then only move similar gates towards current gate.
-                 The similar gate should appear before other types of gates on a qubit.
-                 */
-                if (!qs_obstructed[gate_qubits[0]]) {
-                    qs_obstructed[gate_qubits[0]] = true;
-                    ++num_q_obstructed;
-                }
-                if (num_gate_qubits == 2 && !qs_obstructed[gate_qubits[1]]) {
-                    qs_obstructed[gate_qubits[1]] = true;
-                    ++num_q_obstructed;
+                else if (!curr_gate.IsDiagonal() && curr_gate.GetType() != gates[j].GetType()) {
+                    /*
+                     If the current gate is not diagonal, then only move similar gates towards current gate.
+                     The similar gate should appear before other types of gates on a qubit.
+                     */
+                    // Move obstructing gate closer for better grouping
+//                    if (j > last_swap && ((num_gate_qubits == 1 && !qs_obstructed[q0])
+//                                          || (num_gate_qubits == 2 && !qs_obstructed[q0] && !qs_obstructed[q1]))) {
+//                        ++count_insert;
+//                        gates.insert(gates.begin() + last_swap + consecutive_gates++, gates[j]);
+//                        gates.erase(gates.begin()  + j + 1);
+//                    }
+                    if (!qs_obstructed[q0]) {
+                        qs_obstructed[q0] = true;
+                        ++num_q_obstructed;
+                    }
+                    if (num_gate_qubits == 2 && !qs_obstructed[q1]) {
+                        qs_obstructed[q1] = true;
+                        ++num_q_obstructed;
+                    }
+                    
                 }
             }
         }

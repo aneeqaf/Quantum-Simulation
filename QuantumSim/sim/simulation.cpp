@@ -642,7 +642,7 @@ SimulationLoop(GenericQuantumState &amp,
     static const auto gates = circuit.GetGates();
     
     bool terminate = false;
-    int current_cycle = 0, last_layers_of_H = config -> last_layers_H;
+    int current_cycle = 0;
     Time time, cycle_time;
     for (idx_size i = gate_i; i < size; ++i) {
         
@@ -713,24 +713,18 @@ SimulationLoop(GenericQuantumState &amp,
                 bitset<128> CZ_bitmasks[total_circuit_qubits];
                 amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
                 idx_size prev_i_XY = i;
-                unordered_map<Gate::Type, bitset<128>> bitmasks = amp.Form1QGatesBitmask(i, gates, {Gate::Type::x_1_2, Gate::Type::y_1_2});
-                bitset<128> H_bitmask = 0;
-                
-                if (i < size && circuit.GetGateFromIndex(i).GetType() == Gate::Type::h) {
-                    H_bitmask = amp.Form1QGatesBitmask(i, gates, {Gate::Type::h})[Gate::Type::h];
-                    if (config -> last_layers_H)
-                        last_layers_of_H--;
-                    ++amp.count_of_category.H_layers;
-                }
+                unordered_map<Gate::Type, bitset<128>> bitmasks = amp.Form1QGatesBitmask(i, gates,
+                                                                                        {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
 
                 int xCZ_applied_in_cycle = -1;
 //                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
                     xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                   suffix_size, bitmasks[Gate::Type::x_1_2],
-                                                                  bitmasks[Gate::Type::y_1_2], H_bitmask, CZ_bitmasks,
+                                                                  bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h], CZ_bitmasks,
                                                                   T_bitmasks, config -> th);
                     ++amp.count_of_category.CZT_layers;
                     if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
+                    if (bitmasks[Gate::Type::h] != 0) ++amp.count_of_category.H_layers;
 //                }
                 
                 terminate = xCZ_applied_in_cycle != -1 ? true : false;
@@ -780,12 +774,12 @@ SimulationLoop(GenericQuantumState &amp,
         }
     }
     
-    while (last_layers_of_H) {
-        ++amp.count_of_category.H_layers;
-        amp.ApplyHGateOnAllAmps(true);
-        --last_layers_of_H;
-    }
-    
+//    while (last_layers_of_H) {
+//        ++amp.count_of_category.H_layers;
+//        amp.ApplyHGateOnAllAmps(true);
+//        --last_layers_of_H;
+//    }
+//
     curr_gate = circuit.GetTotalNumGates();
     
     circuit_loop_time += loop_time.GetElapsedTime();

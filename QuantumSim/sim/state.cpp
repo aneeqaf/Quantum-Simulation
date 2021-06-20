@@ -498,8 +498,6 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     pair<int, int> odd_bit_low_XY = GetMostSigOddBit(loq_X_bitmask, loq_Y_bitmask,
                                                      num_lo_X_bits, num_lo_Y_bits);
     if (H_bitmask_64) {
-        global_factor_power += __builtin_popcountll(H_bitmask_64);
-
         idx_size odd_bit_low = odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first;
         if ((odd_bit_low & loq_H_bitmask) != 0) {
             loq_H_bitmask ^= odd_bit_low;
@@ -538,20 +536,21 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     time.StartTime();
     if (hiq_X_bitmask || hiq_Y_bitmask) {
         idx_size num_hiq_H_gates = __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
-        bool H_bitmask_viable = (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask)) == (hiq_X_bitmask | hiq_Y_bitmask);
-        if (book_keep && H_bitmask_viable)
+        bool hi_H_bitmask_applicable = (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask)) == (hiq_X_bitmask | hiq_Y_bitmask)
+                                        && ((hiq_X_bitmask | hiq_Y_bitmask)  != 0);
+        if (book_keep && hi_H_bitmask_applicable)
             count_of_category.H_merged_hi += num_hiq_H_gates;
 
         // TODO : current scheme is all or nothing for H gates, which is not the most efficient
         auto phase1 = ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask,
-                                                    hiq_Y_bitmask, H_bitmask_viable ? hiq_H_bitmask : 0,
+                                                    hiq_Y_bitmask, hi_H_bitmask_applicable ? hiq_H_bitmask : 0,
                                                     num_qubits, num_threads);
         global_i_counter += phase1.first;
         global_factor_power += phase1.second;
         
 //        global_i_counter += ApplyHighXYHGatesByBitReversal(amp, hiq_X_bitmask, hiq_Y_bitmask, hiq_H_bitmask, num_qubits, th, num_threads);
         
-        if (H_bitmask_viable)
+        if (hi_H_bitmask_applicable)
             hiq_H_bitmask ^= (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
     }
     time_by_category.high_q_XY1_2 += time.GetElapsedTime();
@@ -562,18 +561,23 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                 UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     }
     
-    if (H_bitmask_64 && hiq_H_bitmask) {
-        time.StartTime();
-        if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
-            int q = __builtin_ctzl(hiq_H_bitmask);
-            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
-            hiq_H_bitmask ^= 1ull << q;
-            ++single_H;
+    if (H_bitmask_64) {
+        if (hiq_H_bitmask) {
+            time.StartTime();
+            global_factor_power += __builtin_popcountll(hiq_H_bitmask);
+            if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
+                int q = __builtin_ctzl(hiq_H_bitmask);
+                Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
+                hiq_H_bitmask ^= 1ull << q;
+                ++single_H;
+            }
+            ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiq_H_bitmask);
+            time_by_category.last_H += time.GetElapsedTime();
         }
-        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiq_H_bitmask);
-        time_by_category.last_H += time.GetElapsedTime();
     }
 
+    // Each merged X1/2 and Y1/2 qubit gates contribute +2 to global factor. Adding both the gate
+    // qubits to the global factor satisfies that contribution.
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
     
     if (book_keep) {
@@ -976,36 +980,36 @@ void FullAmpStateVector::
 PrintStateVector() 
 {
     RescaleAndApplyGlobalICounter();
-    static int count = 0;
-    ofstream file;
-    if (compressed)
-        file.open("compression/compression/Test_original" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
-    else
-        file.open("compression/compression/Test_decompressed" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
-    
-    for (idx_size i = 0; i < amp_size/(1ull << 12); ++i) {
-        auto a = amp[i];
-        file << real(a) ;
-        
-        if (imag(a) >= 0)
-            file << "+" << imag(a) << "j";
-        else if (imag(a) < 0)
-            file << imag(a) << "j";
-        file << "\n";
-    }
-    file << "\n\n";
+//    static int count = 0;
+//    ofstream file;
+//    if (compressed)
+//        file.open("compression/compression/Test_original" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
+//    else
+//        file.open("compression/compression/Test_decompressed" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
 //
-//    for (idx_size i = 0; i < amp_size; ++i) {
+//    for (idx_size i = 0; i < amp_size/(1ull << 12); ++i) {
 //        auto a = amp[i];
-//        cout << real(a) ;
+//        file << real(a) ;
 //
 //        if (imag(a) >= 0)
-//            cout << "+" << imag(a) << "j";
+//            file << "+" << imag(a) << "j";
 //        else if (imag(a) < 0)
-//            cout << imag(a) << "j";
-//        cout << "\n";
+//            file << imag(a) << "j";
+//        file << "\n";
 //    }
-//     cout << "\n\n";
+//    file << "\n\n";
+//
+    for (idx_size i = 0; i < amp_size; ++i) {
+        auto a = amp[i];
+        cout << real(a) ;
+
+        if (imag(a) >= 0)
+            cout << "+" << imag(a) << "j";
+        else if (imag(a) < 0)
+            cout << imag(a) << "j";
+        cout << "\n";
+    }
+     cout << "\n\n";
 }
 
 void FullAmpStateVector::

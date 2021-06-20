@@ -261,14 +261,15 @@ Apply2QGatesToCachedAmps(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyHighQGatesInBlocksTask(cmplx* __restrict amp,
-                        idx_size idx,
-                        const idx_size num_iters,
-                        const idx_size reverse_t_block,
-                        const idx_size gate_bitmask,
-                        const idx_size* indices,
-                        const idx_size starting_idx,
-                        const int num_indices,
-                        void (*gate_func)(cmplx*, const idx_size*))
+                            idx_size idx,
+                            const idx_size num_iters,
+                            const idx_size reverse_t_block,
+                            const idx_size gate_bitmask,
+                            const idx_size* indices,
+                            const idx_size starting_idx,
+                            const int num_indices,
+                            const idx_size iter_add,
+                            void (*gate_func)(cmplx*, const idx_size*))
 {
     constexpr int max_indices = 4;
 //    const idx_size idx_add = num_indices == 2 ? 128 : 64,
@@ -289,7 +290,7 @@ ApplyHighQGatesInBlocksTask(cmplx* __restrict amp,
             //cache_efficient_func(amp, temp_indices.data(), gate_func);
             gate_func(amp, temp_indices.data());
             
-            idx += 4;
+            idx += iter_add;
             applied_block = true;
         }
         else {
@@ -392,7 +393,9 @@ Apply1QXYHGates(cmplx* __restrict amp,
         #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t) {
             parallel_starting_idxs[t][0] = indices[0] + t * block_size;
-            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], num_indices, gate_func);
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters,
+                                        indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask,
+                                        indices.data(), parallel_starting_idxs[t][0], num_indices, add, gate_func);
         }
     }
     else{
@@ -468,7 +471,9 @@ ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
         #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t) {
             parallel_starting_idxs[t][0] = indices[0] + t * block_size;
-            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], num_indices, gate_func);
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters,
+                                        indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask,
+                                        indices.data(), parallel_starting_idxs[t][0], num_indices, add, gate_func);
         }
     }
     else {

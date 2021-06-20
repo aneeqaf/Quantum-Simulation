@@ -12,7 +12,7 @@ unordered_map<string, gate_generator_ptr> Circuit::gate_funcs;
 
 Circuit::
 Circuit(const string input_filename, idx_size num_q, idx_size depth)
-: qp(nullptr), qubits(num_q)
+: qp(nullptr), qubits(num_q), rearranged(false)
 {
     quiddpro_func.push_back("hadamard");
     quiddpro_func.push_back("sigma_x");
@@ -49,7 +49,7 @@ Circuit(const string input_filename, idx_size num_q, idx_size depth)
 
 Circuit::
 Circuit(const Circuit& g)
-: gates(g.gates), clock_cycles(g.clock_cycles), qp(g.qp), qubits(g.qubits) {}
+: gates(g.gates), clock_cycles(g.clock_cycles), qp(g.qp), qubits(g.qubits), rearranged(g.rearranged) {}
 
 Circuit& Circuit::
 operator=(const Circuit& g)
