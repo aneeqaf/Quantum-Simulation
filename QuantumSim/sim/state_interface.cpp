@@ -33,48 +33,6 @@ GenericQuantumState(int n_threads): compressed(false){
     num_threads = n_threads;
 }
 
-unordered_map<Gate::Type, bitset<128>> GenericQuantumState::
-Form1QGatesBitmask(idx_size& gate_i,
-                  const vector<Gate>& all_gates,
-                  const vector<Gate::Type>& gate_type)
-{
-//    vector<int> cluster_qubits = FormBlockOfXYHGates(gate_i, gate_type, all_gates);
-    unordered_map<Gate::Type, bitset<128>> bitmasks;
-    for (auto g_type : gate_type)
-        bitmasks[g_type] = bitset<128>(0);
-    
-    auto curr_type = all_gates[gate_i].GetType();
-    
-    if (bitmasks.count(curr_type) == 0)
-        return bitmasks;
-    
-    for (; gate_i < all_gates.size(); ++gate_i) {
-        if (all_gates[gate_i].GetType() != curr_type) {
-            curr_type = all_gates[gate_i].GetType();
-            if (bitmasks.count(curr_type) == 0)
-                return bitmasks;
-        }
-        bitmasks[curr_type][all_gates[gate_i].GetQubits()[0]] = 1;
-    }
-//    for (idx_size i = 0; i < cluster_qubits.size(); ++i)
-//        bitmask[cluster_qubits[i]] = 1;
-//
-    return bitmasks;
-}
-
-void GenericQuantumState::
-FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks /*total_circuit_qubits*/,
-                    bitset<128> T_bitmasks[2],
-                    idx_size& gate_i,
-                    const vector<Gate>& all_gates,
-                    const int total_circuit_qubits)
-{
-    for (int i = 0; i < total_circuit_qubits; ++i)
-        CZ_bitmasks[i] = 0;
-    
-    FormBlockOfCZTGates(gate_i, CZ_bitmasks, T_bitmasks, all_gates, total_circuit_qubits);    
-}
-
 idx_size GenericQuantumState::
 GetNumAddends() const
 {

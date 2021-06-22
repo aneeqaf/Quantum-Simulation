@@ -711,10 +711,10 @@ SimulationLoop(GenericQuantumState &amp,
                 idx_size prev_i_CZT = i;
                 bitset<128> T_bitmasks[2] = {0};
                 bitset<128> CZ_bitmasks[total_circuit_qubits];
-                amp.FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
+                FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
                 idx_size prev_i_XY = i;
-                unordered_map<Gate::Type, bitset<128>> bitmasks = amp.Form1QGatesBitmask(i, gates,
-                                                                                        {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
+                unordered_map<Gate::Type, bitset<128>> bitmasks = Form1QGatesBitmask(i, gates,
+                                                                                     {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
 
                 int xCZ_applied_in_cycle = -1;
 //                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {

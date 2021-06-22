@@ -32,6 +32,7 @@
 #include <utility>
 #include <unistd.h>
 #include <thread>
+#include <sleef.h>
 #ifndef Xcode
 #include <omp.h>
 #endif
@@ -544,21 +545,42 @@ void ApplyRzGatesAVX(cmplx* __restrict amp,
     __m256 phases_idx = {0};
     
     for (idx_size i = 0; i < 8; ++i)
-    phases_idx[i] = CalculatePhaseToApplyOnIdxForRz(idx + i, num_qubits, phases);
+        phases_idx[i] = CalculatePhaseToApplyOnIdxForRz(idx + i, num_qubits, phases);
     
-    const __m256 exp_vals = _mm256_exp_ps(phases_idx);
-    __m256 first_4_multiples = _mm256_permute2f128_ps(exp_vals, exp_vals, 0b00000000);
-    __m256 second_4_multiples = _mm256_permute2f128_ps(exp_vals, exp_vals, 0b10001000);
+    // Separate out the multiplies since each amp occupies two slots in m256.
+    __m256 first_4_multiples = _mm256_permute2f128_ps(phases_idx, phases_idx, 0b00000000);
+    __m256 second_4_multiples = _mm256_permute2f128_ps(phases_idx, phases_idx, 0b10001000);
     first_4_multiples = _mm256_permute_ps(first_4_multiples, 0b00001010);
     second_4_multiples = _mm256_permute_ps(second_4_multiples, 0b00001010);
     
+    const __m256 cos_first_4 = Sleef_cosf8_u10avx(first_4_multiples);
+    const __m256 cos_second_4 = Sleef_cosf8_u10avx(second_4_multiples);
+    const __m256 sin_first_4 = Sleef_sinf8_u10avx(first_4_multiples);
+    const __m256 sin_second_4 = Sleef_sinf8_u10avx(second_4_multiples);
+    
     __m256 a0 = _mm256_load_ps(&t_amp[2 * idx]);
     __m256 a1 = _mm256_load_ps(&t_amp[2 * (idx + 4)]);
-    a0 = _mm256_mul_ps(a0, first_4_multiples);
-    a1 = _mm256_mul_ps(a1, second_4_multiples);
+    
+    // Switch imag and real
+    __m256 ia0 = _mm256_permute_ps(a0, 0b10110001);
+    ia0 = _mm256_xor_ps(ia0, kneg1);
+    __m256 ia1 = _mm256_permute_ps(a1, 0b10110001);
+    ia1 = _mm256_xor_ps(ia1, kneg1);
+    
+    // Multiply with real part of exp
+    a0 = _mm256_mul_ps(cos_first_4, a0);
+    a1 = _mm256_mul_ps(cos_second_4, a1);
+    
+    // Multiply with imag part of exp
+    ia0 = _mm256_mul_ps(sin_first_4, ia0);
+    ia1 = _mm256_mul_ps(sin_second_4, ia1);
+    
+    // Complete (a + bi)(cos(theta) + sin(theta)i)
+    a0 = _mm256_add_ps(a0, ia0);
+    a1 = _mm256_add_ps(a1, ia1);
     
     _mm256_store_ps(&t_amp[2 * idx], a0);
-    _mm256_store_ps(&t_amp[2 * (idx + 4)], a0);
+    _mm256_store_ps(&t_amp[2 * (idx + 4)], a1);
 }
 
 pair<idx_size, int>

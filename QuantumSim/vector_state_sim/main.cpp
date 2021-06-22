@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
     store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false, quiddpro = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
-    int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
+    int threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
     save_cp_to_file = 0;
     float norm_perc = 0;

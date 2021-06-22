@@ -165,14 +165,6 @@ public:
                                            const bitset<128>* __restrict CZ_bitmasks,
                                            const bitset<128> T_bitmasks[2],
                                            int th) = 0;
-    virtual unordered_map<Gate::Type, bitset<128>> Form1QGatesBitmask(idx_size& gate_i,
-                                                                       const vector<Gate>& all_gates,
-                                                                       const vector<Gate::Type>& gate_type);
-    virtual void FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks,
-                                     bitset<128> T_bitmasks[2],
-                                     idx_size& gate_i,
-                                     const vector<Gate>& all_gates,
-                                     const int total_circuit_qubits);
     
     virtual cmplx operator[](bitset<128> i) = 0;
     virtual cmplx GetGlobalAmpAtInterestingIdx(idx_size i) = 0;
