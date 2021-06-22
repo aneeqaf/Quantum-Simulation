@@ -56,8 +56,6 @@ public:
     void ReadGoogleCircuitFile(const string& input_file,
                                const idx_size depth,
                                const idx_size add_layer_H = 0);
-    void CreateGoogleCircuit(idx_size qubits,
-                             idx_size clock_cycles);
     void WriteCircuitToFile(const string& out_file);
     void CreateQuiddProScript(const string& out_file,
                               idx_size layers_last_H = 0);
@@ -76,7 +74,7 @@ public:
     bool isRearranged() const;
     bool isCrossingGate(idx_size gate_idx) const;
     
-    Circuit(const string input_filename, idx_size num_q, idx_size depth);
+    Circuit(const string input_filename, idx_size num_q, idx_size depth, bool quiddpro = false);
     Circuit(const Circuit& rhs);
     Circuit& operator=(const Circuit& rhs);
 };

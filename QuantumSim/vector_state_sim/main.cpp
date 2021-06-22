@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
         { "high_value_q",    required_argument,       nullptr, 'q' },
         { "num_threads",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
-        { "google_spec",    required_argument,       nullptr, 'g' },
+        { "quiddpro",    no_argument,       nullptr, 'u' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
         { "vcut",    required_argument,       nullptr, '|' },
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     
     bool googleInput = false, to_write = false, print_amp = false, write_circuit_mode = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false;
+    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false, quiddpro = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int numQ = 0, numG = 0, threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
     num_threads = omp_get_num_procs();
 #endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:g:t:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:C", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:C", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -201,23 +201,6 @@ int main(int argc, char *argv[])
             }
             case 'f': {
                 first_partition_smaller = true;
-                break;
-            }
-            case 'g': {
-                valid = true;
-                if (argc < 3) {
-                    cerr << "Please enter number of qubits and number of gates in circuit\n";
-                    exit(1);
-                }
-                string opt = ReadMultipleArgs(optarg);
-                istringstream iss(opt);
-                
-                while (iss >> numQ >> numG) {
-                    num_qubits.push_back(numQ);
-                    num_gates.push_back(numG);
-                }
-                
-                input_filename = "";
                 break;
             }
             case 'H': {
@@ -318,11 +301,7 @@ int main(int argc, char *argv[])
                 sim_type = (Config::SimType)stoi(s_type);
                 break;
             }
-            case 'v': {
-                string s_v = string(optarg);
-                verbose = (Config::Verbose)stoi(s_v);
-                break;
-            }
+            
             case 't': {
                 string threads = string(optarg);
                 num_threads = stoi(threads);
@@ -332,6 +311,15 @@ int main(int argc, char *argv[])
                     exit(1);
                 }
 #endif
+                break;
+            }
+            case 'u': {
+                quiddpro = true;
+                break;
+            }
+            case 'v': {
+                string s_v = string(optarg);
+                verbose = (Config::Verbose)stoi(s_v);
                 break;
             }
             case 'x': {
@@ -412,7 +400,7 @@ int main(int argc, char *argv[])
             system(string("mkdir -p " + pathname).c_str());
     }
     
-    Circuit cir(input_filename, num_qubits.size() > 0 ? num_qubits[0] : 0, depth);
+    Circuit cir(input_filename, num_qubits.size() > 0 ? num_qubits[0] : 0, depth, quiddpro);
     
     if (sim_type == -1) {
         if (cir.GetNumQubits() <= 32) sim_type = 5;

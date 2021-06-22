@@ -11,7 +11,7 @@ vector<string> Circuit::quiddpro_func;
 unordered_map<string, gate_generator_ptr> Circuit::gate_funcs;
 
 Circuit::
-Circuit(const string input_filename, idx_size num_q, idx_size depth)
+Circuit(const string input_filename, idx_size num_q, idx_size depth, bool quiddpro)
 : qp(nullptr), qubits(num_q), rearranged(false)
 {
     quiddpro_func.push_back("hadamard");
@@ -36,14 +36,9 @@ Circuit(const string input_filename, idx_size num_q, idx_size depth)
     
     if (!input_filename.empty())
         ReadGoogleCircuitFile(input_filename, depth);
-    else {
-        CreateGoogleCircuit(qubits, depth * 10);
-        
-        if(qubits <= 20) {
-//                cir.WriteGeneratedCircuitFile("input/random_circuits_rollright/" + out_file +
-//                                              to_string(i) + ".txt", cir.GetNumQubits());
+    if (quiddpro) {
+        if(qubits <= 20)
             CreateQuiddProScript("output/qpro_scripts/" + to_string(qubits) + "_" + to_string(depth * 10) + ".qpro");
-        }
     }
 }
 
@@ -524,128 +519,6 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
             break;
     }
     return th;
-}
-
-void Circuit::
-CreateGoogleCircuit(idx_size q, idx_size num_clock_cycles)
-{
-    srand(time(NULL));
-    google = true;
-    
-    short GS_gates[3] = {Gate::Type::rx, Gate::Type::ry, Gate::Type::t};
-    
-    int GS_gates_num = 3;
-    
-    //Each row represents a qubit. This is to keep track of the
-    //gates applied to this qubit.
-    qubits = q;
-    vector<vector<idx_size>> qubit_to_gates(qubits);
-  
-    auto count_wires_gate = [&](vector<short>& CZ_pairs) {
-        int count = 0;
-        for (idx_size i = 0; i < qubit_to_gates.size(); ++i) {
-            if (gates[qubit_to_gates[i].back()].GetType() == Gate::Type::cz) {
-                CZ_pairs.push_back(i);
-                count += 1;
-            }
-        }
-        return count;
-    };
-    
-    vector<bool> T_gate_allowed(qubits, true);
-    
-    //Start by applying Hadamard Gates
-    for (int i = 0; i < qubits; ++i) {
-        classical_bits.push_back(0);
-        gates.push_back(create_Hadamard({static_cast<float>(i)}));
-        qubit_to_gates[i].push_back(gates.size());
-    }
-    
-    clock_cycles.push_back(gates.size());
-    
-    for (int i = 0; i < num_clock_cycles; i+=2) {
-        vector<short> current_CZ_pairs;
-        current_CZ_pairs.resize((1 + (rand() % (qubits - 1))) * 2);
-        
-        int CZ_size = (int) current_CZ_pairs.size();
-        int CZ_q = abs(qubits - (double)CZ_size/2.0);
-        CZ_q = rand() % CZ_q;
-        for (int j = 0; j < CZ_size; ++j) {
-            //            int CZ_q = rand () % (qubits - 1) ;
-            //            while(!check_reoccurance(current_CZ_pairs, CZ_q, CZ_q + 1)) {
-            //                CZ_q = rand() % (qubits - 1);
-            //            }
-            
-            current_CZ_pairs[j++] = CZ_q;
-            qubit_to_gates[CZ_q].push_back(gates.size());
-            
-            current_CZ_pairs[j] = ++CZ_q;
-        }
-        qubit_to_gates[CZ_q].push_back(gates.size());
-        
-        //control phase Gate
-        int k = 0;
-        for (idx_size j = 0; j < current_CZ_pairs.size()/2; ++j)
-            gates.push_back(create_CZ({static_cast<float>(current_CZ_pairs[k++]), static_cast<float>(current_CZ_pairs[k++])}));
-        
-        if (current_CZ_pairs.size() > 0)
-            clock_cycles.push_back(gates.size());
-        
-        /*
-         • Place a Gate at qubit q only if this qubit is occupied by a CZ Gate in the previous cycle.
-         • Place a T Gate at qubit q if there are no single- qubit gates in the previous cycles at
-         qubit q except for the initial cycle of Hadamard gates.
-         • Any Gate at qubit q should be different from the Gate at qubit q in the previous cycle.
-         */
-        
-        vector<short> CZ_pairs;
-        int qubits_for_gates = 1 + rand() % (count_wires_gate(CZ_pairs) - 1);
-        vector<short> complied_qubits(qubits_for_gates, -1);
-        
-        for (int j = 0; j < qubits_for_gates; ++j) {
-            int q = rand() % qubits_for_gates;
-            while(gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() != Gate::Type::cz) {
-                q = rand() % qubits_for_gates;
-            }
-            complied_qubits[j] = CZ_pairs[q];
-            
-            short gate_to_apply;
-            if (T_gate_allowed[CZ_pairs[q]]) {
-                gate_to_apply = rand() % GS_gates_num;
-                while (gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() == GS_gates[gate_to_apply]) {
-                    gate_to_apply = rand() % GS_gates_num;
-                }
-                if (gate_to_apply == 2) {
-                    T_gate_allowed[CZ_pairs[q]] = false;
-                }
-            }
-            else {
-                gate_to_apply = rand() % (GS_gates_num - 1);
-                while (gates[qubit_to_gates[CZ_pairs[q]].back()].GetType() == GS_gates[gate_to_apply]) {
-                    gate_to_apply = rand() % (GS_gates_num - 1);
-                }
-            }
-                        
-            if (gate_to_apply == 0)
-                gates.push_back(create_X_1_2({static_cast<float>(CZ_pairs[q])}));
-            else if (gate_to_apply == 1)
-                gates.push_back(create_Y_1_2({static_cast<float>(CZ_pairs[q])}));
-            else if (gate_to_apply == 2)
-                gates.push_back(create_T({static_cast<float>(CZ_pairs[q])}));
-            qubit_to_gates[CZ_pairs[q]].push_back(gates.size());
-        }
-        if(qubits_for_gates > 0)
-           clock_cycles.push_back(gates.size());
-    }
-    
-    //    g_t_q_size = gates_to_qubits.size();
-    //    q_circuit -> gates_to_qubits.resize(q_circuit -> gates_to_qubits.size() + qubits);
-    //    for (idx_size i = 0; i < qubits; ++i) {
-    //        Gate temp = create_I();
-    //        temp -> id.push_back(Gate::Type::Measurement);
-    //        q_circuit -> gates.push_back(temp);
-    //        q_circuit -> gates_to_qubits[g_t_q_size + i].push_back(i);
-    //    }
 }
 
 void Circuit::
