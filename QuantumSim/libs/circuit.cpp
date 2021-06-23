@@ -500,6 +500,31 @@ MovexCZGates(idx_size proc_prefix_bits,
     return pair<int, int> (count_CZ, total_xCZ_count);
 }
 
+void Circuit::
+CoalesceRzGates()
+{
+    // Assume gates are already clustered
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        unordered_map<idx_size, float> rz_idxs;
+        idx_size j = i;
+        // First collect all the gates
+        for (; j < gates.size() && gates[i].GetType() == Gate::Type::rz; ++j) {
+            auto q = gates[j].GetQubits()[0];
+            if (rz_idxs.count(q) == 0)  rz_idxs[q] = gates[j].GetTheta()[0];
+            else {
+                rz_idxs[q] += gates[j].GetTheta()[0];
+                gates.erase(gates.begin() + j);
+            }
+        }
+        // Update the gates in the cluster to have the cumulative phases
+        for (j = i; j < gates.size() && gates[i].GetType() == Gate::Type::rz; ++j) {
+            auto q = gates[j].GetQubits()[0];
+            gates[j] = Gate(Gate::Type::rz, 0, true, {gates[j].GetQubits()[0]}, {rz_idxs[q]});
+        }
+        i = j;
+    }
+}
+
 int Circuit::
 ComputeNumberOfHighValuedQubits(int num_qubits)
 {

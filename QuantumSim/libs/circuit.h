@@ -52,6 +52,7 @@ public:
                                 idx_size range_bits,
                                 idx_size branch_bits,
                                 const bool nearest_neigbors = true);
+    void CoalesceRzGates();
     int ComputeNumberOfHighValuedQubits(int num_qubits);
     void ReadGoogleCircuitFile(const string& input_file,
                                const idx_size depth,
