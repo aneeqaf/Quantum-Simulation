@@ -50,11 +50,13 @@ qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubit
 }
 
 TensorProductStateVector::
-TensorProductStateVector(const TensorProductStateVector& rhs) : qp(rhs.qp), cut_type(rhs.cut_type),
-state_a(new FullAmpStateVector(*(rhs.state_a))), state_b(new FullAmpStateVector(*(rhs.state_b)))
+TensorProductStateVector(const TensorProductStateVector& rhs) : qp(rhs.qp), cut_type(rhs.cut_type)
 {
     sim_type = rhs.sim_type;
     compressed = rhs.compressed;
+    
+    state_a = new FullAmpStateVector(*(rhs.state_a));
+    state_b = new FullAmpStateVector(*(rhs.state_b));
 }
 
 TensorProductStateVector::
@@ -420,13 +422,13 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, qp, 0, true);
         bitset<128> stateA_Hbitmask = Project1QBitmask(H_bitmask, qp, 0, true);
         
-        bitset<128> CZ_bitmasks_a[num_q_a];
+        bitset<128> CZ_bitmasks_a[num_q_a + 1];
         bitset<128> T_bitmasks_a[2] = {0};
         
-        for (int i = 0; i < num_q_a; ++i)
+        for (int i = 0; i <= num_q_a; ++i)
             CZ_bitmasks_a[i] = 0;
         
-        ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks);
+        CZ_bitmasks_a[num_q_a] = ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks) ? 1 : 0;
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
         
@@ -441,13 +443,13 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, qp, 1, true);
         bitset<128> stateB_Hbitmask = Project1QBitmask(H_bitmask, qp, 1, true);
         
-        bitset<128> CZ_bitmasks_b[num_q_b];
+        bitset<128> CZ_bitmasks_b[num_q_b + 1];
         bitset<128> T_bitmasks_b[2] = {0};
         
-        for (int i = 0; i < num_q_b; ++i)
+        for (int i = 0; i <= num_q_b; ++i)
             CZ_bitmasks_b[i] = 0;
         
-        ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks);
+        CZ_bitmasks_b[num_q_b] = ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks) ? 1 : 0;
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
         

@@ -33,9 +33,7 @@
 #include <unistd.h>
 #include <thread>
 #include <sleef.h>
-#ifndef Xcode
 #include <omp.h>
-#endif
 
 #include "gates.h"
 #include "profile.h"
@@ -608,23 +606,14 @@ ApplyHGatesIteratively(cmplx* __restrict amp,
 void
 ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
                            const int num_qubits_amp,
-                           const idx_size* __restrict CZ_bitmasks,
-                           const idx_size* __restrict T_bitmasks);
-
-void
-ApplyBlockOfCZTGatesAVXParallel(cmplx* __restrict amp,
-                                const int num_qubits_amp,
-                                const idx_size* __restrict CZ_bitmasks,
-                                const idx_size* __restrict T_bitmasks,
-                                const idx_size Lo_H_bitmask,
-                                const int num_threads,
-                                const ZeroOptMask& zero_opt_mask);
+                           const idx_size* volatile __restrict CZ_bitmasks,
+                           const idx_size* volatile __restrict T_bitmasks);
 
 pair<idx_size, int>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                   const int num_qubits_amp,
-                                  const idx_size* __restrict CZ_bitmasks,
-                                  const idx_size* __restrict T_bitmasks,
+                                  const idx_size* volatile __restrict CZ_bitmasks,
+                                  const idx_size* volatile __restrict T_bitmasks,
                                   const idx_size Lo_X_bitmask,
                                   const idx_size Lo_Y_bitmask,
                                   const idx_size Lo_H_bitmask,

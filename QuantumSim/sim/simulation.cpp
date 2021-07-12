@@ -278,9 +278,27 @@ CheckpointWithoutFile(bool branch,
                       Circuit& circuit,
                       const idx_size gate_i)
 {
-    SumOfTensorsProductsStateVector temp_amp;
+    auto BranchOrRanges = [&](SumOfTensorsProductsStateVector& temp_amp)
+    {
+        if (branch) {
+              if (config -> count_zeros) {
+                  amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
+                  amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
+              }
+              MainLoopForBranching(temp_amp, circuit, amp, gate_i);
+          }
+          else {
+              if (config -> count_zeros) {
+                  amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
+                  amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
+              }
+              MainLoopForRanges(temp_amp, circuit, amp);
+          }
+    };
     
     if (config -> compress) {
+        SumOfTensorsProductsStateVector temp_amp {};
+        
         Time compress_time, decompress_time;
         compress_time.StartTime();
         
@@ -301,13 +319,14 @@ CheckpointWithoutFile(bool branch,
         
         if (amp.book_keep)
             memory_usage += amp.GetMemUsage();
+        
+        BranchOrRanges(temp_amp);
     }
     else {
         Time copy_time;
         copy_time.StartTime();
         
-        temp_amp.CopyState(amp);
-        temp_amp.CopyMemberVars(amp);
+        SumOfTensorsProductsStateVector temp_amp((const SumOfTensorsProductsStateVector&)amp);
         
         double time_copying = copy_time.GetElapsedTime();
         amp.time_by_category.copying += time_copying;
@@ -315,21 +334,8 @@ CheckpointWithoutFile(bool branch,
         
         if (amp.book_keep)
             memory_usage += amp.GetMemUsage();
-    }
-    
-  if (branch) {
-        if (config -> count_zeros) {
-            amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
-            amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
-        }
-        MainLoopForBranching(temp_amp, circuit, amp, gate_i);
-    }
-    else {
-        if (config -> count_zeros) {
-            amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
-            amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
-        }
-        MainLoopForRanges(temp_amp, circuit, amp);
+        
+        BranchOrRanges(temp_amp);
     }
     
     //Should not need to decompress vector. State vector is useless at this point.
@@ -710,21 +716,24 @@ SimulationLoop(GenericQuantumState &amp,
                 cycle_time.StartTime();
                 idx_size prev_i_CZT = i;
                 bitset<128> T_bitmasks[2] = {0};
-                bitset<128> CZ_bitmasks[total_circuit_qubits];
-                FormCZTGatesBitmask(CZ_bitmasks, T_bitmasks, i, gates, total_circuit_qubits);
+                // last slot to mark whether there are any CZ qubits.
+                bitset<128> CZ_bitmasks[total_circuit_qubits + 1];
+                for (int i = 0; i <= total_circuit_qubits; ++i)
+                    CZ_bitmasks[i] = 0;
+                FormCZTGatesBitmask(i, CZ_bitmasks, T_bitmasks, gates, total_circuit_qubits);
                 idx_size prev_i_XY = i;
-                unordered_map<Gate::Type, bitset<128>> bitmasks = Form1QGatesBitmask(i, gates,
-                                                                                     {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
+                unordered_map<Gate::Type, bitset<128>> bitmasks;
+                Form1QGatesBitmask(bitmasks, i, gates, {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
 
                 int xCZ_applied_in_cycle = -1;
 //                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
-                    xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
-                                                                  suffix_size, bitmasks[Gate::Type::x_1_2],
-                                                                  bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h], CZ_bitmasks,
-                                                                  T_bitmasks, config -> th);
-                    ++amp.count_of_category.CZT_layers;
-                    if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
-                    if (bitmasks[Gate::Type::h] != 0) ++amp.count_of_category.H_layers;
+                xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+                                                                      suffix_size, bitmasks[Gate::Type::x_1_2],
+                                                                      bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h],
+                                                                      CZ_bitmasks, T_bitmasks, config -> th);
+                ++amp.count_of_category.CZT_layers;
+                if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
+                if (bitmasks[Gate::Type::h] != 0) ++amp.count_of_category.H_layers;
 //                }
                 
                 terminate = xCZ_applied_in_cycle != -1 ? true : false;

@@ -296,7 +296,7 @@ QubitPartition::print(int verb) const {
 
 int FindDivisor(int num)
 {
-    int div = 0;
+    int div = 1;
     for (int i = 1; i <= floor(sqrt(num)); ++i){
         if (num % i == 0)
             div = i;
@@ -351,6 +351,7 @@ ProjectCZBitmask(bitset<128> projected_bitmasks[],
             is_bitmask_all_0 = false;
         }
     }
+    
     return !is_bitmask_all_0;
 }
 

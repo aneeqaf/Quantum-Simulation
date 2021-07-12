@@ -515,7 +515,7 @@ ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,
                              const __m256i& mask_cw_256) const
 {
     __m256i extracted_bits = _mm256_and_si256(packed_codewords, mask_cw_256);
-    packed_codewords = _mm256_shift_right(packed_codewords, num_bits_codewords);
+    packed_codewords = _mm256_shift_right(packed_codewords, static_cast<const unsigned int>(num_bits_codewords));
     
     return extracted_bits;
 }
@@ -526,7 +526,7 @@ ExtractCodewordFromAVX256Reg(__m256i& packed_codewords) const
     __m256i extracted_cws = _mm256_and_si256(packed_codewords, MASKS_CW_PER_UI_REG[num_bits_codewords]);
     __m256i cws_alighned_ul = _mm256_srlv_epi32(extracted_cws, BITS_TO_STARTING_OF_UI[num_bits_codewords]);
     
-    packed_codewords = _mm256_shift_right(packed_codewords, num_bits_codewords);
+    packed_codewords = _mm256_shift_right(packed_codewords, static_cast<const unsigned int>(num_bits_codewords));
     
     return cws_alighned_ul;
 }

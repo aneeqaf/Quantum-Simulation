@@ -352,16 +352,11 @@ ApplyMergedXYGates(cmplx* __restrict amp,
     return gate_type != 6 ? 0 : -2;
 }
 
-unordered_map<Gate::Type, bitset<128>>
-Form1QGatesBitmask(idx_size& gate_i,
+void
+Form1QGatesBitmask(unordered_map<Gate::Type, bitset<128>>& bitmasks,
+                   idx_size& gate_i,
                    const vector<Gate>& all_gates,
                    const vector<Gate::Type>& gate_type);
-
-void FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks,
-                         bitset<128> T_bitmasks[2],
-                         idx_size& gate_i,
-                         const vector<Gate>& all_gates,
-                         const int total_circuit_qubits);
 
 void
 GroupCZGates(idx_size* __restrict qubits_CZ_bitmasks,
@@ -380,7 +375,7 @@ ExtractIndicesForAmp(idx_size* strides,
                      const idx_size starting_idx = 0);
 
 void
-FormBlockOfCZTGates(idx_size& gate_i,
+FormCZTGatesBitmask(idx_size& gate_i,
                     bitset<128>* __restrict CZ_bitmasks,
                     bitset<128>* __restrict T_bitmasks,
                     const vector<Gate>& cluster,

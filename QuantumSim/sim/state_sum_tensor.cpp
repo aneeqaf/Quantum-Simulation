@@ -110,8 +110,10 @@ SumOfTensorsProductsStateVector::
 ~SumOfTensorsProductsStateVector()
 {
     for (auto& t : tensor_addends) {
-        delete t;
-        t = nullptr;
+        if (t != nullptr) {
+            delete t;
+            t = nullptr;
+        }
     }
 }
 

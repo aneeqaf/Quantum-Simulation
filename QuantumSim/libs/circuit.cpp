@@ -134,7 +134,7 @@ GroupSimilarGates()
             if(saw_Y || saw_X || saw_H) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
-                saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false; saw_H = false;
+                saw_T = false; saw_X = false; saw_Y = false; saw_H = false;
             }
             saw_CZ = true;
             if (saw_T || saw_X || saw_Y || saw_H) {
@@ -153,7 +153,7 @@ GroupSimilarGates()
             if(saw_Y || saw_X) {
                 g_i = j;
                 last_CZ = 0; last_T = 0; last_X = 0; last_Y = 0;
-                saw_CZ = false; saw_T = false; saw_X = false; saw_Y = false; saw_H = false;
+                saw_CZ = false; saw_X = false; saw_Y = false; saw_H = false;
             }
             saw_T = true;
             if (saw_CZ || saw_X || saw_Y || saw_H) {
@@ -607,8 +607,6 @@ CreateQuiddProScript(const string& out_file,
             }
             file << "\", " + to_string(qubits) << ");\n";
         }
-        else
-            control = true;
         
         if(op_count > 1) {
             file << "op = ";

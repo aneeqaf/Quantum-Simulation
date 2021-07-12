@@ -19,13 +19,13 @@ private:
     double max_prob;
     double min_prob;
     cmplx* amp;
+    Cramer* cramer;
     idx_size amp_size;
     idx_size global_factor_power;
     idx_size global_i_counter;
     int num_qubits;
     ZeroOptMask zero_opt_mask; //0 is most significant
     bool all_zeros;
-    Cramer* cramer;
 
     bitset<128> FormBitmask(const vector<idx_size>& qubits);
     void TransferOddBitsFromHiQubitsBM(int& th,
@@ -138,9 +138,9 @@ public:
     void ReadFromDisk(const string& filename);
     
     FullAmpStateVector(): max_prob(numeric_limits<double>::min()),
-        min_prob(numeric_limits<double>::max()), amp(nullptr), amp_size(0),
-        global_factor_power(0), global_i_counter(0),
-        num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false), cramer(nullptr) {}
+    min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr), global_factor_power(0),
+    global_i_counter(0), num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false) {}
+    
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);

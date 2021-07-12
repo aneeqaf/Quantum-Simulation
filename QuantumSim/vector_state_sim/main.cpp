@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         { nullptr,  0,                 nullptr, '\0' }
     };
     
-    bool googleInput = false, to_write = false, print_amp = false, write_circuit_mode = false,
+    bool to_write = false, print_amp = false, write_circuit_mode = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
     store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false, quiddpro = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
@@ -232,16 +232,13 @@ int main(int argc, char *argv[])
                 }
                 input_filename = string(optarg);
                 
-                googleInput = CheckIfGoogleFile(input_filename);
-                if (!googleInput)
+                if (!CheckIfGoogleFile(input_filename))
                 {
                     ifstream infile(string(input_filename).c_str());
                     if (!infile.good()) {
                         cerr << "Cannot find circuit file.\n";
                         exit(1);
                     }
-                    
-                    googleInput = true;
                 }
                 input_filename = "input/random_circuits_google/" + input_filename;
                 break;

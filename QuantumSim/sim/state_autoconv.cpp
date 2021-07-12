@@ -53,8 +53,8 @@ operator=(const AdaptiveStateVector& rhs)
 AdaptiveStateVector::
 ~AdaptiveStateVector()
 {
-    delete full_state;
-    delete sumOfTensors;
+    if (full_state != nullptr) delete full_state;
+    if (sumOfTensors != nullptr) delete sumOfTensors;
 }
 
 void AdaptiveStateVector::
@@ -122,12 +122,12 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
 {
     int xCZ_applied_in_cycle = -1;
     if (full_state) {
-//        if (book_keep) {
-//            data_per_cycles.xCZ_H.push_back(0);
-//            data_per_cycles.xCZ_V.push_back(0);
-//            data_per_cycles.addends.push_back(0);
-//            data_per_cycles.memory.push_back(GetMemUsage());
-//        }
+        //        if (book_keep) {
+        //            data_per_cycles.xCZ_H.push_back(0);
+        //            data_per_cycles.xCZ_V.push_back(0);
+        //            data_per_cycles.addends.push_back(0);
+        //            data_per_cycles.memory.push_back(GetMemUsage());
+        //        }
         full_state -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
                                                  cz_path_len, suffix_size,
                                                  X_bitmask,Y_bitmask,
@@ -139,13 +139,13 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
             sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
                                                        cz_path_len, suffix_size,
                                                        X_bitmask, Y_bitmask,
-                                                        H_bitmask, CZ_bitmasks,
-                                                        T_bitmasks, th);
+                                                       H_bitmask, CZ_bitmasks,
+                                                       T_bitmasks, th);
         else
             xCZ_applied_in_cycle = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
-                                                                      suffix_size, X_bitmask, Y_bitmask,
-                                                                      H_bitmask, CZ_bitmasks,
-                                                                      T_bitmasks, th);
+                                                                              suffix_size, X_bitmask, Y_bitmask,
+                                                                              H_bitmask, CZ_bitmasks,
+                                                                              T_bitmasks, th);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
             Time time;

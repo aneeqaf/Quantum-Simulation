@@ -7,47 +7,33 @@
 
 #include "kernels.h"
 
-unordered_map<Gate::Type, bitset<128>>
-Form1QGatesBitmask(idx_size& gate_i,
-                  const vector<Gate>& all_gates,
-                  const vector<Gate::Type>& gate_type)
+void
+Form1QGatesBitmask(unordered_map<Gate::Type, bitset<128>>& bitmasks,
+                   idx_size& gate_i,
+                   const vector<Gate>& all_gates,
+                   const vector<Gate::Type>& gate_type)
 {
 //    vector<int> cluster_qubits = FormBlockOfXYHGates(gate_i, gate_type, all_gates);
-    unordered_map<Gate::Type, bitset<128>> bitmasks;
+//    unordered_map<Gate::Type, bitset<128>> bitmasks;
     for (auto g_type : gate_type)
         bitmasks[g_type] = bitset<128>(0);
     
     auto curr_type = all_gates[gate_i].GetType();
     
     if (bitmasks.count(curr_type) == 0)
-        return bitmasks;
+        return;
     
     for (; gate_i < all_gates.size(); ++gate_i) {
         if (all_gates[gate_i].GetType() != curr_type) {
             curr_type = all_gates[gate_i].GetType();
             if (bitmasks.count(curr_type) == 0)
-                return bitmasks;
+                return;
         }
         bitmasks[curr_type][all_gates[gate_i].GetQubits()[0]] = 1;
     }
 //    for (idx_size i = 0; i < cluster_qubits.size(); ++i)
 //        bitmask[cluster_qubits[i]] = 1;
 //
-    return bitmasks;
-}
-
-
-void 
-FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks /*total_circuit_qubits*/,
-                    bitset<128> T_bitmasks[2],
-                    idx_size& gate_i,
-                    const vector<Gate>& all_gates,
-                    const int total_circuit_qubits)
-{
-    for (int i = 0; i < total_circuit_qubits; ++i)
-        CZ_bitmasks[i] = 0;
-    
-    FormBlockOfCZTGates(gate_i, CZ_bitmasks, T_bitmasks, all_gates, total_circuit_qubits);
 }
 
 void
@@ -107,19 +93,25 @@ ExtractIndicesForAmp(idx_size* strides,
 }
 
 void
-FormBlockOfCZTGates(idx_size& gate_i,
+FormCZTGatesBitmask(idx_size& gate_i,
                     bitset<128>* __restrict CZ_bitmasks,
                     bitset<128>* __restrict T_bitmasks /*2*/,
                     const vector<Gate>& cluster,
                     const int num_qubits_amp)
 {
+    bool any_CZ = false;
     for(;gate_i < cluster.size(); ++gate_i) {
-        if (cluster[gate_i].GetType() == Gate::Type::cz)
+        if (cluster[gate_i].GetType() == Gate::Type::cz) {
+            any_CZ = true;
             GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
+        }
         else if (cluster[gate_i].GetType() == Gate::Type::t)
             GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
         else break;
     }
+    
+    if (any_CZ)
+        CZ_bitmasks[num_qubits_amp] = 1;
 }
 
 vector<idx_size>
@@ -779,18 +771,22 @@ XYFastTransformLowQ(cmplx* __restrict amp,
 //        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
 //
 //    return i_count;
+    const bool H_bitmask_applicable = (H_bitmask & (X_bitmask | Y_bitmask)) == (X_bitmask | Y_bitmask)
+                                        && ((X_bitmask | Y_bitmask) != 0);
     
     idx_size i_count = 0;
     int factor_power = 0;
     
-    for (int i = 0; i < num_qubits; ++i) {
-        if (X_bitmask || Y_bitmask) {
-            auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask,
-                                                      H_bitmask, num_qubits);
-            i_count += phases.first;
-            factor_power += phases.second;
+    if (X_bitmask || Y_bitmask) {
+        for (int i = 0; i < num_qubits; ++i) {
+            if (X_bitmask || Y_bitmask) {
+                auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask,
+                                                          H_bitmask_applicable, num_qubits);
+                i_count += phases.first;
+                factor_power += phases.second;
+            }
+            else break;
         }
-        else break;
     }
     return pair<idx_size, int>(i_count, factor_power);
 }
@@ -893,7 +889,6 @@ void ApplyHGatesIteratively(cmplx* __restrict amp,
         if (parity == 1)
         {
             int q = q1 > q2 ? q1 : q2;
-            gate_bm ^= 1ull << q;
             Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
             return;
         }

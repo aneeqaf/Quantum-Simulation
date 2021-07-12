@@ -8,16 +8,16 @@
 
 #include "SZ_helper.h"
 
-SZ_Helper::
-~SZ_Helper()
+SZHelper::
+~SZHelper()
 {
     if (!compressed_vector_ptrs.empty())
         for (auto ptrs : compressed_vector_ptrs)
             if(ptrs) free(ptrs);
 }
 
-SZ_Helper::
-SZ_Helper(const SZ_Helper& rhs)
+SZHelper::
+SZHelper(const SZHelper& rhs)
 {
     for (size_t i = 0; i < num_threads; ++i) {
         compressed_out_sizes[i] = rhs.compressed_out_sizes[i];
@@ -28,7 +28,7 @@ SZ_Helper(const SZ_Helper& rhs)
     }
 }
 
-void SZ_Helper::
+void SZHelper::
 Compress(const cmplx* original_vector)
 {
     int status = SZ_Init(sz_cnfg.c_str());
@@ -46,7 +46,7 @@ Compress(const cmplx* original_vector)
     }
 }
 
-cmplx* SZ_Helper::
+cmplx* SZHelper::
 Decompress()
 {
     cmplx* decompressed_amp = nullptr;

@@ -60,15 +60,15 @@ public:
     {
         string mask = "";
         for (int i = (int)(num_qubits - 1); i >= 0; --i)
-            mask += (*this)[i];
+        mask += (*this)[i];
         
         return mask;
     }
     
     bool CheckIfBlockIsNotZero(idx_size idx,
-                            idx_size block_size) const
+                               idx_size block_size) const
     {
-//        return (idx & nonzero_mask)? (nonzero_mask & block_size) ^ (idx & nonzero_mask) : false;
+        //        return (idx & nonzero_mask)? (nonzero_mask & block_size) ^ (idx & nonzero_mask) : false;
         
         if (idx & nonzero_mask) {
             idx = idx & ~(block_size - 1);

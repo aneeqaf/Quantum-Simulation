@@ -39,6 +39,7 @@ constexpr size_t INNER_R_SHIFT = 0;
 constexpr double B = 0.00298;
 constexpr size_t NUM_UL_IN_REG = 4;
 constexpr size_t NUM_UI_IN_REG = 8;
+constexpr size_t NUM_FLOAT_IN_REG = 8;
 constexpr size_t NUM_SHORT_IN_REG = 16;
 constexpr size_t NUM_SHORT_IN_UL = 4;
 constexpr size_t REG_SIZE = 256;
