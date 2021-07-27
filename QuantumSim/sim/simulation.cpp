@@ -115,6 +115,7 @@ MainLoopForRanges(GenericQuantumState& amp,
                   Circuit& circuit,
                   const GenericQuantumState& copy_amp)
 {
+    // cout << "Simulating Ranges\n";
     idx_size gate_num = curr_gate;
     
     Time time;
@@ -186,6 +187,7 @@ MainLoopForBranching(GenericQuantumState& amp,
                      const GenericQuantumState& copy_amp,
                      const idx_size gate_i)
 {
+    // cout << "Simulating branches\n";
     static int exec = 0; ++exec;
     static const idx_size num_CZ_paths = 1ull << config -> dfs_length,
     idxs_len = config -> indices.size();
@@ -552,10 +554,12 @@ Phase1Simulation(GenericQuantumState& amp,
         amp.partition_to_sim = 'a';
         idx_size cz_path_copy = cz_path;
         int remaining_cz_bits_copy = remaining_cz_bits;
+        // cout << "Simulating partition a\n";
         terminate = SimulationLoop(amp, circuit, remaining_cz_bits, cz_path, cz_path_len,
                                    config -> dfs_length, gate_i);
         config -> th = amp.GetNumQInBlock(1) >> 1;
         amp.partition_to_sim = 'b';
+        // cout << "Simulating partition b\n";
         SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_path_copy, cz_path_len,
                        config -> dfs_length, gate_i);
         amp.partition_to_sim = 'x';
@@ -731,6 +735,7 @@ SimulationLoop(GenericQuantumState &amp,
                                                                       suffix_size, bitmasks[Gate::Type::x_1_2],
                                                                       bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h],
                                                                       CZ_bitmasks, T_bitmasks, config -> th);
+//                cout << "idx=" << curr_gate << ": remaining_cz_bits=" << remaining_cz_bits << ", xCZ_applied_in_cycle="<< xCZ_applied_in_cycle <<"\n";
                 ++amp.count_of_category.CZT_layers;
                 if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
                 if (bitmasks[Gate::Type::h] != 0) ++amp.count_of_category.H_layers;
@@ -758,14 +763,14 @@ SimulationLoop(GenericQuantumState &amp,
 //                    amp.data_per_cycles.XY_gates.push_back(i - prev_i_XY);
                 }
                 
+                CZ_T_top_time += CZT_time.GetElapsedTime();
+                
                 if (terminate) {
                     curr_gate = prev_i_CZT + xCZ_applied_in_cycle;
                     return terminate;
                 }
                 
                 --i;
-                
-                CZ_T_top_time += CZT_time.GetElapsedTime();
             }
             else {
                 amp.ApplyCGate(current_gate.GetNumControls(), current_gate.GetQubits(),

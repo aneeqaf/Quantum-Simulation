@@ -200,7 +200,7 @@ GroupSimilarGates()
             saw_H = true;
     }
 #ifdef PrintG
-    PrintGates(gates, qubits);
+    PrintGates(gates, qubits, *qp);
     cout << "\nGate insert count: " << count_insert << endl;
 #endif
     
@@ -210,7 +210,7 @@ GroupSimilarGates()
 idx_size Circuit::
 ClusterSimilarGates()
 {
-    return ::ClusterSimilarGates(gates, qubits);
+    return ::ClusterSimilarGates(gates, qubits, *qp);
 }
 
 // TODO: Generalize this to other > 1q gates that cross
@@ -220,138 +220,184 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     idx_size branch_bits,
                     const bool nearest_neigbors)
 {
+    static auto MovexCZToFront = [&](idx_size i, idx_size path_size){
+        idx_size count_xCZ = 0;
+        for (; i < gates.size() && count_xCZ < path_size; ++i) {
+            idx_size j = i;
+            idx_size cycle_count_xCZ = 0;
+            for (; j < gates.size() && gates[j].GetType() == Gate::Type::cz; ++j) {
+                if (isCrossingGate(j)) {
+                    ++count_xCZ;
+                    swap(gates[i + cycle_count_xCZ++], gates[j]);
+                }
+            }
+            i = j;
+        }
+    };
     
     const idx_size num_qubits_minus_1 = qp -> getNumQubits() - 1, num_crossing_q = qp -> getNumX();
     int remaining_path_bits = static_cast<int>(proc_prefix_bits), total_CZ = 0, total_xCZ = 0;
     Config::SimMode current_mode = Config::SimMode::ProcPrefix;
     bool continue_rearranging = proc_prefix_bits != 0;
     
+    MovexCZToFront(0, remaining_path_bits);
+    
+#ifdef PrintG
+    PrintGates(gates, qubits, *qp);
+#endif
+    
     for (idx_size i = 0; i < gates.size() && continue_rearranging; ++i) {
-        idx_size j = i;
-        int num_xCZ_in_cluster = 0;
+        int num_xCZ_in_cluster = 0, boundary_qubits_obstructed = 0;
         vector<idx_size> gates_to_delete;
         unordered_map<idx_size, bool> recorded_qubit;
         vector<Gate> gates_to_move;
         
-        // Find all xCZ in cycle
-        for (; j < gates.size(); ++j) {
-           
-            const auto& gate_qubits = gates[j].GetQubits();
+        if (isCrossingGate(i)){
+            idx_size j = i;
             
-            if (nearest_neigbors && gate_qubits.size() > 2) {
-                idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
-                CheckIfNearestNeighbor(q0, q1, *qp);
-            }
-            
-            bool add_gate = false;
-            idx_size q0 = gate_qubits[0];
-            if (gate_qubits.size() > 0) {
-                if ((recorded_qubit.count(q0) > 0  && recorded_qubit[q0])
-                    || (recorded_qubit.count(q0) > 0  && !gates[j].IsDiagonal())) {
-                    add_gate = true;
-                    recorded_qubit[q0] = true;
-                }
-            }
-            if (gate_qubits.size() == 2) {
-                idx_size q1 = gate_qubits[1];
-
-                if (qp -> globalToBlock(num_qubits_minus_1 - q0) !=  qp -> globalToBlock(num_qubits_minus_1 - q1)) {
-                    if (num_xCZ_in_cluster >= num_crossing_q || remaining_path_bits - num_xCZ_in_cluster <= 0)
-                        goto exit_inner_loop;
-                    
-                    ++num_xCZ_in_cluster;
-                    if (recorded_qubit.count(q0) == 0) {
-                        recorded_qubit[q0] = false;
-                        recorded_qubit[q1] = false;
-                    }
-                    add_gate = true;
-                }
-                else if ((recorded_qubit.count(q1) > 0 && recorded_qubit[q1])
-                         || (recorded_qubit.count(q1) > 0 && !gates[j].IsDiagonal())) {
-                    add_gate = true;
-                    recorded_qubit[q1] = true;
-                }
-            }
-            
-            if (add_gate) {
-                for (const auto& q : gate_qubits) {
-                    if (recorded_qubit.count(q) == 0)
-                        recorded_qubit[q] = false;
+            for (; j < gates.size(); ++j) {
+                const auto& gate_qubits = gates[j].GetQubits();
+                
+                if (nearest_neigbors && gate_qubits.size() > 2) {
+                    idx_size q0 = num_qubits_minus_1 - gate_qubits[0], q1 = num_qubits_minus_1 - gate_qubits[1];
+                    CheckIfNearestNeighbor(q0, q1, *qp);
                 }
                 
-                gates_to_move.push_back(gates[j]);
-                gates_to_delete.push_back(j);
-            }
-        }
-        
-        exit_inner_loop:;
-        
-        if (num_xCZ_in_cluster) {
-            
-            InsertNewCycleOnClusteredCircuit(j, qubits, gates, gates_to_move, *qp);
-            
-            for (int k = (int)gates_to_delete.size() - 1; k >=0; --k) {
-                gates.erase(gates.begin() + gates_to_delete[k]);
-                --j;
+                if (isCrossingGate(j))
+                    ++num_xCZ_in_cluster;
+                else if (current_mode != Config::SimMode::Branch) break;
+                else if (current_mode == Config::SimMode::Branch)
+                    if (num_xCZ_in_cluster == num_crossing_q) break;
             }
             
-//            idx_size end_idx = clock_cycles[GetCycleNumForGateIdx(j) + 5];
-            ::ClusterSimilarGates(gates, qubits, j);
-            
-        #ifdef PrintG
-            PrintGates(gates, qubits);
-        #endif
-            
-            idx_size xGate_count = 0;
-            for (; j < gates.size() && xGate_count < num_xCZ_in_cluster; ++j) {
-                const auto& gate_qubits = gates[j].GetQubits();
-
-                if (gate_qubits.size() > 1) {
-                    idx_size q0 = qubits - 1 - gate_qubits[0], q1 =  qubits - 1  - gate_qubits[1];
+            if (remaining_path_bits <= num_xCZ_in_cluster) {
+                j = i;
+                
+                if (remaining_path_bits < num_xCZ_in_cluster)
+                    j = i + remaining_path_bits;
+                
+                idx_size xCZ_to_collect = 0;
+                
+                // Find all xCZ in cycle
+                for (; j < gates.size(); ++j) {
                     
-                    if (qp -> globalToBlock(q0) !=  qp -> globalToBlock(q1))
-                        ++xGate_count;
+                    const auto& gate_qubits = gates[j].GetQubits();
+                    
+                    bool add_gate = false;
+                    idx_size q0 = gate_qubits[0];
+                    if (gate_qubits.size() > 0) {
+                        if ((recorded_qubit.count(q0) > 0  && recorded_qubit[q0])
+                            || (recorded_qubit.count(q0) > 0  && !gates[j].IsDiagonal())) {
+                            add_gate = true;
+                            
+                            if (qp -> isBoundaryQubit(q0) && !recorded_qubit[q0])
+                                ++boundary_qubits_obstructed;
+                            
+                            recorded_qubit[q0] = true;
+                        }
+                    }
+                    if (gate_qubits.size() == 2) {
+                        idx_size q1 = gate_qubits[1];
+                        
+                        if (isCrossingGate(j)) {
+                            if (xCZ_to_collect == remaining_path_bits) break;
+                            
+                            ++xCZ_to_collect;
+                            if (recorded_qubit.count(q0) == 0) {
+                                recorded_qubit[q0] = false;
+                                recorded_qubit[q1] = false;
+                            }
+                            add_gate = true;
+                        }
+                        else if ((recorded_qubit.count(q1) > 0 && recorded_qubit[q1])
+                                 || (recorded_qubit.count(q1) > 0 && !gates[j].IsDiagonal())) {
+                            add_gate = true;
+                            
+                            if (qp -> isBoundaryQubit(q1) && !recorded_qubit[q1])
+                                ++boundary_qubits_obstructed;
+                            
+                            recorded_qubit[q1] = true;
+                        }
+                    }
+                    
+                    if (add_gate) {
+                        for (const auto& q : gate_qubits) {
+                            if (recorded_qubit.count(q) == 0)
+                                recorded_qubit[q] = false;
+                        }
+                        
+                        gates_to_move.push_back(gates[j]);
+                        gates_to_delete.push_back(j);
+                    }
+                    
+                    if (remaining_path_bits == num_xCZ_in_cluster
+                        && num_xCZ_in_cluster == xCZ_to_collect
+                        && boundary_qubits_obstructed >= xCZ_to_collect
+                        && current_mode != Config::SimMode::Branch) {
+                        ++j;
+                        goto exit_inner_loop;
+                    }
+                    else if (remaining_path_bits < num_xCZ_in_cluster
+                             && (num_xCZ_in_cluster - remaining_path_bits) == xCZ_to_collect
+                             && boundary_qubits_obstructed >= xCZ_to_collect) {
+                        ++j;
+                        goto exit_inner_loop;
+                    }
                 }
+                
+            exit_inner_loop:;
+                
+                InsertNewCycleOnClusteredCircuit(j, qubits, gates, gates_to_move, *qp);
+                
+                for (int k = (int)gates_to_delete.size() - 1; k >=0; --k)
+                    gates.erase(gates.begin() + gates_to_delete[k]);
+                
+#ifdef PrintG
+                PrintGates(gates, qubits, *qp);
+#endif
+                // Move it back since the gates moved belong to the next path
+                if (j < gates.size() && remaining_path_bits < num_xCZ_in_cluster)
+                    j -= gates_to_delete.size();
+                // Move back but add back xCZ already processed
+                else if (j < gates.size())
+                    j = (j - gates_to_delete.size()) + remaining_path_bits;
             }
-        }
-        
-        // Move the xCZ in the transitioning cycle further out to have more gates in preceding paths
-        // The number of gates in the branching path should be the least
-        remaining_path_bits -= num_xCZ_in_cluster;
-        if (remaining_path_bits <= 0 && num_xCZ_in_cluster > 0) {
-            switch (current_mode) {
-                case Config::SimMode::ProcPrefix:
-                    remaining_path_bits = static_cast<int>(range_bits);
-                    current_mode = Config::SimMode::Ranges;
-                    if (range_bits == 0) continue_rearranging = false;
-                    break;
-                case Config::SimMode::Ranges:
-                    remaining_path_bits = static_cast<int>(branch_bits);
-                    current_mode = Config::SimMode::Branch;
-                    if (range_bits == 0) continue_rearranging = false;
-                    break;
-                case Config::SimMode::Branch:
-                    break;
+            
+            // Move the xCZ in the transitioning cycle further out to have more gates in preceding paths
+            // The number of gates in the branching path should be the least
+            remaining_path_bits -= num_xCZ_in_cluster;
+            if (remaining_path_bits <= 0 && num_xCZ_in_cluster > 0) {
+                switch (current_mode) {
+                    case Config::SimMode::ProcPrefix:
+                        remaining_path_bits = static_cast<int>(range_bits);
+                        current_mode = Config::SimMode::Ranges;
+                        if (range_bits == 0) continue_rearranging = false;
+                        break;
+                    case Config::SimMode::Ranges:
+                        remaining_path_bits = static_cast<int>(branch_bits);
+                        current_mode = Config::SimMode::Branch;
+                        if (range_bits == 0) continue_rearranging = false;
+                        break;
+                    case Config::SimMode::Branch:
+                        break;
+                }
+                MovexCZToFront(j, remaining_path_bits);
+#ifdef PrintG
+                PrintGates(gates, qubits, *qp);
+#endif
             }
+            i = j - 1;
         }
-        i = j;
     }
     
     // Move xCZ gates to front so that terminations in the middle of the cycle don't break.
     // Alternative way could be more costly in critical simulation loop
-    for (idx_size i = 0; i < gates.size(); ++i) {
-        idx_size count_xCZ = 0;
-        for (idx_size j = i; j < gates.size() && gates[j].GetType() == Gate::Type::cz; ++j) {
-            if (isCrossingGate(j))
-                swap(gates[i + count_xCZ++], gates[j]);
-        }
-    }
-
+    //    MovexCZToFront(0, gates.size());
     
 #ifdef PrintG
-    PrintGates(gates, qubits);
+    PrintGates(gates, qubits, *qp);
 #endif
-        
+    
     return pair<int, int> (total_CZ, total_xCZ);
 }
 
@@ -716,9 +762,10 @@ OptimizeCircuitArrangement(const Config* config)
 {
     if (!isRearranged()) {
         if (google) {
-            if (!ClockCycleEmpty())
-                GroupAlternateCycles();
+//            if (!ClockCycleEmpty())
+//                GroupAlternateCycles();
             ClusterSimilarGates();
+//            GroupSimilarGates();
         }
         
         if (config -> sim_type != Config::SimType::FullState)

@@ -92,6 +92,7 @@ public:
     int getNumQubitsInBlock(idx_size i) const { return (int)_blocks[i].count(); }
     int getNumX() const { return _numX; }
     bitset<128> getBlockBitmask(int i) const { return _blocks[i]; }
+    bool isBoundaryQubit(idx_size i) const { return _boundary_qubits[i]; }
     
     int globalToBlock(idx_size q) const { return _global_to_block[q]; }
     int globalToLocal(idx_size q) const { return _global_to_local[q]; }

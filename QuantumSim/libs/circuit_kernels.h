@@ -62,7 +62,9 @@ struct QubitsListKeyCmp {
 typedef unordered_map<idx_size, shared_ptr<GateMovement>> gate_movement_unordered_map_t;
 
 void
-PrintGates(const vector<Gate>& gates, idx_size num_qubits);
+PrintGates(const vector<Gate>& gates,
+           idx_size num_qubits,
+           const QubitPartition& qp);
 
 void
 PrintGatesAndCycles(const vector<Gate>& gates,
@@ -75,6 +77,7 @@ void CheckIfNearestNeighbor(idx_size q0,
 idx_size
 ClusterSimilarGates(vector<Gate>& gates,
                     idx_size num_qubits,
+                    const QubitPartition& qp,
                     idx_size start_idx = 0,
                     idx_size end_idx = 0);
 

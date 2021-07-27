@@ -159,11 +159,11 @@ ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
     all_zeros = ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks, zero_opt_mask);
     
     for (int q = 0; q < num_qubits; ++q)
-    if (xCZ_bitmasks[1] & (1ull << q))
-        SetEvenZeroPatternAtQubit(q);
+        if (xCZ_bitmasks[1] & (1ull << q))
+            SetEvenZeroPatternAtQubit(q);
     for (int q = 0; q < num_qubits; ++q)
-    if (xCZ_bitmasks[2] & (1ull << q))
-        SetOddZeroPatternAtQubit(q);
+        if (xCZ_bitmasks[2] & (1ull << q))
+            SetOddZeroPatternAtQubit(q);
 }
 
 void FullAmpStateVector::

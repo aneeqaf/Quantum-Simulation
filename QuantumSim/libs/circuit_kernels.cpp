@@ -9,7 +9,7 @@
 #include "circuit_kernels.h"
 
 void
-PrintGates(const vector<Gate>& gates, idx_size num_qubits)
+PrintGates(const vector<Gate>& gates, idx_size num_qubits, const QubitPartition& qp)
 {
     cout << endl;
     for (idx_size q = 0; q < num_qubits; ++q) {
@@ -63,8 +63,15 @@ PrintGates(const vector<Gate>& gates, idx_size num_qubits)
             prev_type = gates[i].GetType();
         }
         const Gate& g = gates[i];
-        if(g.GetType() == Gate::Type::cz)
-            cout << i << ":CZ(" << g.GetQubits()[0] << "," << g.GetQubits()[1] << ") ";
+        if(g.GetType() == Gate::Type::cz) {
+            const auto& gate_qubits = gates[i].GetQubits();
+            if (qp.globalToBlock(num_qubits - 1 - gate_qubits[0]) !=  qp.globalToBlock(num_qubits - 1 - gate_qubits[1])) {
+                cout << i << ":xCZ(" << g.GetQubits()[0] << "," << g.GetQubits()[1] << ") ";
+            }
+            else {
+                cout << i << ":CZ(" << g.GetQubits()[0] << "," << g.GetQubits()[1] << ") ";
+            }
+        }
         else if (g.GetType() == Gate::Type::x_1_2)
             cout << i << ":X(" << g.GetQubits()[0] << ") ";
         else if (g.GetType() == Gate::Type::y_1_2)
@@ -123,12 +130,13 @@ CheckIfNearestNeighbor(idx_size q0,
 idx_size
 ClusterSimilarGates(vector<Gate>& gates,
                     idx_size num_qubits,
+                    const QubitPartition& qp,
                     idx_size start_idx,
                     idx_size end_idx)
 {
     static idx_size count_insert = 0;
 #ifdef PrintG
-    PrintGates(gates, num_qubits);
+    PrintGates(gates, num_qubits, qp);
 #endif
     idx_size count_2q_gates = 0;
         
@@ -237,7 +245,7 @@ ClusterSimilarGates(vector<Gate>& gates,
     }
     
 #ifdef PrintG
-    PrintGates(gates, num_qubits);
+    PrintGates(gates, num_qubits, qp);
     cout << "\nGate insert count: " << count_insert << endl;
 #endif
     
@@ -251,7 +259,7 @@ InsertNewCycleOnClusteredCircuit(idx_size gate_idx,
                                  vector<Gate>& gates_to_insert,
                                  const QubitPartition& qp)
 {
-    ClusterSimilarGates(gates_to_insert, num_qubits);
+    ClusterSimilarGates(gates_to_insert, num_qubits, qp);
 
     for (idx_size i = 0; i < gates_to_insert.size(); ++i)
         circuit_gates.insert(circuit_gates.begin() + gate_idx + i, gates_to_insert[i]);
