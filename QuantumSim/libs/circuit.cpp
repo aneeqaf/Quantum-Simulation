@@ -290,7 +290,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                             || (recorded_qubit.count(q0) > 0  && !gates[j].IsDiagonal())) {
                             add_gate = true;
                             
-                            if (qp -> isBoundaryQubit(q0) && !recorded_qubit[q0])
+                            if (qp -> isBoundaryQubit(qubits - 1 - q0) && !recorded_qubit[q0])
                                 ++boundary_qubits_obstructed;
                             
                             recorded_qubit[q0] = true;
@@ -313,7 +313,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                                  || (recorded_qubit.count(q1) > 0 && !gates[j].IsDiagonal())) {
                             add_gate = true;
                             
-                            if (qp -> isBoundaryQubit(q1) && !recorded_qubit[q1])
+                            if (qp -> isBoundaryQubit(qubits - 1 - q1) && !recorded_qubit[q1])
                                 ++boundary_qubits_obstructed;
                             
                             recorded_qubit[q1] = true;
@@ -355,9 +355,16 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
 #ifdef PrintG
                 PrintGates(gates, qubits, *qp);
 #endif
-                // Move it back since the gates moved belong to the next path
-                if (j < gates.size() && remaining_path_bits < num_xCZ_in_cluster)
+                // if xCZ are not completely obstructed and other xCZ are seen, coalesce them and restart that cycle
+                if (boundary_qubits_obstructed < xCZ_to_collect && xCZ_to_collect == remaining_path_bits) {
                     j -= gates_to_delete.size();
+                    num_xCZ_in_cluster -= xCZ_to_collect;
+                }
+                // Move it back since the gates moved belong to the next path
+                else if (j < gates.size() && remaining_path_bits < num_xCZ_in_cluster) {
+                    j -= gates_to_delete.size();
+                    ::ClusterSimilarGates(gates, qubits, *qp, j);
+                }
                 // Move back but add back xCZ already processed
                 else if (j < gates.size())
                     j = (j - gates_to_delete.size()) + remaining_path_bits;
@@ -392,7 +399,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
     
     // Move xCZ gates to front so that terminations in the middle of the cycle don't break.
     // Alternative way could be more costly in critical simulation loop
-    //    MovexCZToFront(0, gates.size());
+    MovexCZToFront(0, gates.size());
     
 #ifdef PrintG
     PrintGates(gates, qubits, *qp);

@@ -14,7 +14,7 @@
 using namespace std;
 
 __attribute__((always_inline)) inline void
-Apply4X12Gate(cmplx* __restrict amp,
+Apply4X12Gate(cmplx* volatile __restrict amp,
               const array<idx_size, 16> indices)
 {
 //        ApplyXX12Gate( amp, {indices[0], indices[4], indices[8], indices[12]});
@@ -28,7 +28,7 @@ Apply4X12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-Apply4Y12Gate(cmplx* __restrict amp,
+Apply4Y12Gate(cmplx* volatile __restrict amp,
               const array<idx_size, 16> indices)
 {
 //    ApplyYY12Gate( amp, {indices[0], indices[4], indices[8], indices[12]});
@@ -42,7 +42,7 @@ Apply4Y12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyZGateAVX(cmplx* __restrict amp,
+ApplyZGateAVX(cmplx* volatile __restrict amp,
               const int num_qubits_amp,
               const idx_size gate_bitmask)
 {
@@ -70,7 +70,7 @@ ApplyZGateAVX(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyProjection01AVX(cmplx* __restrict amp,
+ApplyProjection01AVX(cmplx* volatile __restrict amp,
                      const int num_qubits_amp,
                      const idx_size gate_bitmask)
 {
@@ -106,7 +106,7 @@ ApplyProjection01AVX(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyProjection10AVX(cmplx* __restrict amp,
+ApplyProjection10AVX(cmplx* volatile __restrict amp,
                      const int num_qubits_amp,
                      const idx_size gate_bitmask)
 {
@@ -153,7 +153,7 @@ FindStrides (const vector<int>& gate_qubits,
 }
 
 void
-ApplyNonControl1QGates(cmplx* __restrict amp,
+ApplyNonControl1QGates(cmplx* volatile __restrict amp,
                        const int q,
                        const int num_qubits_amp,
                        const Gate::Type gate_type,
@@ -161,7 +161,7 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
 
 //TODO: Test this
 void
-ApplyControlGate(cmplx* __restrict amp,
+ApplyControlGate(cmplx* volatile __restrict amp,
                  const int num_controls,
                  const vector<idx_size>& gate_qubits,
                  const int num_qubits_amp,
@@ -169,15 +169,15 @@ ApplyControlGate(cmplx* __restrict amp,
                  const Gate::Type gate_type);
 
 void
-ApplyManyXOnSlice(cmplx* __restrict amp,
+ApplyManyXOnSlice(cmplx* volatile __restrict amp,
                   const idx_size num_qbits);
 
 void
-ApplyManyYOnSlice(cmplx* __restrict amp,
+ApplyManyYOnSlice(cmplx* volatile __restrict amp,
                   const idx_size num_qbits);
 
 void
-ApplyFWHT(cmplx* __restrict amp,
+ApplyFWHT(cmplx* volatile __restrict amp,
           idx_size qubits_in_cluster,
           const int num_qubits_amp,
           const Gate::Type gate_type);

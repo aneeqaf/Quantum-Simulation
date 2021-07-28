@@ -13,7 +13,7 @@
 using namespace std;
 
 __attribute__((always_inline)) inline void
-ApplyHGate(cmplx* __restrict amp,
+ApplyHGate(cmplx* volatile __restrict amp,
            const idx_size* indices)
 {
     cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
@@ -26,7 +26,7 @@ ApplyHGate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyX12Gate(cmplx* __restrict amp,
+ApplyX12Gate(cmplx* volatile __restrict amp,
              const idx_size* indices)
 {
     cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
@@ -39,7 +39,7 @@ ApplyX12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyY12Gate(cmplx* __restrict amp,
+ApplyY12Gate(cmplx* volatile __restrict amp,
              const idx_size* indices)
 {
     cmplx temp_amp[2] = {amp[indices[0]], amp[indices[1]]};
@@ -52,7 +52,7 @@ ApplyY12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyHHGate(cmplx* __restrict amp,
+ApplyHHGate(cmplx* volatile __restrict amp,
             const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -73,7 +73,7 @@ ApplyHHGate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXX12Gate(cmplx* __restrict amp,
+ApplyXX12Gate(cmplx* volatile __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
@@ -94,7 +94,7 @@ ApplyXX12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYY12Gate(cmplx* __restrict amp,
+ApplyYY12Gate(cmplx* volatile __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = {amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -115,7 +115,7 @@ ApplyYY12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXY12Gate(cmplx* __restrict amp,
+ApplyXY12Gate(cmplx* volatile __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -136,7 +136,7 @@ ApplyXY12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYX12Gate(cmplx* __restrict amp,
+ApplyYX12Gate(cmplx* volatile __restrict amp,
               const idx_size* indices /*4*/)
 {
     const cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -157,7 +157,7 @@ ApplyYX12Gate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYY12HHGate(cmplx* __restrict amp,
+ApplyYY12HHGate(cmplx* volatile __restrict amp,
                 const idx_size* indices /*4*/)
 {    
     if (amp[indices[0]] == cmplx(0,0) && amp[indices[1]] == cmplx(0,0)
@@ -169,7 +169,7 @@ ApplyYY12HHGate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXX12HHGate(cmplx* __restrict amp,
+ApplyXX12HHGate(cmplx* volatile __restrict amp,
                 const idx_size* indices /*4*/)
 {
     cmplx a[4] = {amp[indices[0]], amp[indices[1]], amp[indices[2]], amp[indices[3]]};
@@ -190,7 +190,7 @@ ApplyXX12HHGate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXY12HHGate(cmplx* __restrict amp,
+ApplyXY12HHGate(cmplx* volatile __restrict amp,
                 const idx_size* indices /*4*/)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -211,7 +211,7 @@ ApplyXY12HHGate(cmplx* __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYX12HHGate(cmplx* __restrict amp,
+ApplyYX12HHGate(cmplx* volatile __restrict amp,
                 const idx_size* indices /*4*/)
 {
     cmplx a[4] = { amp[indices[0]], amp[indices [1]], amp[indices[2]], amp[indices[3]]};
@@ -233,7 +233,7 @@ ApplyYX12HHGate(cmplx* __restrict amp,
 
 
 inline void
-ApplyGateOnAmps(cmplx* __restrict amp,
+ApplyGateOnAmps(cmplx* volatile __restrict amp,
                 const idx_size* indices,
                 const idx_size indices_size,
                 const Gate::Type gate_type,
@@ -306,14 +306,14 @@ ApplyGateOnAmps(cmplx* __restrict amp,
 
 template<typename function>
 void
-Apply2MergedGatesHelper(cmplx* __restrict amp,
+Apply2MergedGatesHelper(cmplx* volatile __restrict amp,
                         const idx_size gate_qubits,
                         const int num_qubits_amp,
                         const function& gate_func,
                         const idx_size add = 1);
 
 void
-ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
+ApplyHighQ2MergedGatesInParallel(cmplx* volatile __restrict amp,
                                  const int num_threads,
                                  const idx_size gate_qubits,
                                  const int num_qubits_amp,
@@ -321,7 +321,7 @@ ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
                                  const idx_size add = 1);
 
 __attribute__((always_inline)) inline int
-ApplyMergedXYGates(cmplx* __restrict amp,
+ApplyMergedXYGates(cmplx* volatile __restrict amp,
                    int gate_type,
                    const idx_size gates_bitmask,
                    const int num_qubits,
@@ -392,19 +392,19 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates);
 void
-ApplyBlockOfCZTGates(cmplx* __restrict amp,
+ApplyBlockOfCZTGates(cmplx* volatile __restrict amp,
                      const int num_qubits_amp,
                      const idx_size* __restrict CZ_bitmasks,
                      const idx_size* __restrict T_bitmasks);
 
 void
-ApplyCZDecomposition(cmplx* __restrict amp,
+ApplyCZDecomposition(cmplx* volatile __restrict amp,
                      const int num_qubits_amp,
                      const int gate_qubit,
                      const Gate::Type gate_type);
 
 void
-Apply1QXYHGates(cmplx* __restrict amp,
+Apply1QXYHGates(cmplx* volatile __restrict amp,
                 const int num_threads,
                 const int q,
                 const int num_qubits,
@@ -413,11 +413,11 @@ Apply1QXYHGates(cmplx* __restrict amp,
 void
 Apply2MergedXY12Gates(Gate gate1,
                       Gate gate2,
-                      cmplx* __restrict amp,
+                      cmplx* volatile __restrict amp,
                       const int num_qubits_amp);
 
 idx_size
-XYFastTransformIterative(cmplx* __restrict amp,
+XYFastTransformIterative(cmplx* volatile __restrict amp,
                          idx_size X_bitmask,
                          idx_size Y_bitmask,
                          const int num_qubits,
@@ -426,7 +426,7 @@ XYFastTransformIterative(cmplx* __restrict amp,
 
 
 pair<idx_size, int>
-XYFastTransform(cmplx* __restrict amp,
+XYFastTransform(cmplx* volatile __restrict amp,
                 idx_size X_bitmask,
                 idx_size Y_bitmask,
                 const int num_qubits,
@@ -434,25 +434,25 @@ XYFastTransform(cmplx* __restrict amp,
                 const int th);
 
 pair<idx_size, int>
-ApplyXYHIterativelyInParallel(cmplx* __restrict amp,
+ApplyXYHIterativelyInParallel(cmplx* volatile __restrict amp,
                               idx_size X_bitmask,
                               idx_size Y_bitmask,
                               idx_size H_bitmask,
                               const int num_qubits,
                               const int num_threads);
 
-void ApplyHGatesRecursively(cmplx* __restrict amp,
+void ApplyHGatesRecursively(cmplx* volatile __restrict amp,
                             int num_qubits,
                             int num_threads,
                             idx_size gate_bm);
 
-void ApplyHighHGatesIterativelyInParallel(cmplx* __restrict amp,
+void ApplyHighHGatesIterativelyInParallel(cmplx* volatile __restrict amp,
                                           int num_qubits,
                                           int num_threads,
                                           idx_size gate_bm);
 
 pair<idx_size, int>
-ApplyHighXYHGatesByBitReversal(cmplx* __restrict amp,
+ApplyHighXYHGatesByBitReversal(cmplx* volatile __restrict amp,
                                idx_size X_bitmask,
                                idx_size Y_bitmask,
                                idx_size H_bitmask,
@@ -460,7 +460,7 @@ ApplyHighXYHGatesByBitReversal(cmplx* __restrict amp,
                                const int num_low_qubits,
                                const int num_threads);
 
-//void ApplyHGatesRecursively(cmplx* __restrict amp,
+//void ApplyHGatesRecursively(cmplx* volatile __restrict amp,
 //                            int num_qubits,
 //                            int num_threads,
 //                            int current_q);

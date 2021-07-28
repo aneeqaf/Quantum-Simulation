@@ -35,7 +35,7 @@ def EnvCompatibility():
 
 	if not os.path.isdir("output"):
 		try:
-			os.makedirs(script_dir)
+			os.makedirs("output")
 		except OSError as e:
 			if e.errno != errno.EEXIST:
 				raise
