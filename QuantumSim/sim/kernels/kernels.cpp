@@ -737,7 +737,7 @@ ApplyXYHIterativelyInParallel(cmplx* volatile __restrict amp,
     int factor_power = 0;
     while (X_bitmask || Y_bitmask) {
         auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask, H_bitmask,
-                                               num_qubits, num_threads, true);
+                                                  num_qubits, num_threads, true);
         i_count += phases.first;
         factor_power += phases.second;
     }
@@ -839,7 +839,7 @@ void ApplyHighHGatesIterativelyInParallel(cmplx* volatile __restrict amp,
         gate_bm ^= gates_bitmask;
         
         ApplyHighQ2MergedGatesInParallel(amp, num_threads, gates_bitmask, num_qubits,
-          ApplyHHGateAVX, 4);
+                                         ApplyHHGateAVX, 4);
     }
 }
 

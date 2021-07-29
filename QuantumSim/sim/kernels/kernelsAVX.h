@@ -59,6 +59,7 @@ constexpr __m256 kneg = {-1, 1, -1, 1, -1, 1, -1, 1};
 constexpr __m256 kzeros = {0, 0, 0, 0, 0, 0, 0, 0};
 constexpr __m256 kneg1 = {-0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f};
 constexpr __m256 kneg2 = {-0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f, -0.0f};
+constexpr __m256 kneg3 = {0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f, 0.0f, -0.0f};
 constexpr __m128 kneg128 = {-0.0f, -0.0f, -0.0f, -0.0f};
 
 const __m256 kfAll1s = (__m256)_mm256_set1_epi64x(-1);
@@ -399,26 +400,26 @@ ApplyXY12HHGateAVX(cmplx* volatile __restrict amp,
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
-    
+
     __m256 ia0 = _mm256_permute_ps(a0, 0b10110001);
     ia0 = _mm256_xor_ps(ia0, kneg1);
-    __m256 ia1 = _mm256_permute_ps(a1, 0b10110001);
-    ia1 = _mm256_xor_ps(ia1, kneg1);
+    __m256 _ia1 = _mm256_permute_ps(a1, 0b10110001);
+    _ia1 = _mm256_xor_ps(_ia1, kneg3);
     __m256 ia2 = _mm256_permute_ps(a2, 0b10110001);
     ia2 = _mm256_xor_ps(ia2, kneg1);
     __m256 ia3 = _mm256_permute_ps(a3, 0b10110001);
     ia3 = _mm256_xor_ps(ia3, kneg1);
-    
+
     __m256 t0 = _mm256_add_ps(ia0, a2);
     __m256 t1 = _mm256_add_ps(a0, ia2);
-    __m256 t2 = _mm256_sub_ps(ia1, a3);
+    __m256 t2 = _mm256_sub_ps(_ia1, a3);
     __m256 t3 = _mm256_add_ps(a1, ia3);
-    
+
     a0 = _mm256_add_ps(t0, t1);
     a1 = _mm256_sub_ps(t2, t3);
     a2 = _mm256_sub_ps(t0, t1);
     a3 = _mm256_add_ps(t3, t2);
-    
+
     _mm256_store_ps(&t_amp[2*indices[0]], a0);
     _mm256_store_ps(&t_amp[2*indices[1]], a1);
     _mm256_store_ps(&t_amp[2*indices[2]], a2);
@@ -439,14 +440,14 @@ ApplyYX12HHGateAVX(cmplx* volatile __restrict amp,
     ia0 = _mm256_xor_ps(ia0, kneg1);
     __m256 ia1 = _mm256_permute_ps(a1, 0b10110001);
     ia1 = _mm256_xor_ps(ia1, kneg1);
-    __m256 ia2 = _mm256_permute_ps(a2, 0b10110001);
-    ia2 = _mm256_xor_ps(ia2, kneg1);
+    __m256 _ia2 = _mm256_permute_ps(a2, 0b10110001);
+    _ia2 = _mm256_xor_ps(_ia2, kneg3);
     __m256 ia3 = _mm256_permute_ps(a3, 0b10110001);
     ia3 = _mm256_xor_ps(ia3, kneg1);
     
     __m256 t0 = _mm256_add_ps(ia0, a1);
     __m256 t1 = _mm256_add_ps(a0, ia1);
-    __m256 t2 = _mm256_sub_ps(ia2, a3);
+    __m256 t2 = _mm256_sub_ps(_ia2, a3);
     __m256 t3 = _mm256_add_ps(a2, ia3);
     
     a0 = _mm256_add_ps(t0, t1);

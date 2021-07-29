@@ -490,7 +490,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     idx_size loq_X_bitmask = X_bitmask_64 & ~((1ull << th) - 1);
     idx_size loq_Y_bitmask = Y_bitmask_64 & ~((1ull << th) - 1);
     idx_size hiq_H_bitmask = H_bitmask_64 & ((1ull << th) - 1);
-    idx_size loq_H_bitmask =  H_bitmask_64 & ~((1ull << th) - 1);
+    idx_size loq_H_bitmask = H_bitmask_64 & ~((1ull << th) - 1);
     int num_lo_X_bits = __builtin_popcountll(loq_X_bitmask);
     int num_lo_Y_bits = __builtin_popcountll(loq_Y_bitmask);
     int single_H = 0;
@@ -544,11 +544,10 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     
     time.StartTime();
     if (hiq_X_bitmask || hiq_Y_bitmask) {
-        idx_size num_hiq_H_gates = __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));
         bool hi_H_bitmask_applicable = (hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask)) == (hiq_X_bitmask | hiq_Y_bitmask)
-        && ((hiq_X_bitmask | hiq_Y_bitmask)  != 0);
+                && ((hiq_X_bitmask | hiq_Y_bitmask)  != 0);
         if (book_keep && hi_H_bitmask_applicable)
-            count_of_category.H_merged_hi += num_hiq_H_gates;
+            count_of_category.H_merged_hi += __builtin_popcountll(hiq_H_bitmask & (hiq_X_bitmask | hiq_Y_bitmask));;
         
         // TODO : current scheme is all or nothing for H gates, which is not the most efficient
         auto phase1 = ApplyXYHIterativelyInParallel(amp, hiq_X_bitmask,

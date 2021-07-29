@@ -678,8 +678,8 @@ OptimizeCircuitArrangement(const Config* config)
 {
     if (!isRearranged()) {
         if (google) {
-//            if (!ClockCycleEmpty())
-//                GroupAlternateCycles();
+            if (!ClockCycleEmpty())
+                GroupAlternateCycles();
             ClusterSimilarGates();
 //            GroupSimilarGates();
         }
