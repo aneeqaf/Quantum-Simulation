@@ -86,7 +86,6 @@ int main(int argc, char *argv[])
         { "high_value_q",    required_argument,       nullptr, 'q' },
         { "num_threads",    required_argument,       nullptr, 't' },
         { "depth",    required_argument,       nullptr, 'd' },
-        { "quiddpro",    no_argument,       nullptr, 'u' },
         { "outfile",    required_argument,       nullptr, 'o' },
         { "sim_type",    required_argument,       nullptr, 's' },
         { "vcut",    required_argument,       nullptr, '|' },
@@ -109,7 +108,7 @@ int main(int argc, char *argv[])
     
     bool to_write = false, print_amp = false, write_circuit_mode = false,
     print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false, quiddpro = false;
+    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
@@ -310,10 +309,6 @@ int main(int argc, char *argv[])
 #endif
                 break;
             }
-            case 'u': {
-                quiddpro = true;
-                break;
-            }
             case 'v': {
                 string s_v = string(optarg);
                 verbose = (Config::Verbose)stoi(s_v);
@@ -397,7 +392,7 @@ int main(int argc, char *argv[])
             system(string("mkdir -p " + pathname).c_str());
     }
     
-    Circuit cir(input_filename, num_qubits.size() > 0 ? num_qubits[0] : 0, depth, quiddpro);
+    Circuit cir(input_filename, num_qubits.size() > 0 ? num_qubits[0] : 0, depth);
     
     if (sim_type == -1) {
         if (cir.GetNumQubits() <= 32) sim_type = 5;

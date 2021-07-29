@@ -11,7 +11,7 @@ vector<string> Circuit::quiddpro_func;
 unordered_map<string, gate_generator_ptr> Circuit::gate_funcs;
 
 Circuit::
-Circuit(const string input_filename, idx_size num_q, idx_size depth, bool quiddpro)
+Circuit(const string input_filename, idx_size num_q, idx_size depth)
 : qp(nullptr), qubits(num_q), rearranged(false)
 {
     quiddpro_func.push_back("hadamard");
@@ -36,10 +36,6 @@ Circuit(const string input_filename, idx_size num_q, idx_size depth, bool quiddp
     
     if (!input_filename.empty())
         ReadGoogleCircuitFile(input_filename, depth);
-    if (quiddpro) {
-        if(qubits <= 20)
-            CreateQuiddProScript("output/qpro_scripts/" + to_string(qubits) + "_" + to_string(depth * 10) + ".qpro");
-    }
 }
 
 Circuit::
@@ -270,6 +266,8 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     if (num_xCZ_in_cluster == num_crossing_q) break;
             }
             
+            // Move the xCZ in the transitioning cycle further out to have more gates in preceding paths
+            // The number of gates in the branching path should be the least
             if (remaining_path_bits <= num_xCZ_in_cluster) {
                 j = i;
                 
@@ -370,8 +368,6 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     j = (j - gates_to_delete.size()) + remaining_path_bits;
             }
             
-            // Move the xCZ in the transitioning cycle further out to have more gates in preceding paths
-            // The number of gates in the branching path should be the least
             remaining_path_bits -= num_xCZ_in_cluster;
             if (remaining_path_bits <= 0 && num_xCZ_in_cluster > 0) {
                 switch (current_mode) {
@@ -597,93 +593,6 @@ ComputeNumberOfHighValuedQubits(int num_qubits)
             break;
     }
     return th;
-}
-
-void Circuit::
-CreateQuiddProScript(const string& out_file,
-                     idx_size layers_last_H)
-{
-    ofstream file;
-    file.open(out_file);
-    
-    file << "state = cb(\"" + to_string((int)real(classical_bits[0]))<< "\");\n";;
-    
-    for (idx_size q = 1; q < classical_bits.size(); ++q)
-        file << "state = kron(state, cb(\"" + to_string(classical_bits[q]) << "\"));\n";
-    
-    for (idx_size i = 0; i < gates.size(); ++i) {
-        if(i != 0)
-            file << ";\n";
-        int op_count = 0;
-        bool control = false;
-        
-        if (gates[i].GetType() == Gate::Type::m) {
-            file << "measure_sv(" + to_string(gates[i].GetQubits()[0] + 1)
-            + ", state)";
-            continue;
-        }
-        
-        if (gates[i].GetType() == Gate::Type::t) {
-            file << "T = [1 0 ; 0 " + to_string(0.707106781) + "+i*" + to_string(0.707106781) + "];\n";
-            file << "op" + to_string(op_count++) + " = cu_gate (T, \"";
-        }
-        else if (gates[i].GetType() == Gate::Type::x_1_2) {
-            file << "X_1_2 = [0.5+i*0.5 0.5-i*0.5 ; 0.5-i*0.5 0.5+i*0.5];\n";
-            file << "op" + to_string(op_count++) + " = cu_gate (X_1_2, \"";
-        }
-        else if (gates[i].GetType() == Gate::Type::y_1_2) {
-            file << "Y_1_2 = [0.5+i*0.5 -0.5-i*0.5 ; 0.5+i*0.5 0.5+i*0.5];\n";
-            file << "op" + to_string(op_count++) + " = cu_gate (Y_1_2, \"";
-        }
-        else if (gates[i].GetType() != Gate::Type::cz) {
-            file << "op" + to_string(op_count++)  + " = cu_gate(" + quiddpro_func[gates[i].GetType()] + "(";
-            
-            if (gates[i].GetType() < Gate::Type::rx || gates[i].GetType() == Gate::Type::ph) {
-                file << "1), \"";
-            }
-            else if (gates[i].GetType() < Gate::Type::cz) {
-                file << to_string(gates[i].GetTheta()[0]) + " * pi, 1), \"";
-            }
-        }
-        
-        if (gates[i].GetType() != Gate::Type::cz) {
-            int q = 0;
-            if (control) {
-                for (; q < gates[i].GetNumControls(); ++q) {
-                    file << "c" + to_string(gates[i].GetQubits()[q] + 1);
-                }
-            }
-            
-            auto num_qubits = (int)gates[i].GetQubits().size();
-            for (; q < num_qubits; ++q) {
-                file << "x" + to_string(gates[i].GetQubits()[q] + 1);
-            }
-            file << "\", " + to_string(qubits) << ");\n";
-        }
-        
-        if(op_count > 1) {
-            file << "op = ";
-            for (int n = 0; n < op_count; ++n) {
-                if (n != 0)
-                    file << "-";
-                
-                file << "op" + to_string(n);
-            }
-            file << ";\n";
-            file << "state = op * state";
-        }
-        else
-            file << "state = op0 * state";
-    }
-    
-    if (layers_last_H && gates.back().GetType() != Gate::Type::h) {
-        for (int j = 0; j < layers_last_H; ++j) {        
-            for (int i = 0; i < qubits; ++i) {
-                file << ";\nop0 = cu_gate(hadamard(1), \"x" << i + 1 << "\" ," << qubits
-                << ");\nstate = op0 * state";
-            }
-        }
-    }
 }
 
 void Circuit::
