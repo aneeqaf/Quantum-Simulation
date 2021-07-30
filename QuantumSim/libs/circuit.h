@@ -28,7 +28,6 @@ using idx_size = unsigned long long;
 
 class Circuit {
 private:
-    static vector<string> quiddpro_func;
     static unordered_map<string, gate_generator_ptr> gate_funcs;
     vector<Gate> gates;
     vector<idx_size> clock_cycles;

@@ -8,6 +8,27 @@
 
 #include "circuit_kernels.h"
 
+bool
+isCrossingGate(idx_size gate_idx,
+               idx_size qubits,
+               const vector<Gate>& gates,
+               const QubitPartition& qp)
+{
+    const auto& gate_qubits = gates[gate_idx].GetQubits();
+    return gate_qubits.size() > 1 &&
+        (qp.globalToBlock(qubits - 1 - gate_qubits[0]) !=  qp.globalToBlock(qubits - 1 - gate_qubits[1]));
+}
+
+int
+GetCycleNumForGateIdx(idx_size gate_idx, const vector<idx_size>& clock_cycles)
+{
+    for (int c = 0; c < (int)clock_cycles.size(); ++c) {
+        if (gate_idx < clock_cycles[c])
+            return c;
+    }
+    return (int)clock_cycles.size();
+}
+
 void
 PrintGates(const vector<Gate>& gates, idx_size num_qubits, const QubitPartition& qp)
 {
@@ -125,6 +146,31 @@ CheckIfNearestNeighbor(idx_size q0,
     }
 }
 
+void
+CoalesceRzGates(vector<Gate>& gates)
+{
+    // Assume gates are already clustered
+    for (idx_size i = 0; i < gates.size(); ++i) {
+        unordered_map<idx_size, float> rz_idxs;
+        idx_size j = i;
+        // First collect all the gates
+        for (; j < gates.size() && gates[i].GetType() == Gate::Type::rz; ++j) {
+            auto q = gates[j].GetQubits()[0];
+            if (rz_idxs.count(q) == 0)  rz_idxs[q] = gates[j].GetTheta()[0];
+            else {
+                rz_idxs[q] += gates[j].GetTheta()[0];
+                gates.erase(gates.begin() + j);
+            }
+        }
+        // Update the gates in the cluster to have the cumulative phases
+        for (j = i; j < gates.size() && gates[i].GetType() == Gate::Type::rz; ++j) {
+            auto q = gates[j].GetQubits()[0];
+            gates[j] = Gate(Gate::Type::rz, 0, true, {gates[j].GetQubits()[0]}, {rz_idxs[q]});
+        }
+        i = j;
+    }
+}
+
 // TODO: The way the gates are arranged affects the clustering. Not sure if there is a way to overcome that
 // TODO: Currently, can only have one type of 1q non-diag gate incident on a qubit
 idx_size
@@ -226,23 +272,19 @@ ClusterSimilarGates(vector<Gate>& gates,
             count_2q_gates += last_swap - i;
     }
     
-    // TODO : Move all diagonal gates to front. Order shouldn't matter.
-    for (idx_size i = start_idx; i < end_idx; ++i) {
-        idx_size j = i;
-        if (gates[i].IsDiagonal()) {
-            if (gates[j].GetType() != Gate::Type::cz) {
-                for (; j < end_idx && gates[j].GetType() != Gate::Type::cz; ++j) {}
-                
-                idx_size count_CZ = 0;
-                for (; j < end_idx && gates[j].GetType() == Gate::Type::cz; ++j)
-                    swap(gates[i + count_CZ++], gates[j]);
-            }
-            else {
-                for (; j < end_idx && gates[j].IsDiagonal(); ++j) {}
-            }
-        }
-        i = j;
-    }
+//    // TODO : Move all diagonal gates to front. Order shouldn't matter.
+//    for (idx_size i = start_idx; i < end_idx; ++i) {
+//        idx_size j = i;
+//        if (gates[i].IsDiagonal()) {
+//                idx_size count_diag = 0;
+//                for (; j < end_idx && gates[j].IsDiagonal(); ++j)
+//                    swap(gates[i + count_diag++], gates[j]);
+//            else {
+//                for (; j < end_idx && gates[j].IsDiagonal(); ++j) {}
+//            }
+//        }
+//        i = j;
+//    }
     
 #ifdef PrintG
     PrintGates(gates, num_qubits, qp);

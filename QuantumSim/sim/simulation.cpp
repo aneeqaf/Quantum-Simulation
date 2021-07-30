@@ -50,6 +50,10 @@ PopulateBenchmarkMap()
         cmplx(-2.26996e-05, -4.063e-06), cmplx(0.000146145, 3.12126e-06), cmplx(-8.68663e-06, -7.95167e-05)};
     benchmark["inst_5x6_21_0_22"] = {cmplx(-1.141978e-05, 8.101054e-06), cmplx(-2.860430e-05, -4.218435e-05),
         cmplx(-2.930546e-05, 4.713042e-06), cmplx(1.8098e-12, -1.160662e-06), cmplx(-1.208545e-05, -2.048368e-07)};
+    benchmark["inst_5x5_27_5_435"] = {cmplx(9.59515e-05, 0.000183951), cmplx(0.000163744, 2.90668e-05),
+        cmplx(6.16249e-05, -0.000169552), cmplx(-3.86031e-05, -7.94697e-05), cmplx(0.000110518, -9.92812e-05)};
+    benchmark["inst_5x6_27_5_524"] = {cmplx(-1.96742e-05, 1.59778e-05), cmplx(3.55476e-08, 4.40849e-06),
+        cmplx(-1.06781e-05, 1.58316e-06), cmplx(1.256e-06, 4.03744e-05), cmplx(3.07262e-05, -3.1141e-05)};
     benchmark["inst_8_8_26_0_chen_6"] = {cmplx(1.01709e-13, 9.58446e-13), cmplx(-2.3139e-12, 2.4555e-13),
         cmplx(1.01712e-13, 9.58448e-13), cmplx(1.204301e-10, 1.46254e-12), cmplx(-2.89576e-10, 3.58332e-10)};
     benchmark["inst_8_8_26_0_chen_11"] = {cmplx(1.904682e-10, 2.036684e-10), cmplx(-6.751987e-11, 2.830940e-11),
@@ -671,16 +675,12 @@ SimulationLoop(GenericQuantumState &amp,
         }
         
         curr_gate = i;
-//        cout << "Current gate: " << curr_gate << endl;
         Gate& current_gate = circuit.GetGateFromIndex(i);
-        if(current_gate.GetType() == Gate::Type::cz ||
-           current_gate.GetType() == Gate::Type::t) {
+        if(current_gate.IsDiagonal()) {
 
             double cycle_elapsed_t = time.GetElapsedTime();
             current_cycle = circuit.GetCycleNumForGateIdx(i);
             
-//            if (amp.book_keep)
-//                amp.data_per_cycles.cycles.push_back(current_cycle);
           // TODO: Change the way the cycles are read. What if CZ and T gates are not present?
             // Maybe need a class that defines structure of cycles.
             if (current_gate.GetType() == Gate::Type::t ||
@@ -718,59 +718,45 @@ SimulationLoop(GenericQuantumState &amp,
                 }
                 
                 cycle_time.StartTime();
-                idx_size prev_i_CZT = i;
+                idx_size end_cycle_gate_idx = circuit.GateIndexForCycle(current_cycle);
                 bitset<128> T_bitmasks[2] = {0};
                 // last slot to mark whether there are any CZ qubits.
                 bitset<128> CZ_bitmasks[total_circuit_qubits + 1];
                 for (int i = 0; i <= total_circuit_qubits; ++i)
                     CZ_bitmasks[i] = 0;
-                FormCZTGatesBitmask(i, CZ_bitmasks, T_bitmasks, gates, total_circuit_qubits);
-                idx_size prev_i_XY = i;
+                idx_size num_CZT_gates = FormCZTGatesBitmask(i, end_cycle_gate_idx, CZ_bitmasks, T_bitmasks,
+                                                             gates, total_circuit_qubits);
                 unordered_map<Gate::Type, bitset<128>> bitmasks;
-                Form1QGatesBitmask(bitmasks, i, gates, {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
+                idx_size num_1Q_gates = Form1QGatesBitmask(bitmasks, i, end_cycle_gate_idx, gates,
+                                                           {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
 
                 int xCZ_applied_in_cycle = -1;
-//                if (bitmasks[Gate::Type::X_1_2] != 0 || bitmasks[Gate::Type::Y_1_2] != 0) {
                 xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
                                                                       suffix_size, bitmasks[Gate::Type::x_1_2],
                                                                       bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h],
                                                                       CZ_bitmasks, T_bitmasks, config -> th);
-//                cout << "idx=" << curr_gate << ": remaining_cz_bits=" << remaining_cz_bits << ", xCZ_applied_in_cycle="<< xCZ_applied_in_cycle <<"\n";
                 ++amp.count_of_category.CZT_layers;
                 if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)  ++amp.count_of_category.XY_layers;
                 if (bitmasks[Gate::Type::h] != 0) ++amp.count_of_category.H_layers;
-//                }
                 
                 terminate = xCZ_applied_in_cycle != -1 ? true : false;
                 
                 if (amp.book_keep) {
-//                    if (config -> sim_type == Config::SimType::FullState) {
-//                        amp.data_per_cycles.xCZ_H.push_back(0);
-//                        amp.data_per_cycles.xCZ_V.push_back(0);
-//                    }
-                    
-                    if (!terminate) {
-                        amp.count_of_category.CZ_T += prev_i_XY - prev_i_CZT - amp.count_of_category.xCZ_not_applied;
-//                        amp.data_per_cycles.T_gates.push_back(T_bitmasks[0].count() + T_bitmasks[1].count());
-//                        amp.data_per_cycles.CZ_gates.push_back(prev_i_XY - prev_i_CZT -
-//                                                               amp.data_per_cycles.T_gates.back() -
-//                                                               amp.count_of_category.xCZ_not_applied);
-                    }
-                    else if (xCZ_applied_in_cycle) {
+                    if (!terminate)
+                        amp.count_of_category.CZ_T += num_CZT_gates - amp.count_of_category.xCZ_not_applied;
+                    else if (xCZ_applied_in_cycle)
                         amp.count_of_category.CZ_T += xCZ_applied_in_cycle;
-//                        amp.data_per_cycles.CZ_gates.push_back(last_xCZ_idx); //not accurate
-                    }
-//                    amp.data_per_cycles.XY_gates.push_back(i - prev_i_XY);
                 }
                 
                 CZ_T_top_time += CZT_time.GetElapsedTime();
                 
+                // TODO: xCZ termination middle of cycle not supported
                 if (terminate) {
-                    curr_gate = prev_i_CZT + xCZ_applied_in_cycle;
+                    curr_gate = i;
                     return terminate;
                 }
                 
-                --i;
+                i += num_CZT_gates + num_1Q_gates - 1;
             }
             else {
                 amp.ApplyCGate(current_gate.GetNumControls(), current_gate.GetQubits(),
@@ -1374,10 +1360,12 @@ PrintSimReport(GenericQuantumState& amp,
     
     if (config -> proc_prefix_bits == 0) {
         
-        string key = config -> infile.substr(0, config -> infile.find_first_of('.')) + "_" + to_string(circuit.GetNumCycles());
+        string key0 = config -> infile.substr(0, config -> infile.find_first_of('.')) + "_" + to_string(circuit.GetGates().size());
+        string key1 = config -> infile.substr(0, config -> infile.find_first_of('.')) + "_" + to_string(circuit.GetNumCycles());
         cout << "Correctness check : ";
     
-        if (benchmark.count(key)) {
+        if (benchmark.count(key0) || benchmark.count(key1)) {
+            string key = benchmark.count(key0) ? key0 : key1;
             if (real(amp[3]) - real(benchmark[key][0]) < 1e-9
                 && imag(amp[3]) - imag(benchmark[key][0]) < 1e-9
                 && real(amp[temp_amp_size/4]) - real(benchmark[key][1]) < 1e-9

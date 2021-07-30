@@ -7,33 +7,26 @@
 
 #include "kernels.h"
 
-void
+idx_size
 Form1QGatesBitmask(unordered_map<Gate::Type, bitset<128>>& bitmasks,
-                   idx_size& gate_i,
+                   idx_size gate_i,
+                   idx_size end_idx,
                    const vector<Gate>& all_gates,
                    const vector<Gate::Type>& gate_type)
 {
-//    vector<int> cluster_qubits = FormBlockOfXYHGates(gate_i, gate_type, all_gates);
-//    unordered_map<Gate::Type, bitset<128>> bitmasks;
+    idx_size num_1Q_gates = 0;
+    
     for (auto g_type : gate_type)
         bitmasks[g_type] = bitset<128>(0);
     
-    auto curr_type = all_gates[gate_i].GetType();
-    
-    if (bitmasks.count(curr_type) == 0)
-        return;
-    
-    for (; gate_i < all_gates.size(); ++gate_i) {
-        if (all_gates[gate_i].GetType() != curr_type) {
-            curr_type = all_gates[gate_i].GetType();
-            if (bitmasks.count(curr_type) == 0)
-                return;
+    for (; gate_i < end_idx; ++gate_i) {
+        if (bitmasks.count(all_gates[gate_i].GetType()) != 0) {
+            ++num_1Q_gates;
+            bitmasks[all_gates[gate_i].GetType()][all_gates[gate_i].GetQubits()[0]] = 1;
         }
-        bitmasks[curr_type][all_gates[gate_i].GetQubits()[0]] = 1;
     }
-//    for (idx_size i = 0; i < cluster_qubits.size(); ++i)
-//        bitmask[cluster_qubits[i]] = 1;
-//
+    
+    return num_1Q_gates;
 }
 
 void
@@ -92,26 +85,32 @@ ExtractIndicesForAmp(idx_size* strides,
     }
 }
 
-void
-FormCZTGatesBitmask(idx_size& gate_i,
+idx_size
+FormCZTGatesBitmask(idx_size gate_i,
+                    idx_size end_idx,
                     bitset<128>* __restrict CZ_bitmasks,
                     bitset<128>* __restrict T_bitmasks /*2*/,
                     const vector<Gate>& cluster,
                     const int num_qubits_amp)
 {
+    idx_size num_CZT_gates = 0;
     bool any_CZ = false;
-    for(;gate_i < cluster.size(); ++gate_i) {
+    for(; gate_i < end_idx; ++gate_i) {
         if (cluster[gate_i].GetType() == Gate::Type::cz) {
+            ++num_CZT_gates;
             any_CZ = true;
             GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
         }
-        else if (cluster[gate_i].GetType() == Gate::Type::t)
+        else if (cluster[gate_i].GetType() == Gate::Type::t) {
+            ++num_CZT_gates;
             GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
-        else break;
+        }
     }
     
     if (any_CZ)
         CZ_bitmasks[num_qubits_amp] = 1;
+    
+    return num_CZT_gates;
 }
 
 vector<idx_size>

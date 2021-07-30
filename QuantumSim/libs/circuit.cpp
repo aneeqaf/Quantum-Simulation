@@ -7,23 +7,12 @@
 
 #include "circuit.h"
 
-vector<string> Circuit::quiddpro_func;
 unordered_map<string, gate_generator_ptr> Circuit::gate_funcs;
 
 Circuit::
 Circuit(const string input_filename, idx_size num_q, idx_size depth)
 : qp(nullptr), qubits(num_q), rearranged(false)
 {
-    quiddpro_func.push_back("hadamard");
-    quiddpro_func.push_back("sigma_x");
-    quiddpro_func.push_back("sigma_y");
-    quiddpro_func.push_back("sigma_z");
-    quiddpro_func.push_back("");
-    quiddpro_func.push_back("rx");
-    quiddpro_func.push_back("ry");
-    quiddpro_func.push_back("rz");
-    quiddpro_func.push_back("phase");
-    
     gate_funcs["h"] = create_Hadamard;
     gate_funcs["t"] = create_T;
     gate_funcs["y_1_2"] = create_Y_1_2;
@@ -100,11 +89,11 @@ RecalibrateGoogleClockCycles()
         
     // Assume a non-diag gate incident on same qubit initiates a new cycle
     for (idx_size i = qubits; i < gates.size(); ++i) {
-        if (gates[i].GetType() == Gate::cz || gates[i].GetType() == Gate::h) {
+        if (gates[i].IsDiagonal() || gates[i].GetType() == Gate::h) {
             clock_cycles.push_back(i);
             
-            for (; i < gates.size() && gates[i].GetType() == Gate::Type::cz; ++i) {}
-            for (; i < gates.size() && gates[i].GetType() != Gate::Type::cz; ++i) {}
+            for (; i < gates.size() && gates[i].IsDiagonal(); ++i) {}
+            for (; i < gates.size() && !gates[i].IsDiagonal(); ++i) {}
             --i;
         }
     }
@@ -354,14 +343,14 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                 PrintGates(gates, qubits, *qp);
 #endif
                 // if xCZ are not completely obstructed and other xCZ are seen, coalesce them and restart that cycle
-                if (boundary_qubits_obstructed < xCZ_to_collect && xCZ_to_collect == remaining_path_bits) {
+                if (boundary_qubits_obstructed == 0 && xCZ_to_collect == remaining_path_bits) {
                     j -= gates_to_delete.size();
                     num_xCZ_in_cluster -= xCZ_to_collect;
                 }
                 // Move it back since the gates moved belong to the next path
                 else if (j < gates.size() && remaining_path_bits < num_xCZ_in_cluster) {
                     j -= gates_to_delete.size();
-                    ::ClusterSimilarGates(gates, qubits, *qp, j);
+//                    ::ClusterSimilarGates(gates, qubits, *qp, j);
                 }
                 // Move back but add back xCZ already processed
                 else if (j < gates.size())
@@ -676,20 +665,79 @@ ReadGoogleCircuitFile(const string& input_file,
 void Circuit::
 OptimizeCircuitArrangement(const Config* config)
 {
+    // TODO: Find a better solution here. Super naive temporary solution.
     if (!isRearranged()) {
-        if (google) {
-            if (!ClockCycleEmpty())
-                GroupAlternateCycles();
-            ClusterSimilarGates();
-//            GroupSimilarGates();
-        }
+        vector<Gate> gates_op1, gates_op2 = gates;
+        vector<idx_size> clock_cycles_op1;
+        idx_size num_cycles_op1, num_cycles_op2;
+        
+        // First option circuit preprocessing
+        if (!ClockCycleEmpty())
+            GroupAlternateCycles();
+        ClusterSimilarGates();
         
         if (config -> sim_type != Config::SimType::FullState)
             MovexCZGatesRewrite(config -> proc_prefix_bits,
                                 config -> ranges_bits, config -> dfs_length,
                                 config -> nearest_neighbors);
-        
         RecalibrateGoogleClockCycles();
+        
+        gates_op1 = gates;
+        clock_cycles_op1 = clock_cycles;
+        num_cycles_op1 = clock_cycles.size();
+        
+        // Second option circuit preprocessing
+        gates = gates_op2;
+        ClusterSimilarGates();
+        
+        if (config -> sim_type != Config::SimType::FullState)
+            MovexCZGatesRewrite(config -> proc_prefix_bits,
+                                config -> ranges_bits, config -> dfs_length,
+                                config -> nearest_neighbors);
+        RecalibrateGoogleClockCycles();
+        num_cycles_op2 = clock_cycles.size();
+        
+        // Decide between two options
+        if (config -> sim_type  == Config::SimType::FullState) {
+            if (num_cycles_op1 < num_cycles_op2) {
+                gates = gates_op1;
+                clock_cycles = clock_cycles_op1;
+            }
+        }
+        else {
+            idx_size branching_gates_op1 = 0, branching_gates_op2 = 0,
+            remaining_branching_bits = config -> dfs_length;
+            for (branching_gates_op1 = gates_op1.size();
+                 branching_gates_op1 >= 0 && remaining_branching_bits != 0;
+                 --branching_gates_op1) {
+                if (::isCrossingGate(branching_gates_op1, qubits, gates_op1, *qp)) --remaining_branching_bits;
+            }
+            
+            remaining_branching_bits = config -> dfs_length;
+            for (branching_gates_op2 = gates.size();
+                 branching_gates_op2 >= 0 && remaining_branching_bits != 0;
+                 --branching_gates_op2) {
+                if (isCrossingGate(branching_gates_op2)) --remaining_branching_bits;
+            }
+            
+            idx_size op1_branching_cycles = num_cycles_op1 - ::GetCycleNumForGateIdx(branching_gates_op1, clock_cycles_op1),
+            op2_branching_cycles = num_cycles_op2 - GetCycleNumForGateIdx(branching_gates_op2);
+            // '5' is an arbitrary threshold.
+            // TODO: remove arbitary threshold and calculate precisely the number of memory passes
+            // The correct way to do this is to see where the extra cycles are
+            // and calculate how many more memory passes they will lead to
+            if ((num_cycles_op1 < num_cycles_op2 && op1_branching_cycles < op2_branching_cycles) ||
+                (num_cycles_op1 < num_cycles_op2 - 5 && op1_branching_cycles > op2_branching_cycles) ||
+                (num_cycles_op1 > num_cycles_op2 + 5 && op1_branching_cycles < op2_branching_cycles)) {
+                gates = gates_op1;
+                clock_cycles = clock_cycles_op1;
+            }
+        }
+        
+#ifdef PrintG
+        PrintGates(gates, qubits, *qp);
+#endif
+        rearranged = true;
     }
 }
 
@@ -777,11 +825,7 @@ GetGates() const
 int Circuit::
 GetCycleNumForGateIdx(idx_size gate_idx) const
 {
-    for (int c = 0; c < (int)clock_cycles.size(); ++c) {
-        if (gate_idx < (idx_size)GateIndexForCycle(c))
-            return c;
-    }
-    return (int)clock_cycles.size();
+    return ::GetCycleNumForGateIdx(gate_idx, clock_cycles);
 }
 
 bool Circuit::
@@ -793,7 +837,5 @@ isRearranged() const
 bool Circuit::
 isCrossingGate(idx_size gate_idx) const
 {
-    const auto& gate_qubits = gates[gate_idx].GetQubits();
-    return gate_qubits.size() > 1 &&
-        (qp -> globalToBlock(qubits - 1 - gate_qubits[0]) !=  qp -> globalToBlock(qubits - 1 - gate_qubits[1]));
+    return ::isCrossingGate(gate_idx, qubits, gates, *qp);
 }

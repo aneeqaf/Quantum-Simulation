@@ -75,6 +75,7 @@ def AddPrintOptToCommand(seed, command, idx_file, num_idx):
 
 def RearrangeCicuit(input_filename, command, cz_path):
 	if "rearranged" not in input_filename:
+		print ("Command for rearranging circuit : " + command + cz_path + " -C")
 		os.system(command + cz_path + " -C")
 		command = command.replace(input_filename, input_filename + ".rearranged")
 		print ("Command after circuit rearrangement : " + command)

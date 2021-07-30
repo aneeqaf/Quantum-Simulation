@@ -20,7 +20,7 @@ Rollright was developed in c++17 and uses g++7.
 
 ### Command line options
 
-**Mandatory argument** : You must either specify the input file (-i).
+**Mandatory argument** : You must specify the input file (-i).
 
 * **--CZ_path, -c**
 	* CZ path is usually specified for distributed simulation.
