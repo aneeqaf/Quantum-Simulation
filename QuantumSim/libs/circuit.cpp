@@ -199,7 +199,7 @@ ClusterSimilarGates()
 }
 
 // TODO: Generalize this to other > 1q gates that cross
-pair<int, int> Circuit::
+void Circuit::
 MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     idx_size range_bits,
                     idx_size branch_bits,
@@ -389,8 +389,6 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
 #ifdef PrintG
     PrintGates(gates, qubits, *qp);
 #endif
-    
-    return pair<int, int> (total_CZ, total_xCZ);
 }
 
 
@@ -536,6 +534,12 @@ MovexCZGates(idx_size proc_prefix_bits,
     GroupSimilarGates();
     
     return pair<int, int> (count_CZ, total_xCZ_count);
+}
+
+idx_size Circuit::
+CalculateTotalNumCycles(const Config* config)
+{
+    return ::CalculateTotalNumCycles(qubits, config, clock_cycles, gates, *qp);
 }
 
 void Circuit::
@@ -705,30 +709,9 @@ OptimizeCircuitArrangement(const Config* config)
             }
         }
         else {
-            idx_size branching_gates_op1 = 0, branching_gates_op2 = 0,
-            remaining_branching_bits = config -> dfs_length;
-            for (branching_gates_op1 = gates_op1.size();
-                 branching_gates_op1 >= 0 && remaining_branching_bits != 0;
-                 --branching_gates_op1) {
-                if (::isCrossingGate(branching_gates_op1, qubits, gates_op1, *qp)) --remaining_branching_bits;
-            }
-            
-            remaining_branching_bits = config -> dfs_length;
-            for (branching_gates_op2 = gates.size();
-                 branching_gates_op2 >= 0 && remaining_branching_bits != 0;
-                 --branching_gates_op2) {
-                if (isCrossingGate(branching_gates_op2)) --remaining_branching_bits;
-            }
-            
-            idx_size op1_branching_cycles = num_cycles_op1 - ::GetCycleNumForGateIdx(branching_gates_op1, clock_cycles_op1),
-            op2_branching_cycles = num_cycles_op2 - GetCycleNumForGateIdx(branching_gates_op2);
-            // '5' is an arbitrary threshold.
-            // TODO: remove arbitary threshold and calculate precisely the number of memory passes
-            // The correct way to do this is to see where the extra cycles are
-            // and calculate how many more memory passes they will lead to
-            if ((num_cycles_op1 < num_cycles_op2 && op1_branching_cycles < op2_branching_cycles) ||
-                (num_cycles_op1 < num_cycles_op2 - 5 && op1_branching_cycles > op2_branching_cycles) ||
-                (num_cycles_op1 > num_cycles_op2 + 5 && op1_branching_cycles < op2_branching_cycles)) {
+            idx_size op1_cycles = ::CalculateTotalNumCycles(qubits, config, clock_cycles_op1, gates_op1, *qp),
+                     op2_cycles = CalculateTotalNumCycles(config);
+            if (op1_cycles < op2_cycles) {
                 gates = gates_op1;
                 clock_cycles = clock_cycles_op1;
             }

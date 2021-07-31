@@ -16,6 +16,7 @@
 #include <set>
 #include <string>
 #include <stdio.h>
+#include <tuple>
 #include <vector>
 
 #include "circuit_kernels.h"
@@ -43,10 +44,10 @@ public:
     void RecalibrateGoogleClockCycles();
     idx_size GroupSimilarGates();
     idx_size ClusterSimilarGates();
-    pair<int, int> MovexCZGatesRewrite(idx_size proc_prefix_bits,
-                                       idx_size range_bits,
-                                       idx_size branch_bits,
-                                       const bool nearest_neigbors);
+    void MovexCZGatesRewrite(idx_size proc_prefix_bits,
+                             idx_size range_bits,
+                             idx_size branch_bits,
+                             const bool nearest_neigbors);
     pair<int, int> MovexCZGates(idx_size proc_prefix_bits,
                                 idx_size range_bits,
                                 idx_size branch_bits,
@@ -68,6 +69,7 @@ public:
     Gate& GetGateFromIndex(idx_size i);
     const vector<Gate>& GetGates() const;
     int GetCycleNumForGateIdx(idx_size gate_idx) const;
+    idx_size CalculateTotalNumCycles(const Config* config);
     pair<int, int> GetTwoQGateCount() const;
     bool isRearranged() const;
     bool isCrossingGate(idx_size gate_idx) const;

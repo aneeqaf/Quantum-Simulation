@@ -146,6 +146,51 @@ CheckIfNearestNeighbor(idx_size q0,
     }
 }
 
+idx_size
+CalculateTotalNumCycles(const idx_size num_qubits,
+                        const Config* config,
+                        const vector<idx_size>& clock_cycles,
+                        const vector<Gate>& gates,
+                        const QubitPartition& qp)
+{
+    if (config -> sim_type == Config::SimType::FullState)
+    {
+        return clock_cycles.size();
+    }
+    else {
+        array<idx_size, 3> proc_ranges_branch_cycle {0, 0, 0};
+        auto current_mode = Config::ProcPrefix;
+        idx_size current_path_bits = config -> proc_prefix_bits;
+        for (idx_size i = 0; i < gates.size(); ++i) {
+            if (isCrossingGate(i, num_qubits, gates, qp)) {
+                if (current_path_bits == 0) {
+                    switch (current_mode) {
+                        case Config::ProcPrefix:
+                            proc_ranges_branch_cycle[1] = ::GetCycleNumForGateIdx(i, clock_cycles);
+                            current_mode = Config::Ranges;
+                            current_path_bits = config -> ranges_bits;
+                            break;
+                        case Config::Ranges:
+                            proc_ranges_branch_cycle[2] = ::GetCycleNumForGateIdx(i, clock_cycles);
+                            goto exit_loop;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                --current_path_bits;
+            }
+        }
+        exit_loop:;
+        
+        idx_size num_proc_cycles = proc_ranges_branch_cycle[1],
+        num_ranges_cycles = proc_ranges_branch_cycle[2] - proc_ranges_branch_cycle[1],
+        num_branches_cycles = clock_cycles.size() - proc_ranges_branch_cycle[2];
+        return num_proc_cycles + (1ull << num_ranges_cycles)
+                + ((1ull << num_ranges_cycles) * (1ull << num_branches_cycles));
+    }
+}
+
 void
 CoalesceRzGates(vector<Gate>& gates)
 {

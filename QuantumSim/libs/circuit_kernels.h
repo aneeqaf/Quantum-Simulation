@@ -83,6 +83,13 @@ void CheckIfNearestNeighbor(idx_size q0,
                             idx_size q1,
                             const QubitPartition& qp);
 
+idx_size
+CalculateTotalNumCycles(const idx_size num_qubits,
+                        const Config* config,
+                        const vector<idx_size>& clock_cycles,
+                        const vector<Gate>& gates,
+                        const QubitPartition& qp);
+
 void
 CoalesceRzGates(vector<Gate>& gates);
 
