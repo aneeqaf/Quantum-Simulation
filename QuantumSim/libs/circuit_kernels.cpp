@@ -9,7 +9,7 @@
 #include "circuit_kernels.h"
 
 bool
-isCrossingGate(idx_size gate_idx,
+IsCrossingGate(idx_size gate_idx,
                idx_size qubits,
                const vector<Gate>& gates,
                const QubitPartition& qp)
@@ -162,7 +162,7 @@ CalculateTotalNumCycles(const idx_size num_qubits,
         auto current_mode = Config::ProcPrefix;
         idx_size current_path_bits = config -> proc_prefix_bits;
         for (idx_size i = 0; i < gates.size(); ++i) {
-            if (isCrossingGate(i, num_qubits, gates, qp)) {
+            if (IsCrossingGate(i, num_qubits, gates, qp)) {
                 if (current_path_bits == 0) {
                     switch (current_mode) {
                         case Config::ProcPrefix:
@@ -214,6 +214,68 @@ CoalesceRzGates(vector<Gate>& gates)
         }
         i = j;
     }
+}
+
+void
+PostProcessAfterClustering(idx_size num_qubits,
+                           vector<Gate>& gates,
+                           vector<idx_size>& clock_cycles,
+                           bool google)
+{
+    clock_cycles.clear();
+        
+    idx_size prev_non_diag_start = 0;
+    idx_size prev_num_1q_gates = 0;
+    // Assume a non-diag gate incident on same qubit initiates a new cycle
+    for (idx_size i = num_qubits; i < gates.size(); ++i) {
+        idx_size num_1q_gates = 0;
+        bitset<128> obstructed_qubits;
+
+        if (gates[i].IsDiagonal() || gates[i].GetType() == Gate::h) {
+            clock_cycles.push_back(i);
+            
+            for (; i < gates.size() && gates[i].IsDiagonal(); ++i) {
+                auto gate_qubits = gates[i].GetQubits();
+                for (auto q : gate_qubits) obstructed_qubits[q] = 1;
+            }
+            
+            idx_size non_diag_start = i;
+            for (; i < gates.size() && !gates[i].IsDiagonal(); ++i) {
+                auto gate_qubits = gates[i].GetQubits();
+                if (google && gates[i].GetType() == Gate::Type::h) break;
+                if (gate_qubits.size() == 1) ++num_1q_gates;
+                for (auto q : gate_qubits) obstructed_qubits[q] = 1;
+            }
+                        
+            // If there was an odd 1q gate in previous cycle, see if it can be moved in current cycle
+            if (prev_num_1q_gates % 2 == 1) {
+                idx_size gate_idx_to_move = 0;
+                for (idx_size j = prev_non_diag_start; j < i; ++j) {
+                    if (!obstructed_qubits[gates[j].GetQubits()[0]]) {
+                        gate_idx_to_move = j;
+                        ++num_1q_gates;
+                        clock_cycles[clock_cycles.size() - 1] -= 1;
+                        break;
+                    }
+                }
+                if (gate_idx_to_move != 0) {
+                    gates.insert(gates.begin() + i, gates[gate_idx_to_move]);
+                    gates.erase(gates.begin() + gate_idx_to_move);
+                }
+            }
+            
+            prev_num_1q_gates = num_1q_gates;
+            prev_non_diag_start = non_diag_start;
+            
+            if (google)
+                for (; i < gates.size() && gates[i].GetType() == Gate::Type::h; ++i) {}
+
+                        
+            --i;
+        }
+    }
+    
+    clock_cycles.push_back(gates.size());
 }
 
 // TODO: The way the gates are arranged affects the clustering. Not sure if there is a way to overcome that

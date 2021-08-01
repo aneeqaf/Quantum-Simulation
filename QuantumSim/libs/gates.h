@@ -9,8 +9,11 @@
 #define gates_h
 
 #include <algorithm>
+#include <boost/functional/hash.hpp>
+#include <cassert>
 #include <complex>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <stdio.h>
 #include <utility>
@@ -85,6 +88,28 @@ public:
     const vector<float>& GetTheta() const { return thetas; }
     bool IsDiagonal() const { return diagonal; }
     idx_size GetNumControls() const { return num_controls; }
+};
+
+struct Hash_1q_Gate {
+    idx_size qubit;
+    float theta;
+    Gate::Type type;
+    
+    bool operator==(const Hash_1q_Gate& g) const {
+        return (qubit == g.qubit
+              && theta == g.theta
+              && type == g.type);
+    }
+    
+    size_t operator()(const Hash_1q_Gate& g) const
+    {
+        size_t seed = 0;
+        boost::hash_combine(seed, g.qubit);
+        boost::hash_combine(seed, g.theta);
+        boost::hash_combine(seed, g.type);
+        
+        return seed;
+    }
 };
 
 // Args start with qubits and then phases in order

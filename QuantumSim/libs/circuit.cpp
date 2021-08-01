@@ -83,8 +83,6 @@ GroupAlternateCycles()
 void Circuit::
 RecalibrateGoogleClockCycles()
 {
-    unordered_map<idx_size, Gate::Type> gate_obstruction;
-    
     clock_cycles.clear();
         
     // Assume a non-diag gate incident on same qubit initiates a new cycle
@@ -211,7 +209,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
             idx_size j = i;
             idx_size cycle_count_xCZ = 0;
             for (; j < gates.size() && gates[j].GetType() == Gate::Type::cz; ++j) {
-                if (isCrossingGate(j)) {
+                if (IsCrossingGate(j)) {
                     ++count_xCZ;
                     swap(gates[i + cycle_count_xCZ++], gates[j]);
                 }
@@ -237,7 +235,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
         unordered_map<idx_size, bool> recorded_qubit;
         vector<Gate> gates_to_move;
         
-        if (isCrossingGate(i)){
+        if (IsCrossingGate(i)){
             idx_size j = i;
             
             for (; j < gates.size(); ++j) {
@@ -248,7 +246,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     CheckIfNearestNeighbor(q0, q1, *qp);
                 }
                 
-                if (isCrossingGate(j))
+                if (IsCrossingGate(j))
                     ++num_xCZ_in_cluster;
                 else if (current_mode != Config::SimMode::Branch) break;
                 else if (current_mode == Config::SimMode::Branch)
@@ -286,7 +284,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     if (gate_qubits.size() == 2) {
                         idx_size q1 = gate_qubits[1];
                         
-                        if (isCrossingGate(j)) {
+                        if (IsCrossingGate(j)) {
                             if (xCZ_to_collect == remaining_path_bits) break;
                             
                             ++xCZ_to_collect;
@@ -670,10 +668,8 @@ void Circuit::
 OptimizeCircuitArrangement(const Config* config)
 {
     // TODO: Find a better solution here. Super naive temporary solution.
-    if (!isRearranged()) {
-        vector<Gate> gates_op1, gates_op2 = gates;
-        vector<idx_size> clock_cycles_op1;
-        idx_size num_cycles_op1, num_cycles_op2;
+    if (!IsRearranged()) {
+        vector<Gate> gates_op2 = gates;
         
         // First option circuit preprocessing
         if (!ClockCycleEmpty())
@@ -684,11 +680,14 @@ OptimizeCircuitArrangement(const Config* config)
             MovexCZGatesRewrite(config -> proc_prefix_bits,
                                 config -> ranges_bits, config -> dfs_length,
                                 config -> nearest_neighbors);
-        RecalibrateGoogleClockCycles();
+        PostProcessAfterClustering(qubits, gates, clock_cycles);
+#ifdef PrintG
+        PrintGates(gates, qubits, *qp);
+#endif
         
-        gates_op1 = gates;
-        clock_cycles_op1 = clock_cycles;
-        num_cycles_op1 = clock_cycles.size();
+        vector<Gate> gates_op1 = gates;
+        vector<idx_size> clock_cycles_op1 = clock_cycles;
+        idx_size num_cycles_op1 = clock_cycles.size();
         
         // Second option circuit preprocessing
         gates = gates_op2;
@@ -698,8 +697,11 @@ OptimizeCircuitArrangement(const Config* config)
             MovexCZGatesRewrite(config -> proc_prefix_bits,
                                 config -> ranges_bits, config -> dfs_length,
                                 config -> nearest_neighbors);
-        RecalibrateGoogleClockCycles();
-        num_cycles_op2 = clock_cycles.size();
+        PostProcessAfterClustering(qubits, gates, clock_cycles);
+#ifdef PrintG
+        PrintGates(gates, qubits, *qp);
+#endif
+        idx_size num_cycles_op2 = clock_cycles.size();
         
         // Decide between two options
         if (config -> sim_type  == Config::SimType::FullState) {
@@ -812,13 +814,13 @@ GetCycleNumForGateIdx(idx_size gate_idx) const
 }
 
 bool Circuit::
-isRearranged() const
+IsRearranged() const
 {
     return rearranged;
 }
 
 bool Circuit::
-isCrossingGate(idx_size gate_idx) const
+IsCrossingGate(idx_size gate_idx) const
 {
-    return ::isCrossingGate(gate_idx, qubits, gates, *qp);
+    return ::IsCrossingGate(gate_idx, qubits, gates, *qp);
 }

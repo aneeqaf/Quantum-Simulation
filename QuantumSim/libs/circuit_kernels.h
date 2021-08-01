@@ -62,7 +62,7 @@ struct QubitsListKeyCmp {
 typedef unordered_map<idx_size, shared_ptr<GateMovement>> gate_movement_unordered_map_t;
 
 bool
-isCrossingGate(idx_size gate_idx,
+IsCrossingGate(idx_size gate_idx,
                idx_size qubits,
                const vector<Gate>& gates,
                const QubitPartition& qp);
@@ -79,9 +79,10 @@ void
 PrintGatesAndCycles(const vector<Gate>& gates,
                     const vector<idx_size>& clock_cycles);
 
-void CheckIfNearestNeighbor(idx_size q0,
-                            idx_size q1,
-                            const QubitPartition& qp);
+void
+CheckIfNearestNeighbor(idx_size q0,
+                       idx_size q1,
+                       const QubitPartition& qp);
 
 idx_size
 CalculateTotalNumCycles(const idx_size num_qubits,
@@ -92,6 +93,12 @@ CalculateTotalNumCycles(const idx_size num_qubits,
 
 void
 CoalesceRzGates(vector<Gate>& gates);
+
+void
+PostProcessAfterClustering(idx_size num_qubits,
+                           vector<Gate>& gates,
+                           vector<idx_size>& clock_cycles,
+                           bool google = true);
 
 idx_size
 ClusterSimilarGates(vector<Gate>& gates,
