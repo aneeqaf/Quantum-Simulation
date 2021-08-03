@@ -95,10 +95,10 @@ const __m256 knegZ[4] = {{0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
 //}
 
 __attribute__((always_inline)) inline void
-ApplyHGateAVX(cmplx* volatile __restrict amp,
-              const idx_size* volatile indices /*2*/)
+ApplyHGateAVX(cmplx* __restrict amp,
+              const idx_size* indices /*2*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     
@@ -110,10 +110,10 @@ ApplyHGateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyX12GateAVX(cmplx* volatile __restrict amp,
-                const idx_size* volatile indices /*2*/)
+ApplyX12GateAVX(cmplx* __restrict amp,
+                const idx_size* indices /*2*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     
@@ -139,10 +139,10 @@ ApplyX12GateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyY12GateAVX(cmplx* volatile __restrict amp,
-                const idx_size* volatile indices /*2*/)
+ApplyY12GateAVX(cmplx* __restrict amp,
+                const idx_size* indices /*2*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     
@@ -169,10 +169,10 @@ ApplyY12GateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyHHGateAVX(cmplx* volatile __restrict amp,
-               const idx_size* volatile indices /*4*/)
+ApplyHHGateAVX(cmplx* __restrict amp,
+               const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -195,10 +195,10 @@ ApplyHHGateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXX12GateAVX(cmplx* volatile __restrict amp,
-                 const idx_size* volatile indices /*4*/)
+ApplyXX12GateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -231,10 +231,10 @@ ApplyXX12GateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYY12GateAVX(cmplx* volatile __restrict amp,
-                 const idx_size* volatile indices /*4*/)
+ApplyYY12GateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -263,10 +263,10 @@ ApplyYY12GateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXY12GateAVX(cmplx* volatile __restrict amp,
-                 const idx_size* volatile indices /*4*/)
+ApplyXY12GateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -305,11 +305,11 @@ ApplyXY12GateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYX12GateAVX(cmplx* volatile __restrict amp,
-                 const idx_size* volatile indices /*4*/)
+ApplyYX12GateAVX(cmplx* __restrict amp,
+                 const idx_size* indices /*4*/)
 {
     
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -347,10 +347,10 @@ ApplyYX12GateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYY12HHGateAVX(cmplx* volatile __restrict amp,
-                   const idx_size* volatile indices /*4*/)
+ApplyYY12HHGateAVX(cmplx* __restrict amp,
+                   const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
    __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
 
@@ -362,10 +362,10 @@ ApplyYY12HHGateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXX12HHGateAVX(cmplx* volatile __restrict amp,
-                   const idx_size* volatile indices /*4*/)
+ApplyXX12HHGateAVX(cmplx* __restrict amp,
+                   const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -392,10 +392,10 @@ ApplyXX12HHGateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyXY12HHGateAVX(cmplx* volatile __restrict amp,
-                   const idx_size* volatile indices /*4*/)
+ApplyXY12HHGateAVX(cmplx* __restrict amp,
+                   const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -427,10 +427,10 @@ ApplyXY12HHGateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyYX12HHGateAVX(cmplx* volatile __restrict amp,
-                   const idx_size* volatile indices /*4*/)
+ApplyYX12HHGateAVX(cmplx* __restrict amp,
+                   const idx_size* indices /*4*/)
 {
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     __m256 a0 = _mm256_load_ps (&t_amp[2*indices[0]]);
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
@@ -462,14 +462,14 @@ ApplyYX12HHGateAVX(cmplx* volatile __restrict amp,
 }
 
 __attribute__((always_inline)) inline bool
-ApplyxCZGateAVX(cmplx* volatile __restrict amp,
+ApplyxCZGateAVX(cmplx* __restrict amp,
                 int num_threads,
                 const int num_qubits_amp,
                 const idx_size* volatile __restrict gate_bitmask,
                 const ZeroOptMask& zero_opt_mask)
 {
     /*0 : Z; 1 : 01; 2 : 10 */
-    float* volatile __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
+    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
     const __m256 mm256_neg = knegZ[gate_bitmask[0] & 3];
     const __m256  mm256_01 = kzero01[gate_bitmask[1] & 3];
@@ -519,11 +519,11 @@ ApplyxCZGateAVX(cmplx* volatile __restrict amp,
 __attribute__((always_inline)) inline float
 CalculatePhaseToApplyOnIdxForRz(const idx_size idx,
                                 const idx_size num_qubits,
-                                const double* volatile phases /*num qubits*/)
+                                const double* phases /*num qubits*/)
 {
     double acc_phase = 0;
     for (idx_size i = 0; i < num_qubits; ++i) {
-        if ((idx & (1 << i)) == (1 << i))
+        if ((idx & (1ull << i)) == (1ull << i))
             acc_phase += phases[i];
         else
             acc_phase -= phases[i];
@@ -534,10 +534,10 @@ CalculatePhaseToApplyOnIdxForRz(const idx_size idx,
 }
 
 __attribute__((always_inline)) inline
-void ApplyRzGatesAVX(cmplx* volatile __restrict amp,
+void ApplyRzGatesAVX(cmplx*  __restrict amp,
                      const idx_size num_qubits,
                      const idx_size idx /* starting idx of 8 contiguous idxs */,
-                     const double* volatile phases /* num qubits */)
+                     const double* phases /* num qubits */)
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
@@ -548,9 +548,10 @@ void ApplyRzGatesAVX(cmplx* volatile __restrict amp,
     
     // Separate out the multiplies since each amp occupies two slots in m256.
     __m256 first_4_multiples = _mm256_permute2f128_ps(phases_idx, phases_idx, 0b00000000);
-    __m256 second_4_multiples = _mm256_permute2f128_ps(phases_idx, phases_idx, 0b10001000);
-    first_4_multiples = _mm256_permute_ps(first_4_multiples, 0b00001010);
-    second_4_multiples = _mm256_permute_ps(second_4_multiples, 0b00001010);
+    __m256 second_4_multiples = _mm256_permute2f128_ps(phases_idx, phases_idx, 0b00010001);
+    const __m256i idxs = {0, 0x0000000100000001, 0x0000000200000002, 0x0000000300000003};
+    first_4_multiples = _mm256_permutevar_ps(first_4_multiples, idxs);
+    second_4_multiples = _mm256_permutevar_ps(second_4_multiples, idxs);
     
     const __m256 cos_first_4 = Sleef_cosf8_u10avx(first_4_multiples);
     const __m256 cos_second_4 = Sleef_cosf8_u10avx(second_4_multiples);
@@ -583,7 +584,7 @@ void ApplyRzGatesAVX(cmplx* volatile __restrict amp,
 }
 
 pair<idx_size, int>
-XYFastTransformLowQ(cmplx* volatile __restrict amp,
+XYFastTransformLowQ(cmplx* __restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
                     idx_size H_bitmask,
@@ -591,7 +592,7 @@ XYFastTransformLowQ(cmplx* volatile __restrict amp,
                     const int num_threads);
 
 pair<idx_size, int>
-XYHFastTransformHighQ(cmplx* volatile __restrict amp,
+XYHFastTransformHighQ(cmplx* __restrict amp,
                       idx_size X_bitmask,
                       idx_size Y_bitmask,
                       idx_size H_bitmask,
@@ -599,19 +600,19 @@ XYHFastTransformHighQ(cmplx* volatile __restrict amp,
                       const int num_threads);
 
 void
-ApplyHGatesIteratively(cmplx* volatile __restrict amp,
+ApplyHGatesIteratively(cmplx* __restrict amp,
                        int num_qubits,
                        int num_threads,
                        idx_size gate_bm);
 
 void
-ApplyBlockOfCZTGatesAVXSeq(cmplx* volatile __restrict amp,
+ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
                            const int num_qubits_amp,
                            const idx_size* volatile __restrict CZ_bitmasks,
                            const idx_size* volatile __restrict T_bitmasks);
 
 pair<idx_size, int>
-ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* volatile __restrict amp,
+ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                   const int num_qubits_amp,
                                   const idx_size* volatile __restrict CZ_bitmasks,
                                   const idx_size* volatile __restrict T_bitmasks,

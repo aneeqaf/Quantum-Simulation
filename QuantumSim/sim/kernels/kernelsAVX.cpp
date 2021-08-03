@@ -38,7 +38,7 @@ GetTGatesCount(idx_size* volatile gate_counts /*8*/,
 }
 
 __attribute__((always_inline)) inline void
-FirstGroupOf8GatesHelper(float* volatile __restrict t_amp,
+FirstGroupOf8GatesHelper(float* __restrict t_amp,
                          const idx_size* volatile gate_counts /*8*/,
                          const idx_size* volatile __restrict gray_codes /*8*/)
 {
@@ -72,7 +72,7 @@ FirstGroupOf8GatesHelper(float* volatile __restrict t_amp,
 }
 
 __attribute__((always_inline)) inline void
-SecondGroupOf8GatesHelper(float* volatile __restrict t_amp,
+SecondGroupOf8GatesHelper(float* __restrict t_amp,
                           const idx_size* volatile gate_counts /*8*/,
                           const idx_size* volatile __restrict gray_codes /*8*/)
 {
@@ -107,13 +107,13 @@ SecondGroupOf8GatesHelper(float* volatile __restrict t_amp,
 }
 
 __attribute__((always_inline)) inline void
-ApplyCZTGatesInABlock(float* volatile __restrict t_amp,
-                      const volatile int num_qubits_amp,
+ApplyCZTGatesInABlock(float* __restrict t_amp,
+                      const int num_qubits_amp,
                       const idx_size* volatile __restrict CZ_bitmasks,
                       const idx_size* volatile __restrict T_bitmasks /*2*/,
-                      const volatile int num_threads,
-                      const volatile idx_size block_begin,
-                      const volatile idx_size block_size,
+                      const int num_threads,
+                      const idx_size block_begin,
+                      const idx_size block_size,
                       const ZeroOptMask& zero_opt_mask)
 {
     bool any_CZ = CZ_bitmasks[num_qubits_amp] == 1, any_T = T_bitmasks[0] || T_bitmasks[1];
@@ -182,8 +182,8 @@ ApplyCZTGatesInABlock(float* volatile __restrict t_amp,
 }
 
 void
-ApplyBlockOfCZTGatesAVXSeq(cmplx* volatile __restrict amp,
-                           const volatile int num_qubits_amp,
+ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
+                           const int num_qubits_amp,
                            const idx_size* volatile __restrict CZ_bitmasks,
                            const idx_size* volatile __restrict T_bitmasks /*2*/)
 {
@@ -215,7 +215,7 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* volatile __restrict amp,
 }
 
 pair<idx_size, int>
-ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* volatile __restrict amp,
+ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
                                   const int num_qubits_amp,
                                   const idx_size* volatile __restrict CZ_bitmasks,
                                   const idx_size* volatile __restrict T_bitmasks,

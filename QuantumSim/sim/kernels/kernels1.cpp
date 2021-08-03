@@ -9,7 +9,7 @@
 #include "kernels1.h"
 
 void
-ApplyNonControl1QGates(cmplx* volatile __restrict amp,
+ApplyNonControl1QGates(cmplx* __restrict amp,
                        const int q,
                        const int num_qubits_amp,
                        const Gate::Type gate_type,
@@ -43,7 +43,7 @@ ApplyNonControl1QGates(cmplx* volatile __restrict amp,
 
 //TODO: Test this
 void
-ApplyControlGate(cmplx* volatile __restrict amp,
+ApplyControlGate(cmplx* __restrict amp,
                  const int num_controls,
                  const vector<idx_size>& gate_qubits,
                  const int num_qubits_amp,
@@ -88,7 +88,7 @@ ApplyControlGate(cmplx* volatile __restrict amp,
 }
 
 void
-ApplyManyXOnSlice(cmplx* volatile __restrict amp,
+ApplyManyXOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
 {
     for (idx_size i = 0; i < num_qbits ; i+=2){
@@ -116,7 +116,7 @@ ApplyManyXOnSlice(cmplx* volatile __restrict amp,
 }
 
 void
-ApplyManyYOnSlice(cmplx* volatile __restrict amp,
+ApplyManyYOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
 {
     for (idx_size i = 0; i < num_qbits ; i+=2){
@@ -144,7 +144,7 @@ ApplyManyYOnSlice(cmplx* volatile __restrict amp,
 }
 
 void
-ApplyFWHT(cmplx* volatile __restrict amp,
+ApplyFWHT(cmplx* __restrict amp,
           idx_size qubits_in_cluster,
           const int num_qubits_amp,
           const Gate::Type gate_type)
