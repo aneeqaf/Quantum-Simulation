@@ -516,21 +516,40 @@ ApplyxCZGateAVX(cmplx* __restrict amp,
     return all_zeros;
 }
 
-__attribute__((always_inline)) inline float
-CalculatePhaseToApplyOnIdxForRz(const idx_size idx,
+__attribute__((always_inline)) inline __m256
+CalculatePhaseForRzInGroupsOf8(const idx_size idx,
                                 const idx_size num_qubits,
                                 const double* phases /*num qubits*/)
 {
-    double acc_phase = 0;
+    static constexpr idx_size num_phases = 8;
+    static idx_size gc_idxs[] = {0,  1,  3,  2, 6, 7, 5 , 4};
+
+    double acc_phase_first = 0;
     for (idx_size i = 0; i < num_qubits; ++i) {
         if ((idx & (1ull << i)) == (1ull << i))
-            acc_phase += phases[i];
+            acc_phase_first += phases[i];
         else
-            acc_phase -= phases[i];
+            acc_phase_first -= phases[i];
+    }
+
+    __m256 phases_per_idx = {0};
+    phases_per_idx[idx] = acc_phase_first;
+
+    for (size_t i = 1; i < num_phases; ++i) {
+        idx_size gc_idx = idx + gc_idxs[i];
+        idx_size prev_gc_idx = idx + gc_idxs[i - 1];
+
+        idx_size phase_idx = __builtin_ctzl(gc_idx ^ prev_gc_idx);
+        double phase_to_modify = phases[phase_idx];
+        if ((prev_gc_idx & (1ull << phase_idx)) ==  (1ull << phase_idx))
+            acc_phase_first -= (2 * phase_to_modify);
+        else 
+            acc_phase_first += (2 * phase_to_modify);
         
+        phases_per_idx[gc_idx - idx] = acc_phase_first;
     }
     
-    return acc_phase;
+    return phases_per_idx;
 }
 
 __attribute__((always_inline)) inline
@@ -541,10 +560,7 @@ void ApplyRzGatesAVX(cmplx*  __restrict amp,
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
-    __m256 phases_idx = {0};
-    
-    for (idx_size i = 0; i < 8; ++i)
-        phases_idx[i] = CalculatePhaseToApplyOnIdxForRz(idx + i, num_qubits, phases);
+    __m256 phases_idx = CalculatePhaseForRzInGroupsOf8(idx, num_qubits, phases);
     
     // Separate out the multiplies since each amp occupies two slots in m256.
     __m256 first_4_multiples = _mm256_permute2f128_ps(phases_idx, phases_idx, 0b00000000);
