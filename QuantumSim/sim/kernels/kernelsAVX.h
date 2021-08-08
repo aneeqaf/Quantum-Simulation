@@ -351,14 +351,14 @@ ApplyYY12HHGateAVX(cmplx* __restrict amp,
                    const idx_size* indices /*4*/)
 {
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-   __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
-   __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
-
-   a1 = _mm256_xor_ps(a1, kneg2);
-   a2 = _mm256_xor_ps(a2, kneg2);
-   
-   _mm256_store_ps(&t_amp[2*indices[1]], a1);
-   _mm256_store_ps(&t_amp[2*indices[2]], a2);
+    __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
+    __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
+    
+    a1 = _mm256_xor_ps(a1, kneg2);
+    a2 = _mm256_xor_ps(a2, kneg2);
+    
+    _mm256_store_ps(&t_amp[2*indices[1]], a1);
+    _mm256_store_ps(&t_amp[2*indices[2]], a2);
 }
 
 __attribute__((always_inline)) inline void
@@ -370,7 +370,7 @@ ApplyXX12HHGateAVX(cmplx* __restrict amp,
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
-
+    
     __m256 t0 = _mm256_add_ps(a0, a3);
     __m256 t1 = _mm256_add_ps(a1, a2);
     __m256 t2 = _mm256_sub_ps(a0, a3);
@@ -379,7 +379,7 @@ ApplyXX12HHGateAVX(cmplx* __restrict amp,
     t2 = _mm256_xor_ps(t2, kneg1);
     t3 = _mm256_permute_ps(t3, 0b10110001);
     t3 = _mm256_xor_ps(t3, kneg1);
-
+    
     a0 = _mm256_add_ps(t1, t0);
     a1 = _mm256_sub_ps(t2, t3);
     a2 = _mm256_add_ps(t2, t3);
@@ -400,7 +400,7 @@ ApplyXY12HHGateAVX(cmplx* __restrict amp,
     __m256 a1 = _mm256_load_ps (&t_amp[2*indices[1]]);
     __m256 a2 = _mm256_load_ps (&t_amp[2*indices[2]]);
     __m256 a3 = _mm256_load_ps (&t_amp[2*indices[3]]);
-
+    
     __m256 ia0 = _mm256_permute_ps(a0, 0b10110001);
     ia0 = _mm256_xor_ps(ia0, kneg1);
     __m256 _ia1 = _mm256_permute_ps(a1, 0b10110001);
@@ -409,17 +409,17 @@ ApplyXY12HHGateAVX(cmplx* __restrict amp,
     ia2 = _mm256_xor_ps(ia2, kneg1);
     __m256 ia3 = _mm256_permute_ps(a3, 0b10110001);
     ia3 = _mm256_xor_ps(ia3, kneg1);
-
+    
     __m256 t0 = _mm256_add_ps(ia0, a2);
     __m256 t1 = _mm256_add_ps(a0, ia2);
     __m256 t2 = _mm256_sub_ps(_ia1, a3);
     __m256 t3 = _mm256_add_ps(a1, ia3);
-
+    
     a0 = _mm256_add_ps(t0, t1);
     a1 = _mm256_sub_ps(t2, t3);
     a2 = _mm256_sub_ps(t0, t1);
     a3 = _mm256_add_ps(t3, t2);
-
+    
     _mm256_store_ps(&t_amp[2*indices[0]], a0);
     _mm256_store_ps(&t_amp[2*indices[1]], a1);
     _mm256_store_ps(&t_amp[2*indices[2]], a2);
@@ -558,96 +558,37 @@ ApplyRzPhasesAVX(float* __restrict t_amp,
     _mm256_store_ps(&t_amp[2 * (idx + 4)], a1);
 }
 
-__attribute__((always_inline)) inline double 
+double
 CalculateRzPhase(const idx_size idx,
-                                const idx_size num_qubits,
-                                const double* phases /*num qubits*/)
-{
-    double acc_phase_first = 0;
+                 const idx_size num_qubits,
+                 const double* phases /*num qubits*/);
 
-    for (idx_size i = 0; i < num_qubits; ++i) {
-        if ((idx & (1ull << i)) == (1ull << i))
-            acc_phase_first += phases[i];
-        else
-            acc_phase_first -= phases[i];
-    }
+double
+CalculateQftCRkPhase(const idx_size idx,
+                     const idx_size num_qubits,
+                     const idx_size* CRk_bitmasks);
 
-    return acc_phase_first;
-}
+void
+PrepareQFTCRkBitmask(idx_size* CRk_bitmasks,
+                     const idx_size cycle_num,
+                     const idx_size num_qubits);
 
-__attribute__((always_inline)) inline double
+double
 CalculateCRzPhaseAndPopulatePhasesMatrix(double* control_phase_sums /* num_qubits */,
-                                        double* target_phase_sums /* num_qubits */,
-                                        const idx_size idx,
-                                        const idx_size num_qubits,
-                                        const vector<vector<double>>& phases)
-{
-    double acc_phase_first = 0;
+                                         double* target_phase_sums /* num_qubits */,
+                                         const idx_size idx,
+                                         const idx_size num_qubits,
+                                         const vector<vector<double>>& phases);
 
-    for (idx_size i = 0; i < num_qubits; ++i) {
-        double row_sum = 0, col_sum = 0;
-        for (idx_size j = 0; j < num_qubits; ++j) {
-            if ((idx & (1ull << j)) == (1ull << j)) {
-                // Calculate row sum assuming the control is set
-                row_sum += phases[i][j];
-
-                // Calculate column sum only for the control bits that are set
-                if ((idx & (1ull << i)) == (1ull << i)) col_sum += phases[j][i];
-                else col_sum -= phases[j][i];
-            }
-            else row_sum -= phases[i][j];
-        }
-        if ((idx & (1ull << i)) == (1ull << i))
-            acc_phase_first += row_sum;
-
-        control_phase_sums[i] = row_sum;
-        target_phase_sums[i] = col_sum;
-    }
-
-    return acc_phase_first;
-}
-
-__attribute__((always_inline)) inline pair<__m256, bool>
+pair<__m256, bool>
 CalculatePhaseForRzInGroupsOf8( volatile double& acc_phase_first,
-                                volatile idx_size& gray_code_idx,
-                                idx_size reg_idx,
-                                idx_size block_begin_idx,
-                                const idx_size num_qubits,
-                                const double* phases /*num qubits*/)
-{
-    static constexpr idx_size num_phases = 8;
+                               volatile idx_size& gray_code_idx,
+                               idx_size reg_idx,
+                               idx_size block_begin_idx,
+                               const idx_size num_qubits,
+                               const double* phases /*num qubits*/);
 
-    __m256 phases_per_idx = {0};
-    idx_size i = 0;
-    bool all_zeros = true;
-
-    // The gray code idx ensures the continuity of gray codes for a certain number of bits
-    // hence must calculate the beginning of block separately.
-    if (gray_code_idx == 0) {
-        phases_per_idx[0] = acc_phase_first;
-        ++i;
-        ++gray_code_idx;
-    }
-
-    for (; i < num_phases; ++i, ++gray_code_idx) {
-        idx_size gc_idx = block_begin_idx + ((gray_code_idx) ^ (gray_code_idx >> 1));
-        idx_size prev_gc_idx = block_begin_idx + (gray_code_idx - 1) ^ ((gray_code_idx - 1) >> 1);
-
-        idx_size phase_idx = __builtin_ctzl(gc_idx ^ prev_gc_idx);
-        double phase_to_modify = phases[phase_idx];
-        if ((prev_gc_idx & (1ull << phase_idx)) ==  (1ull << phase_idx))
-            acc_phase_first -= (2 * phase_to_modify);
-        else 
-            acc_phase_first += (2 * phase_to_modify);
-        
-        if (acc_phase_first != 0) all_zeros = false;
-        phases_per_idx[gc_idx - reg_idx] = acc_phase_first;
-    }
-    
-    return pair<__m256, bool>{phases_per_idx, all_zeros};;
-}
-
-__attribute__((always_inline)) inline pair<__m256, bool>
+pair<__m256, bool>
 CalculatePhaseForCRzInGroupsOf8(double* volatile control_phase_sums,
                                 double* volatile target_phase_sums,
                                 volatile double& base_phase,
@@ -655,140 +596,28 @@ CalculatePhaseForCRzInGroupsOf8(double* volatile control_phase_sums,
                                 idx_size reg_idx,
                                 idx_size block_begin_idx,
                                 const idx_size num_qubits,
-                                const vector<vector<double>>& phases)
-{
-    constexpr idx_size num_phases_reg = 8;
+                                const vector<vector<double>>& phases);
 
-    __m256 phases_per_idx = {0};
-    bool all_zeros = true;
+void
+CalculatePhaseForQftCRkInGroupsOf8(idx_size gray_code_idx,
+                                   const idx_size num_qubits,
+                                   const idx_size* CRk_bitmasks);
 
-    if (gray_code_idx != 0) {
-        idx_size gc_idx = block_begin_idx + (gray_code_idx ^ (gray_code_idx >> 1));
-        idx_size prev_gc_idx = gray_code_idx == 0 ? 0 : block_begin_idx + (gray_code_idx - 1) ^ ((gray_code_idx - 1) >> 1);
-        idx_size bit_flip_idx = __builtin_ctzl(gc_idx ^ prev_gc_idx);
-
-        for (idx_size j = 0; j < num_qubits; ++j) {
-            
-            // Fix the sign of phases in controls after a target bit flipped
-            // Amend the targets after the flip of the control bit
-            // Diagonal always has 0s.
-            if ((reg_idx & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx)) {
-                control_phase_sums[j] += (2 * phases[j][bit_flip_idx]);
-                if ((reg_idx & (1ull << j)) ==  (1ull << j))
-                    target_phase_sums[j] += phases[bit_flip_idx][j];
-                else
-                    target_phase_sums[j] -= phases[bit_flip_idx][j];
-            }
-            else {
-                control_phase_sums[j] -= (2 * phases[j][bit_flip_idx]);
-                if ((reg_idx & (1ull << j)) ==  (1ull << j))
-                    target_phase_sums[j] -= phases[bit_flip_idx][j];
-                else
-                    target_phase_sums[j] += phases[bit_flip_idx][j];
-            }
-        }
-        target_phase_sums[bit_flip_idx] = -target_phase_sums[bit_flip_idx];
-        
-        // Add the new control to base_phase and flip the signs of the target for the other controls
-        if ((reg_idx & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx))
-            base_phase += control_phase_sums[bit_flip_idx] + (2 * target_phase_sums[bit_flip_idx]);
-        else
-            base_phase -= control_phase_sums[bit_flip_idx] - (2 * target_phase_sums[bit_flip_idx]);
-    }
-
-    phases_per_idx[0] = base_phase;
-    for (idx_size i = 1; i < num_phases_reg; ++i){
-        double phase = base_phase;
-
-        if ((i & 1) == 1) {
-            phase += control_phase_sums[0] - (2 * target_phase_sums[0]);
-            if (((i & 2) == 2)) phase += (2 * phases[0][1]);
-            if (((i & 4) == 4)) phase += (2 * phases[0][2]);
-        }
-        if ((i & 2) == 2) {
-            phase += control_phase_sums[1] - (2 * target_phase_sums[1]);
-            if (((i & 1) == 1)) phase += (2 * phases[1][0]);
-            if (((i & 4) == 4)) phase += (2 * phases[1][2]);
-        }
-        if ((i & 4) == 4) {
-            phase += control_phase_sums[2] - (2 * target_phase_sums[2]);
-            if (((i & 1) == 1)) phase += (2 * phases[2][0]);
-            if (((i & 2) == 2)) phase += (2 * phases[2][1]);
-        }
-
-        phases_per_idx[i] = phase;
-        if (phase != 0) all_zeros = false;
-    }
-    
-    return pair<__m256, bool>{phases_per_idx, all_zeros};;
-}
-
-__attribute__((always_inline)) inline void
+void
 ApplyRzGatesAVX(cmplx*  __restrict amp,
                 const idx_size num_qubits,
                 /* difference between starting and end idx should be multiple of 8 */
                 const idx_size idx_begin,
                 const idx_size idx_end,
-                const double* phases /* num qubits */)
-{
-    static constexpr idx_size num_phases = 8;
-
-    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    
-    double acc_phase_first = CalculateRzPhase(idx_begin, num_qubits, phases);
-    idx_size gray_code_idx = 0;
-
-    for (size_t i = idx_begin; i < idx_end; i += num_phases) {
-        idx_size reg_idx =  (gray_code_idx) ^ (gray_code_idx >> 1);
-        if ((reg_idx & (num_phases >> 1)) == (num_phases >> 1))
-            reg_idx =  reg_idx ^ (num_phases >> 1);
-        reg_idx += idx_begin;
-
-        const auto phases_idx = CalculatePhaseForRzInGroupsOf8(acc_phase_first,
-                                                                gray_code_idx,
-                                                                reg_idx,
-                                                                idx_begin, 
-                                                                num_qubits,
-                                                                phases);
-        if (!phases_idx.second) 
-            ApplyRzPhasesAVX(t_amp, phases_idx.first, reg_idx);
-    }
-}
+                const double* phases /* num qubits */);
 
 __attribute__((always_inline)) inline
 void ApplyCRzGatesAVX(cmplx*  __restrict amp,
-                     const idx_size num_qubits,
-                     /* difference between starting and end idx should be multiple of 8 */
-                    const idx_size idx_begin,
-                    const idx_size idx_end,
-                     const vector<vector<double>>& phases /* num qubits x num qubits */)
-{
-    static constexpr idx_size num_phases = 8;
-
-    float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
-    double control_phase_sums[num_qubits];
-    double target_phase_sums[num_qubits];
-
-    auto base_phase = CalculateCRzPhaseAndPopulatePhasesMatrix(control_phase_sums,
-                                                                target_phase_sums,
-                                                                idx_begin,
-                                                                num_qubits,
-                                                                phases);
-
-    for (size_t i = 0; i + idx_begin < idx_end; i += num_phases) {
-        idx_size reg_idx =  i ^ (i >> 1);
-        if ((reg_idx & (num_phases >> 1)) == (num_phases >> 1))
-            reg_idx =  reg_idx ^ (num_phases >> 1);
-        reg_idx += idx_begin;
-
-        const auto phases_idx = CalculatePhaseForCRzInGroupsOf8(control_phase_sums, target_phase_sums,
-                                                                base_phase, i, reg_idx,
-                                                                idx_begin, num_qubits, phases);
-    
-        if (!phases_idx.second)
-            ApplyRzPhasesAVX(t_amp, phases_idx.first, reg_idx);
-    }
-}
+                      const idx_size num_qubits,
+                      /* difference between starting and end idx should be multiple of 8 */
+                      const idx_size idx_begin,
+                      const idx_size idx_end,
+                      const vector<vector<double>>& phases /* num qubits x num qubits */);
 
 pair<idx_size, int>
 XYFastTransformLowQ(cmplx* __restrict amp,
