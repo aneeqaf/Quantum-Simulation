@@ -361,10 +361,10 @@ ApplyNonCGate(const idx_size gate_qubit,
 }
 
 void SumOfTensorsProductsStateVector::
-ApplyHGateOnAllAmps(bool not_cycle_0)
+ApplyHGateOnAllAmps(bool cycle_0)
 {
     for (auto& t : tensor_addends)
-        t -> ApplyHGateOnAllAmps(not_cycle_0);
+        t -> ApplyHGateOnAllAmps(cycle_0);
 }
 
 //TODO

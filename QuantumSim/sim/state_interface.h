@@ -142,7 +142,7 @@ public:
   
     virtual void ApplyNonCGate(const idx_size gate_qubit,
                                const Gate::Type gate_type) = 0;
-    virtual void ApplyHGateOnAllAmps(bool not_cycle_0 = false) = 0;
+    virtual void ApplyHGateOnAllAmps(bool cycle_0 = false) = 0;
     virtual void ApplyCGate(const idx_size num_controls,
                             const vector<idx_size>& gate_qubits,
                             const Gate& g,

@@ -379,9 +379,9 @@ ApplyLowQGatesInBlocksTask(cmplx* __restrict amp,
 
 void
 Apply1QXYHGates(cmplx* __restrict amp,
-                int num_threads,
-                const int q,
-                const int num_qubits,
+                idx_size num_threads,
+                const idx_size q,
+                const idx_size num_qubits,
                 const Gate::Type gate_type)
 {
     constexpr idx_size num_indices = 2;
@@ -875,8 +875,8 @@ void ApplyHighHGatesIterativelyInParallel(cmplx* __restrict amp,
 //}
 
 void ApplyHGatesIteratively(cmplx* __restrict amp,
-                             int num_qubits,
-                             int num_threads,
+                             idx_size num_qubits,
+                             idx_size num_threads,
                              idx_size gate_bm)
 {
     while (gate_bm) {
@@ -887,7 +887,7 @@ void ApplyHGatesIteratively(cmplx* __restrict amp,
         
         if (parity == 1)
         {
-            int q = q1 > q2 ? q1 : q2;
+            idx_size q = q1 > q2 ? q1 : q2;
             Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
             return;
         }

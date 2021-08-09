@@ -68,12 +68,12 @@ ApplyNonCGate(const idx_size gate_qubit,
 }
 
 void AdaptiveStateVector::
-ApplyHGateOnAllAmps(bool not_cycle_0)
+ApplyHGateOnAllAmps(bool cycle_0)
 {
     if (full_state)
-        full_state -> ApplyHGateOnAllAmps(not_cycle_0);
+        full_state -> ApplyHGateOnAllAmps(cycle_0);
     else
-        sumOfTensors -> ApplyHGateOnAllAmps(not_cycle_0);
+        sumOfTensors -> ApplyHGateOnAllAmps(cycle_0);
 }
 
 //TODO

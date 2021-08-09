@@ -44,7 +44,7 @@ public:
                             const Gate::Type CZ_D_B);
     void ApplyNonCGate(const idx_size gate_qubit,
                        const Gate::Type gate_type);
-    void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
+    void ApplyHGateOnAllAmps(bool cycle_0 = false);
     void ApplyCGate(const idx_size num_controls,
                     const vector<idx_size>& gate_qubits,
                     const Gate& g,

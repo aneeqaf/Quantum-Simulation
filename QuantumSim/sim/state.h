@@ -62,7 +62,7 @@ public:
     
     void ApplyNonCGate(const idx_size gate_qubit,
                        const Gate::Type gate_type);
-    void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
+    void ApplyHGateOnAllAmps(bool cycle_0 = false);
     void ApplyCGate(const idx_size num_controls,
                    const vector<idx_size>& gate_qubits,
                    const Gate& g,
@@ -89,6 +89,7 @@ public:
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);
+    void ApplyQFT();
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);

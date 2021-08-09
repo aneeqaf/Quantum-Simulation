@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "qftSimulation.h"
 #include "simulation.h"
 #include "state.h"
 #include "state_autoconv.h"
@@ -101,6 +102,7 @@ int main(int argc, char *argv[])
         { "save_checkpoint_to_file",    required_argument,       nullptr, 'r' },
         { "count_zeros",    no_argument,       nullptr, '0' },
         { "Cramer",    required_argument,       nullptr, 'z' },
+        { "QFT",    required_argument,       nullptr, 'Q' },
         { "circuit_reordering_mode", no_argument, nullptr, 'C'},
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
@@ -112,19 +114,16 @@ int main(int argc, char *argv[])
     string input_filename = "", out_file = "", idx_filename = "" ;
     int threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
-    save_cp_to_file = 0;
+    save_cp_to_file = 0, qft = 0;
     float norm_perc = 0;
     idx_size cz_path = 0, epsilon = 0, cramer_cw = 0;
     double cramer_p_reject = 0;
     int sim_type = -1;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
-    
-#ifdef Parallel
     num_threads = omp_get_num_procs();
-#endif
     
-    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:C", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:Q:C", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -283,6 +282,12 @@ int main(int argc, char *argv[])
                 threshold = stoi(s_th);
                 break;
             }
+            case 'Q': {
+                valid = true;
+                string s_qft = string(optarg);
+                qft = stoi(s_qft);
+                break;
+            }
             case 'r': {
                 string s_cp = string(optarg);
                 save_cp_to_file = stoi(s_cp);
@@ -394,7 +399,7 @@ int main(int argc, char *argv[])
     
     Circuit cir(input_filename, num_qubits.size() > 0 ? num_qubits[0] : 0, depth);
     
-    if (sim_type == -1) {
+    if (sim_type == -1  && qft == 0) {
         if (cir.GetNumQubits() <= 32) sim_type = 5;
         else if (hcut != 0) sim_type = 0;
         else if (vcut != 0) sim_type = 1;
@@ -430,13 +435,25 @@ int main(int argc, char *argv[])
         else
             config -> ReadIndices(idx_filename);
     }
+    
+    GenericQuantumState::num_threads = num_threads;
+    if (qft > 0) {
+        FullAmpStateVector amp(qft);
+        
+        QFTSimulation qft_sim(qft);
+        
+        qft_sim.Simulate(amp);
+        
+        delete config;
+        return 0;
+    }
+    
     SequentialSimulation sim(config);
     
     if (config -> verbose)
         sim.PrintSystemReport();
     
-    GenericQuantumState::num_threads = num_threads;
-    if (sim_type == Config::FullState) {
+    else if (sim_type == Config::FullState) {
         FullAmpStateVector amp(cir.GetNumQubits());
         if (threshold == 0)
             sim.SetThreshold(cir.GetNumQubits()/2);

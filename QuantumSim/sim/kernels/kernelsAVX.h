@@ -74,6 +74,7 @@ const __m256 knegZ[4] = {{0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
     {0, 0, 0, 0, -0.0f, -0.0f, -0.0f, -0.0f},
     {0, 0, -0.0f, -0.0f, -0.0f, -0.0f, 0, 0}};
 
+constexpr idx_size kCmplxInL1Cache = (1ull << 13);
 
 //__attribute__((always_inline)) inline bool
 //CheckIfBlockIsZero(const ZeroOptMask& zero_opt_mask,
@@ -611,13 +612,22 @@ ApplyRzGatesAVX(cmplx*  __restrict amp,
                 const idx_size idx_end,
                 const double* phases /* num qubits */);
 
-__attribute__((always_inline)) inline
-void ApplyCRzGatesAVX(cmplx*  __restrict amp,
-                      const idx_size num_qubits,
-                      /* difference between starting and end idx should be multiple of 8 */
-                      const idx_size idx_begin,
-                      const idx_size idx_end,
-                      const vector<vector<double>>& phases /* num qubits x num qubits */);
+void
+ApplyCRzGatesAVX(cmplx*  __restrict amp,
+                 const idx_size num_qubits,
+                 /* difference between starting and end idx should be multiple of 8 */
+                 const idx_size idx_begin,
+                 const idx_size idx_end,
+                 const vector<vector<double>>& phases /* num qubits x num qubits */);
+
+void
+ApplyQftCRkGatesAVX(cmplx*  __restrict amp,
+                    const idx_size target,
+                    const idx_size num_qubits,
+                    /* difference between starting and end idx should be multiple of 8 */
+                    const idx_size idx_begin,
+                    const idx_size idx_end,
+                    const idx_size* CRk_bitmasks /* num qubits */);
 
 pair<idx_size, int>
 XYFastTransformLowQ(cmplx* __restrict amp,
@@ -637,8 +647,8 @@ XYHFastTransformHighQ(cmplx* __restrict amp,
 
 void
 ApplyHGatesIteratively(cmplx* __restrict amp,
-                       int num_qubits,
-                       int num_threads,
+                       idx_size num_qubits,
+                       idx_size num_threads,
                        idx_size gate_bm);
 
 void

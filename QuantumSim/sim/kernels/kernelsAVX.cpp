@@ -303,7 +303,7 @@ CalculateQftCRkPhase(const idx_size idx,
         if (i != target
             && ((idx & (1ull << i)) == (1ull << i))
             && ((CRk_bitmasks[i] & (1ull << i)) == (1ull << i)))
-            control_phase += 2 * M_PI/ (1ull << (i - target));
+            control_phase += M_PI/ (1ull << (i - target));
     }
 
     if ((idx & (1ull << target)) == (1ull << target))
@@ -488,7 +488,7 @@ CalculatePhaseForQftCRkInGroupsOf8(double& control_phase,
     __m256 phases_per_idx = {0};
     bool all_zeros = true;
     idx_size i = 0;
-
+    
     // The gray code idx ensures the continuity of gray codes for a certain number of bits
     // hence must calculate the beginning of block separately.
     if (gray_code_idx == 0) {
@@ -500,23 +500,23 @@ CalculatePhaseForQftCRkInGroupsOf8(double& control_phase,
     for (; i < num_phases; ++i, ++gray_code_idx) {
         idx_size gc_idx = block_begin_idx + ((gray_code_idx) ^ (gray_code_idx >> 1));
         idx_size prev_gc_idx = gray_code_idx == 0 ?
-                    0 : block_begin_idx + (gray_code_idx - 1) ^ ((gray_code_idx - 1) >> 1);
+        0 : block_begin_idx + (gray_code_idx - 1) ^ ((gray_code_idx - 1) >> 1);
         
         idx_size bit_flip_idx = __builtin_ctzl(gc_idx ^ prev_gc_idx);
         if (bit_flip_idx != target) {
             // Phase only depends on the control
             // Only subtract if there was contribution from the prev_gc_idx
             if (((gc_idx & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx))
-            && ((CRk_bitmasks[bit_flip_idx] & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx)))
-                control_phase += 2 * M_PI/ (1ull << (bit_flip_idx - target));
+                && ((CRk_bitmasks[bit_flip_idx] & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx)))
+                control_phase += M_PI/ (1ull << (bit_flip_idx - target));
             else if (((prev_gc_idx & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx))
-            && ((CRk_bitmasks[bit_flip_idx] & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx)))
-                control_phase -= 2 * M_PI/ (1ull << (bit_flip_idx - target));
+                     && ((CRk_bitmasks[bit_flip_idx] & (1ull << bit_flip_idx)) == (1ull << bit_flip_idx)))
+                control_phase -= M_PI/ (1ull << (bit_flip_idx - target));
         }
         
         double phase =  (gc_idx & (1ull << target)) == (1ull << target) ? control_phase : 0;
         phases_per_idx[gc_idx - reg_idx] = phase;
-        if (phase != 0) all_zeros = false;
+        if (phase > 1e-8) all_zeros = false;
     }
     
     return pair<__m256, bool>{phases_per_idx, all_zeros};
@@ -525,11 +525,11 @@ CalculatePhaseForQftCRkInGroupsOf8(double& control_phase,
 void
 ApplyQftCRkGatesAVX(cmplx*  __restrict amp,
                     const idx_size target,
-                   const idx_size num_qubits,
+                    const idx_size num_qubits,
                     /* difference between starting and end idx should be multiple of 8 */
-                   const idx_size idx_begin,
-                   const idx_size idx_end,
-                   const idx_size* CRk_bitmasks /* num qubits */)
+                    const idx_size idx_begin,
+                    const idx_size idx_end,
+                    const idx_size* CRk_bitmasks /* num qubits */)
 {
     static constexpr idx_size num_phases = 8;
     
@@ -540,11 +540,11 @@ ApplyQftCRkGatesAVX(cmplx*  __restrict amp,
     if ((reg_idx & (num_phases >> 1)) == (num_phases >> 1))
         reg_idx =  reg_idx ^ (num_phases >> 1);
     reg_idx += idx_begin;
-
+    
     auto acc_phase_first = CalculateQftCRkPhase(reg_idx, num_qubits, target, CRk_bitmasks);
     
     for (size_t i = idx_begin; i < idx_end; i += num_phases) {
-       const auto phases_idx = CalculatePhaseForQftCRkInGroupsOf8(acc_phase_first.first,
+        const auto phases_idx = CalculatePhaseForQftCRkInGroupsOf8(acc_phase_first.first,
                                                                    gray_code_idx,
                                                                    reg_idx,
                                                                    idx_begin,
@@ -553,7 +553,7 @@ ApplyQftCRkGatesAVX(cmplx*  __restrict amp,
                                                                    CRk_bitmasks);
         if (!phases_idx.second)
             ApplyRzPhasesAVX(t_amp, phases_idx.first, reg_idx);
-
+        
         reg_idx =  (gray_code_idx) ^ (gray_code_idx >> 1);
         if ((reg_idx & (num_phases >> 1)) == (num_phases >> 1))
             reg_idx =  reg_idx ^ (num_phases >> 1);

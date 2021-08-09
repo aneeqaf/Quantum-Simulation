@@ -341,12 +341,12 @@ ApplyNonCGate(const idx_size gate_qubit,
 }
 
 void TensorProductStateVector::
-ApplyHGateOnAllAmps(bool not_cycle_0)
+ApplyHGateOnAllAmps(bool cycle_0)
 {
     if (partition_to_sim == 'a' || partition_to_sim == 'x')
-        state_a -> ApplyHGateOnAllAmps(not_cycle_0);
+        state_a -> ApplyHGateOnAllAmps(cycle_0);
     if (partition_to_sim == 'b' || partition_to_sim == 'x')
-        state_b -> ApplyHGateOnAllAmps(not_cycle_0);
+        state_b -> ApplyHGateOnAllAmps(cycle_0);
 }
 
 //TODO

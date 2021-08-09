@@ -407,9 +407,9 @@ ApplyCZDecomposition(cmplx* __restrict amp,
 
 void
 Apply1QXYHGates(cmplx* __restrict amp,
-                const int num_threads,
-                const int q,
-                const int num_qubits,
+                const idx_size num_threads,
+                const idx_size q,
+                const idx_size num_qubits,
                 const Gate::Type gate_type);
 
 void

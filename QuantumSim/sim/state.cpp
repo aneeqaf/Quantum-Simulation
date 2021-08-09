@@ -167,12 +167,12 @@ ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks)
 }
 
 void FullAmpStateVector::
-ApplyHGateOnAllAmps(bool not_initialize_amp)
+ApplyHGateOnAllAmps(bool initialize_amp)
 {
     Time time;
     time.StartTime();
     
-    if (!not_initialize_amp) {
+    if (initialize_amp) {
         float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
         constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0 , 1, 0};
         
@@ -599,6 +599,37 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     }
     
     return -1;
+}
+
+void FullAmpStateVector::
+ApplyQFT()
+{
+    idx_size block_size = amp_size < 64 ? 8 : amp_size/num_threads > kCmplxInL1Cache/num_threads
+                            ? kCmplxInL1Cache/num_threads : amp_size/num_threads;
+    idx_size block_bits = log2(block_size);
+    idx_size n_threads =  amp_size/num_threads > num_threads ? num_threads :  amp_size/num_threads;
+            
+    for (idx_size cycle = 0; cycle < num_qubits; ++cycle) {
+        idx_size CRk_bitmasks[num_qubits];
+        memset(CRk_bitmasks, 0, num_qubits * sizeof(idx_size));
+        PrepareQFTCRkBitmask(CRk_bitmasks, cycle, num_qubits);
+        
+        if (cycle + 1 >= block_bits)
+            Apply1QXYHGates(amp, n_threads, num_qubits - 1 - cycle, num_qubits, Gate::Type::h);
+
+#pragma omp parallel for schedule(guided) num_threads(n_threads)
+        for (idx_size block = 0; block < amp_size; block += block_size) {
+            if (cycle + 1 < block_bits)
+                Apply1QXYHGates(amp + block, n_threads, block_bits - 1 - cycle, block_bits, Gate::Type::h);
+            
+            if (!(cycle >= block_bits && ((block & (1ull << cycle)) == 0)))
+                ApplyQftCRkGatesAVX(amp, cycle, num_qubits, block, block + block_size, CRk_bitmasks);
+        }
+    }
+    
+    global_factor_power += num_qubits;
+
+    Rescale();
 }
 
 cmplx FullAmpStateVector::

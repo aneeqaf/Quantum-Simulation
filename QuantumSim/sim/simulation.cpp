@@ -768,7 +768,7 @@ SimulationLoop(GenericQuantumState &amp,
                 
                 ++amp.count_of_category.H_layers;
                 cycle_time.StartTime();
-                amp.ApplyHGateOnAllAmps(i != 0);
+                amp.ApplyHGateOnAllAmps(i == 0);
                 i += total_circuit_qubits - 1;
             }
         }
