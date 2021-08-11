@@ -346,11 +346,11 @@ int main(int argc, char *argv[])
                 if (args.find(",") != string::npos) {
                     string num_cw = args.substr(0, args.find_first_of(","));
                     string p_reject = args.substr(args.find_first_of(",") + 1, args.size());
-                    cramer_cw = (1ull << stoul(args)) - 1;
+                    cramer_cw = (1ull << stoul(args));
                     p_reject = stod(p_reject);
                 }
                 else
-                    cramer_cw = (1ull << stoul(args)) - 1;
+                    cramer_cw = (1ull << stoul(args));
                 break;
             }
             case '|': {

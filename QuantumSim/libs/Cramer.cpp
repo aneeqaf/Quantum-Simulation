@@ -15,7 +15,7 @@ Cramer(size_t vector_size,
        double probabilty_rejection,
        size_t num_sectors,
        bool projection_v): orig_vector_size(vector_size), num_bits_sector(log2(num_sectors)),
-num_bits_codewords(log2(num_cw + 1)), num_bits_encoding(num_bits_codewords + num_bits_sector),
+num_bits_codewords(log2(num_cw)), num_bits_encoding(num_bits_codewords + num_bits_sector),
 num_total_codewords(num_cw * num_sectors), num_threads(num_th), num_zero_amps(0), num_sectors(num_sectors),
 num_turnings(num_turnings), lambda(0), k(0), projection_vector(projection_v), dist_type(exponential)
 {
@@ -42,7 +42,7 @@ num_turnings(num_turnings), lambda(0), k(0), projection_vector(projection_v), di
         dist_type = exponential;
     }
     
-    codewords_mappings = new complex<float>[num_total_codewords + 1];
+    codewords_mappings = new complex<float>[num_total_codewords];
 }
 
 Cramer::
@@ -55,7 +55,7 @@ projection_vector(rhs.projection_vector), dist_type(rhs.dist_type)
 {
     if (rhs.codewords_mappings) {
         if(codewords_mappings) delete [] codewords_mappings;
-        codewords_mappings = new complex<float>[num_total_codewords + 1];
+        codewords_mappings = new complex<float>[num_total_codewords];
         for (size_t i = 0; i < num_total_codewords; ++i)
             codewords_mappings[i] = rhs.codewords_mappings[i];
     }
@@ -512,9 +512,9 @@ MapValToCWAVX(__m256 real,
         __m256 codewords = CalcNearestCWToValWithEncodedSectorAVX(real, imag);
         
         __m256 mask1 = _mm256_cmp_ps(codewords, _mm256_setzero_ps(), _CMP_LE_OQ);
-        __m256 mask2 = _mm256_cmp_ps(_mm256_set1_ps(num_total_codewords + 1), codewords, _CMP_LT_OQ);
+        __m256 mask2 = _mm256_cmp_ps(_mm256_set1_ps(num_total_codewords - 1), codewords, _CMP_LT_OQ);
         __m256 mask12 = _mm256_or_ps(mask1, mask2);
-        codewords = _mm256_or_ps(_mm256_and_ps(mask2, _mm256_set1_ps(num_total_codewords)),
+        codewords = _mm256_or_ps(_mm256_and_ps(mask2, _mm256_set1_ps(num_total_codewords - 1)),
                                  _mm256_andnot_ps(mask12, codewords));
         
         return codewords;
@@ -676,8 +676,10 @@ CramerCompress(complex<float>* compressed_vector,
     }
 
     #pragma omp parallel for num_threads(num_threads)
-    for (size_t i = 0; i <= num_total_codewords; ++i)
-        codewords_mappings[i] /= cw_freq[i];
+    for (size_t i = 0; i < num_total_codewords; ++i) {
+        if (cw_freq[i] > 0)
+            codewords_mappings[i] /= cw_freq[i];
+    }
     
     return compressed_vector;
 }

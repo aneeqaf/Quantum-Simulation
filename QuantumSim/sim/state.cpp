@@ -1019,36 +1019,36 @@ void FullAmpStateVector::
 PrintStateVector() 
 {
     RescaleAndApplyGlobalICounter();
-    //    static int count = 0;
-    //    ofstream file;
-    //    if (compressed)
-    //        file.open("compression/compression/Test_original" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
-    //    else
-    //        file.open("compression/compression/Test_decompressed" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
-    //
-    //    for (idx_size i = 0; i < amp_size/(1ull << 12); ++i) {
-    //        auto a = amp[i];
-    //        file << real(a) ;
-    //
-    //        if (imag(a) >= 0)
-    //            file << "+" << imag(a) << "j";
-    //        else if (imag(a) < 0)
-    //            file << imag(a) << "j";
-    //        file << "\n";
-    //    }
-    //    file << "\n\n";
-    //
-    for (idx_size i = 0; i < amp_size; ++i) {
-        auto a = amp[i];
-        cout << real(a) ;
-        
-        if (imag(a) >= 0)
-            cout << "+" << imag(a) << "j";
-        else if (imag(a) < 0)
-            cout << imag(a) << "j";
-        cout << "\n";
-    }
-    cout << "\n\n";
+        static int count = 0;
+        ofstream file;
+        if (compressed)
+            file.open("compression/compression/Test_original" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
+        else
+            file.open("compression/compression/Test_decompressed" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
+    
+        for (idx_size i = 0; i < amp_size; ++i) {
+            auto a = amp[i];
+            file << real(a) ;
+    
+            if (imag(a) >= 0)
+                file << "+" << imag(a) << "j";
+            else if (imag(a) < 0)
+                file << imag(a) << "j";
+            file << "\n";
+        }
+        file << "\n\n";
+    
+//    for (idx_size i = 0; i < amp_size; ++i) {
+//        auto a = amp[i];
+//        cout << real(a) ;
+//
+//        if (imag(a) >= 0)
+//            cout << "+" << imag(a) << "j";
+//        else if (imag(a) < 0)
+//            cout << imag(a) << "j";
+//        cout << "\n";
+//    }
+//    cout << "\n\n";
 }
 
 void FullAmpStateVector::
@@ -1178,12 +1178,11 @@ CompressStateVector(idx_size num_codewords,
     if (global_i_counter || global_factor_power)
         RescaleAndApplyGlobalICounter();
     
-    //    cout << "\n\ncompressed\n\n";
-    //    if(book_keep) {
-    //        compressed = true;
-    //        PrintStateVector();
-    //        compressed = false;
-    //    }
+    if(book_keep) {
+        compressed = true;
+        PrintStateVector();
+        compressed = false;
+    }
     unsigned short block_num = partition_to_sim == 'a' ? 0 : 1;
     cramer = new Cramer(amp_size, num_codewords, num_threads, p_rejection, 1);
     cmplx* compressed_amp = cramer -> CramerCompress(compressed_vector_ptrs.back()[block_num],
