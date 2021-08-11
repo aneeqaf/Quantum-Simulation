@@ -39,6 +39,7 @@ constexpr double CDF_MAX_P = 1.02;
 constexpr size_t INNER_R_SHIFT = 0;
 constexpr size_t NUM_UL_IN_REG = 4;
 constexpr size_t NUM_UI_IN_REG = 8;
+constexpr size_t NUM_FLOAT_IN_REG = 8;
 constexpr size_t NUM_SHORT_IN_REG = 16;
 constexpr size_t NUM_SHORT_IN_UL = 4;
 constexpr size_t REG_SIZE = 256;
@@ -47,6 +48,9 @@ constexpr size_t BITS_SHORT = 16;
 constexpr size_t BITS_UL = 64;
 constexpr size_t BITS_UI = 32;
 constexpr size_t SAMPLING_SIZE = 1 << 10;
+
+// Hardcoding for now from experiments. Don't have a good way of calculating for now
+constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 20, 20, 20, 20, 40, 50, 100, 150, 200, 200};
 
 constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};
@@ -107,28 +111,40 @@ class Cramer {
     
     enum Distribution: unsigned int {exponential, erlang, gamma};
     
-    complex<float>* codewords_mappings;
-    vector<short> map_codewords_sector;
+    struct SharedContext {
+        
+        size_t orig_vector_size;
+        size_t num_bits_sector;
+        size_t num_bits_codewords;
+        size_t num_bits_encoding;
+        size_t num_total_codewords;
+        size_t num_threads;
+        size_t num_zero_amps;
+        size_t num_sectors;
+        size_t num_turnings;
+        size_t num_codewords_reg;
+        size_t compressed_vector_UL_size;
+        double magnitude_r;
+        double A;
+        double spiral_length_r;
+        double codewords_spacing;
+        double lambda;
+        float k; //k -> shape in Gamma dist
+        bool projection_vector;
+        Distribution dist_type;
+        complex<float>* codewords_mappings;
+        vector<short> map_codewords_sector;
+    };
     
-    size_t orig_vector_size;
-    size_t compressed_vector_UL_size;
-    size_t num_bits_sector;
-    size_t num_bits_codewords;
-    size_t num_bits_encoding;
-    size_t num_total_codewords;
-    size_t num_codewords_reg;
-    size_t num_threads;
-    size_t num_zero_amps;
-    size_t num_sectors;
-    size_t num_turnings;
-    double A;
-    double magnitude_r;
-    double codewords_spacing;
-    double spiral_length_r;
-    double lambda;
-    float k; //k -> shape in Gamma dist
-    bool projection_vector;
-    Distribution dist_type;
+    struct BlockAccumulatingContext {
+        double running_mean;
+        double running_variance;
+        complex<float>* codewords_mappings;
+        size_t* cw_freq;
+    };
+    
+    SharedContext context;
+    BlockAccumulatingContext block_context;
     
     double CalculateCDFofExponential(complex<double>& amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
@@ -200,10 +216,9 @@ public:
     Cramer(size_t vector_size,
            size_t num_codewords,
            size_t num_threads,
-           size_t num_turnings,
            double probabilty_rejection,
-           bool projection_v = true,
-           size_t num_sectors = 1 /* Cannot be 0 and should be powers of 2*/);
+           size_t num_sectors = 1 /* Cannot be 0 and should be powers of 2*/,
+           bool projection_v = true);
     Cramer(const Cramer& rhs);
     ~Cramer();
     

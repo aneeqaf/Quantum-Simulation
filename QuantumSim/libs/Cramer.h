@@ -50,7 +50,7 @@ constexpr size_t BITS_UI = 32;
 constexpr size_t SAMPLING_SIZE = 1 << 10;
 
 // Hardcoding for now from experiments. Don't have a good way of calculating for now
-constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 10, 10, 20, 20, 40, 50, 100, 150, 200, 200};
+constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 20, 20, 20, 20, 40, 50, 100, 150, 200, 200};
 
 constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};

@@ -40,7 +40,7 @@ int main(int argc, char * argv[]) {
     string input_filename = "";
     double error_bound = 1e-3;
     int c = 0, idx = 0;
-    size_t num_codewords = (1 << 13) - 2;
+    size_t num_codewords = (1 << 13);
     size_t num_q = 0;
     double probability = 0;
     
@@ -114,7 +114,7 @@ int main(int argc, char * argv[]) {
     //    PlotPT(amp, num_q);
 //    PlotPointsOnComplexPlane(amp, amp_size);
     
-    Cramer cramer(amp_size, num_codewords, 4, 40, probability, true, 8);
+    Cramer cramer(amp_size, num_codewords, 4, probability, 8, true);
     
     //    ApplyUniformTransformToStateVector(amp, amp_size);
     //    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);

@@ -17,7 +17,7 @@ Cramer(size_t vector_size,
        bool projection_v): orig_vector_size(vector_size), num_bits_sector(log2(num_sectors)),
 num_bits_codewords(log2(num_cw)), num_bits_encoding(num_bits_codewords + num_bits_sector),
 num_total_codewords(num_cw * num_sectors), num_threads(num_th), num_zero_amps(0), num_sectors(num_sectors),
-num_turnings(num_turnings), lambda(0), k(0), projection_vector(projection_v), dist_type(exponential)
+lambda(0), k(0), projection_vector(projection_v), dist_type(exponential)
 {
     /*
      The probability of rejection are the smaller amps that we map to 0.
