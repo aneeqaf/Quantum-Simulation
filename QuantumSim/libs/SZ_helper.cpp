@@ -13,7 +13,10 @@ SZHelper::
 {
     if (!compressed_vector_ptrs.empty())
         for (auto ptrs : compressed_vector_ptrs)
-            if(ptrs) free(ptrs);
+            if(ptrs) {
+                free(ptrs);
+                ptrs = nullptr;
+            }
 }
 
 SZHelper::

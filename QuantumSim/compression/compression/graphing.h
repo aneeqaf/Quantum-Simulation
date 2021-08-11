@@ -431,7 +431,7 @@ static void PlotPhaseError(const vector<float>& error,
 {
 
     vector<pair<double, size_t>> error_plot(num_codewords);
-    for (int i = 10; i <= num_codewords; ++i) {
+    for (int i = 10; i < num_codewords; ++i) {
         error_plot[i] = make_pair(error[i], i);
     }
 #ifdef GP
@@ -466,7 +466,7 @@ static void PlotAmpsAroundCW(const vector<complex<float>>& amps,
     Gnuplot gp;
     
     gp << "reset\nset nokey\n";
-    gp << "set title \"Amps mapping to codeword " << codeword << " plot\" font \",14\"\n";
+    gp << "set title \""  << amps.size() << " amps mapping to codeword " << codeword << " plot\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
         gp << "set term png\n";

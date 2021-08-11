@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+#include <sleef.h>
 
 #include "math_helper.h"
 
@@ -36,7 +37,6 @@ using Packed4ShortArray = unsigned short[4];
 constexpr double PI = M_PI;
 constexpr double CDF_MAX_P = 1.02;
 constexpr size_t INNER_R_SHIFT = 0;
-constexpr double B = 0.00298;
 constexpr size_t NUM_UL_IN_REG = 4;
 constexpr size_t NUM_UI_IN_REG = 8;
 constexpr size_t NUM_FLOAT_IN_REG = 8;
@@ -48,6 +48,9 @@ constexpr size_t BITS_SHORT = 16;
 constexpr size_t BITS_UL = 64;
 constexpr size_t BITS_UI = 32;
 constexpr size_t SAMPLING_SIZE = 1 << 10;
+
+// Hardcoding for now from experiments. Don't have a good way of calculating for now
+constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 10, 10, 20, 20, 40, 50, 100, 150, 200, 200};
 
 constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};
@@ -112,13 +115,16 @@ class Cramer {
     
     size_t orig_vector_size;
     size_t compressed_vector_UL_size;
-    size_t r;
-    size_t R;
+    size_t num_bits_sector;
     size_t num_bits_codewords;
-    size_t num_codewords;
+    size_t num_bits_encoding;
+    size_t num_total_codewords;
     size_t num_codewords_reg;
     size_t num_threads;
     size_t num_zero_amps;
+    size_t num_sectors;
+    size_t num_turnings;
+    double A;
     double magnitude_r;
     double codewords_spacing;
     double spiral_length_r;
@@ -127,24 +133,24 @@ class Cramer {
     bool projection_vector;
     Distribution dist_type;
     
-    complex<double> CalculateCDFofExponential(complex<double> amp) const;
+    double CalculateCDFofExponential(complex<double>& amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
                                         __m256& imag ) const;
-    complex<double> CalculateCDFofGammaDist(complex<double> amp) const;
+    double CalculateCDFofGammaDist(complex<double>& amp) const;
     __m256 CalculateCDFofGammaDistAVX(__m256& real,
                                       __m256& imag ) const;
-    complex<double> CalculateCDFofErlangDist(complex<double> amp) const;
+    double CalculateCDFofErlangDist(complex<double>& amp) const;
     __m256 CalculateCDFofErlangDistAVX(__m256& real,
                                        __m256& imag ) const;
-    complex<double> UniformTransformMagnitudeAndAmp(complex<double> amp) const;
+    double UniformTransformMagnitudeAndAmp(complex<double>& amp) const;
     __m256 UniformTransformMagnitudeAndAmpAVX(__m256& real,
                                               __m256& imag) const;
     complex<double> PTTransformMagnitudeAndAmp(complex<double> amp) const;
     
-    //Polar equation: r = BTheta = BcPi
-    double CalcCInMagnitudeUniformSpiral(double magnitude) const;
+    //Polar equation: r = B * a * theta
+    double CalcSizeParameterInUniformSpiral(double radius, double theta) const;
     double CalcThetaForMagnitude(double magnitude) const;
-    double CalcMagnitudeForC(double c) const;
+    double CalcMagnitudeForTheta(double theta) const;
     double CalcCWForMagnitude(double magnitude) const;
     __m256 CalcCWForMagnitudeAVX(__m256 magnitudes) const;
     double CalcCWForTheta(double theta) const;
@@ -154,29 +160,32 @@ class Cramer {
     __m256 CalcApproxSpiralLenAVX(__m256 thetas) const;
     __m256 CalcApproxThetaForSpiralLenAVX(__m256 spiral_lengths) const;
     double CalcExactSpiralLen(double theta) const;
+    __m256 CalcExactSpiralLenAVX(__m256 theta) const;
     double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
     double CalcThetaForCW(unsigned short codeword) const;
     __m256 CalcThetaForCWAVX(__m256 codewords) const;
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
-    double CalculateKFromMeanAndVariance(double mean,
-                                         double variance) const;
-    double CalculateLambdaFromMeanAndVariance(double mean,
-                                              double variance) const;
-    void CalculateKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
+    double CalcKFromMeanAndVar(double mean,
+                               double variance) const;
+    double CalcLambdaFromMeanAndVar(double mean,
+                                    double variance) const;
+    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          double codeword) const;
     __m256 ShiftCWToNearestPhaseAVX(__m256 phase,
                                     __m256 codeword) const;
+    __m256 CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
+                                                  __m256 imag) ;
     unsigned short CalcNearestCWToVal(complex<double> val) const;
     __m256 CalcNearestCWToValAVX(__m256 real,
                                  __m256 imag) const;
     unsigned short MapValToCW(complex<double> val);
     __m256 MapValToCWAVX(__m256 real,
                          __m256 imag);
-    __m256 PackCWIn256BitsAVXReg(const unsigned int* codewords) const;
+    __m256i PackCWIn256BitsAVXReg(const unsigned int* codewords) const;
     void UnpackCWFrom256Bits(bitset<REG_SIZE> packed_codewords,
                              unsigned short* unpacked_codewords) const;
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords,
@@ -191,6 +200,7 @@ public:
            size_t num_codewords,
            size_t num_threads,
            double probabilty_rejection,
+           size_t num_sectors = 1 /* Cannot be 0 and should be powers of 2*/,
            bool projection_v = true);
     Cramer(const Cramer& rhs);
     ~Cramer();

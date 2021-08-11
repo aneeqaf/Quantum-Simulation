@@ -51,3 +51,4 @@ qsim/
 *.zip
 input/random_circuits_google/
 *.icloud
+*.o

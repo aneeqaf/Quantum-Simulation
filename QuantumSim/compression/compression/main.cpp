@@ -43,7 +43,7 @@ int main(int argc, char * argv[]) {
     size_t num_codewords = (1 << 13) - 2;
     size_t num_q = 0;
     double probability = 0;
-
+    
     while ((c = getopt_long(argc, argv, "i:e:n:q:p:", longopts, &idx)) != -1)
     {
         switch (c) {
@@ -67,7 +67,7 @@ int main(int argc, char * argv[]) {
             }
             case 'n': {
                 string temp = string(optarg);
-                num_codewords = (1 << stoul(temp)) - 1;
+                num_codewords = (1 << stoul(temp));
                 break;
             }
             case 'q': {
@@ -99,7 +99,7 @@ int main(int argc, char * argv[]) {
     infile.open(input_filename);
     
     char extra = '\0';
-//    getline(infile, cmplx_num);
+    //    getline(infile, cmplx_num);
     float real = 0, imag = 0;
     int i = 0;
     while (infile >> real >> imag >> extra) {
@@ -110,14 +110,14 @@ int main(int argc, char * argv[]) {
     }
     infile.close();
     
-        PlotCDF(amp, num_q);
-//    PlotPT(amp, num_q);
-    PlotPointsOnComplexPlane(amp, amp_size);
-
-    Cramer cramer(amp_size, num_codewords, 4, probability, true);
+//    PlotCDF(amp, num_q);
+    //    PlotPT(amp, num_q);
+//    PlotPointsOnComplexPlane(amp, amp_size);
     
-//    ApplyUniformTransformToStateVector(amp, amp_size);
-//    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);
-//    ApplyPTTransformToStateVector(amp, amp_size);
+    Cramer cramer(amp_size, num_codewords, 4, 40, probability, true, 8);
+    
+    //    ApplyUniformTransformToStateVector(amp, amp_size);
+    //    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);
+    //    ApplyPTTransformToStateVector(amp, amp_size);
     CompressDecompressStateVector(amp, amp_size, cramer);
 }

@@ -453,7 +453,7 @@ int main(int argc, char *argv[])
     if (config -> verbose)
         sim.PrintSystemReport();
     
-    else if (sim_type == Config::FullState) {
+    if (sim_type == Config::FullState) {
         FullAmpStateVector amp(cir.GetNumQubits());
         if (threshold == 0)
             sim.SetThreshold(cir.GetNumQubits()/2);

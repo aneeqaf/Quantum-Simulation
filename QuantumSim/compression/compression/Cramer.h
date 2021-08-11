@@ -25,6 +25,7 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
+#include <sleef.h>
 
 #include "math_helper.h"
 
@@ -36,7 +37,6 @@ using Packed4ShortArray = unsigned short[4];
 constexpr double PI = M_PI;
 constexpr double CDF_MAX_P = 1.02;
 constexpr size_t INNER_R_SHIFT = 0;
-constexpr double B = 0.00298;
 constexpr size_t NUM_UL_IN_REG = 4;
 constexpr size_t NUM_UI_IN_REG = 8;
 constexpr size_t NUM_SHORT_IN_REG = 16;
@@ -108,16 +108,20 @@ class Cramer {
     enum Distribution: unsigned int {exponential, erlang, gamma};
     
     complex<float>* codewords_mappings;
+    vector<short> map_codewords_sector;
     
     size_t orig_vector_size;
     size_t compressed_vector_UL_size;
-    size_t r;
-    size_t R;
+    size_t num_bits_sector;
     size_t num_bits_codewords;
-    size_t num_codewords;
+    size_t num_bits_encoding;
+    size_t num_total_codewords;
     size_t num_codewords_reg;
     size_t num_threads;
     size_t num_zero_amps;
+    size_t num_sectors;
+    size_t num_turnings;
+    double A;
     double magnitude_r;
     double codewords_spacing;
     double spiral_length_r;
@@ -141,18 +145,21 @@ class Cramer {
     complex<double> PTTransformMagnitudeAndAmp(complex<double> amp) const;
     
     //Polar equation: r = BTheta = BcPi
-    double CalcCInMagnitudeUniformSpiral(double magnitude) const;
+    //Polar equation: r = B * a * theta
+    double CalcSizeParameterInUniformSpiral(double radius, double theta) const;
     double CalcThetaForMagnitude(double magnitude) const;
-    double CalcMagnitudeForC(double c) const;
+    double CalcMagnitudeForTheta(double theta) const;
     double CalcCWForMagnitude(double magnitude) const;
     __m256 CalcCWForMagnitudeAVX(__m256 magnitudes) const;
     double CalcCWForTheta(double theta) const;
     __m256 CalcCWForThetaAVX(__m256 thetas) const;
+    __m256 CalcCWForPhaseAndMagnitudeAVX(__m256 magnitude, __m256 phase);
     double CalcMagnitudeForCW(unsigned short codeword) const;
     double CalcApproxSpiralLen(double theta) const;
     __m256 CalcApproxSpiralLenAVX(__m256 thetas) const;
     __m256 CalcApproxThetaForSpiralLenAVX(__m256 spiral_lengths) const;
     double CalcExactSpiralLen(double theta) const;
+    __m256 CalcExactSpiralLenAVX(__m256 theta) const;
     double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
     double CalcThetaForCW(unsigned short codeword) const;
     __m256 CalcThetaForCWAVX(__m256 codewords) const;
@@ -169,6 +176,10 @@ class Cramer {
                                          double codeword) const;
     __m256 ShiftCWToNearestPhaseAVX(__m256 phase,
                                     __m256 codeword) const;
+    __m256 GetAdjustedPhaseAVX(__m256 phases,
+                               __m256 phase_sectors) const;
+    __m256 CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
+                                                  __m256 imag) ;
     unsigned short CalcNearestCWToVal(complex<double> val) const;
     __m256 CalcNearestCWToValAVX(__m256 real,
                                  __m256 imag) const;
@@ -189,8 +200,10 @@ public:
     Cramer(size_t vector_size,
            size_t num_codewords,
            size_t num_threads,
+           size_t num_turnings,
            double probabilty_rejection,
-           bool projection_v = true);
+           bool projection_v = true,
+           size_t num_sectors = 1 /* Cannot be 0 and should be powers of 2*/);
     Cramer(const Cramer& rhs);
     ~Cramer();
     

@@ -1185,14 +1185,17 @@ CompressStateVector(idx_size num_codewords,
     //        compressed = false;
     //    }
     unsigned short block_num = partition_to_sim == 'a' ? 0 : 1;
-    cramer = new Cramer(amp_size, num_codewords, num_threads, p_rejection);
+    cramer = new Cramer(amp_size, num_codewords, num_threads, p_rejection, 1);
     cmplx* compressed_amp = cramer -> CramerCompress(compressed_vector_ptrs.back()[block_num],
                                                      amp);
     
     if (book_keep)
         compressed_vector_ptrs.back()[block_num] = compressed_amp;
     
-    if (amp && !compressed) free(amp);
+    if (amp) {
+        free(amp);
+        amp = nullptr;
+    }
     amp = compressed_amp;
     compressed = true;
 }
@@ -1202,7 +1205,10 @@ DecompressStateVector()
 {
     auto compressed_amp = amp;
     amp = cramer -> CramerDecompress(nullptr, compressed_amp);
-    if (compressed_amp) free(compressed_amp);
+    if (compressed_amp) {
+        free(compressed_amp);
+        compressed_amp = nullptr;
+    }
     
     //    cout << "\n\ndecompressed1\n\n";
     //    PrintStateVector();
@@ -1220,17 +1226,17 @@ DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
     CopyMemberVars(rhs);
     compressed = prev_compressed;
     
+    // Cannot deallocate amp. When in compressed state it is being used
+    // as a copy state in later layers.
     if (compressed == true) {
-        if (amp != nullptr) {
-            free(amp);
+        if (amp)
             amp = nullptr;
-        }
     }
     
+    // With the current logic amp is decompressed and when in decompressed state
+    // the memory is rewritten to in the decompression loop
+    // so don't deallocate.
     amp = t_rhs.cramer -> CramerDecompress(amp, t_rhs.amp);
-    //    cout << "\n\ndecompressed2\n\n";
-    //   if(book_keep) PrintStateVector();
-    
     compressed = false;
 }
 
