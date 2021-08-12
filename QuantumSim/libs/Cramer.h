@@ -50,7 +50,7 @@ constexpr size_t BITS_UI = 32;
 constexpr size_t SAMPLING_SIZE = 1 << 10;
 
 // Hardcoding for now from experiments. Don't have a good way of calculating for now
-constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 20, 20, 20, 20, 40, 50, 100, 150, 200, 200};
+constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 25, 20, 20, 20, 25, 50, 100, 150, 200, 200};
 
 constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};
@@ -111,27 +111,44 @@ class Cramer {
     
     enum Distribution: unsigned int {exponential, erlang, gamma};
     
-    complex<float>* codewords_mappings;
+    struct Config {
+        
+        size_t orig_vector_size;
+        size_t num_bits_sector;
+        size_t num_bits_codewords;
+        size_t num_bits_encoding;
+        size_t num_total_codewords;
+        size_t num_threads;
+        size_t num_zero_amps;
+        size_t num_sectors;
+        size_t num_turnings;
+        size_t num_codewords_reg;
+        size_t compressed_vector_UL_size;
+        double magnitude_r;
+        double A;
+        double spiral_length_r;
+        double codewords_spacing;
+        bool projection_vector;
+        Distribution dist_type;
+    };
     
-    size_t orig_vector_size;
-    size_t compressed_vector_UL_size;
-    size_t num_bits_sector;
-    size_t num_bits_codewords;
-    size_t num_bits_encoding;
-    size_t num_total_codewords;
-    size_t num_codewords_reg;
-    size_t num_threads;
-    size_t num_zero_amps;
-    size_t num_sectors;
-    size_t num_turnings;
-    double A;
-    double magnitude_r;
-    double codewords_spacing;
-    double spiral_length_r;
-    double lambda;
-    float k; //k -> shape in Gamma dist
-    bool projection_vector;
-    Distribution dist_type;
+    struct GlobalContext {
+        complex<float>* codewords_mappings;
+    };
+    
+    struct BlockContext {
+        double mean;
+        double variance;
+        double lambda;
+        float k; //k -> shape in Gamma dist
+        complex<float>* codewords_mappings;
+        size_t* cw_freq;
+        bool active;
+    };
+    
+    Config config;
+    GlobalContext global_context;
+    BlockContext block_context;
     
     double CalculateCDFofExponential(complex<double>& amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
@@ -155,6 +172,7 @@ class Cramer {
     __m256 CalcCWForMagnitudeAVX(__m256 magnitudes) const;
     double CalcCWForTheta(double theta) const;
     __m256 CalcCWForThetaAVX(__m256 thetas) const;
+    __m256 CalcCWForPhaseAndMagnitudeAVX(__m256 magnitude, __m256 phase);
     double CalcMagnitudeForCW(unsigned short codeword) const;
     double CalcApproxSpiralLen(double theta) const;
     __m256 CalcApproxSpiralLenAVX(__m256 thetas) const;
@@ -167,16 +185,20 @@ class Cramer {
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
+    size_t CalcNum256RegForSizeOfBlock(size_t block_size) const;
     double CalcKFromMeanAndVar(double mean,
                                double variance) const;
     double CalcLambdaFromMeanAndVar(double mean,
                                     double variance) const;
-    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
+    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector,
+                                        const size_t block_size);
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          double codeword) const;
     __m256 ShiftCWToNearestPhaseAVX(__m256 phase,
                                     __m256 codeword) const;
+    __m256 GetAdjustedPhaseAVX(__m256 phases,
+                               __m256 phase_sectors) const;
     __m256 CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
                                                   __m256 imag) ;
     unsigned short CalcNearestCWToVal(complex<double> val) const;
@@ -192,7 +214,7 @@ class Cramer {
                                          const __m256i& mask_cw_256) const;
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords) const;
     void UnpackCWFrom256BitsAVX(__m256i packed_codewords,
-                                unsigned short* unpacked_codewords) const;
+                                unsigned int* unpacked_codewords) const;
     
 public:
     
@@ -210,6 +232,24 @@ public:
     complex<float>* CramerDecompress(complex<float>* decompressed_v,
                                      const complex<float>* state_vector);
     
+    void InitiateBlockContext();
+    complex<float>* CramerBlockCompress(complex<float>* compressed_vector,
+                                        const complex<float>* state_vector,
+                                        const size_t block_idx,
+                                        const size_t block_size);
+    complex<float>* CramerBlockDecompress(complex<float>* decompressed_v,
+                                          const complex<float>* state_vector,
+                                          const size_t block_idx,
+                                          const size_t block_size);
+    void CommitBlockContext();
+    void CramerBlockSectorSwitch(const unsigned short* sectors,
+                                 const complex<float>* state_vector,
+                                 const size_t block_idx,
+                                 const size_t block_size);
+    void ModifySectorInCompressedInput(complex<float>* compressed_vector,
+                                      const size_t idx,
+                                      const __m256 sectors);
+    
     size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;
     double GetMaxOuterRadius() const;
@@ -219,7 +259,6 @@ public:
     double GetDistBetweenCW() const;
     double GetLog2Lambda() const;
     double GetKForGammaDist() const;
-    void GetCWForPlotting(vector<pair<float, float>>& codewords) const;
 };
 
 #endif /* Cramer_h */

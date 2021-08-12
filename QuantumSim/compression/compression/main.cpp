@@ -111,10 +111,10 @@ int main(int argc, char * argv[]) {
     infile.close();
     
 //    PlotCDF(amp, num_q);
-    //    PlotPT(amp, num_q);
+//        PlotPT(amp, num_q);
 //    PlotPointsOnComplexPlane(amp, amp_size);
     
-    Cramer cramer(amp_size, num_codewords, 4, probability, 8, true);
+    Cramer cramer(amp_size, num_codewords, 4, probability, 1, true);
     
     //    ApplyUniformTransformToStateVector(amp, amp_size);
     //    PlotUniformSpiralAndAmpDensity("uniform_plot" + to_string(num_codewords), amp, amp_size, cramer);

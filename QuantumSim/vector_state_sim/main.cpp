@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "qftSimulation.h"
+#include "qft_simulation.h"
 #include "simulation.h"
 #include "state.h"
 #include "state_autoconv.h"

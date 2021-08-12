@@ -82,33 +82,33 @@ ApproxAtan2(double y,
 }
 
 static inline __m256i _mm256_shift_right(__m256i A,
-                                         unsigned int count) {
+                                         size_t count) {
     
     unsigned int m = (1u << count) - 1;
     __m256i mask = {0, m, m, m};
     
     __m256i last_bits = _mm256_and_si256(A, mask);
-    last_bits = _mm256_slli_epi64(last_bits, 64 - count);
+    last_bits = _mm256_slli_epi64(last_bits, 64 - static_cast<int>(count));
     last_bits = _mm256_permute4x64_epi64 (last_bits,  0b00111001);
     last_bits[3] = 0;
     
-    __m256i shift_bits = _mm256_srli_epi64(A, count);
+    __m256i shift_bits = _mm256_srli_epi64(A, static_cast<int>(count));
     
     return _mm256_or_si256(last_bits, shift_bits);
 }
 
 static inline __m256i _mm256_shift_left(__m256i A,
-                                        unsigned int count)
+                                        size_t count)
 {
     unsigned long long m = ((1ul << count) - 1) << (64 - count);
     __m256i mask = {(long long)m, (long long)m, (long long)m, 0};
     
     __m256i last_bits = _mm256_and_si256(A, mask);
-    last_bits = _mm256_srli_epi64(last_bits, 64 - count);
+    last_bits = _mm256_srli_epi64(last_bits, 64 - static_cast<int>(count));
     last_bits = _mm256_permute4x64_epi64 (last_bits,  0b10010000);
     last_bits[0] = 0;
     
-    __m256i shift_bits = _mm256_slli_epi64(A, count);
+    __m256i shift_bits = _mm256_slli_epi64(A, static_cast<int>(count));
     
     return _mm256_or_si256(last_bits, shift_bits);
 }
@@ -710,5 +710,34 @@ static inline __m256 _mm256_gammp_ps(__m256 a,
     return result;
 }
 
+static inline void
+CalculateMeanAndVariance(double& mean,
+                         double& variance,
+                         const double threshold,
+                         const complex<float>* input /* pointer to beginning of input block */,
+                         const size_t input_size,
+                         const size_t num_threads)
+{
+    size_t non_zero_amps = 0;
+#pragma omp parallel for reduction(+:non_zero_amps, mean) num_threads(num_threads)
+    for (size_t i = 0; i < input_size; ++i) {
+        double p = norm(input[i]);
+        if (p > threshold) {
+            ++non_zero_amps;
+            mean += p;
+        }
+    }
+    
+    mean /= non_zero_amps;
+
+#pragma omp parallel for reduction(+:variance) num_threads(num_threads)
+    for (size_t i = 0; i < input_size; ++i) {
+        double p = norm(input[i]);
+        if (p > threshold)
+            variance += ((p - mean) * (p - mean));
+    }
+    
+    variance /= input_size;
+}
 
 #endif /* math_helper_h */

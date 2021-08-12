@@ -6,7 +6,7 @@
 //  Copyright © 2021 Aneeqa Fatima. All rights reserved.
 //
 
-#include "qftSimulation.h"
+#include "qft_simulation.h"
 
 void QFTSimulation::
 Simulate(FullAmpStateVector& amp)

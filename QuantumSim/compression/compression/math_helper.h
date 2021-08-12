@@ -714,5 +714,32 @@ static inline __m256 _mm256_gammp_ps(__m256 a,
     return result;
 }
 
+static inline void
+CalculateMeanAndVariance(double& mean,
+                         double& variance,
+                         const double threshold,
+                         const complex<float>* input /* pointer to beginning of input block */,
+                         const size_t input_size)
+{
+    size_t non_zero_amps = 0;
+#pragma omp parallel for reduction(+:num_amps, mean) num_threads(num_threads)
+    for (size_t i = 0; i < input_size; ++i) {
+        double p = norm(input[i]);
+        if (p > threshold) {
+            ++non_zero_amps;
+            mean += p;
+        }
+    }
+    
+    mean /= non_zero_amps;
 
+#pragma omp parallel for reduction(+:variance) num_threads(num_threads)
+    for (size_t i = 0; i < input_size; ++i) {
+        double p = norm(input[i]);
+        if (p > threshold)
+            variance += ((p - mean) * (p - mean));
+    }
+    
+    variance /= input_size;
+}
 #endif /* math_helper_h */

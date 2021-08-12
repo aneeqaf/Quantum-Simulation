@@ -50,7 +50,7 @@ constexpr size_t BITS_UI = 32;
 constexpr size_t SAMPLING_SIZE = 1 << 10;
 
 // Hardcoding for now from experiments. Don't have a good way of calculating for now
-constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 20, 20, 20, 20, 40, 50, 100, 150, 200, 200};
+constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 25, 20, 20, 20, 25, 50, 100, 150, 200, 200};
 
 constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};
@@ -111,7 +111,7 @@ class Cramer {
     
     enum Distribution: unsigned int {exponential, erlang, gamma};
     
-    struct SharedContext {
+    struct Config {
         
         size_t orig_vector_size;
         size_t num_bits_sector;
@@ -128,23 +128,28 @@ class Cramer {
         double A;
         double spiral_length_r;
         double codewords_spacing;
-        double lambda;
-        float k; //k -> shape in Gamma dist
         bool projection_vector;
         Distribution dist_type;
-        complex<float>* codewords_mappings;
         vector<short> map_codewords_sector;
     };
     
-    struct BlockAccumulatingContext {
-        double running_mean;
-        double running_variance;
+    struct GlobalContext {
         complex<float>* codewords_mappings;
-        size_t* cw_freq;
     };
     
-    SharedContext context;
-    BlockAccumulatingContext block_context;
+    struct BlockContext {
+        double mean;
+        double variance;
+        double lambda;
+        float k; //k -> shape in Gamma dist
+        complex<float>* codewords_mappings;
+        size_t* cw_freq;
+        bool active;
+    };
+    
+    Config config;
+    GlobalContext global_context;
+    BlockContext block_context;
     
     double CalculateCDFofExponential(complex<double>& amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
@@ -182,11 +187,13 @@ class Cramer {
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
+    size_t CalcNum256RegForSizeOfBlock(size_t block_size) const;
     double CalcKFromMeanAndVar(double mean,
                                double variance) const;
     double CalcLambdaFromMeanAndVar(double mean,
                                     double variance) const;
-    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector);
+    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector,
+                                        const size_t block_size);
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          double codeword) const;
@@ -209,7 +216,7 @@ class Cramer {
                                          const __m256i& mask_cw_256) const;
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords) const;
     void UnpackCWFrom256BitsAVX(__m256i packed_codewords,
-                                unsigned short* unpacked_codewords) const;
+                                unsigned int* unpacked_codewords) const;
     
 public:
     
@@ -219,13 +226,25 @@ public:
            double probabilty_rejection,
            size_t num_sectors = 1 /* Cannot be 0 and should be powers of 2*/,
            bool projection_v = true);
-    Cramer(const Cramer& rhs);
+    Cramer(const Cramer& rhs) = delete;
     ~Cramer();
     
     complex<float>* CramerCompress(complex<float>* compressed_v,
                                    const complex<float>* state_vector);
     complex<float>* CramerDecompress(complex<float>* decompressed_v,
                                      const complex<float>* state_vector);
+    
+    void InitiateBlockContext();
+    complex<float>* CramerBlockCompress(complex<float>* compressed_vector,
+                                        unsigned int* codewords,
+                                        const complex<float>* state_vector,
+                                        const size_t block_idx,
+                                        const size_t block_size);
+    complex<float>* CramerBlockDecompress(complex<float>* decompressed_v,
+                                          const complex<float>* state_vector,
+                                          const size_t block_idx,
+                                          const size_t block_size);
+    void CommitBlockContext();
     
     size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;
