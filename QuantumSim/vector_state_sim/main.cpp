@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
     
     if(write_circuit_mode) {
         cout << "Rearranging and writing circuit to file\n";
-        cir.OptimizeCircuitArrangement(config);
+        cir.OptimizeCircuitArrangement(config, write_circuit_mode);
         cir.WriteCircuitToFile(input_filename + ".rearranged");
         delete config;
         return 0;
@@ -437,13 +437,14 @@ int main(int argc, char *argv[])
     }
     
     GenericQuantumState::num_threads = num_threads;
+    
     if (qft > 0) {
         FullAmpStateVector amp(qft);
-        
+
         QFTSimulation qft_sim(qft);
-        
+
         qft_sim.Simulate(amp);
-        
+
         delete config;
         return 0;
     }

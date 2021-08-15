@@ -158,36 +158,57 @@ CalculateTotalNumCycles(const idx_size num_qubits,
         return clock_cycles.size();
     }
     else {
-        array<idx_size, 3> proc_ranges_branch_cycle {0, 0, 0};
-        auto current_mode = Config::ProcPrefix;
-        idx_size current_path_bits = config -> proc_prefix_bits;
+        array<idx_size, 3> proc_ranges_branch_mempass {0, 0, 0};
+        int current_mode = Config::ProcPrefix;
+        idx_size current_path_bits = config -> proc_prefix_bits, memory_passes = 0;
         for (idx_size i = 0; i < gates.size(); ++i) {
-            if (IsCrossingGate(i, num_qubits, gates, qp)) {
-                if (current_path_bits == 0) {
-                    switch (current_mode) {
-                        case Config::ProcPrefix:
-                            proc_ranges_branch_cycle[1] = ::GetCycleNumForGateIdx(i, clock_cycles);
-                            current_mode = Config::Ranges;
-                            current_path_bits = config -> ranges_bits;
-                            break;
-                        case Config::Ranges:
-                            proc_ranges_branch_cycle[2] = ::GetCycleNumForGateIdx(i, clock_cycles);
-                            goto exit_loop;
-                            break;
-                        default:
-                            break;
+            if (memory_passes == 0 && gates[i].GetType() == Gate::Type::h) {
+                i += num_qubits - 1;
+                ++memory_passes;
+                continue;
+            }
+            else if (gates[i].IsDiagonal()) {
+                ++memory_passes;
+                for(; i < gates.size() && gates[i].IsDiagonal(); ++i) { 
+                    if (IsCrossingGate(i, num_qubits, gates, qp)) {
+                        if (current_path_bits <= 0) {
+                            proc_ranges_branch_mempass[current_mode] = memory_passes;
+                            memory_passes = 0;
+
+                            switch (current_mode) {
+                                case Config::ProcPrefix:
+                                    current_path_bits = config -> ranges_bits;
+                                    ++current_mode;
+                                    break;
+                                case Config::Ranges:
+                                    current_path_bits = config -> dfs_length;
+                                    ++current_mode;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        --current_path_bits;
                     }
                 }
-                --current_path_bits;
             }
+            else {
+                while (i < gates.size() && !gates[i].IsDiagonal()) {
+                    if (i + 1 < gates.size() && !gates[i].IsDiagonal() && !gates[i + 1].IsDiagonal()) {
+                        ++memory_passes;
+                        i += 2;
+                    }
+                    else {
+                        ++memory_passes;
+                        ++i;
+                    }
+                }
+            }
+            --i;
         }
-        exit_loop:;
-        
-        idx_size num_proc_cycles = proc_ranges_branch_cycle[1],
-        num_ranges_cycles = proc_ranges_branch_cycle[2] - proc_ranges_branch_cycle[1],
-        num_branches_cycles = clock_cycles.size() - proc_ranges_branch_cycle[2];
-        return num_proc_cycles + (1ull << num_ranges_cycles)
-                + ((1ull << num_ranges_cycles) * (1ull << num_branches_cycles));
+        proc_ranges_branch_mempass[current_mode] = memory_passes;
+        return  proc_ranges_branch_mempass[0] + ((1ull << config -> ranges_bits) * proc_ranges_branch_mempass[1])
+                + ((1ull << config -> ranges_bits) * (1ull << config -> dfs_length) * proc_ranges_branch_mempass[2]);
     }
 }
 
@@ -242,6 +263,8 @@ PostProcessAfterClustering(idx_size num_qubits,
             idx_size non_diag_start = i;
             for (; i < gates.size() && !gates[i].IsDiagonal(); ++i) {
                 auto gate_qubits = gates[i].GetQubits();
+                // google gates have a layer of H that completely obstructs and will not allow moving
+                // potential gates.
                 if (google && gates[i].GetType() == Gate::Type::h) break;
                 if (gate_qubits.size() == 1) ++num_1q_gates;
                 for (auto q : gate_qubits) obstructed_qubits[q] = 1;
@@ -264,13 +287,15 @@ PostProcessAfterClustering(idx_size num_qubits,
                 }
             }
             
-            prev_num_1q_gates = num_1q_gates;
+            
             prev_non_diag_start = non_diag_start;
             
-            if (google)
+            if (google && gates[i].GetType() == Gate::Type::h) {
+                prev_num_1q_gates = 0;
                 for (; i < gates.size() && gates[i].GetType() == Gate::Type::h; ++i) {}
+            }
+            else prev_num_1q_gates = num_1q_gates;
 
-                        
             --i;
         }
     }

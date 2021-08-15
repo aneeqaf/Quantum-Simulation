@@ -58,7 +58,8 @@ public:
                                const idx_size depth,
                                const idx_size add_layer_H = 0);
     void WriteCircuitToFile(const string& out_file);
-    void OptimizeCircuitArrangement(const Config* config);
+    void OptimizeCircuitArrangement(const Config* config,
+                                    bool write_circuit_mode = false);
     void InitializeCircuitConfig(const Config* config);
     
     int GetNumQubits() const;

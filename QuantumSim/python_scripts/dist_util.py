@@ -459,10 +459,10 @@ def LaunchDisParallelSim(num_cz, num_batches, dfs_len, cir_dir, cz_bits_strings,
 						new_cmd = command
 					new_cmd += " --CZ_path "
 					if j < (start_idx + proc_per_script - 1) or binary_vectors_only:
-						script.write("echo /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
+						script.write("date\necho /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 						script.write("/usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "\n")
 					else:
-						script.write("echo /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
+						script.write("date\necho /usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
 						script.write("/usr/bin/time " + new_cmd + cz_bits_strings[j] + "--outfile output_" + str(batch_count) + "@\n")
 					script.write("ELAPSED_TIME=$((($PROCS - " + str(proc_count) + ")*($SECONDS - $START_TIME)))\n" + \
 					"echo \"\n" + str(proc_count)  + " out of " + str(proc_per_script) \

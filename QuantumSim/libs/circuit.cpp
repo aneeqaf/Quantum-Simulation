@@ -665,7 +665,8 @@ ReadGoogleCircuitFile(const string& input_file,
 }
 
 void Circuit::
-OptimizeCircuitArrangement(const Config* config)
+OptimizeCircuitArrangement(const Config* config,
+                           bool write_circuit_mode)
 {
     // TODO: Find a better solution here. Super naive temporary solution.
     if (!IsRearranged()) {
@@ -712,10 +713,16 @@ OptimizeCircuitArrangement(const Config* config)
         }
         else {
             idx_size op1_cycles = ::CalculateTotalNumCycles(qubits, config, clock_cycles_op1, gates_op1, *qp),
-                     op2_cycles = CalculateTotalNumCycles(config);
+                     op2_cycles = CalculateTotalNumCycles(config), chosen_cycles = op2_cycles;
             if (op1_cycles < op2_cycles) {
                 gates = gates_op1;
                 clock_cycles = clock_cycles_op1;
+                chosen_cycles = op1_cycles;
+            }
+            
+            if (write_circuit_mode) {
+                cout << "Number of memory passes in circuit : " << chosen_cycles << "\n\nCircuit:\n";
+                PrintGates(gates, qubits, *qp);
             }
         }
         
