@@ -219,7 +219,7 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
     };
     
     const idx_size num_qubits_minus_1 = qp -> getNumQubits() - 1, num_crossing_q = qp -> getNumX();
-    int remaining_path_bits = static_cast<int>(proc_prefix_bits), total_CZ = 0, total_xCZ = 0;
+    int remaining_path_bits = static_cast<int>(proc_prefix_bits);
     Config::SimMode current_mode = Config::SimMode::ProcPrefix;
     bool continue_rearranging = proc_prefix_bits != 0;
     
@@ -361,12 +361,12 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     case Config::SimMode::ProcPrefix:
                         remaining_path_bits = static_cast<int>(range_bits);
                         current_mode = Config::SimMode::Ranges;
-                        if (range_bits == 0) continue_rearranging = false;
+//                        if (range_bits == 0) continue_rearranging = false;
                         break;
                     case Config::SimMode::Ranges:
                         remaining_path_bits = static_cast<int>(branch_bits);
                         current_mode = Config::SimMode::Branch;
-                        if (range_bits == 0) continue_rearranging = false;
+                        if (branch_bits == 0) continue_rearranging = false;
                         break;
                     case Config::SimMode::Branch:
                         break;
