@@ -134,17 +134,21 @@ class Cramer {
     };
     
     struct GlobalContext {
-        complex<float>* codewords_mappings;
+        complex<float>* codewords_mappings; 
+        int codewords_all;
     };
     
     struct BlockContext {
         double mean;
         double variance;
         double lambda;
-        float k; //k -> shape in Gamma dist
+        size_t active_block;
         complex<float>* codewords_mappings;
         size_t* cw_freq;
-        bool active;
+        float k; //k -> shape in Gamma dist
+        int codewords_all;
+        bool initialized;
+        bool calc_mean_var;
     };
     
     Config config;
@@ -234,7 +238,8 @@ public:
     complex<float>* CramerDecompress(complex<float>* decompressed_v,
                                      const complex<float>* state_vector);
     
-    void InitiateBlockContext();
+    void InitiateBlockContext(size_t block_id,
+                              bool calc_mean_var);
     complex<float>* CramerBlockCompress(complex<float>* compressed_vector,
                                         unsigned int* codewords,
                                         const complex<float>* state_vector,

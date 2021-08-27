@@ -29,7 +29,7 @@ public:
     friend class SumOfTensorsProductsStateVector;
     
     int FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
-                                      const bitset<128>* gate_bitmasks);
+                                     const bitset<128>* gate_bitmasks);
     void ApplyCZGateAcrossTensorFactors(const Gate::Type CZ_D_A,
                                         const Gate::Type CZ_D_B,
                                         const int qubit_a,
@@ -120,6 +120,7 @@ public:
     }
     TensorProductStateVector(const int qubits,
                              const QubitPartition::Cuts type,
+                             const Config* config,
                              const int hcut = 0,
                              const int vcut = 0,
                              const Config::SimType sim = Config::LosslessH,

@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     int sim_type = -1;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
-    num_threads = omp_get_num_procs();
+    num_threads = 1ull << static_cast<int>(floor(log2(omp_get_num_procs())));
     
     while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:Q:C", longopts, &idx)) != -1)
     {
@@ -306,6 +306,7 @@ int main(int argc, char *argv[])
             case 't': {
                 string threads = string(optarg);
                 num_threads = stoi(threads);
+                num_threads = 1ull << static_cast<int>(floor(log2(stoi(threads))));
 #ifdef Parallel
                 if (num_threads > omp_get_max_threads()) {
                     cerr << "Number of threads specified greater than max number of threads\n";
@@ -416,7 +417,7 @@ int main(int argc, char *argv[])
                                  cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii,
                                  print_amp, print_idx, (Config::SimType)sim_type, verbose, vcut, hcut,
                                  depth, threshold, num_threads, true, nearest_neighbors, row_major,
-                                 layers_H_gates, store_checkpoint_range, first_partition_smaller,
+                                store_checkpoint_range, first_partition_smaller,
                                  count_zeros, save_cp_to_file, compress, cramer_cw, cramer_p_reject);
     
     cir.InitializeCircuitConfig(config);
@@ -439,8 +440,8 @@ int main(int argc, char *argv[])
     GenericQuantumState::num_threads = num_threads;
     
     if (qft > 0) {
-        FullAmpStateVector amp(qft);
-
+        FullAmpStateVector amp(qft, config);
+        
         QFTSimulation qft_sim(qft);
 
         qft_sim.Simulate(amp);
@@ -455,7 +456,7 @@ int main(int argc, char *argv[])
         sim.PrintSystemReport();
     
     if (sim_type == Config::FullState) {
-        FullAmpStateVector amp(cir.GetNumQubits());
+        FullAmpStateVector amp(cir.GetNumQubits(), config);
         if (threshold == 0)
             sim.SetThreshold(cir.GetNumQubits()/2);
         
@@ -464,15 +465,15 @@ int main(int argc, char *argv[])
     else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011 || sim_type == Config::Approx_i11i
              || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      QubitPartition::Cuts::Horizontal, hcut, vcut,
-                                      (Config::SimType)sim_type, row_major, first_partition_smaller,
+                                      QubitPartition::Cuts::Horizontal,
+                                      config, hcut, vcut, (Config::SimType)sim_type, row_major, first_partition_smaller,
                                       config -> verbose);
         sim.Simulate(amp, cir);
     }
     else if (sim_type == Config::Approx1CutV) {
         TensorProductStateVector amp (cir.GetNumQubits(),
-                                      QubitPartition::Cuts::Vertical, hcut, vcut,
-                                      (Config::SimType)sim_type, row_major, first_partition_smaller,
+                                      QubitPartition::Cuts::Vertical,
+                                      config, hcut, vcut, (Config::SimType)sim_type, row_major, first_partition_smaller,
                                       config -> verbose);
         
         if (threshold == 0) {
@@ -485,7 +486,7 @@ int main(int argc, char *argv[])
     }
     else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0) {
         SumOfTensorsProductsStateVector amp (cir.GetNumQubits(), (Config::SimType)sim_type,
-                                             hcut, vcut, row_major, first_partition_smaller,
+                                             config, hcut, vcut, row_major, first_partition_smaller,
                                              config -> verbose);
         if (!config -> indices.empty())
             amp.PopulateGlobalToLocalMap(config -> indices);
@@ -501,8 +502,8 @@ int main(int argc, char *argv[])
             amp.UnpopulateGlobalToLocalMap();
     }
     else {
-        AdaptiveStateVector amp(cir.GetNumQubits(),
-                                (Config::SimType)sim_type, hcut, vcut, row_major, first_partition_smaller,
+        AdaptiveStateVector amp(cir.GetNumQubits(), (Config::SimType)sim_type,
+                                config, hcut, vcut, row_major, first_partition_smaller,
                                 config -> verbose);
         sim.Simulate(amp, cir);
     }

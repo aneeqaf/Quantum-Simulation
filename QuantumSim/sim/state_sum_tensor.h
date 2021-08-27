@@ -121,6 +121,7 @@ public:
         tensor_addends.push_back(new TensorProductStateVector());}
     SumOfTensorsProductsStateVector(const int qubits,
                                     const Config::SimType type,
+                                    const Config* config,
                                     const int hcut = 0,
                                     const int vcut = 0,
                                     const bool row_major = true,

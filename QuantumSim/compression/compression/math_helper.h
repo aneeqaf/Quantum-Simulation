@@ -719,27 +719,52 @@ CalculateMeanAndVariance(double& mean,
                          double& variance,
                          const double threshold,
                          const complex<float>* input /* pointer to beginning of input block */,
-                         const size_t input_size)
+                         const size_t input_size,
+                         const size_t num_threads = 4)
 {
-    size_t non_zero_amps = 0;
-#pragma omp parallel for reduction(+:num_amps, mean) num_threads(num_threads)
+    size_t non_zero_amps = 1;
+#pragma omp parallel for reduction(+:non_zero_amps, mean) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i) {
+        if (mean >  ULONG_MAX - 100000) {
+            mean /= non_zero_amps;
+            non_zero_amps = 1;
+        }
         double p = norm(input[i]);
+        assert(mean != NAN);
+        assert(p < INFINITY);
+
         if (p > threshold) {
             ++non_zero_amps;
             mean += p;
         }
     }
+    assert(mean != NAN);
+    assert(mean < INFINITY);
     
     mean /= non_zero_amps;
 
+    // Setting it to 2 so that Bessel's formula does not lead to division by 0
+    non_zero_amps = 2;
 #pragma omp parallel for reduction(+:variance) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i) {
+        if (variance > ULONG_MAX - 100000) {
+            variance /= non_zero_amps;
+            non_zero_amps = 1;
+        }
         double p = norm(input[i]);
-        if (p > threshold)
+        assert(mean != NAN);
+        assert(p < INFINITY);
+        
+        if (p > threshold) {
+            ++non_zero_amps;
             variance += ((p - mean) * (p - mean));
+        }
     }
+    assert(variance != NAN);
+    assert(variance < INFINITY);
+    assert(variance != 0);
     
-    variance /= input_size;
+    variance /= (non_zero_amps - 1);
 }
+
 #endif /* math_helper_h */

@@ -35,6 +35,7 @@
 #include <sleef.h>
 #include <omp.h>
 
+#include "Cramer.h"
 #include "gates.h"
 #include "profile.h"
 #include "zero_opt_mask.h"
@@ -659,6 +660,7 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
 
 pair<idx_size, int>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
+                                  Cramer* cramer,
                                   const int num_qubits_amp,
                                   const idx_size* volatile __restrict CZ_bitmasks,
                                   const idx_size* volatile __restrict T_bitmasks,

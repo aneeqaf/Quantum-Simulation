@@ -142,7 +142,8 @@ public:
     min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr), global_factor_power(0),
     global_i_counter(0), num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false) {}
     
-    FullAmpStateVector(const int qubits);
+    FullAmpStateVector(const int qubits,
+                       const Config* config);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);
     FullAmpStateVector& operator=(const FullAmpStateVector& rhs) = delete;

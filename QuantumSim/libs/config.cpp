@@ -145,7 +145,6 @@ Config(const bitset<128>& amp_size,
        const bool google,
        const bool near_neighbors,
        const bool row_maj,
-       const int layers_last_H,
        const bool store_r,
        const bool first_part_small,
        const bool count_0,
@@ -157,7 +156,7 @@ Config(const bitset<128>& amp_size,
 report_outfile(rfile), misc_outfile(mfile), cz_path(cz_p), approx_epsilon(epsilon),
 cramer_num_codewords(cramer_num_cw), cramer_p_rejection(cramer_p_reject),
 norm_perc(norm_p), norm_depth(norm_d), ranges_bits(cz_append_l), proc_prefix_bits(cz_len),
-dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), last_layers_H(layers_last_H),
+dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), 
 save_cp_file(sv_cp_file), google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx),
 nearest_neighbors(near_neighbors), row_major(row_maj), count_zeros(count_0),
 store_checkpoint_range(store_r), first_part_smaller(first_part_small), compress(sz_compress),
@@ -301,7 +300,6 @@ Config(const Config& rhs)
     approx = rhs.approx;
     nearest_neighbors = rhs.nearest_neighbors;
     row_major = rhs.row_major;
-    last_layers_H = rhs.last_layers_H;
     store_checkpoint_range = rhs.store_checkpoint_range;
     first_part_smaller = rhs.first_part_smaller;
     save_cp_file = rhs.save_cp_file;
@@ -340,7 +338,6 @@ operator=(const Config& rhs)
     approx = rhs.approx;
     nearest_neighbors = rhs.nearest_neighbors;
     row_major = rhs.row_major;
-    last_layers_H = rhs.last_layers_H;
     store_checkpoint_range = rhs.store_checkpoint_range;
     first_part_smaller = rhs.first_part_smaller;
     save_cp_file = rhs.save_cp_file;

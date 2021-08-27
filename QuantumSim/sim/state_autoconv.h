@@ -90,6 +90,7 @@ public:
     sumOfTensors(new SumOfTensorsProductsStateVector), total_q(0) {}
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,
+                        const Config* config,
                         const int hcut = 0,
                         const int vcut = 0,
                         const bool row_major = true,

@@ -726,18 +726,35 @@ CalculateMeanAndVariance(double& mean,
             ++non_zero_amps;
             mean += p;
         }
+        if (mean > ULONG_MAX - 100) {
+            mean /= non_zero_amps;
+            non_zero_amps = 1;
+        }
     }
+    assert(mean != NAN);
+    assert(mean < INFINITY);
     
     mean /= non_zero_amps;
 
+    variance = 0;
+    non_zero_amps = 1;
 #pragma omp parallel for reduction(+:variance) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i) {
         double p = norm(input[i]);
-        if (p > threshold)
+        if (p > threshold) {
+            ++non_zero_amps;
             variance += ((p - mean) * (p - mean));
+        }
+        if (variance > ULONG_MAX - 100) {
+            variance /= non_zero_amps;
+            non_zero_amps = 1;
+        }
     }
+    assert(variance != NAN);
+    assert(variance < INFINITY);
+    assert(variance != 0);
     
-    variance /= input_size;
+    variance /= (non_zero_amps - 1);
 }
 
 #endif /* math_helper_h */

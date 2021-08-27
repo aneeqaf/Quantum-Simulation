@@ -15,6 +15,7 @@ idx_size TensorProductStateVector::num_requested_amps(0);
 TensorProductStateVector::
 TensorProductStateVector(const int qubits,
                          const QubitPartition::Cuts cut_type,
+                         const Config* config,
                          const int hcut,
                          const int vcut,
                          const Config::SimType sim,
@@ -31,8 +32,8 @@ qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubit
 //    qp.RenumberLocalQubits();
 
     int num_q_b0 = qp.getNumQubitsInBlock(0), num_q_b1 = qp.getNumQubitsInBlock(1);
-    state_a = new FullAmpStateVector(num_q_b0);
-    state_b = new FullAmpStateVector(num_q_b1);
+    state_a = new FullAmpStateVector(num_q_b0, config);
+    state_b = new FullAmpStateVector(num_q_b1, config);
         
     if (!count_h && cut_type == QubitPartition::Cuts::Horizontal) {
         string data = "";

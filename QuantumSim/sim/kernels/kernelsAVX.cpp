@@ -10,7 +10,7 @@
 #include "kernelsAVX.h"
 
 __attribute__((always_inline)) inline void
-GetTGatesCount(idx_size* volatile gate_counts /*8*/,
+GetTGatesCount(unsigned short* volatile gate_counts /*8*/,
                volatile bool&  negate_Z,
                const volatile idx_size p_gray_code,
                const idx_size* volatile __restrict gray_codes /*8*/,
@@ -39,7 +39,7 @@ GetTGatesCount(idx_size* volatile gate_counts /*8*/,
 
 __attribute__((always_inline)) inline void
 FirstGroupOf8GatesHelper(float* __restrict t_amp,
-                         const idx_size* volatile gate_counts /*8*/,
+                         const unsigned short* volatile gate_counts /*8*/,
                          const idx_size* volatile __restrict gray_codes /*8*/)
 {
     const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2 * gray_codes[0]]);
@@ -72,8 +72,22 @@ FirstGroupOf8GatesHelper(float* __restrict t_amp,
 }
 
 __attribute__((always_inline)) inline void
+GroupOf8GatesHelperOnCompressedState(float* __restrict t_amp,
+                                      Cramer* cramer,
+                                      const unsigned short* volatile gate_counts /*16*/,
+                                      const idx_size volatile __restrict idx_begin)
+{
+//    cout << "\nidx_begin: "<< idx_begin << "\n";
+//    for (size_t i = 0; i < 16; ++i)
+//        cout << gate_counts[i] << ", ";
+//    cout << "\n";
+    cramer -> CramerBlockSectorSwitch((complex<float>*)t_amp, gate_counts, idx_begin, 16);
+}
+
+
+__attribute__((always_inline)) inline void
 SecondGroupOf8GatesHelper(float* __restrict t_amp,
-                          const idx_size* volatile gate_counts /*8*/,
+                          const unsigned short* volatile gate_counts /*8*/,
                           const idx_size* volatile __restrict gray_codes /*8*/)
 {
     const __m256 temp_amp0 = _mm256_load_ps (&t_amp[2 * gray_codes[7]]);
@@ -108,6 +122,7 @@ SecondGroupOf8GatesHelper(float* __restrict t_amp,
 
 __attribute__((always_inline)) inline void
 ApplyCZTGatesInABlock(float* __restrict t_amp,
+                      Cramer* cramer,
                       const int num_qubits_amp,
                       const idx_size* volatile __restrict CZ_bitmasks,
                       const idx_size* volatile __restrict T_bitmasks /*2*/,
@@ -151,17 +166,37 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
         const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
         idx_size prev_gc1 = gc_first[7];
         
-        idx_size Tgate_count_1[8] = {0};
+        unsigned short Tgate_count_1[8] = {0};
         GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
         
-        idx_size Tgate_count_2[8] = {0};
+        unsigned short Tgate_count_2[8] = {0};
         GetTGatesCount(Tgate_count_2, negate_Z, prev_gc1, gc_second, CZ_bitmasks, T_bitmasks);
         
         if (zero_opt_mask.CheckIfAllNonZeroes() || zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * 16, 16)) {
             
-            FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
-            
-            FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
+            if (cramer) {
+                if ((gc_first[0] & 8) == 0) {
+                    unsigned short Tgate_count[16] = {
+                        Tgate_count_1[0], Tgate_count_1[1], Tgate_count_1[3], Tgate_count_1[2],
+                        Tgate_count_1[7], Tgate_count_1[6], Tgate_count_1[4], Tgate_count_1[5],
+                        Tgate_count_2[7], Tgate_count_2[6], Tgate_count_2[4], Tgate_count_2[5],
+                        Tgate_count_2[0], Tgate_count_2[1], Tgate_count_2[3], Tgate_count_2[2]};
+                    GroupOf8GatesHelperOnCompressedState(t_amp, cramer, Tgate_count, gc_first[0]);
+                }
+                else {
+                    unsigned short Tgate_count[16] = {
+                        Tgate_count_2[7], Tgate_count_2[6], Tgate_count_2[4], Tgate_count_2[5],
+                        Tgate_count_2[0], Tgate_count_2[1], Tgate_count_2[3], Tgate_count_2[2],
+                        Tgate_count_1[0], Tgate_count_1[1], Tgate_count_1[3], Tgate_count_1[2],
+                        Tgate_count_1[7], Tgate_count_1[6], Tgate_count_1[4], Tgate_count_1[5]
+                    };
+                    GroupOf8GatesHelperOnCompressedState(t_amp, cramer, Tgate_count, gc_second[7]);
+                }
+            }
+            else {
+                FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
+                FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
+            }
         }
         //        else {
         //            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * 16
@@ -198,7 +233,7 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
         idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
         const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
         
-        idx_size Tgate_count_1[8] = {0};
+        unsigned short Tgate_count_1[8] = {0};
         GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
         FirstGroupOf8GatesHelper(t_amp, Tgate_count_1, gc_first);
         prev_gc = gc_first[7];
@@ -207,7 +242,7 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
         gc4 = (count + 12) ^ ((count + 12) >> 1);
         const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
         
-        idx_size Tgate_count_2[8] = {0};
+        unsigned short Tgate_count_2[8] = {0};
         GetTGatesCount(Tgate_count_2, negate_Z, prev_gc, gc_second, CZ_bitmasks, T_bitmasks);
         FirstGroupOf8GatesHelper(t_amp, Tgate_count_2, gc_second);
         prev_gc = gc_second[7];
@@ -216,6 +251,7 @@ ApplyBlockOfCZTGatesAVXSeq(cmplx* __restrict amp,
 
 pair<idx_size, int>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
+                                  Cramer* cramer,
                                   const int num_qubits_amp,
                                   const idx_size* volatile __restrict CZ_bitmasks,
                                   const idx_size* volatile __restrict T_bitmasks,
@@ -238,6 +274,12 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
     
     pair<idx_size, int> phases;
     
+    complex<float>* active_amp = new complex<float>[block_size];
+    memset(active_amp, 0, sizeof(complex<float>) * block_size);
+    
+    if (cramer && !cramer -> IsBlockInitialized())
+        cramer -> InitiateBlockContext(0, true);
+    
 #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
         idx_size num_iters = block_begin/block_size;
@@ -246,16 +288,31 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
         if (zero_opt_mask.CheckIfAllNonZeroes() ||
             zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
             
-            ApplyCZTGatesInABlock(t_amp, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+            ApplyCZTGatesInABlock(t_amp, cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                   num_threads, block_begin, block_size, zero_opt_mask);
             
-            phases = XYFastTransformLowQ(amp + (offset_idx * block_size),
+            if (cramer)
+                cramer -> UpdateActiveBlock(block_begin);
+            
+             active_amp = cramer ? cramer -> CramerBlockDecompress(active_amp, amp, block_begin, block_size)
+                                        : amp + (offset_idx * block_size);
+            
+//            cout << endl;
+//            for (size_t i = 0; i < block_size; ++i) {
+//                cout << active_amp[i] << "\n";
+//            }
+//            cout << endl;
+            
+            phases = XYFastTransformLowQ(active_amp,
                                          lo_X_bitmask, lo_Y_bitmask, lo_H_bitmask,
                                          block_bits, num_threads);
             
+            
             if (new_lo_H_bitmask)
-                ApplyHGatesIteratively(amp + (offset_idx * block_size), block_bits,
+                ApplyHGatesIteratively(active_amp, block_bits,
                                        num_threads, new_lo_H_bitmask);
+            
+            amp = cramer ? cramer -> CramerBlockCompress(amp, active_amp, block_begin, block_size) : amp;
         }
         //        else {
         //            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
@@ -267,7 +324,13 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
         //        }
     }
     
+    if (cramer) {
+        cramer -> CommitBlockContext();
+//        global_factor_power = 0;
+    }
+    
     phases.second += __builtin_popcountll(new_lo_H_bitmask);
+    delete [] active_amp;
     
     return pair<idx_size, int>(phases.first, phases.second);
 }

@@ -109,7 +109,7 @@ public:
     amp_outfile(""), report_outfile(""), misc_outfile(""), temp_dir(""),
     cz_path(0), approx_epsilon(0), cramer_num_codewords(0), cramer_p_rejection(0),
     norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
-    dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), last_layers_H(0), save_cp_file(0),
+    dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), save_cp_file(0),
     google(true), print_amp(false), print_idx(false), ascii(false), approx(true), nearest_neighbors(true),
     row_major(true), count_zeros(false), store_checkpoint_range(true), first_part_smaller(false), compress(false),
     sim_type(FullState), verbose(Default), curr_mode(ProcPrefix){}
@@ -140,7 +140,6 @@ public:
            const bool google = true,
            const bool near_neighbors = true,
            const bool row_maj = true,
-           const int layers_last_H = 0,
            const bool checkpoint_r = true,
            const bool first_part_small = false,
            const bool count_0 = false,

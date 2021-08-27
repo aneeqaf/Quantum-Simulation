@@ -513,9 +513,11 @@ Simulate(GenericQuantumState& amp,
         auto& idx = config -> indices;
         Time amp_st_time;
         amp_st_time.StartTime();
-        for(idx_size i = 0; i < idx.size(); ++i) {
-            assert(amp.compressed == false);
-            amps_of_interest[i] += amp[idx[i]];
+        if (!amp.block_compression) {
+            for(idx_size i = 0; i < idx.size(); ++i) {
+                assert(amp.compressed == false);
+                amps_of_interest[i] += amp[idx[i]];
+            }
         }
         amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
     }
@@ -791,6 +793,15 @@ void SequentialSimulation::
 ReportingAfterSim(GenericQuantumState& amp,
                   Circuit& circuit)
 {
+    if (amp.block_compression) {
+        amp.DecompressStateVector();
+        auto& idx = config -> indices;
+        for(idx_size i = 0; i < idx.size(); ++i) {
+            assert(amp.compressed == false);
+            amps_of_interest[i] += amp[idx[i]];
+        }
+    }
+    
 #ifdef Print
 //    amp.PrintStateVector();
 #endif

@@ -124,6 +124,7 @@ class Cramer {
         size_t num_turnings;
         size_t num_codewords_reg;
         size_t compressed_vector_UL_size;
+        size_t num_codewords_sector;
         double magnitude_r;
         double A;
         double spiral_length_r;
@@ -134,16 +135,20 @@ class Cramer {
     
     struct GlobalContext {
         complex<float>* codewords_mappings;
+        int codewords_all;
     };
     
     struct BlockContext {
         double mean;
         double variance;
         double lambda;
-        float k; //k -> shape in Gamma dist
+        size_t active_block;
         complex<float>* codewords_mappings;
         size_t* cw_freq;
-        bool active;
+        float k; //k -> shape in Gamma dist
+        int codewords_all;
+        bool initialized;
+        bool calc_mean_var;
     };
     
     Config config;
@@ -190,7 +195,7 @@ class Cramer {
                                double variance) const;
     double CalcLambdaFromMeanAndVar(double mean,
                                     double variance) const;
-    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector,
+    void CalcKandLambdaFromEmpiricalCDF(complex<float>* state_vector,
                                         const size_t block_size);
     
     unsigned short ShiftCWToNearestPhase(double phase,
@@ -228,13 +233,15 @@ public:
     ~Cramer();
     
     complex<float>* CramerCompress(complex<float>* compressed_v,
-                                   const complex<float>* state_vector);
+                                  complex<float>* state_vector);
     complex<float>* CramerDecompress(complex<float>* decompressed_v,
                                      const complex<float>* state_vector);
     
-    void InitiateBlockContext();
+    void InitiateBlockContext(size_t block_id,
+                              bool calc_mean_var);
+    void UpdateActiveBlock(size_t block_id);
     complex<float>* CramerBlockCompress(complex<float>* compressed_vector,
-                                        const complex<float>* state_vector,
+                                        complex<float>* state_vector,
                                         const size_t block_idx,
                                         const size_t block_size);
     complex<float>* CramerBlockDecompress(complex<float>* decompressed_v,
@@ -242,14 +249,15 @@ public:
                                           const size_t block_idx,
                                           const size_t block_size);
     void CommitBlockContext();
-    void CramerBlockSectorSwitch(const unsigned short* sectors,
-                                 const complex<float>* state_vector,
+    void CramerBlockSectorSwitch(complex<float>* state_vector,
+                                 const unsigned short* volatile sectors,
                                  const size_t block_idx,
                                  const size_t block_size);
-    void ModifySectorInCompressedInput(complex<float>* compressed_vector,
-                                      const size_t idx,
-                                      const __m256 sectors);
+    complex<float>* SetAllAmpsToZero(complex<float>* state_vector);
+    complex<float>* SetAllAmpsToOne(complex<float>* state_vector);
+    void Rescale(const __m256 rescaling);
     
+    bool IsBlockInitialized() const;
     size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;
     double GetMaxOuterRadius() const;

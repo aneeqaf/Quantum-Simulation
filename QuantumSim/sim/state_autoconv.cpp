@@ -10,13 +10,15 @@
 AdaptiveStateVector::
 AdaptiveStateVector(const int qubits,
                     const Config::SimType type,
+                    const Config* config,
                     const int hcut,
                     const int vcut,
                     const bool row_major,
                     const bool first_part_small,
                     const int verb) : full_state(nullptr), total_q(qubits)
 {
-    sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, hcut, vcut, row_major,
+    sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, config,
+                                                       hcut, vcut, row_major,
                                                        first_part_small, verb);
 }
 
