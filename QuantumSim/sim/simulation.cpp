@@ -470,6 +470,15 @@ Simulate(GenericQuantumState& amp,
    
     pair<int, int> twoq_gate_count = circuit.GetTwoQGateCount();
     
+    if (config -> sim_type != Config::SimType::FullState) {
+        idx_size xCZ_path_len = (config -> proc_prefix_bits + config -> ranges_bits + config -> dfs_length);
+        if (twoq_gate_count.second != xCZ_path_len && !config -> trial_mode) {
+            cerr << "\n\nxCZ path of length " + to_string(xCZ_path_len) + " does not equal "
+                    + to_string(twoq_gate_count.second) + " xCZ gates.\n";
+            throw;
+        }
+    }
+    
     Time cir_time;
     cir_time.StartTime();
     
@@ -854,6 +863,8 @@ PrintIdxsToFile() const
     + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
     if (config -> approx)
         dir += "_approx_" + to_string(config -> approx_epsilon);
+    if (config -> compress)
+        dir += "_compress_" + to_string(config -> cramer_num_codewords);
     string idx_outfile = dir + config -> amp_outfile.substr(config -> amp_outfile.find_last_of("/")) + ".idx";
     ofstream  idx_out;
     idx_out.open(idx_outfile);
@@ -883,6 +894,8 @@ void SequentialSimulation::
     + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
     if (config -> approx)
         dir += "_approx_" + to_string(config -> approx_epsilon);
+    if (config -> compress)
+        dir += "_compress_" + to_string(config -> cramer_num_codewords);
     string amp_outfile = dir + config -> amp_outfile.substr(config -> amp_outfile.find_last_of("/")) + "_ascii.amps";
     ofstream amp_out;
     amp_out.open(amp_outfile);
@@ -905,7 +918,8 @@ WriteAmpToASCIIFile(GenericQuantumState& amp) const
     + "_" + to_string(config -> proc_prefix_bits + config -> ranges_bits) + "_" + to_string(config -> num_threads);
     if (config -> approx)
         dir += "_approx_" + to_string(config -> approx_epsilon);
-    
+    if (config -> compress)
+        dir += "_compress_" + to_string(config -> cramer_num_codewords);
     string command = "mkdir -p " + dir;
     system(command.c_str());
     auto time = to_string(clock());
@@ -985,9 +999,8 @@ WriteAmpToASCIIFile(GenericQuantumState& amp) const
 void SequentialSimulation::
 PrintSystemReport() const
 {
-    cout << "\n(C) 2017, 2018  Regents of the University of Michigan\n";
-    cout << "Rollright ver 2.3 - a quantum circuit simulator\n";
-    cout << "Igor L. Markov and Aneeqa Fatima\n\n";
+    cout << "\n(C) Igor L. Markov and Aneeqa Fatima  2018 - 2021\n";
+    cout << "Entangled Simulator ver 1.0 - a quantum circuit simulator\n\n";
     
 //    char hostname[30] = {};
 //    gethostname(hostname, 30);
@@ -1050,8 +1063,20 @@ PrintSystemReport() const
         << ", avx2:" << __builtin_cpu_supports("avx2") << "\n";
         cout << "Using instructions : " << "AVX-2, popcnt\n\n";
         
-        cout << "Compiler : gcc " << __GNUC__  << "." << __GNUC_MINOR__ << "."
-        <<  __GNUC_PATCHLEVEL__<< "\n";
+       string true_cxx =
+       #ifdef __clang__
+          "clang++";
+       #else
+          "g++";
+       #endif
+
+         std::string true_cxx_ver =
+       #ifdef __clang__
+           ver_string(__clang_major__, __clang_minor__, __clang_patchlevel__);
+       #else
+           ver_string(__GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+       #endif
+        cout << "Compiler : " << true_cxx << " " << true_cxx_ver << "\n";
         
         cout << "Compiled on : " <<  __DATE__ << " " << __TIME__ << "\n";
         time_t t = time(0);
@@ -1263,7 +1288,7 @@ PrintSimReport(GenericQuantumState& amp,
         cout << "\n";
     }
     if (config -> print_amp)
-        cout << "Requested num amps : " << config -> indices.size() - 5 << "\n";
+        cout << "Requested number of amplitudes : " << config -> indices.size() - 5 << "\n";
     
     cout << "\n";
     
@@ -1386,31 +1411,31 @@ PrintSimReport(GenericQuantumState& amp,
                     imag2 = to_string(imag(benchmark[key][2])), imag3 = to_string(imag(benchmark[key][3])),
                     imag4 = to_string(imag(benchmark[key][4]));
                     
-                    cout << "amp[3]  \t= "  << real(benchmark[key][0]) ;
+                    cout << "amplitudes[3]  \t= "  << real(benchmark[key][0]) ;
                     if (imag(benchmark[key][0]) < 0)
                         cout << " - " << abs(imag(benchmark[key][0])) << "j\n";
                     else
                         cout << " + " << imag(benchmark[key][0]) << "j\n";
                     
-                    cout << "amp[1/4]\t= " << real(benchmark[key][1]);
+                    cout << "amplitudes[1/4]\t= " << real(benchmark[key][1]);
                     if (imag(benchmark[key][1]) < 0)
                         cout << " - " << abs(imag(benchmark[key][1])) << "j\n";
                     else
                         cout << " + " << imag(benchmark[key][1]) << "j\n";
                     
-                    cout << "amp[1/2]\t= " << real(benchmark[key][2]);
+                    cout << "amplitudes[1/2]\t= " << real(benchmark[key][2]);
                     if (imag(benchmark[key][2]) < 0)
                         cout << " - " << abs(imag(benchmark[key][2])) << "j\n";
                     else
                         cout << " + " << imag(benchmark[key][2]) << "j\n";
                     
-                    cout << "amp[3/4]\t= " << real(benchmark[key][3]);
+                    cout << "amplitudes[3/4]\t= " << real(benchmark[key][3]);
                     if (imag(benchmark[key][3]) < 0)
                         cout << " - " << abs(imag(benchmark[key][3])) << "j\n";
                     else
                         cout << " + " << imag(benchmark[key][3]) << "j\n";
                     
-                    cout << "amp[-3] \t= "  << real(benchmark[key][4]);
+                    cout << "amplitudes[-3] \t= "  << real(benchmark[key][4]);
                     if (imag(benchmark[key][4]) < 0)
                         cout << " - " << abs(imag(benchmark[key][4])) << "j\n";
                     else
@@ -1428,35 +1453,35 @@ PrintSimReport(GenericQuantumState& amp,
     {
         if (!amps_of_interest.empty()) {
             auto amp3 = amps_of_interest[0];
-            cout << "amp[3]  \t= " << real(amp3);
+            cout << "amplitudes[3]  \t= " << real(amp3);
             if (imag(amp3) < 0)
                 cout << " - " << abs(imag(amp3)) << "j\n";
             else
                 cout << " + " << imag(amp3) << "j\n";
             
             auto amp14 = amps_of_interest[1];
-            cout << "amp[1/4]\t= " << real(amp14);
+            cout << "amplitudes[1/4]\t= " << real(amp14);
             if (imag(amp14) < 0)
                 cout << " - " << abs(imag(amp14)) << "j\n";
             else
                 cout << " + " << imag(amp14) << "j\n";
             
             auto amp12 = amps_of_interest[2];
-            cout << "amp[1/2]\t= " << real(amp12);
+            cout << "amplitudes[1/2]\t= " << real(amp12);
             if (imag(amp12) < 0)
                 cout << " - " << abs(imag(amp12)) << "j\n";
             else
                 cout << " + " << imag(amp12) << "j\n";
             
             auto amp34 = amps_of_interest[3];
-            cout << "amp[3/4]\t= " << real(amp34);
+            cout << "amplitudes[3/4]\t= " << real(amp34);
             if (imag(amp34) < 0)
                 cout << " - " << abs(imag(amp34)) << "j\n";
             else
                 cout << " + " << imag(amp34) << "j\n";
             
             auto amp_3 = amps_of_interest[4];
-            cout << "amp[-3] \t= " << real(amp_3);
+            cout << "amplitudes[-3] \t= " << real(amp_3);
             if (imag(amp_3) < 0)
                 cout << " - " << abs(imag(amp_3)) << "j\n";
             else
@@ -1465,31 +1490,31 @@ PrintSimReport(GenericQuantumState& amp,
             cout << "\n";
         }
         else if (config -> proc_prefix_bits == 0) {
-            cout << "amp[3]  \t= " << real(amp[3]);
+            cout << "amplitudes[3]  \t= " << real(amp[3]);
             if (imag(amp[3]) < 0)
                 cout << " - " << abs(imag(amp[3])) << "j\n";
             else
                 cout << " + " << imag(amp[3]) << "j\n";
             
-            cout << "amp[1/4]\t= " << real(amp[temp_amp_size/4]);
+            cout << "amplitudes[1/4]\t= " << real(amp[temp_amp_size/4]);
             if (imag(amp[temp_amp_size/4]) < 0)
                 cout << " - " << abs(imag(amp[temp_amp_size/4])) << "j\n";
             else
                 cout << " + " << imag(amp[temp_amp_size/4]) << "j\n";
             
-            cout << "amp[1/2]\t= " << real(amp[temp_amp_size/2]);
+            cout << "amplitudes[1/2]\t= " << real(amp[temp_amp_size/2]);
             if (imag(amp[temp_amp_size/2]) < 0)
                 cout << " - " << abs(imag(amp[temp_amp_size/2])) << "j\n";
             else
                 cout << " + " << imag(amp[temp_amp_size/2]) << "j\n";
             
-            cout << "amp[3/4]\t= " << real(amp[3 * temp_amp_size/4]);
+            cout << "amplitudes[3/4]\t= " << real(amp[3 * temp_amp_size/4]);
             if (imag(amp[3 * temp_amp_size/4]) < 0)
                 cout << " - " << abs(imag(amp[3 * temp_amp_size/4])) << "j\n";
             else
                 cout << " + " << imag(amp[3 * temp_amp_size/4]) << "j\n";
             
-            cout << "amp[-3] \t= " << real(amp[temp_amp_size - 3]);
+            cout << "amplitudes[-3] \t= " << real(amp[temp_amp_size - 3]);
             if (imag(amp[temp_amp_size - 3]) < 0)
                 cout << " - " << abs(imag(amp[temp_amp_size - 3])) << "j\n";
             else
@@ -1617,7 +1642,7 @@ PrintSimReport(GenericQuantumState& amp,
         }
         
         if(amp.time_by_category.amp_storage) {
-            string RP_s = "\tStoring amps ";
+            string RP_s = "\tStoring and retrieving amplitudes ";
             ss <<  RP_s << setw(width - (int)RP_s.size()) << right << ": "
             << amp.time_by_category.amp_storage << " s  \t\t  =  "
             << (amp.time_by_category.amp_storage/(total_time)) * 100 << "%\n";
@@ -1657,6 +1682,9 @@ PrintSimReport(GenericQuantumState& amp,
         }
         else
             ss << memory_usage << " B \n";
+        
+        if (config -> compress)
+            ss << "Compression ratio: " << (sizeof(cmplx) * amp.GetSize() * 3)/memory_usage << "\n";
         
         cout << ss.str() << "\n";
     }

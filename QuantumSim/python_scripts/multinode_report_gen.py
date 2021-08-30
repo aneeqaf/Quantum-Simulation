@@ -70,9 +70,9 @@ def main(cir_file, max_procs, test_fid):
 						if len(cz_path) == 3 :
 							dfs = True
 
-					if "Requested num amps" not in line and print_line:
+					if "Requested number of amplitudes" not in line and print_line:
 						print(line,  end='')
-					elif "Requested num amps" in line:
+					elif "Requested number of amplitudes" in line:
 						num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 						print(line,  end='')
 						print_line = False
@@ -177,15 +177,15 @@ def main(cir_file, max_procs, test_fid):
 					elif "Avg page faults" in line:
 						avg_minor_pagefaults += float(line.split()[6])
 						avg_major_pagefaults += float(line.split()[4])
-					elif "amp[3]" in line:
+					elif "amplitudes[3]" in line:
 						amp['3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[1/4]" in line:
+					elif "amplitudes[1/4]" in line:
 						amp['1/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[1/2]" in line:
+					elif "amplitudes[1/2]" in line:
 						amp['1/2'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[3/4]" in line:
+					elif "amplitudes[3/4]" in line:
 						amp['3/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[-3]" in line:
+					elif "amplitudes[-3]" in line:
 						amp['-3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
 					elif "Avg runtime (" in line:
 						time_r = line.split()[2]
@@ -209,7 +209,7 @@ def main(cir_file, max_procs, test_fid):
 						avg_time_per_category['Rescaling passes'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Copying" in line:
 						avg_time_per_category['Copying'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					elif "Storing amps" in line:
+					elif "Storing and retrieving amplitudes" in line:
 						avg_time_per_category['Storing amps'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Prefix" in line:
 						avg_cz_time += float(line.split(":")[1].split()[0])
@@ -239,7 +239,15 @@ def main(cir_file, max_procs, test_fid):
 			exact_path2_file = os.path.join(approx_dir, "test_fid_2_ascii.amps")
 			if os.path.isdir(approx_dir):
 				test_fid = dist_util.CalculateFidelity(exact_path1_file, exact_path2_file)
-				
+	elif "_compress" in cir_file:
+		exact_dir = os.path.join("output", "amp_vectors", re.sub('_compress.*\d', "", cir_file))
+		compress_dir = os.path.join("output", "amp_vectors", cir_file)
+		exact_res_file= os.path.join(exact_dir, "result.amps")
+		compress_res_file = os.path.join(compress_dir, "result.amps")
+		
+		if os.path.isfile(exact_res_file):
+			fidelity = dist_util.CalculateFidelity(exact_res_file, approx_res_file)
+
 	# printing statistics onto reports				
 	print("\nMulti-process simulation " , end="")
 	if max_procs and max_procs < (1 << cz_path_len):
@@ -271,6 +279,7 @@ def main(cir_file, max_procs, test_fid):
 	if num_reports > 1:
 		print( " (" + str(round(peak_mem_per_node, 3)) + " " + unit + " per node)", end="")
 	print()
+	print("\tCompression ratio : " + str(compression_ratio))
 
 	if layers_simulated_line != "":
 		print(layers_simulated_line, end="")
@@ -298,14 +307,16 @@ def main(cir_file, max_procs, test_fid):
 		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
 			# " (epsilon = " + str(round(1/(num_processes / (1 << cz_path_len)), 3)) + ")")
 
-	print("\tBillable runtime : {:.3e}".format((max_elapsed_time * num_reports)/3600) \
-		+ " hrs ({:.3e}".format(((max_elapsed_time * num_reports)/num_amps)/3600) + " hrs per amp)")
+	print ("\tTotal runtime: {:.3e}".format(max_elapsed_time) + " s")
 
-	print("\namp[3]  \t= {:.6e}".format(amp['3']))
-	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))
-	print("amp[1/2]\t= {:.6e}".format(amp['1/2']))
-	print("amp[3/4]\t= {:.6e}".format(amp['3/4']))
-	print("amp[-3] \t= {:.6e}".format(amp['-3']) + "\n")
+	print("\tBillable runtime (total runtime * number of machines): {:.3e}".format((max_elapsed_time * num_machines)/3600) \
+		+ " hrs ({:.3e}".format(((max_elapsed_time * num_machines)/num_amps)/3600) + " hrs per amp)")
+
+	print("\namplitudes[3]  \t= {:.6e}".format(amp['3']))
+	print("amplitudes[1/4]\t= {:.6e}".format(amp['1/4']))
+	print("amplitudes[1/2]\t= {:.6e}".format(amp['1/2']))
+	print("amplitudes[3/4]\t= {:.6e}".format(amp['3/4']))
+	print("amplitudes[-3] \t= {:.6e}".format(amp['-3']) + "\n")
 
 	avg_time_per_process /= num_reports
 	avg_dfs_time /= num_reports
@@ -372,7 +383,7 @@ def main(cir_file, max_procs, test_fid):
 		str(round(((avg_time_per_category['Copying'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Storing amps']:
-		print("\tStoring amps \t\t\t\t: "\
+		print("\tStoring and retrieving amplitudes \t: "\
 		 + str(round(avg_time_per_category['Storing amps'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Storing amps'])/avg_time_per_process)*100, 3)) + "%")
 

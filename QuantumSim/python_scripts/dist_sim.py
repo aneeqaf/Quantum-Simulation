@@ -33,12 +33,12 @@ from math import sqrt, floor, ceil
 @click.option("--idx_file", nargs=1, required=False, default="")
 @click.option("--num_idx", nargs=1, required=False, default=1000)
 @click.option("--print_idxs", nargs=1, required=False, is_flag=True)
-@click.option("--print_all_amps", nargs=1, required=False, default=-1)
+@click.option("--print_ordered_amps", nargs=1, required=False, is_flag=True)
 @click.option("--trial", nargs=1, required=False, is_flag=True)
 @click.option("--approx", nargs=1, required=False, default=0)
 @click.option("--test_fid", nargs=1, required=False, is_flag=True)
 @click.option("--multiple_nodes", nargs=1, required=False, is_flag=True)
-@click.option("--cont_cz_paths", nargs=1, required=False, is_flag=True)
+@click.option("--continuous_cz_paths", nargs=1, required=False, is_flag=True)
 @click.option("--no_nearest_neighbors", nargs=1, required=False, is_flag=True)
 @click.option("--layers_hgates_b4_meas", nargs=1, required=False, default=0)
 @click.option("--no_checkpoint_with_ranges", nargs=1, required=False, is_flag=True)
@@ -48,14 +48,15 @@ from math import sqrt, floor, ceil
 @click.option("--compress_cw_bits", nargs=1, required=True, default=0)
 @click.option("--compress_p_rejection", nargs=1, required=True, default=0.0)
 def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_highq, v_cut, h_cut,\
- idx_file, print_idxs, num_batches, num_threads, print_all_amps, max_procs, ranges_bits, trial, \
- approx, test_fid, multiple_nodes, cont_cz_paths, column_major, no_nearest_neighbors,
+ idx_file, print_idxs, num_batches, num_threads, print_ordered_amps, max_procs, ranges_bits, trial, \
+ approx, test_fid, multiple_nodes, continuous_cz_paths, column_major, no_nearest_neighbors,
  layers_hgates_b4_meas, no_checkpoint_with_ranges, binary_vectors_only, save_checkpoint_to_file,
  count_zeros, compress_cw_bits, compress_p_rejection):
 
 	dist_util.CheckInputFile(circuit)
 
-	depth = int(circuit.split("_")[2]) + 1
+	if depth == 0:
+		depth = int(circuit.split("_")[2]) + 1
 
 	epsilon = 1
 	max_threads = cpu_count()
@@ -69,15 +70,16 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 		num_batches = int(max_threads/num_threads);
 
 	if not multiple_nodes and num_batches * num_threads > cpu_count():
-		print("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.\033[0m")
-		exit()
+		raise Exception("\033[1m Requested too many threads. There are " + str(cpu_count()) + " hardware threads.\033[0m")
+
+	if compress_cw_bits != 0 and (compress_cw_bits < 8 or compress_cw_bits > 13):
+		raise Exception("\033[1m Only codeword bits between 8-13 are currently supported.\033[0m")
 
 	# If the entire state vector needs to be printed, specify this command.
 	# The value is the number of qubits in the circuit
-	if int(print_all_amps) != -1:
-		num_idx = 1 << int(print_all_amps)
+	if print_ordered_amps:
 		with open(idx_file, "w") as f:
-			for q in range(1 << int(print_all_amps)):
+			for q in range(num_idx):
 				f.write(str(q) + "\n")
 
 	# cir_name = circuit + "_" + str(depth) + "_"
@@ -101,9 +103,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	if approx:
 		fid = approx
-		if not cont_cz_paths:
+		if not continuous_cz_paths:
 			epsilon = approx
-		if cont_cz_paths:
+		if continuous_cz_paths:
 			num_bit_strings = ceil(num_bit_strings / approx)
 
 	if int(max_procs)/int(num_batches) > ((1 << int(proc_prefix_bits))/int(num_batches)):
@@ -114,7 +116,19 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 	dist_util.EvalMemAndRuntime(t_time, proc_prefix_bits, mem, num_batches)
 
 	cz_bits_strings = []
-	for bit_comb in range(0, num_bit_strings, epsilon):
+	start_string_idx = 0
+	if compress_cw_bits != 0:
+		for bit_comb in range(0, 20):
+			if branch_bits:
+				cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
+					+ "," + str(branch_bits) + " ")
+			elif ranges_bits:
+				cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) + " ")
+			else:
+				cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
+		start_string_idx = 20
+
+	for bit_comb in range(start_string_idx, num_bit_strings, epsilon):
 		if branch_bits:
 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")
@@ -136,7 +150,9 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	if approx:
 		cir_name += "_approx_" + str(approx)
-
+	if compress_cw_bits:
+		cir_name += "_compress_" + str(1 << compress_cw_bits)
+	
 	cir_dir = os.path.join("output", "amp_vectors", cir_name)
 	if os.path.isdir(cir_dir):
 		shutil.rmtree(cir_dir, ignore_errors=True)

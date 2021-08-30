@@ -22,18 +22,18 @@ TensorProductStateVector(const int qubits,
                          const bool first_part_small,
                          const int verb):
 qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubits, row_major, hcut, first_part_small)
-         : QubitPartition(cut_type, qubits, row_major, vcut, first_part_small))
+   : QubitPartition(cut_type, qubits, row_major, vcut, first_part_small))
 {
     sim_type = sim;
     static int count_h = 0, count_v = 0;
     this -> cut_type = cut_type;
     
-//    qp.RenumberLocalQubits();
-
+    //    qp.RenumberLocalQubits();
+    
     int num_q_b0 = qp.getNumQubitsInBlock(0), num_q_b1 = qp.getNumQubitsInBlock(1);
     state_a = new FullAmpStateVector(num_q_b0);
     state_b = new FullAmpStateVector(num_q_b1);
-        
+    
     if (!count_h && cut_type == QubitPartition::Cuts::Horizontal) {
         string data = "";
         data += "Cut : horizontal " + to_string(num_q_b0) + "q + " + to_string(num_q_b1) + "q";
@@ -89,50 +89,50 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
     global_to_local_b = new idx_size[num_requested_amps];
     memset(global_to_local_a, 0, num_requested_amps * sizeof(idx_size));
     memset(global_to_local_b, 0, num_requested_amps * sizeof(idx_size));
-
-//    cout << endl;
-//    for (idx_size i = 0; i < num_requested_amps; ++i) {
-//        cout << idxs[i].to_ullong() << ": " << qp.IndexScatter(idxs[i], 0) << ", ";
-//        cout << qp.IndexScatter(idxs[i], 1) << endl;
-//    }
+    
+    //    cout << endl;
+    //    for (idx_size i = 0; i < num_requested_amps; ++i) {
+    //        cout << idxs[i].to_ullong() << ": " << qp.IndexScatter(idxs[i], 0) << ", ";
+    //        cout << qp.IndexScatter(idxs[i], 1) << endl;
+    //    }
     
     for (idx_size i = 0; i < num_requested_amps; ++i)
         temp_global_to_local_a[i] = pair<idx_size, idx_size>(i, qp.IndexScatter(idxs[i], 0));
     
     sort(temp_global_to_local_a.begin() + 5, temp_global_to_local_a.end(),
          [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
-             return first.second < second.second;
-         });
+        return first.second < second.second;
+    });
     
     for (idx_size i = 0; i < num_requested_amps; ++i)
         temp_global_to_local_b[i] = pair<idx_size, idx_size>(i,
-                                                qp.IndexScatter(idxs[temp_global_to_local_a[i].first], 1));
+                                                             qp.IndexScatter(idxs[temp_global_to_local_a[i].first], 1));
     
     idx_size last_idx_a = 5;
-//    for (idx_size i = 5; i < num_requested_amps; ++i) {
-//        if (temp_global_to_local_a[i].second != temp_global_to_local_a[last_idx_a].second) {
-//            if (i - last_idx_a > 1)
-//                sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + i,
-//                     [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
-//                         return first.second < second.second;
-//                     });
-//            last_idx_a = i;
-//        }
-//    }
-//
-//    if (num_requested_amps - last_idx_a > 1)
-//        sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + num_requested_amps,
-//             [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
-//                 return first.second < second.second;
-//             });
+    //    for (idx_size i = 5; i < num_requested_amps; ++i) {
+    //        if (temp_global_to_local_a[i].second != temp_global_to_local_a[last_idx_a].second) {
+    //            if (i - last_idx_a > 1)
+    //                sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + i,
+    //                     [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+    //                         return first.second < second.second;
+    //                     });
+    //            last_idx_a = i;
+    //        }
+    //    }
+    //
+    //    if (num_requested_amps - last_idx_a > 1)
+    //        sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + num_requested_amps,
+    //             [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
+    //                 return first.second < second.second;
+    //             });
     
     for (idx_size i = 5; i < num_requested_amps; ++i) {
         if (temp_global_to_local_a[i].second >= (temp_global_to_local_a[last_idx_a].second + (1ull << 12))) {
             if (i - last_idx_a > 1)
                 sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + i,
                      [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
-                         return first.second < second.second;
-                     });
+                    return first.second < second.second;
+                });
             last_idx_a = i;
         }
     }
@@ -140,8 +140,8 @@ PopulateGlobalToLocalMap(vector<bitset<128>>& idxs)
     if (num_requested_amps - last_idx_a > 1)
         sort(temp_global_to_local_b.begin() + last_idx_a, temp_global_to_local_b.begin() + num_requested_amps,
              [](pair<idx_size, idx_size>& first, pair<idx_size, idx_size>& second) {
-                 return first.second < second.second;
-             });
+            return first.second < second.second;
+        });
     
     vector<bitset<128>> temp_global_idxs (num_requested_amps, 0);
     for (idx_size i = 0; i < num_requested_amps; ++i)
@@ -175,17 +175,17 @@ FindCZGatesBetweenPartitions(bitset<128>* __restrict xCZ_bitmasks,
     // CZ bitmasks array is numbered in the opposite direction
     for (int i = 0; i <  num_q_1 + 1; ++i) {
         if (qp.globalToBlock(num_q_1 - i) == 0) {
-//            cout << "bm 1: " << gate_bitmasks[num_q_1 - i].to_string().substr(128-15) << endl;
-//            cout << "bm 0: " << gate_bitmasks[num_q_1 - i].to_string().substr(128-30, 15) << endl;
-//            cout << "g i 0 :" << num_q_1 - i << endl;
-//            cout << "gtl 0 : "<< qp.globalToLocal(num_q_1 - i) << endl;
+            //            cout << "bm 1: " << gate_bitmasks[num_q_1 - i].to_string().substr(128-15) << endl;
+            //            cout << "bm 0: " << gate_bitmasks[num_q_1 - i].to_string().substr(128-30, 15) << endl;
+            //            cout << "g i 0 :" << num_q_1 - i << endl;
+            //            cout << "gtl 0 : "<< qp.globalToLocal(num_q_1 - i) << endl;
             
-             if ((gate_bitmasks[num_q_1 - i] & block0_bitmask) != gate_bitmasks[num_q_1 - i]) {
+            if ((gate_bitmasks[num_q_1 - i] & block0_bitmask) != gate_bitmasks[num_q_1 - i]) {
                 xCZ_bitmasks[qubits_a_1 - qp.globalToLocal(num_q_1 - i)] =
-                        Project1QBitmask(gate_bitmasks[num_q_1 - i] & block1_bitmask, qp, 1) ;
+                Project1QBitmask(gate_bitmasks[num_q_1 - i] & block1_bitmask, qp, 1) ;
                 ++count;
             }
-//            cout << "gtl 1: "<< __builtin_ctzl(xCZ_bitmasks[qubits_a_1 - qp.globalToLocal(num_q_1 - i)].to_ulong()) << endl;
+            //            cout << "gtl 1: "<< __builtin_ctzl(xCZ_bitmasks[qubits_a_1 - qp.globalToLocal(num_q_1 - i)].to_ulong()) << endl;
         }
     }
     return count;
@@ -219,7 +219,7 @@ ApplyCZGateAcrossTensorFactors(bitset<128>* __restrict xCZ_bitmasks_path0_D1D2,
         }
         state_a -> ApplyCZDecompositionDist(state_A_gate_bm);
     }
-   if (partition_to_sim == 'b' || partition_to_sim == 'x') {
+    if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         idx_size state_B_gate_bm[3] = {0};
         for (int i = 0; i < num_q_a; ++i) {
             state_B_gate_bm[1] |= xCZ_bitmasks_path0_D1D2[i].to_ulong();
@@ -243,17 +243,17 @@ HandleCZApprox(const bitset<128> *CZ_bitmasks)
         ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d6, Gate::Type::cz_d7);
     else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
              && book_keep){
-//        idx_size count = CountXCZGates(CZ_bitmasks);
-//        data_per_cycles.memory.push_back(GetMemUsage());
-//        data_per_cycles.addends.push_back(1);
-//        if (cut_type == QubitPartition::Cuts::Horizontal) {
-//            data_per_cycles.xCZ_H.push_back(count);
-//            data_per_cycles.xCZ_V.push_back(0);
-//        }
-//        else {
-//            data_per_cycles.xCZ_H.push_back(count);
-//            data_per_cycles.xCZ_H.push_back(0);
-//        }
+        //        idx_size count = CountXCZGates(CZ_bitmasks);
+        //        data_per_cycles.memory.push_back(GetMemUsage());
+        //        data_per_cycles.addends.push_back(1);
+        //        if (cut_type == QubitPartition::Cuts::Horizontal) {
+        //            data_per_cycles.xCZ_H.push_back(count);
+        //            data_per_cycles.xCZ_V.push_back(0);
+        //        }
+        //        else {
+        //            data_per_cycles.xCZ_H.push_back(count);
+        //            data_per_cycles.xCZ_H.push_back(0);
+        //        }
     }
 }
 
@@ -295,7 +295,7 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     FindCZGatesBetweenPartitions(xCZ_bitmask, CZ_bitmasks);
     
     const int modified_num_q_B = num_q_a + num_q_b - 1;
-//    const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
+    //    const idx_size prev_CZ_count = count_of_category.decomposed_CZ;
     for (int i = 0; i < num_q_a; ++i) {
         while (xCZ_bitmask[i] != 0) {
             const idx_size first_half = __builtin_ctzl(((xCZ_bitmask[i] << 64) >> 64).to_ulong());
@@ -311,19 +311,19 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
     
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-//    if (book_keep &&
-//        (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
-//        data_per_cycles.memory.push_back(GetMemUsage());
-//        data_per_cycles.addends.push_back(1);
-//        if (cut_type == QubitPartition::Cuts::Horizontal) {
-//            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-//            data_per_cycles.xCZ_V.push_back(0);
-//        }
-//        else {
-//            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-//            data_per_cycles.xCZ_H.push_back(0);
-//        }
-//    }
+    //    if (book_keep &&
+    //        (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
+    //        data_per_cycles.memory.push_back(GetMemUsage());
+    //        data_per_cycles.addends.push_back(1);
+    //        if (cut_type == QubitPartition::Cuts::Horizontal) {
+    //            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+    //            data_per_cycles.xCZ_V.push_back(0);
+    //        }
+    //        else {
+    //            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+    //            data_per_cycles.xCZ_H.push_back(0);
+    //        }
+    //    }
 }
 
 void TensorProductStateVector::
@@ -332,7 +332,7 @@ ApplyNonCGate(const idx_size gate_qubit,
 {
     int block = qp.globalToBlock(gate_qubit);
     int num_q_1_partition = qp.getNumQubitsInBlock(block) - 1;
-
+    
     const int projected_gate_q = num_q_1_partition - qp.globalToLocal(gate_qubit);
     if (qp.globalToBlock(gate_qubit) == 0)
         state_a -> ApplyNonCGate(projected_gate_q, gate_type);
@@ -368,7 +368,7 @@ ApplyMergedXYGate(const Gate& gate1,
     temp2[gate2.GetQubits()[0]] = 1;
     
     const bitset<128> a_qubits_bitmask = qp.getBlockBitmask(0), b_qubits_bitmask = qp.getBlockBitmask(1);
-
+    
     if ((temp1 & a_qubits_bitmask) != 0 && (temp2 & a_qubits_bitmask) != 0)
         state_a -> ApplyMergedXYGate(gate1, gate2);
     else if ((temp1 & b_qubits_bitmask) != 0 && (temp2 & b_qubits_bitmask) != 0)
@@ -378,7 +378,7 @@ ApplyMergedXYGate(const Gate& gate1,
             state_a -> ApplyNonCGate(gate1.GetQubits()[0], gate1.GetType());
         else
             state_b -> ApplyNonCGate(gate1.GetQubits()[0], gate1.GetType());
-
+        
         if ((temp2 & b_qubits_bitmask) != 0)
             state_a -> ApplyNonCGate(gate2.GetQubits()[0], gate2.GetType());
         else
@@ -416,7 +416,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            int th)
 {
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
-
+    
     if (partition_to_sim == 'a' || partition_to_sim == 'x') {
         bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, qp, 0, true);
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, qp, 0, true);
@@ -466,15 +466,15 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
 cmplx TensorProductStateVector::
 operator[](bitset<128> i) 
 {    
-//    if (cut_type == QubitPartition::Cuts::Horizontal) {
-//        bitset<128> temp_i = i;
-//        bitset<128> a = i >> qp.getNumQubitsInBlock(1);
-//        bitset<128> b = temp_i & qp.getBlockBitmask(1);
-//        return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
-//    }
-//    else {
-        return (*state_a)[qp.IndexScatter(i, 0)] * (*state_b)[qp.IndexScatter(i, 1)];
-//    }
+    //    if (cut_type == QubitPartition::Cuts::Horizontal) {
+    //        bitset<128> temp_i = i;
+    //        bitset<128> a = i >> qp.getNumQubitsInBlock(1);
+    //        bitset<128> b = temp_i & qp.getBlockBitmask(1);
+    //        return (*state_a)[a.to_ulong()] * (*state_b)[b.to_ulong()];
+    //    }
+    //    else {
+    return (*state_a)[qp.IndexScatter(i, 0)] * (*state_b)[qp.IndexScatter(i, 1)];
+    //    }
 }
 
 cmplx TensorProductStateVector::
@@ -601,7 +601,7 @@ CalculateMeanEntropy() const
             if ((real(s_b) > 1e-20 || imag(s_b) > 1e-20) &&
                 (real(s_a) > 1e-20 || imag(s_a) > 1e-20))
                 entropy += norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b)
-               * log2l(norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b));
+                * log2l(norm(s_a * s_b * rescaling_factor_a * rescaling_factor_b));
         }
     }
     
@@ -676,7 +676,7 @@ void TensorProductStateVector::
 ApplyGlobalICounter()
 {
     if (partition_to_sim == 'a' || partition_to_sim == 'x')
-         state_a -> ApplyGlobalICounter();
+        state_a -> ApplyGlobalICounter();
     if (partition_to_sim == 'b' || partition_to_sim == 'x')
         state_b -> ApplyGlobalICounter();
 }
@@ -684,20 +684,20 @@ ApplyGlobalICounter()
 double TensorProductStateVector::
 CountZeroAmpPercentage() const
 {
-//    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
-//    idx_size zero_count = 0;
-//
-//    for (idx_size i = 0; i < a_size; ++i) {
-//        if ((*state_a)[i] == cmplx(0,0))
-//            zero_count += b_size;
-//        else {
-//            for (idx_size j = 0; j < b_size; ++j) {
-//                if ((*state_b)[j] == cmplx(0,0))
-//                    ++zero_count;
-//            }
-//        }
-//    }
-
+    //    const idx_size a_size = 1ull << num_q_a, b_size = 1ull << num_q_b;
+    //    idx_size zero_count = 0;
+    //
+    //    for (idx_size i = 0; i < a_size; ++i) {
+    //        if ((*state_a)[i] == cmplx(0,0))
+    //            zero_count += b_size;
+    //        else {
+    //            for (idx_size j = 0; j < b_size; ++j) {
+    //                if ((*state_b)[j] == cmplx(0,0))
+    //                    ++zero_count;
+    //            }
+    //        }
+    //    }
+    
     static int calls = 0;
     ++calls;
     
@@ -772,7 +772,7 @@ PrintStateVector()
             cout << imag(amp) << "j";
         cout << "\n";
     }
-     cout << "\n\n";
+    cout << "\n\n";
 }
 
 void TensorProductStateVector::
@@ -786,7 +786,7 @@ PrintProbabilities(const string& out_file,
     
     RescaleAndApplyGlobalICounter();
     double norm_f = sqrt(CalculateNormSquared());
-
+    
     srand(6);
     idx_size off = 0;
     
@@ -803,7 +803,7 @@ void TensorProductStateVector::
 WriteAmpToDisk(const string& filename)
 {
     if (partition_to_sim == 'a' || partition_to_sim == 'x')
-       state_a -> WriteAmpToDisk(filename + "_A");
+        state_a -> WriteAmpToDisk(filename + "_A");
     if (partition_to_sim == 'b' || partition_to_sim == 'x')
         state_b -> WriteAmpToDisk(filename + "_B");
 }
@@ -824,7 +824,7 @@ CopyState(const GenericQuantumState& rhs)
     qp = t_rhs.qp;
     cut_type = t_rhs.cut_type;
     sim_type = t_rhs.sim_type;
-  
+    
     state_a -> CopyState(*t_rhs.state_a);
     state_b -> CopyState(*t_rhs.state_b);
 }
@@ -848,7 +848,7 @@ CompressStateVector(idx_size num_codewords,
 {
     if (book_keep)
         compressed_vector_ptrs.push_back({nullptr, nullptr});
-        
+    
     partition_to_sim = 'a';
     state_a -> CompressStateVector(num_codewords, p_rejection);
     partition_to_sim = 'b';

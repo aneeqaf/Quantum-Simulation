@@ -150,6 +150,7 @@ Config(const bitset<128>& amp_size,
        const bool first_part_small,
        const bool count_0,
        const int sv_cp_file,
+       const bool is_trial,
        const bool sz_compress,
        const idx_size cramer_num_cw,
        const double cramer_p_reject)
@@ -161,12 +162,14 @@ dfs_length(dfs), depth(d), th(t), num_threads(n_threads), vcut(vc), hcut(hc), la
 save_cp_file(sv_cp_file), google(google), print_amp(p_amp), print_idx(p_idx), ascii(ascii), approx(approx),
 nearest_neighbors(near_neighbors), row_major(row_maj), count_zeros(count_0),
 store_checkpoint_range(store_r), first_part_smaller(first_part_small), compress(sz_compress),
-sim_type(sim), verbose(v), curr_mode(ProcPrefix)
+trial_mode(is_trial), sim_type(sim), verbose(v), curr_mode(ProcPrefix)
 {
     temp_dir = "output/amp_vectors/" + infile + "_" + to_string(depth)
     + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);
     if (approx)
         temp_dir += "_approx_" + to_string(approx_epsilon);
+    if (compress)
+        temp_dir += "_compress_" + to_string(cramer_num_codewords);
     temp_dir += "/temp_" + to_string(getpid()) + "/";
     
     if (!print_amp)
@@ -225,6 +228,8 @@ ReadIndices(const string& idx_infile)
     + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);
     if (approx)
         file_n += "_approx_" + to_string(approx_epsilon);
+    if (compress)
+        file_n += "_compress_" + to_string(cramer_num_codewords);
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     mmap_obj = new MMapContent(file_n + amp_outfile.substr(amp_outfile.find_last_of("/")) + ".amps",
@@ -241,6 +246,8 @@ GenerateRandomIndices(const int seed,
     + "_" + to_string(proc_prefix_bits + ranges_bits) + "_" + to_string(num_threads);
     if (approx)
         file_n += "_approx_" + to_string(approx_epsilon);
+    if (compress)
+        file_n += "_compress_" + to_string(cramer_num_codewords);
     string command = "mkdir -p " + file_n;
     system(command.c_str());
     

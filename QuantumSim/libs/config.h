@@ -96,6 +96,7 @@ public:
     bool store_checkpoint_range;
     bool first_part_smaller;
     bool compress;
+    bool trial_mode;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -112,7 +113,7 @@ public:
     dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), last_layers_H(0), save_cp_file(0),
     google(true), print_amp(false), print_idx(false), ascii(false), approx(true), nearest_neighbors(true),
     row_major(true), count_zeros(false), store_checkpoint_range(true), first_part_smaller(false), compress(false),
-    sim_type(FullState), verbose(Default), curr_mode(ProcPrefix){}
+    trial_mode(false), sim_type(FullState), verbose(Default), curr_mode(ProcPrefix){}
     Config(const bitset<128>& amp_size,
            const string ifile,
            const string pfile,
@@ -145,6 +146,7 @@ public:
            const bool first_part_small = false,
            const bool count_0 = false,
            const int sv_cp_file = 0,
+           const bool is_trial = false,
            const bool compress = false,
            const idx_size cramer_num_cw = 0,
            const double cramer_p_reject = 0);

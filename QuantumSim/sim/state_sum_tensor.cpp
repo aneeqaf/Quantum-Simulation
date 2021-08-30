@@ -144,22 +144,22 @@ HandlexCZApplication(int& remaining_cz_bits,
         || sim_type == Config::SimType::ApproxCZPathH2011 || sim_type == Config::SimType::ApproxCZPathV2011) {
         if (remaining_cz_bits != -1)
             xCZ_applied_in_cycle = ApplyXCZGatesForDist(remaining_cz_bits, cz_path, cz_path_len,
-                                                suffix_size, CZ_bitmasks);
+                                                        suffix_size, CZ_bitmasks);
         else
             xCZ_applied_in_cycle = ApplyXCZGatesExact(CZ_bitmasks);
     }
     
-//    else if (book_keep &&
-//     (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
-//      sim_type == Config::SimType::Approx2011OWT)){
-//         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
-//         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
-//     }
-//
-//    if (book_keep) {
-//        data_per_cycles.memory.push_back(GetMemUsage());
-//        data_per_cycles.addends.push_back(GetNumAddends());
-//    }
+    //    else if (book_keep &&
+    //     (sim_type == Config::SimType::ApproxOWT || sim_type == Config::SimType::Approx_i11iOWT ||
+    //      sim_type == Config::SimType::Approx2011OWT)){
+    //         data_per_cycles.xCZ_H.push_back(tensor_addends[0] -> CountXCZGates(CZ_bitmasks));
+    //         data_per_cycles.xCZ_V.push_back(tensor_addends[1] -> CountXCZGates(CZ_bitmasks));
+    //     }
+    //
+    //    if (book_keep) {
+    //        data_per_cycles.memory.push_back(GetMemUsage());
+    //        data_per_cycles.addends.push_back(GetNumAddends());
+    //    }
     
     return xCZ_applied_in_cycle;
 }
@@ -205,20 +205,20 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
             num_addends = tensor_addends.size();
         }
     }
-
+    
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
     if (book_keep) {
-//        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
-//            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-//            data_per_cycles.xCZ_V.push_back(0);
-//        }
-//        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
-//            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-//            data_per_cycles.xCZ_H.push_back(0);
-//        }
+        //        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
+        //            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+        //            data_per_cycles.xCZ_V.push_back(0);
+        //        }
+        //        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
+        //            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+        //            data_per_cycles.xCZ_H.push_back(0);
+        //        }
         count_of_category.xCZ_not_applied += tensor_addends[0] -> CountXCZGates(CZ_bitmasks)
-            - (count_of_category.decomposed_CZ - prev_CZ_count);
+        - (count_of_category.decomposed_CZ - prev_CZ_count);
     }
     
     return  -1;
@@ -238,7 +238,7 @@ ApplyXCZGatesForDist(int& remaining_cz_bits,
     Time time;
     time.StartTime();
     
-//    const ul prev_CZ_count = count_of_category.decomposed_CZ;
+    //    const ul prev_CZ_count = count_of_category.decomposed_CZ;
     const idx_size num_q_a = tensor_addends[0] -> GetNumQInBlock(0);
     bitset<128> xCZ_bitmasks_path0_D1D2[num_q_a], xCZ_bitmasks_path1_D3D4[num_q_a],
     xCZ_bitmasks_path0_D2D1[num_q_a], xCZ_bitmasks_path1_D4D3[num_q_a];
@@ -249,27 +249,27 @@ ApplyXCZGatesForDist(int& remaining_cz_bits,
         xCZ_bitmasks_path1_D4D3[i] = 0;
     }
     const int xCZ_applied_in_cycle = FormGatesBitmaskXCZ(terminate, remaining_cz_bits, cz_path,
-                                                 xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
-                                                 xCZ_bitmasks_path1_D3D4,xCZ_bitmasks_path1_D4D3,
-                                                 cz_path_len, suffix_size, CZ_bitmasks);
+                                                         xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
+                                                         xCZ_bitmasks_path1_D3D4,xCZ_bitmasks_path1_D4D3,
+                                                         cz_path_len, suffix_size, CZ_bitmasks);
     if (xCZ_applied_in_cycle > 0)
         tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2,
                                                             xCZ_bitmasks_path0_D2D1,
                                                             xCZ_bitmasks_path1_D3D4,
                                                             xCZ_bitmasks_path1_D4D3);
-      
+    
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-//    if (xCZ_applied_in_cycle && book_keep) {
-//        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
-//            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-//            data_per_cycles.xCZ_V.push_back(0);
-//        }
-//        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
-//            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-//            data_per_cycles.xCZ_H.push_back(0);
-//        }
-//    }
+    //    if (xCZ_applied_in_cycle && book_keep) {
+    //        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
+    //            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+    //            data_per_cycles.xCZ_V.push_back(0);
+    //        }
+    //        else if (sim_type == Config::SimType::LosslessV || sim_type == Config::SimType::ApproxCZPathV2011) {
+    //            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
+    //            data_per_cycles.xCZ_H.push_back(0);
+    //        }
+    //    }
     
     if (terminate)
         return xCZ_applied_in_cycle;
@@ -311,7 +311,7 @@ FormGatesBitmaskXCZ(bool& terminate,
             const idx_size second_half = (xCZ_bitmask[i] >> 64).to_ulong();
             const int q = first_half ? __builtin_ctzl(first_half)
             : second_half ? 64 +  __builtin_ctzl(second_half) : 0;
-
+            
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
             if (tensor_addends[0] -> GetNumQInBlock(0) < tensor_addends[0] -> GetNumQInBlock(1)) {
@@ -324,7 +324,7 @@ FormGatesBitmaskXCZ(bool& terminate,
                 if ((cz_path & 1) == 0 == 0)
                     xCZ_bitmasks_path0_D2D1[i][q] = 1;
                 else
-                   xCZ_bitmasks_path1_D4D3[i][q] = 1;
+                    xCZ_bitmasks_path1_D4D3[i][q] = 1;
             }
             else {
                 if ((cz_path & 1) == 0) {
@@ -387,8 +387,8 @@ ApplyMergedXYGate(const Gate& gate1,
 
 void SumOfTensorsProductsStateVector::
 ApplyXYRecursiveTransform(bitset<128> X_bitmask,
-                         bitset<128> Y_bitmask,
-                         int th)
+                          bitset<128> Y_bitmask,
+                          int th)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
     for (auto& t : tensor_addends)
@@ -454,7 +454,7 @@ ConvertSumOfTensorsToStateAVX()
     cmplx* amp;
     posix_memalign((void**)&amp, 64, sizeof(cmplx) * size);
     memset(amp, 0, size * sizeof(amp));
-   
+    
     float* __restrict result = (float*)__builtin_assume_aligned(amp, 64);
     for (idx_size n = 0; n < num_addends; ++n) {
         float* __restrict amp_a = (float*)__builtin_assume_aligned(tensor_addends[n] -> state_a -> GetAmpVector(), 64);
@@ -521,33 +521,33 @@ ConvertSumOfTensorsToState()
     const int num_q_B = tensor_addends[0] -> GetNumQInBlock(1), num_q_A = tensor_addends[0] -> GetNumQInBlock(0),
     total_q = num_q_A  + num_q_B;
     const idx_size size = 1ull << total_q;
-//    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
+    //    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
     
     cmplx* amp = new cmplx[size];
     for (idx_size i = 0; i < size; ++i)
         amp[i] = 0;
-  
-//    if (sim_type == Config::SimType::LosslessV) {
-        for (idx_size i = 0; i < size; ++i) {
-            for (idx_size n = 0; n < num_addends; ++n)
-                amp[i] += (*tensor_addends[n])[i];
-        }
-//    }
-//    else {
-//        for (idx_size j = 0; j < num_addends; ++j) {
-//            auto& state_A = *(tensor_addends[j] -> state_a);
-//            auto& state_B = *(tensor_addends[j] -> state_b);
-//            for (idx_size a = 0; a < A_size; ++a) {
-//                const cmplx t_a = state_A[a];
-//                for (idx_size b = 0; b < B_size; ++b) {
-//                    bitset<128> temp_b = b;
-//                    bitset<128> temp_a = a << num_q_B;
-//                    bitset<128> i = temp_a | (temp_b & B_qubits_bitmask);
-//                    amp[i.to_ulong()] += t_a * state_B[b];
-//                }
-//            }
-//        }
-//    }
+    
+    //    if (sim_type == Config::SimType::LosslessV) {
+    for (idx_size i = 0; i < size; ++i) {
+        for (idx_size n = 0; n < num_addends; ++n)
+            amp[i] += (*tensor_addends[n])[i];
+    }
+    //    }
+    //    else {
+    //        for (idx_size j = 0; j < num_addends; ++j) {
+    //            auto& state_A = *(tensor_addends[j] -> state_a);
+    //            auto& state_B = *(tensor_addends[j] -> state_b);
+    //            for (idx_size a = 0; a < A_size; ++a) {
+    //                const cmplx t_a = state_A[a];
+    //                for (idx_size b = 0; b < B_size; ++b) {
+    //                    bitset<128> temp_b = b;
+    //                    bitset<128> temp_a = a << num_q_B;
+    //                    bitset<128> i = temp_a | (temp_b & B_qubits_bitmask);
+    //                    amp[i.to_ulong()] += t_a * state_B[b];
+    //                }
+    //            }
+    //        }
+    //    }
     FullAmpStateVector* full_state = new FullAmpStateVector(amp, size);
     delete [] amp;
     return full_state;
@@ -556,7 +556,7 @@ ConvertSumOfTensorsToState()
 cmplx SumOfTensorsProductsStateVector::
 operator[](bitset<128> i) 
 {
-   cmplx val = 0;
+    cmplx val = 0;
     for (auto& t : tensor_addends)
         val += (*t)[i];
     return val;
@@ -751,7 +751,7 @@ CalculateMeanEntropy2Cuts() const
         cmplx ampl =  t0[idx] + t1[idx];
         
         if ((real(ampl) > 1e-20 || imag(ampl) > 1e-20))
-             entropy += norm(ampl) * log2l(norm(ampl));
+            entropy += norm(ampl) * log2l(norm(ampl));
     }
     
     return -entropy * range;
@@ -821,14 +821,14 @@ CountZeroAmpPercentage() const
     // const idx_size total_size = 1ull << (tensor_addends[0] -> GetNumQInBlock(0) + tensor_addends[0] -> GetNumQInBlock(1));
     // idx_size zero_count = 0;
     
-//    for (idx_size i = 0; i < total_size; ++i) {
-//        if ((*this)[i] == cmplx(0,0))
-//            ++zero_count;
-//    }
-
+    //    for (idx_size i = 0; i < total_size; ++i) {
+    //        if ((*this)[i] == cmplx(0,0))
+    //            ++zero_count;
+    //    }
+    
     if (num_addends == 1) return tensor_addends[0] -> CountZeroAmpPercentage();
-
-   return NAN;
+    
+    return NAN;
 }
 
 //Todo : Implement for multiple addends.
@@ -897,7 +897,7 @@ PrintStateVector()
             cout << imag(amp) << "j";
         cout << "\n";
     }
-     cout << "\n\n";
+    cout << "\n\n";
 }
 
 void SumOfTensorsProductsStateVector::

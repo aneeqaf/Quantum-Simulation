@@ -22,8 +22,9 @@ def main(cir_dir, num_idx, binary_vectors_only, not_final_amps, add_partial_res_
 	
 	for filename in files:
 		if filename.endswith("_ascii.amps") or binary_vectors_only or "result" in filename:
-			if binary_vectors_only and (filename.endswith("_ascii.amps")
-			 or "result" in filename):
+			if binary_vectors_only and (filename.endswith("_ascii.amps") or "result" in filename):
+				continue
+			if "result" in filename:
 				continue
 			if add_partial_res_amps and "result" not in filename:
 				continue

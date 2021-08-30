@@ -608,7 +608,7 @@ ApplyQFT()
                             ? kCmplxInL1Cache/num_threads : amp_size/num_threads;
     idx_size block_bits = log2(block_size);
     idx_size n_threads =  amp_size/num_threads > num_threads ? num_threads :  amp_size/num_threads;
-            
+    
     for (idx_size cycle = 0; cycle < num_qubits; ++cycle) {
         idx_size CRk_bitmasks[num_qubits];
         memset(CRk_bitmasks, 0, num_qubits * sizeof(idx_size));
