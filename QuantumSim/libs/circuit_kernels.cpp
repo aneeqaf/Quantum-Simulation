@@ -162,7 +162,7 @@ CalculateTotalNumCycles(const idx_size num_qubits,
         int current_mode = Config::ProcPrefix;
         idx_size current_path_bits = config -> proc_prefix_bits, memory_passes = 0;
         for (idx_size i = 0; i < gates.size(); ++i) {
-            if (memory_passes == 0 && gates[i].GetType() == Gate::Type::h) {
+            if (i == 0 && memory_passes == 0 && gates[i].GetType() == Gate::Type::h) {
                 i += num_qubits - 1;
                 ++memory_passes;
                 continue;

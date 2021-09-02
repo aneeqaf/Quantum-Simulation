@@ -428,13 +428,13 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 
 	if fidelity != 0.0:
 		if compress:
-			print("\tCalculated end-to-end circuit fidelity : {:.3e}".format(fidelity))
+			print("\tCalculated end-to-end circuit fidelity : " + str(round(fidelity, 3)))
 		else:
-			print("\tEstimated end-to-end circuit fidelity : {:.3e}".format(fidelity))
+			print("\tEstimated end-to-end circuit fidelity : " + str(round(fidelity, 3)))
 				# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
 
-	print("\tBillable runtime (total runtime * number of machines): {:.3e}".format((max_elapsed_time * num_machines)/3600) \
-		+ " hrs ({:.3e}".format(((max_elapsed_time * num_machines)/num_amps)/3600) + " hrs per amp)")
+	print("\tBillable runtime (total runtime * number of machines): " + str(round((max_elapsed_time * num_machines)/3600, 3)) \
+		+ " hrs (" + str(round((max_elapsed_time * num_machines)/num_amps, 3)) + " s per amp)")
 
 	if cp_1 or cp_2:
 		print("\tAvg zero count ")
@@ -558,11 +558,21 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 		print("Avg CPU utilization per process : " + \
 			str(round(avg_CPU_uti_per_p/num_CZ_paths, 3)) + " % ")
 
+	print ("Total runtime: " + str(round(max_elapsed_time, 3)) + " s")
+	
 	if max_procs != 0:
-		print("\033[1m\nThe estimated time for all the processes is " \
-			+ str(round((avg_elapsed_time/(max_procs)) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
-
-	print ("Total runtime: {:.3e}".format(max_elapsed_time) + " s")
+		estimated_time = ((avg_elapsed_time/max_procs) * ((1 << cz_path_len)/num_batches))/3600
+		if estimated_time >= 72:
+			estimated_time = estimated_time/24
+			print("\033[1m\nThe estimated time for all the processes is " \
+				+ str(round(estimated_time, 3)) + " days\n\033[0m")
+		elif estimated_time >= 1:
+			print("\033[1m\nThe estimated time for all the processes is " \
+				+ str(round(estimated_time, 3)) + " hrs\n\033[0m")
+		else:
+			estimated_time = estimated_time * 3600
+			print("\033[1m\nThe estimated time for all the processes is " \
+				+ str(round(estimated_time, 3)) + " seconds\n\033[0m")
 	
 	print("\n¯\_(ツ)_/¯ \n")
 
