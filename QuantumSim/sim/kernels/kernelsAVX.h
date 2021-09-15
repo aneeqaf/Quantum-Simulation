@@ -76,6 +76,7 @@ const __m256 knegZ[4] = {{0}, {0, 0, -0.0f, -0.0f, 0, 0, -0.0f, -0.0f},
 
 constexpr idx_size kCmplxInL1Cache = (1ull << 13);
 
+constexpr idx_size kBlockApplicationLimit = 7;
 //__attribute__((always_inline)) inline bool
 //CheckIfBlockIsZero(const ZeroOptMask& zero_opt_mask,
 //                   const int idx,
