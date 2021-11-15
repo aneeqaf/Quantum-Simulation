@@ -39,6 +39,7 @@
 #include "profile.h"
 #include "zero_opt_mask.h"
 #include "math_helper.h"
+#include "qubit_partition.h"
 
 using namespace std;
 
