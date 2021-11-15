@@ -21,7 +21,7 @@ class QFTSimulation {
 public:
     QFTSimulation(idx_size num_qubits): num_qubits(num_qubits) {}
     
-    void Simulate(FullAmpStateVector& amp);
+    void Simulate(FullAmpStateVector& amp, string idx_infile = "");
 };
 
 #endif /* qftSimulation_h */

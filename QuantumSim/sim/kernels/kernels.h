@@ -310,7 +310,7 @@ Apply2MergedGatesHelper(cmplx* __restrict amp,
                         const idx_size gate_qubits,
                         const int num_qubits_amp,
                         const function& gate_func,
-                        const idx_size add = 1);
+                        const idx_size data_parallelism = 1);
 
 void
 ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
@@ -318,7 +318,7 @@ ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
                                  const idx_size gate_qubits,
                                  const int num_qubits_amp,
                                  void (*gate_func)(cmplx*, const idx_size*),
-                                 const idx_size add = 1);
+                                 const idx_size data_parallelism = 1);
 
 __attribute__((always_inline)) inline int
 ApplyMergedXYGates(cmplx* __restrict amp,

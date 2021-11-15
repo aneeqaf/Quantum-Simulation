@@ -4,14 +4,14 @@ CC := g++
 SZPATH := /usr/local
 SRCDIR := vector_state_sim
 TARGETDIR := bin
-OUTPUT := output/amp_vectors output/probabilities output/qpro_scripts output/reports output/misc
-INPUT := input/random_circuits_rollright
+OUTPUT := output/amp_vectors output/probabilities output/log output/reports output/misc
+INPUT := input/random_circuits_google
 TARGET := bin/rr
 LIBS = -lm -lstdc++ -lomp -lsleef
 SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a
 INC = -I libs -I sim -I sim/kernels 
 CFLAGS = -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -ffast-math -m64 -mavx -mavx2 \
--march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel 
+-march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel -g
 # -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled -DFidelityDoubled
 # CFLAGS = -g -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i
 .PHONY: clean all

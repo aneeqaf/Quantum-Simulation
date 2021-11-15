@@ -380,8 +380,19 @@ PrepareQFTCRkBitmask(idx_size* CRk_bitmasks,
                      const idx_size cycle_num,
                      const idx_size num_qubits)
 {
-    for (idx_size i = cycle_num; i < num_qubits; ++i)
-        CRk_bitmasks[i] = (1ull << i) | (1ull << cycle_num);
+    static idx_size gates_dropped = 0, crossing_gates = 0;
+    QubitPartition qp(QubitPartition::Cuts::Horizontal, num_qubits);
+    for (idx_size i = cycle_num; i < num_qubits; ++i) {
+        if (qp.globalToBlock(i) ==  qp.globalToBlock(cycle_num) || ((i <= 10))) {
+            CRk_bitmasks[i] = (1ull << i) | (1ull << cycle_num);
+            if (qp.globalToBlock(i) !=  qp.globalToBlock(cycle_num))
+                ++crossing_gates;
+        }
+        else ++gates_dropped;
+    }
+    
+//    cout << "gates_dropped: " << gates_dropped << endl;
+//    cout << "crossing_gates: " << crossing_gates << endl;
 }
 
 double

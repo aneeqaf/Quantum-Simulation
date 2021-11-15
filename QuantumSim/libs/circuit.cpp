@@ -253,15 +253,18 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                     if (num_xCZ_in_cluster == num_crossing_q) break;
             }
             
+            idx_size xCZ_to_collect = remaining_path_bits;
             // Move the xCZ in the transitioning cycle further out to have more gates in preceding paths
             // The number of gates in the branching path should be the least
             if (remaining_path_bits <= num_xCZ_in_cluster) {
                 j = i;
                 
-                if (remaining_path_bits < num_xCZ_in_cluster)
+                if (remaining_path_bits < num_xCZ_in_cluster) {
                     j = i + remaining_path_bits;
+                    xCZ_to_collect = num_xCZ_in_cluster - remaining_path_bits;
+                }
                 
-                idx_size xCZ_to_collect = 0;
+                idx_size xCZ_collected = 0;
                 
                 // Find all xCZ in cycle
                 for (; j < gates.size(); ++j) {
@@ -285,9 +288,9 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                         idx_size q1 = gate_qubits[1];
                         
                         if (IsCrossingGate(j)) {
-                            if (xCZ_to_collect == remaining_path_bits) break;
+                            if (xCZ_collected == xCZ_to_collect) break;
                             
-                            ++xCZ_to_collect;
+                            ++xCZ_collected;
                             if (recorded_qubit.count(q0) == 0) {
                                 recorded_qubit[q0] = false;
                                 recorded_qubit[q1] = false;
@@ -315,16 +318,16 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                         gates_to_delete.push_back(j);
                     }
                     
-                    if (remaining_path_bits == num_xCZ_in_cluster
-                        && num_xCZ_in_cluster == xCZ_to_collect
-                        && boundary_qubits_obstructed >= xCZ_to_collect
+                    if (xCZ_to_collect == xCZ_collected
+                        && boundary_qubits_obstructed >= xCZ_collected
                         && current_mode != Config::SimMode::Branch) {
                         ++j;
                         goto exit_inner_loop;
                     }
-                    else if (remaining_path_bits < num_xCZ_in_cluster
-                             && (num_xCZ_in_cluster - remaining_path_bits) == xCZ_to_collect
-                             && boundary_qubits_obstructed >= xCZ_to_collect) {
+                    // TODO : Remove and test. 
+                    else if (xCZ_to_collect < num_xCZ_in_cluster
+                             && xCZ_to_collect == xCZ_collected
+                             && boundary_qubits_obstructed >= xCZ_collected) {
                         ++j;
                         goto exit_inner_loop;
                     }
@@ -341,9 +344,18 @@ MovexCZGatesRewrite(idx_size proc_prefix_bits,
                 PrintGates(gates, qubits, *qp);
 #endif
                 // if xCZ are not completely obstructed and other xCZ are seen, coalesce them and restart that cycle
-                if (boundary_qubits_obstructed == 0 && xCZ_to_collect == remaining_path_bits) {
+                if (boundary_qubits_obstructed == 0 && xCZ_collected == remaining_path_bits) {
                     j -= gates_to_delete.size();
-                    num_xCZ_in_cluster -= xCZ_to_collect;
+                    num_xCZ_in_cluster -= xCZ_collected;
+                    if (current_mode == Config::SimMode::ProcPrefix)
+                        MovexCZToFront(j, remaining_path_bits + static_cast<int>(range_bits));
+                    else if (current_mode == Config::SimMode::Ranges)
+                        MovexCZToFront(j, remaining_path_bits + static_cast<int>(branch_bits));
+                    else
+                        MovexCZToFront(j, remaining_path_bits);
+#ifdef PrintG
+                PrintGates(gates, qubits, *qp);
+#endif
                 }
                 // Move it back since the gates moved belong to the next path
                 else if (j < gates.size() && remaining_path_bits < num_xCZ_in_cluster) {
@@ -703,6 +715,7 @@ OptimizeCircuitArrangement(const Config* config,
         PrintGates(gates, qubits, *qp);
 #endif
         idx_size num_cycles_op2 = clock_cycles.size();
+        idx_size chosen_cycles = 0;
         
         // Decide between two options
         if (config -> sim_type  == Config::SimType::FullState) {
@@ -719,16 +732,21 @@ OptimizeCircuitArrangement(const Config* config,
                 clock_cycles = clock_cycles_op1;
                 chosen_cycles = op1_cycles;
             }
-            
-            if (write_circuit_mode) {
-                cout << "Number of memory passes in circuit : " << chosen_cycles << "\n\nCircuit:\n";
-                PrintGates(gates, qubits, *qp);
-            }
         }
         
 #ifdef PrintG
         PrintGates(gates, qubits, *qp);
 #endif
+        MoveLastLayerOfHGatesForFusion(qubits, gates, clock_cycles);
+        
+#ifdef PrintG
+        PrintGates(gates, qubits, *qp);
+#endif
+        if (write_circuit_mode) {
+            cout << "Number of memory passes in circuit : " << chosen_cycles << "\n\nCircuit:\n";
+            PrintGates(gates, qubits, *qp);
+        }
+        
         rearranged = true;
     }
 }

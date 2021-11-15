@@ -1,6 +1,6 @@
 # Rollright - A Quantum Simulator
 
-Rollright is a hybrid Schrondinger-Feynman quantum simulator that is particularly efficient on Google quantum-supremacy circuits. In addition to a full state-vector representation, it uses sum-of-tensors representations. Distributed simulation with no interprocess communication is performed using a meta-simulation script. 
+Rollright is a hybrid Schrondinger-Feynman quantum simulator that is particularly efficient on Google quantum-supremacy and Quantum Fourier Transforms circuits. In addition to a full state-vector representation, it uses sum-of-tensors representations. Distributed simulation with no interprocess communication is performed using a meta-simulation script. 
 
 Tensor partitions are currently specified by the choice of a vertical or horizontal cut with a particular size breakdown (3q + 4q versus 4q + 3q). Non-straightline cuts are supported internally but would require additional command-line controls. Straightline cuts are preferrable for deeper circuits.
 
@@ -12,11 +12,15 @@ Rollright prints many details about its hardware and software environment, as we
 
 Rollright supports multithreaded execution, however the number of threads requested must be carefully balanced against the number of parallel processes launched.
 
-Rollright was developed in c++17 and uses g++7.
+Rollright was developed in c++17 and uses g++9.
 
 **Important: depth 41 is 1 + 40, where 1 accounts for cycle 0 of H gates.**
 
 ## Running the Simulator
+
+* QFT is only performed on the full-state vector and is enabled by the option, **-Q <num_qubits>**, **--QFT <num_qubits>**
+	* Disclaimer: currently, only acts on the ground state.
+* Quantum Supremamacy circuit is supported in both modes.
 
 ### Command line options
 
@@ -30,15 +34,19 @@ Rollright was developed in c++17 and uses g++7.
 	* The fourth argument is the number of bits to branch on using depth first search.
 	* Initially, simulations consumes the process prefix and subsequent CZ bits from the specified range. Then, a branching simulation is performed for specified number of bits. 
 	* Defines the CZ path for CZ gates that cross partitions for distributed simulation.
+* **--circuit_reordering_mode, -C**
+	* Reorder circuit to a permutation that forms blocks and enables the reduction of memory passes.
+	* No simulation is performed, number of memory passes are calculated, circuit is printed, and the reordered circuit is printed to the file `<input_filename>.rearranged`.
+	* By default it is turned off.
 * **--depth, -d** 
 	* Must be followed by an integer to specify the number of cycles to simulate.
 	* The default setting simulates all cycles specified in the input.
 * **--first_partition_smaller, -f**
-        * This is a flag and if specified it chooses a cut where the first partition is smaller than the second.
-        * The default behavior is that the first partition is bigger than the second.
+	* This is a flag and if specified it chooses a cut where the first partition is smaller than the second.
+	* The default behavior is that the first partition is bigger than the second.
 * **--grid_type, -m**
-        * Must be followed by a string specifying the type of 2D circuit : "c" or "column_major", "r" or "row_major".
-        * Default is row major.
+	* Must be followed by a string specifying the type of 2D circuit : "c" or "column_major", "r" or "row_major".
+	* Default is row major.
 * **--hcut, -_**
 	* Must be followed by an integer that specifies one side of a horizontal cut in a circuit.
 	* The program calculates the size of the other partition given number of qubits in the first partition.
@@ -49,22 +57,18 @@ Rollright was developed in c++17 and uses g++7.
 	* Must be followed by a filename (currently only reads the file in the Rollright or in the Google circuit format).
 	* The file is assumed to be in `input\random_circuits_rollright` or in `input\random_circuits_google`.
 * **--idx, -x**
-	* Must be followed by either a filename or two comma separated integers, seed and number of indices.
+	* Must be followed by either a filename or two comma separated integers, seed, and number of indices.
 	* Optionally, end the two integers argument with a '+' to print the generated indices to a file.
 	* The program prints the values of the amplitudes in the specified indices to a file in `output\amp_vectors\<dirname pertaining to circuit>\<filename>.amps` or `output\amp_vectors\<filename>.amps`. `<filename>` can be specified using the -o option. Providing a `<filename>` is recommended for distributed simulation to simplify recollection of files for computations. 
 	* Generated indices are printed in `output\amp_vectors\<dirname>\<filename>.idx` or `output\amp_vectors\<filename>.idx`
-* **--layers_Hgates_b4_meas, -H**
-        * Must be followed by the number of layers of H gates to add at the specified depth.
-        * Default is zero.
-        * Don't need to specify this flag if the circuit file already has the required layer of H gates.
 * **--no_checkpoint_ranges, -p**
         * This is a flag and if specified, the state vector after simulation of the process prefix bits is not saved.
         * Default is false.
-        * The purpose of this flag is to save memory with possible deprecation in performance.
+        * The purpose of this flag is to save memory with a tradeoff in performance.
 * **--no_nearest_neighbors, -n**
         * If specified then the simulator does not check to make sure all two qubits gates are acting on nearest neighbors.
 * **--num_threads, -t**
-	* Must be followed by an integer.
+	* Must be followed by an integer that is a power of two.
 	* Sets a maximum limit on the number of threads to be used 
 * **--outfile, -o**
 	* Must be followed by a filename.
@@ -76,7 +80,8 @@ Rollright was developed in c++17 and uses g++7.
         * 0 : do not save any checkpoint to file
         * 1 : save only the checkpoint before ranges to file 
         * 2 : save both the checkpoints to file
-    * Default value is 0. 
+    * Default value is 0.
+	* Note this flag can take a large amount of disk space and results in severe runtime hits. 
 * **--sim_type, -s**
 	* Must be followed by an integer between 0 and 8 that specifies the type of simulation.
 	* The simulation types supported (in order): LosslessH, LosslessV, Approx1CutH, Approx1CutV, Approx2Cuts, FullState, Approx2011, Approx1_101, Approx1110. Default simulation type is FullState. 

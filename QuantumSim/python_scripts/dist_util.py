@@ -219,7 +219,7 @@ def ExecuteSingleTrialRun(num_cz, command):
 	for i in range(int(num_cz)):
 		cz_p += str(i % 2);
 	
-	command_temp = command + " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) 
+	command_temp = command + " --CZ_path " + str(num_cz) + "," + str(int(cz_p, 2)) + " -T" 
 
 	print("/usr/bin/time " + command_temp + " > " + str(temp_file) + " 2>&1")
 	os.system("/usr/bin/time " + command_temp + " > " + str(temp_file) + " 2>&1")
@@ -330,7 +330,7 @@ def PerformTrialRun(commandH, commandV, proc_prefix_bits, ranges_bits = 0, branc
 			branch_bits = ceil(num_xCZ / 3)
 			proc_prefix_bits = ceil((num_xCZ - branch_bits)/2)
 			ranges_bits = num_xCZ - branch_bits - proc_prefix_bits 
-		elif approx and not ranges_bits: 
+		elif approx and ranges_bits: 
 			if proc_prefix_bits and not branch_bits:
 				branch_bits = num_xCZ - proc_prefix_bits - ranges_bits
 			elif branch_bits and not proc_prefix_bits:

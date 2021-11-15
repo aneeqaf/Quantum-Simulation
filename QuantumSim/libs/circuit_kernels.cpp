@@ -162,7 +162,7 @@ CalculateTotalNumCycles(const idx_size num_qubits,
         int current_mode = Config::ProcPrefix;
         idx_size current_path_bits = config -> proc_prefix_bits, memory_passes = 0;
         for (idx_size i = 0; i < gates.size(); ++i) {
-            if (memory_passes == 0 && gates[i].GetType() == Gate::Type::h) {
+            if (i == 0 && memory_passes == 0 && gates[i].GetType() == Gate::Type::h) {
                 i += num_qubits - 1;
                 ++memory_passes;
                 continue;
@@ -301,6 +301,45 @@ PostProcessAfterClustering(idx_size num_qubits,
     }
     
     clock_cycles.push_back(gates.size());
+}
+
+void MoveLastLayerOfHGatesForFusion(idx_size num_qubits,
+                                    vector<Gate>& gates,
+                                    vector<idx_size>& clock_cycles)
+{
+    idx_size num_gates = gates.size();
+    
+    idx_size starting_idx = 0;
+    for (size_t i = 0; i < gates.size() ; ++i) {
+        if (gates[i].GetType() != Gate::Type::h) break;
+        ++starting_idx;
+    }
+    
+    for (idx_size i = num_gates - 1; i > starting_idx ; --i) {
+        if (gates[i].GetType() == Gate::Type::h) {
+            Gate gate = gates[i];
+            idx_size q = gate.GetQubits()[0];
+            idx_size i_cycle_num = GetCycleNumForGateIdx(i, clock_cycles);
+
+            for (idx_size j = i - 1; j > 0 ; --j) {
+                auto gate_qubits = gates[j].GetQubits();
+                if (gate_qubits[0] == q || (gate_qubits.size() == 2 && gate_qubits[1] == q)){
+                    // Assume H gates are at the end of the cycle
+                    idx_size cycle_num = GetCycleNumForGateIdx(j, clock_cycles);
+                    idx_size end = clock_cycles[cycle_num];
+                    if (cycle_num != i_cycle_num) {
+                        gates.erase(gates.begin() + i);
+                        gates.insert(gates.begin() + end, gate);
+                        for (idx_size c = cycle_num; c < i_cycle_num; ++c)
+                            clock_cycles[c] += 1;
+                       
+                        ++i;
+                    }
+                    break;
+                }
+            }            
+        }
+    }
 }
 
 // TODO: The way the gates are arranged affects the clustering. Not sure if there is a way to overcome that

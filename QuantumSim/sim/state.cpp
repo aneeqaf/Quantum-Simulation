@@ -395,8 +395,8 @@ ApplyOddGates(idx_size& X_bitmask,
     }
 }
 
-pair<int, int> FullAmpStateVector::
-GetMostSigOddBit(idx_size& X_bitmask,
+pair<int, Gate::Type> FullAmpStateVector::
+GetMostSigOddBitForXY1_2Gates(idx_size& X_bitmask,
                  idx_size& Y_bitmask,
                  int& num_X_bits,
                  int& num_Y_bits)
@@ -407,15 +407,15 @@ GetMostSigOddBit(idx_size& X_bitmask,
         if (X_q < Y_q) {
             X_bitmask ^= 1ull << X_q;
             --num_X_bits;
-            return pair<int, int>(X_q, 0);
+            return pair<int, Gate::Type>(X_q, Gate::Type::x_1_2);
         }
         else {
             Y_bitmask ^= 1ull << Y_q;
             --num_Y_bits;
-            return pair<int, int>(Y_q, 1);
+            return pair<int, Gate::Type>(Y_q, Gate::Type::y_1_2);
         }
     }
-    return pair<int, int> (-1, -1);
+    return pair<int, Gate::Type> (-1, Gate::Type::none);
 }
 
 pair<int, int> FullAmpStateVector::
@@ -491,7 +491,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
                            int th)
-{    
+{
     Time time;
     time.StartTime();
     
@@ -524,8 +524,8 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     for (int i = 0; i <= num_qubits; ++i)
         CZ_bitmasks_64[i] = CZ_bitmasks[i].to_ulong();
     
-    pair<int, int> odd_bit_low_XY = GetMostSigOddBit(loq_X_bitmask, loq_Y_bitmask,
-                                                     num_lo_X_bits, num_lo_Y_bits);
+    pair<int, Gate::Type> odd_bit_low_XY = GetMostSigOddBitForXY1_2Gates(loq_X_bitmask, loq_Y_bitmask,
+                                                                         num_lo_X_bits, num_lo_Y_bits);
     if (H_bitmask_64) {
         idx_size odd_bit_low = odd_bit_low_XY.first < 0 ? 0 : 1ull << odd_bit_low_XY.first;
         if ((odd_bit_low & loq_H_bitmask) != 0) {
@@ -554,11 +554,11 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     global_factor_power += phase.second;
     
     int num_hi_X_bits = __builtin_popcountll(hiq_X_bitmask), num_hi_Y_bits = __builtin_popcountll(hiq_Y_bitmask);
-    if (odd_bit_low_XY.second == 0) {
+    if (odd_bit_low_XY.second == Gate::Type::x_1_2) {
         hiq_X_bitmask |= 1ull << odd_bit_low_XY.first;
         ++num_hi_X_bits;
     }
-    else if (odd_bit_low_XY.second == 1) {
+    else if (odd_bit_low_XY.second == Gate::Type::y_1_2) {
         hiq_Y_bitmask |= 1ull << odd_bit_low_XY.first;
         ++num_hi_Y_bits;
     }
@@ -595,19 +595,17 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
             UnsetZeroPatternAtQubit(num_qubits - 1 - i);
     }
     
-    if (H_bitmask_64) {
-        if (hiq_H_bitmask) {
-            time.StartTime();
-            global_factor_power += __builtin_popcountll(hiq_H_bitmask);
-            if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
-                int q = __builtin_ctzl(hiq_H_bitmask);
-                Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
-                hiq_H_bitmask ^= 1ull << q;
-                ++single_H;
-            }
-            ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiq_H_bitmask);
-            time_by_category.last_H += time.GetElapsedTime();
+    if (hiq_H_bitmask) {
+        time.StartTime();
+        global_factor_power += __builtin_popcountll(hiq_H_bitmask);
+        if (__builtin_popcountll(hiq_H_bitmask) % 2 != 0) {
+            int q = __builtin_ctzl(hiq_H_bitmask);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
+            hiq_H_bitmask ^= 1ull << q;
+            ++single_H;
         }
+        ApplyHighHGatesIterativelyInParallel(amp, num_qubits, num_threads, hiq_H_bitmask);
+        time_by_category.last_H += time.GetElapsedTime();
     }
     
     // Each merged X1/2 and Y1/2 qubit gates contribute +2 to global factor. Adding both the gate
@@ -642,7 +640,7 @@ ApplyQFT()
                             ? kCmplxInL1Cache/num_threads : amp_size/num_threads;
     idx_size block_bits = log2(block_size);
     idx_size n_threads =  amp_size/num_threads > num_threads ? num_threads :  amp_size/num_threads;
-            
+    
     for (idx_size cycle = 0; cycle < num_qubits; ++cycle) {
         idx_size CRk_bitmasks[num_qubits];
         memset(CRk_bitmasks, 0, num_qubits * sizeof(idx_size));

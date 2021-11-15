@@ -50,7 +50,7 @@ private:
                        idx_size& Y_bitmask,
                        int& num_X_bits,
                        int& num_Y_bits);
-    pair<int, int> GetMostSigOddBit(idx_size& X_bitmask,
+    pair<int, Gate::Type> GetMostSigOddBitForXY1_2Gates(idx_size& X_bitmask,
                                      idx_size& Y_bitmask,
                                      int& num_X_bits,
                                      int& num_Y_bits);

@@ -26,6 +26,13 @@
 
 using namespace std;
 
+inline string
+ver_string(int a, int b, int c) {
+  ostringstream ss;
+  ss << a << '.' << b << '.' << c;
+  return ss.str();
+}
+
 class SequentialSimulation {
 private:
     

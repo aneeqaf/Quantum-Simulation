@@ -26,6 +26,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 
 	mem_line = ""
 	mem_val = 0
+	compression_ratio = 0.0
 	unit = "B"
 	qubits = 0
 	print_line = False
@@ -54,7 +55,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 				num_gates = 0
 				print_line_out = ""
 				for line in first_file:
-					if "(C) 2017, 2018  Regents of the University of Michigan" in line:
+					if "(C) Igor L. Markov and Aneeqa Fatima  2018 - 2021" in line:
 						print_line = True
 						print_line_out += "\n"
 					if "Qubits" in line:
@@ -98,7 +99,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						layers_breakdown = line
 					elif "Low-value qubits" in line:
 						low_val_q_line = line
-					elif "Requested num amps" in line:
+					elif "Requested number of amplitudes" in line:
 						num_amps = int(line.split(":")[1].replace(' ','').replace("\n", ""))
 						# print(line,  end='')
 						print_line_out += line
@@ -145,7 +146,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						categories['Rescaling passes'] = int(line.split()[2].replace("(","").replace(")",""))
 					elif "Copying" in line:
 						categories['Copying'] = int(line.split()[1].replace("(","").replace(")",""))
-					elif "Compression" in line:
+					elif "Compression (" in line:
 						categories['Compression'] = int(line.split()[1].replace("(","").replace(")",""))
 					elif "Decompression" in line:
 						categories['Decompression'] = int(line.split()[1].replace("(","").replace(")",""))
@@ -153,7 +154,10 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						mem_usage = line.split(":")[1].replace('\n', '')
 						mem_val = float(mem_usage.split(" ")[1].replace(' ',''))
 						unit = mem_usage.split(" ")[2].replace(' ','')
-					
+					elif "Compression ratio" in line:
+						compression_ratio_str = line.split(":")[1].replace('\n', ''); 
+						compression_ratio = float(compression_ratio_str.split(" ")[1].replace(' ','')) 
+
 					elif "¯\_(ツ)_/¯ " in line and \
 					categories['I_H'] + categories['L_H'] + categories['CZ & T'] + categories['Low XY'] + \
 					categories['H_lo'] + categories['xCZ'] + categories['Single X'] + categories['Single Y'] + \
@@ -215,15 +219,15 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						zeros_checkpoint_2_B += int(line.split('=')[2].split(' ')[1].replace(' ', ''))
 						zeros_checkpoint_2_A_p += float(line.split("(")[1].split(")")[0].replace("%",""))
 						zeros_checkpoint_2_B_p += float(line.split("(")[2].split(")")[0].replace("%",""))
-					elif "amp[3]" in line:
+					elif "amplitudes[3]" in line:
 						amp['3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[1/4]" in line:
+					elif "amplitudes[1/4]" in line:
 						amp['1/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[1/2]" in line:
+					elif "amplitudes[1/2]" in line:
 						amp['1/2'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[3/4]" in line:
+					elif "amplitudes[3/4]" in line:
 						amp['3/4'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
-					elif "amp[-3]" in line:
+					elif "amplitudes[-3]" in line:
 						amp['-3'] += complex(line.split('=')[1].replace(' ', '').replace('\n', ''))
 					elif "Runtime (" in line:
 						num_CZ_paths += 1
@@ -255,7 +259,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 						avg_time_per_category['Compression'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Decompression" in line:
 						avg_time_per_category['Decompression'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
-					elif "Storing amps" in line:
+					elif "Storing and retrieving amplitudes" in line:
 						avg_time_per_category['Storing amps'] += float(line.split(":")[1].replace("\t","").replace(" ","").split("=")[0][:-1])
 					elif "Prefix" in line:
 						avg_cz_time += float(line.split(":")[1].split()[0])
@@ -327,11 +331,28 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 				test_fid = dist_util.CalculateFidelity(exact_path1_file, exact_path2_file)
 				# print(test_fid)
 				# if test_fid > 1e-3:
-				# 	fidelity = float("nan")
+				# 	fidelity = float("nan")i
+	elif "_compress" in cir_file:
+		exact_dir = os.path.join("output", "amp_vectors", re.sub('_compress.*\d', "", cir_file))
+		compress_dir = os.path.join("output", "amp_vectors", cir_file)
+		exact_res_file= os.path.join(exact_dir, "result.amps")
+		compress_res_file = os.path.join(compress_dir, "result.amps")
+		# model_dir = os.path.join("output", "misc", cir_file)
+
+		# if not os.path.isdir(model_dir):
+		# 	try:
+		# 		os.makedirs(model_dir)
+		# 	except OSError as e:
+		# 		if e.errno != errno.EEXIST:
+		# 			raise
+		# model_file = os.path.join(model_dir, "model.txt")
+
+		if os.path.isfile(exact_res_file):
+			fidelity = dist_util.CalculateFidelity(exact_res_file, compress_res_file)	
 	
 	num_machines = ceil((num_threads * num_batches)/hardware_threads)
 	# printing statistics onto reports				
-	print("\nMulti-process simulation " , end="")
+	print("\nMultiprocess simulation " , end="")
 	if max_procs and max_procs < (1 << cz_path_len):
 		print ("(truncated) ", end="")
 	print(": ", end="")
@@ -357,11 +378,13 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 	# elif save_checkpoint_to_file == 1 and dfs:
 	# 	mem_val *= 2
 
-	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit, end="")
-
+	print("\tPeak memory : " + str(round(mem_val * num_batches,3)) + " " + unit, end="")	
 	if num_machines > 1:
 		print( " (" + str(round((mem_val * num_batches) / num_machines, 3)) + " " + unit + " per node)", end="")
 	print()
+
+	if compress:
+		print("\tCompression ratio : " + str(compression_ratio));
 
 	if float(est_time):
 		print("\tPredicted time : " + str(round(float(est_time), 3)) \
@@ -404,11 +427,14 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 			+ str(round(avg_minor_pagefaults/num_CZ_paths, 3)) + " (minor)")
 
 	if fidelity != 0.0:
-		print("\tEstimated end-to-end circuit fidelity : " + str(fidelity))
-			# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
+		if compress:
+			print("\tCalculated end-to-end circuit fidelity : " + str(round(fidelity, 3)))
+		else:
+			print("\tEstimated end-to-end circuit fidelity : " + str(round(fidelity, 3)))
+				# " (epsilon = " + str(round(1/(num_CZ_paths / (1 << cz_path_len)), 3)) + ")")
 
-	print("\tBillable runtime : {:.3e}".format((max_elapsed_time * num_machines)/3600) \
-		+ " hrs ({:.3e}".format(((max_elapsed_time * num_machines)/num_amps)/3600) + " hrs per amp)")
+	print("\tBillable runtime (total runtime * number of machines): " + str(round((max_elapsed_time * num_machines)/3600, 3)) \
+		+ " hrs (" + str(round((max_elapsed_time * num_machines)/num_amps, 3)) + " s per amp)")
 
 	if cp_1 or cp_2:
 		print("\tAvg zero count ")
@@ -423,11 +449,11 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 				+ str(int(zeros_checkpoint_2_B/num_CZ_paths)) +\
 				 " ({:.3}".format(zeros_checkpoint_2_B_p/num_CZ_paths) + "%)")
 
-	print("\namp[3]  \t= {:.6e}".format(amp['3']))
-	print("amp[1/4]\t= {:.6e}".format(amp['1/4']))
-	print("amp[1/2]\t= {:.6e}".format(amp['1/2']))
-	print("amp[3/4]\t= {:.6e}".format(amp['3/4']))
-	print("amp[-3] \t= {:.6e}".format(amp['-3']) + "\n")
+	print("\namplitudes[3]  \t= {:.6e}".format(amp['3']))
+	print("amplitudes[1/4]\t= {:.6e}".format(amp['1/4']))
+	print("amplitudes[1/2]\t= {:.6e}".format(amp['1/2']))
+	print("amplitudes[3/4]\t= {:.6e}".format(amp['3/4']))
+	print("amplitudes[-3] \t= {:.6e}".format(amp['-3']) + "\n")
 
 	avg_time_per_process /= num_CZ_paths
 	avg_dfs_time /= num_CZ_paths
@@ -504,7 +530,7 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 		str(round(((avg_time_per_category['Decompression'])/avg_time_per_process)*100, 3)) + "%")
 
 	if avg_time_per_category['Storing amps']:
-		print("\tStoring amps \t\t\t\t: "\
+		print("\tStoring and retrieving amplitudes \t: "\
 		 + str(round(avg_time_per_category['Storing amps'], 3)) + " s  \t= " +\
 		str(round(((avg_time_per_category['Storing amps'])/avg_time_per_process)*100, 3)) + "%")
 
@@ -532,10 +558,22 @@ def main(cir_file, est_time, max_procs, test_fid, no_checkpoint_with_ranges,\
 		print("Avg CPU utilization per process : " + \
 			str(round(avg_CPU_uti_per_p/num_CZ_paths, 3)) + " % ")
 
+	print ("Total runtime: " + str(round(max_elapsed_time, 3)) + " s")
+	
 	if max_procs != 0:
-		print("\033[1m\nThe estimated time for all the processes is " \
-			+ str(round((avg_elapsed_time/(max_procs)) * ((1 << cz_path_len)/num_batches), 3)) + " s\n\033[0m")
-
+		estimated_time = ((avg_elapsed_time/max_procs) * ((1 << cz_path_len)/num_batches))/3600
+		if estimated_time >= 72:
+			estimated_time = estimated_time/24
+			print("\033[1m\nThe estimated time for all the processes is " \
+				+ str(round(estimated_time, 3)) + " days\n\033[0m")
+		elif estimated_time >= 1:
+			print("\033[1m\nThe estimated time for all the processes is " \
+				+ str(round(estimated_time, 3)) + " hrs\n\033[0m")
+		else:
+			estimated_time = estimated_time * 3600
+			print("\033[1m\nThe estimated time for all the processes is " \
+				+ str(round(estimated_time, 3)) + " seconds\n\033[0m")
+	
 	print("\n¯\_(ツ)_/¯ \n")
 
 if __name__ == "__main__":

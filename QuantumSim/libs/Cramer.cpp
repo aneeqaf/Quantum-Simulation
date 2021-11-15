@@ -987,7 +987,7 @@ Rescale(const __m256 rescaling)
     float* __restrict t_cw_map = (float*)__builtin_assume_aligned(global_context.codewords_mappings, 64);
     float* __restrict t_block_cw_map = (float*)__builtin_assume_aligned(block_context.codewords_mappings, 64);
 
- #pragma omp parallel for num_threads(config.gnum_threads)
+ #pragma omp parallel for num_threads(config.num_threads)
      for (size_t i = 0; i < config.num_total_codewords; i += 4) {
          __m256 t = _mm256_load_ps(t_cw_map + (2 * i));
          t = _mm256_mul_ps(t, rescaling);
