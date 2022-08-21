@@ -548,7 +548,11 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         auto prev_amp = amp;
         amp = cramer -> CramerDecompress(nullptr, amp);
         free(prev_amp);
+        compressed = true;
     }
+    
+    PrintStateVector();
+    compressed = false;
     
     global_i_counter += phase.first;
     global_factor_power += phase.second;
@@ -624,8 +628,6 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
     
     if (cramer) {
         auto prev_amp = amp;
-        if (!cramer -> IsBlockInitialized())
-            cramer -> InitiateBlockContext(0, false);
         amp = cramer -> CramerCompress(nullptr, amp);
         free(prev_amp);
     }
@@ -1057,36 +1059,36 @@ void FullAmpStateVector::
 PrintStateVector() 
 {
     RescaleAndApplyGlobalICounter();
-//        static int count = 0;
-//        ofstream file;
-//        if (compressed)
-//            file.open("compression/compression/Test_original" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
-//        else
-//            file.open("compression/compression/Test_decompressed" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
-//
-//        for (idx_size i = 0; i < amp_size; ++i) {
-//            auto a = amp[i];
-//            file << real(a) ;
-//
-//            if (imag(a) >= 0)
-//                file << "+" << imag(a) << "j";
-//            else if (imag(a) < 0)
-//                file << imag(a) << "j";
-//            file << "\n";
-//        }
-//        file << "\n\n";
-    
-    for (idx_size i = 0; i < amp_size; ++i) {
-        auto a = amp[i];
-        cout << real(a) ;
+        static int count = 0;
+        ofstream file;
+        if (compressed)
+            file.open("compression/Test_original" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
+        else
+            file.open("compression/Test_decompressed" + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
 
-        if (imag(a) >= 0)
-            cout << "+" << imag(a) << "j";
-        else if (imag(a) < 0)
-            cout << imag(a) << "j";
-        cout << "\n";
-    }
-    cout << "\n\n";
+        for (idx_size i = 0; i < amp_size; ++i) {
+            auto a = amp[i];
+            file << real(a) ;
+
+            if (imag(a) >= 0)
+                file << "+" << imag(a) << "j";
+            else if (imag(a) < 0)
+                file << imag(a) << "j";
+            file << "\n";
+        }
+        file << "\n\n";
+    
+//    for (idx_size i = 0; i < amp_size; ++i) {
+//        auto a = amp[i];
+//        cout << real(a) ;
+//
+//        if (imag(a) >= 0)
+//            cout << "+" << imag(a) << "j";
+//        else if (imag(a) < 0)
+//            cout << imag(a) << "j";
+//        cout << "\n";
+//    }
+//    cout << "\n\n";
 }
 
 void FullAmpStateVector::

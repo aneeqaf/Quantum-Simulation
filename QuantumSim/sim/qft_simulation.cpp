@@ -36,9 +36,7 @@ Simulate(FullAmpStateVector& amp, string idx_infile)
     idx_size amp_size = 1ull << num_qubits;
     
     amp.ApplyQFT();
-    
-    double elapsed_time = qft_time.GetElapsedTime();
-    
+        
 //    cout << "\n(C) Igor L. Markov and Aneeqa Fatima  2018 - 2021\n";
 //    cout << "Entangled Simulator ver 1.0 - a quantum circuit simulator\n\n";
 //    cout << "Entangled Simulator QFT time : " << elapsed_time << "s\n\n";

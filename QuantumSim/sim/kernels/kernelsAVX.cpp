@@ -72,20 +72,6 @@ FirstGroupOf8GatesHelper(float* __restrict t_amp,
 }
 
 __attribute__((always_inline)) inline void
-GroupOf8GatesHelperOnCompressedState(float* __restrict t_amp,
-                                      Cramer* cramer,
-                                      const unsigned short* volatile gate_counts /*16*/,
-                                      const idx_size volatile __restrict idx_begin)
-{
-//    cout << "\nidx_begin: "<< idx_begin << "\n";
-//    for (size_t i = 0; i < 16; ++i)
-//        cout << gate_counts[i] << ", ";
-//    cout << "\n";
-    cramer -> CramerBlockSectorSwitch((complex<float>*)t_amp, gate_counts, idx_begin, 16);
-}
-
-
-__attribute__((always_inline)) inline void
 SecondGroupOf8GatesHelper(float* __restrict t_amp,
                           const unsigned short* volatile gate_counts /*8*/,
                           const idx_size* volatile __restrict gray_codes /*8*/)
@@ -135,37 +121,36 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
     
     if (!any_CZ && !any_T)
         return;
-    
-    const idx_size block_end = block_begin + block_size;
-    
+        
     // Before starting a block compute `negate_Z`
     bool negate_Z = false;
     idx_size prev_gc = 0;
     
+    // parity of gray code switches between odd and even
     if (block_begin) {
-        prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
+        prev_gc = block_begin;
         idx_size gate_count = 0;
         for (idx_size i = 0; i < (idx_size)num_qubits_amp; ++i) {
             if (((prev_gc & (1ull << i)) == (1ull << i)) && (prev_gc & CZ_bitmasks[i]))
                 gate_count += __builtin_popcountll((prev_gc & CZ_bitmasks[i]));
         }
-        if (gate_count & 2)
+        if ((gate_count >> 1) % 2 == 1)
             negate_Z = true;
     }
     
     //Use `negate_Z` to enable a Gray-code optimized loop.
-    for (idx_size count = block_begin; count + 15 < block_end ; count+=16) {
+    for (idx_size count = 0; count + 15 < block_size ; count += 16) {
         idx_size num_iters = count/16;
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
         
-        idx_size gc0 = count ^ (count >> 1);
-        idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
+        idx_size gc0 = block_begin + (count ^ (count >> 1));
+        idx_size gc4 = block_begin + ((count + 4) ^ ((count + 4) >> 1));
         const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-        gc0 = (count + 8) ^ ((count + 8) >> 1);
-        gc4 = (count + 12) ^ ((count + 12) >> 1);
+        gc0 = block_begin + ((count + 8) ^ ((count + 8) >> 1));
+        gc4 = block_begin + ((count + 12) ^ ((count + 12) >> 1));
         const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
         idx_size prev_gc1 = gc_first[7];
-        
+              
         unsigned short Tgate_count_1[8] = {0};
         GetTGatesCount(Tgate_count_1, negate_Z, prev_gc, gc_first, CZ_bitmasks, T_bitmasks);
         
@@ -181,7 +166,7 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
                         Tgate_count_1[7], Tgate_count_1[6], Tgate_count_1[4], Tgate_count_1[5],
                         Tgate_count_2[7], Tgate_count_2[6], Tgate_count_2[4], Tgate_count_2[5],
                         Tgate_count_2[0], Tgate_count_2[1], Tgate_count_2[3], Tgate_count_2[2]};
-                    GroupOf8GatesHelperOnCompressedState(t_amp, cramer, Tgate_count, gc_first[0]);
+                    cramer -> CramerBlockSectorSwitch((complex<float>*)t_amp, Tgate_count, gc_first[0], 16);
                 }
                 else {
                     unsigned short Tgate_count[16] = {
@@ -190,7 +175,7 @@ ApplyCZTGatesInABlock(float* __restrict t_amp,
                         Tgate_count_1[0], Tgate_count_1[1], Tgate_count_1[3], Tgate_count_1[2],
                         Tgate_count_1[7], Tgate_count_1[6], Tgate_count_1[4], Tgate_count_1[5]
                     };
-                    GroupOf8GatesHelperOnCompressedState(t_amp, cramer, Tgate_count, gc_second[7]);
+                    cramer -> CramerBlockSectorSwitch((complex<float>*)t_amp, Tgate_count, gc_second[7], 16);
                 }
             }
             else {
@@ -273,33 +258,40 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
     float* __restrict t_amp = (float*)__builtin_assume_aligned(amp, 64);
     
     pair<idx_size, int> phases;
+    cmplx* active_block_amps[num_threads];
     
-    complex<float>* active_amp = new complex<float>[block_size];
-    memset(active_amp, 0, sizeof(complex<float>) * block_size);
+    if (cramer) {
+        for (size_t t = 0; t < num_threads; ++t) {
+            if (posix_memalign((void**)&active_block_amps[t], 64, sizeof(complex<float>) * block_size) != 0)
+                throw "Unable to allocate space for decompressed vector";
+            
+            memset(active_block_amps[t], 0, sizeof(complex<float>) * block_size);
+        }
+    }
     
-    if (cramer && !cramer -> IsBlockInitialized())
-        cramer -> InitiateBlockContext(0, true);
-    
-#pragma omp parallel for schedule(guided) num_threads(num_threads)
+//#pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size) {
-        idx_size num_iters = block_begin/block_size;
-        idx_size offset_idx = num_iters ^ (num_iters >> 1);
-        
         if (zero_opt_mask.CheckIfAllNonZeroes() ||
-            zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * block_size, block_size)) {
+            zero_opt_mask.CheckIfBlockIsNotZero(block_begin, block_size)) {
             
             ApplyCZTGatesInABlock(t_amp, cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                   num_threads, block_begin, block_size, zero_opt_mask);
             
-            if (cramer)
-                cramer -> UpdateActiveBlock(block_begin);
-            
-             active_amp = cramer ? cramer -> CramerBlockDecompress(active_amp, amp, block_begin, block_size)
-                                        : amp + (offset_idx * block_size);
+            auto active_amp =  cramer ? cramer -> CramerBlockDecompress(
+                                                  active_block_amps[(block_begin/block_size) % num_threads],
+                                                  amp, block_begin, block_size): amp + block_begin;
             
 //            cout << endl;
 //            for (size_t i = 0; i < block_size; ++i) {
-//                cout << active_amp[i] << "\n";
+//                float real = active_amp[i].real();
+//                float imag = active_amp[i].imag();
+//                if (abs(active_amp[i].real()) < 1.0e-10) {
+//                    real = 0;
+//                }
+//                if (abs(active_amp[i].imag()) < 1.0e-10) {
+//                    imag = 0;
+//                }
+//                cout << complex<float>(real, imag) << "\n";
 //            }
 //            cout << endl;
             
@@ -311,6 +303,9 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
             if (new_lo_H_bitmask)
                 ApplyHGatesIteratively(active_amp, block_bits,
                                        num_threads, new_lo_H_bitmask);
+            
+            if (cramer && !cramer -> kAndLambdaInitialized.exchange(true))
+                cramer -> CalcKandLambdaFromEmpiricalCDF(active_amp, block_size);
             
             amp = cramer ? cramer -> CramerBlockCompress(amp, active_amp, block_begin, block_size) : amp;
         }
@@ -325,13 +320,17 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx* __restrict amp,
     }
     
     if (cramer) {
-        cramer -> CommitBlockContext();
+        cramer -> CommitGlobalContext();
 //        global_factor_power = 0;
     }
     
     phases.second += __builtin_popcountll(new_lo_H_bitmask);
-    delete [] active_amp;
     
+    if (cramer) {
+        for (idx_size i = 0; i < num_threads; ++i)
+            delete [] active_block_amps[i];
+    }
+        
     return pair<idx_size, int>(phases.first, phases.second);
 }
 
@@ -428,7 +427,7 @@ CalculateCRzPhaseAndPopulatePhasesMatrix(double* control_phase_sums /* num_qubit
 }
 
 pair<__m256, bool>
-CalculatePhaseForRzInGroupsOf8( volatile double& acc_phase_first,
+CalculatePhaseForRzInGroupsOf8(volatile double& acc_phase_first,
                                volatile idx_size& gray_code_idx,
                                const idx_size reg_idx,
                                const idx_size block_begin_idx,

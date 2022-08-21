@@ -173,7 +173,6 @@ int main(int argc, char *argv[])
         { "norm_est",    required_argument,       nullptr, 'e' },
         { "grid_type",    required_argument,       nullptr, 'm' },
         { "no_nearest_neighbors",    no_argument,       nullptr, 'n' },
-        { "add_concluding_H_gates",    required_argument,       nullptr, 'H' },
         { "no_checkpoint_ranges",    no_argument,       nullptr, 'p' },
         { "first_partition_smaller",    no_argument,       nullptr, 'f' },
         { "save_checkpoint_to_file",    required_argument,       nullptr, 'r' },
@@ -192,7 +191,7 @@ int main(int argc, char *argv[])
     count_zeros = false, compress = false, trial_mode = false;
     string input_filename = "", out_file = "", idx_filename = "" ;
     int threshold = 0, depth = 0, vcut = 0, hcut = 0, idx = 0, c = 0, seed = -1, num_idx = -1,
-    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0, layers_H_gates = 0,
+    num_threads = 8, dfs_length = 0, cz_len = 0, czp_app_len = 0, norm_depth = 0,
     save_cp_to_file = 0, qft = 0;
     float norm_perc = 0;
     idx_size cz_path = 0, epsilon = 0, cramer_cw = 0;
@@ -202,7 +201,7 @@ int main(int argc, char *argv[])
     vector<int> num_qubits, num_gates;
     num_threads = 1ull << static_cast<int>(floor(log2(omp_get_num_procs())));
     
-    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:H:pfr:0z:Q:CT", longopts, &idx)) != -1)
+    while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:pfr:0z:Q:CT", longopts, &idx)) != -1)
     {
         switch (c) {
             case 'a': {
@@ -278,10 +277,6 @@ int main(int argc, char *argv[])
             }
             case 'f': {
                 first_partition_smaller = true;
-                break;
-            }
-            case 'H': {
-                layers_H_gates = stoi(string(optarg));
                 break;
             }
             case 'h':{
@@ -384,7 +379,6 @@ int main(int argc, char *argv[])
             
             case 't': {
                 string threads = string(optarg);
-                num_threads = stoi(threads);
                 num_threads = 1ull << static_cast<int>(floor(log2(stoi(threads))));
 #ifdef Parallel
                 if (num_threads > omp_get_max_threads()) {
@@ -500,8 +494,8 @@ int main(int argc, char *argv[])
                                  cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii,
                                  print_amp, print_idx, (Config::SimType)sim_type, verbose, vcut, hcut,
                                  depth, threshold, num_threads, true, nearest_neighbors, row_major,
-                                store_checkpoint_range, first_partition_smaller,
-                                 count_zeros, save_cp_to_file, compress, cramer_cw, cramer_p_reject);
+                                 store_checkpoint_range, first_partition_smaller,
+                                 count_zeros, save_cp_to_file, trial_mode, compress, cramer_cw, cramer_p_reject);
     
     cir.InitializeCircuitConfig(config);
     

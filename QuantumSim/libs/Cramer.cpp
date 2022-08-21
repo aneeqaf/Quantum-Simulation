@@ -33,7 +33,7 @@ Cramer(size_t vector_size,
     config.num_sectors = num_sectors;
     config.num_turnings = NUM_TURNINGS_CW[config.num_bits_codewords];
     config.projection_vector = projection_v;
-    config.dist_type = exponential;
+    config.dist_type = gamma;
     config.num_codewords_sector = (1ull << config.num_bits_codewords);
     
     config.magnitude_r = CalcMagnitudeForTheta(probabilty_rejection);
@@ -45,69 +45,97 @@ Cramer(size_t vector_size,
     config.num_codewords_reg = CalcCWThatFitIn256BitsReg();
     config.compressed_vector_UL_size = CalcNumULInCompressedVector(CalcNum256RegForSizeOfVector());
     
-    if (!config.projection_vector) {
-        block_context.lambda = config.orig_vector_size;
-        block_context.k = 1;
-        config.dist_type = exponential;
-    }
+    global_context.codewords_mappings = new atomic<complex<float>>[config.num_total_codewords];
+    global_context.cw_freq = new atomic<size_t>[config.num_total_codewords];
+    global_context.codeword_all_amps = -1;
+    k = 0;
+    lambda = 0;
+    kAndLambdaInitialized = false;
     
-    global_context.codewords_mappings = new complex<float>[config.num_total_codewords];
-    global_context.codewords_all = -1;
+    new_global_context.codewords_mappings = new atomic<complex<float>>[config.num_total_codewords];
+    new_global_context.cw_freq = new atomic<size_t>[config.num_total_codewords];
+    new_global_context.codeword_all_amps = -1;
     
     memset(global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_total_codewords);
-    block_context.initialized = false;
-    block_context.calc_mean_var = false;
-    block_context.active_block = 0;
-    block_context.variance = 0;
-    block_context.mean = 0;
-    block_context.codewords_mappings = nullptr;
-    block_context.cw_freq = nullptr;
-    block_context.codewords_all = -1;
+    memset(global_context.cw_freq, 0, sizeof(size_t) * config.num_total_codewords);
+    memset(new_global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_total_codewords);
+    memset(new_global_context.cw_freq, 0, sizeof(size_t) * config.num_total_codewords);
 }
 
 Cramer::
-Cramer(const Cramer& rhs): config(rhs.config), block_context(rhs.block_context)
+Cramer(const Cramer& rhs): config(rhs.config)
 {
     if (rhs.global_context.codewords_mappings) {
         if(global_context.codewords_mappings) delete [] global_context.codewords_mappings;
-        global_context.codewords_mappings = new complex<float>[config.num_total_codewords];
+        global_context.codewords_mappings = new atomic<complex<float>>[config.num_total_codewords];
         for (size_t i = 0; i < config.num_total_codewords; ++i)
-            global_context.codewords_mappings[i] = rhs.global_context.codewords_mappings[i];
+            global_context.codewords_mappings[i].store(rhs.global_context.codewords_mappings[i].load());
     }
     else {
         if(global_context.codewords_mappings) delete [] global_context.codewords_mappings;
         global_context.codewords_mappings = nullptr;
     }
     
-    if (rhs.block_context.codewords_mappings) {
-        if(block_context.codewords_mappings) delete [] block_context.codewords_mappings;
-        block_context.codewords_mappings = new complex<float>[config.num_total_codewords];
+    if (rhs.global_context.cw_freq) {
+        if(global_context.cw_freq) delete [] global_context.cw_freq;
+        global_context.cw_freq = new atomic<size_t>[config.num_total_codewords + 1];
         for (size_t i = 0; i < config.num_total_codewords; ++i)
-            block_context.codewords_mappings[i] = rhs.block_context.codewords_mappings[i];
+            global_context.cw_freq[i].store(rhs.global_context.cw_freq[i].load());
     }
     else {
-        if(block_context.codewords_mappings) delete [] block_context.codewords_mappings;
-        block_context.codewords_mappings = nullptr;
+        if(global_context.cw_freq) delete [] global_context.cw_freq;
+        global_context.cw_freq = nullptr;
     }
     
-    if (rhs.block_context.cw_freq) {
-        if(block_context.cw_freq) delete [] block_context.cw_freq;
-        block_context.cw_freq = new size_t[config.num_total_codewords + 1];
+    if (rhs.new_global_context.codewords_mappings) {
+        if(new_global_context.codewords_mappings) delete [] new_global_context.codewords_mappings;
+        new_global_context.codewords_mappings = new atomic<complex<float>>[config.num_total_codewords];
         for (size_t i = 0; i < config.num_total_codewords; ++i)
-            block_context.cw_freq[i] = rhs.block_context.cw_freq[i];
+            new_global_context.codewords_mappings[i].store(rhs.new_global_context.codewords_mappings[i].load());
     }
     else {
-        if(block_context.codewords_mappings) delete [] block_context.codewords_mappings;
-        block_context.codewords_mappings = nullptr;
+        if(new_global_context.codewords_mappings) delete [] new_global_context.codewords_mappings;
+        new_global_context.codewords_mappings = nullptr;
     }
+    
+    if (rhs.new_global_context.cw_freq) {
+        if(new_global_context.cw_freq) delete [] new_global_context.cw_freq;
+        new_global_context.cw_freq = new atomic<size_t>[config.num_total_codewords + 1];
+        for (size_t i = 0; i < config.num_total_codewords; ++i)
+            new_global_context.cw_freq[i].store(rhs.new_global_context.cw_freq[i].load());
+    }
+    else {
+        if(new_global_context.cw_freq) delete [] new_global_context.cw_freq;
+        new_global_context.cw_freq = nullptr;
+    }
+    
+    global_context.codeword_all_amps = rhs.global_context.codeword_all_amps;
+    k = rhs.k;
+    lambda = rhs.lambda;
+    kAndLambdaInitialized.store(rhs.kAndLambdaInitialized.load());
+    
+    new_global_context.codeword_all_amps = rhs.new_global_context.codeword_all_amps;
+}
+
+Cramer& Cramer::
+operator=(const Cramer& rhs)
+{
+    Cramer temp(rhs);
+    swap(config, temp.config);
+    swap(global_context, temp.global_context);
+    swap(new_global_context, temp.new_global_context);
+    kAndLambdaInitialized.exchange(temp.kAndLambdaInitialized);
+    
+    return *this;
 }
 
 Cramer::
 ~Cramer()
 {
     if (global_context.codewords_mappings) delete [] global_context.codewords_mappings;
-    if (block_context.codewords_mappings) delete [] block_context.codewords_mappings;
-    if (block_context.cw_freq) delete [] block_context.cw_freq;
+    if (global_context.cw_freq) delete [] global_context.cw_freq;
+    if (new_global_context.codewords_mappings) delete [] new_global_context.codewords_mappings;
+    if (new_global_context.cw_freq) delete [] new_global_context.cw_freq;
 }
 
 double Cramer::
@@ -116,8 +144,8 @@ CalculateCDFofGammaDist(complex<double>& amp) const
     double PT_mag = abs(amp);
     PT_mag = PT_mag > 0 ? PT_mag : 1;
     double PT_probability = PT_mag * PT_mag;
-    double Np = PT_probability * block_context.lambda;
-    double uniform_probability = gammp(block_context.k, Np) ;
+    double Np = PT_probability * lambda;
+    double uniform_probability = gammp(k, Np) ;
     double uniform_mag = sqrt(uniform_probability);
     amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
     
@@ -126,14 +154,14 @@ CalculateCDFofGammaDist(complex<double>& amp) const
 
 __m256 Cramer::
 CalculateCDFofGammaDistAVX(__m256& real,
-                           __m256& imag ) const
+                           __m256& imag) const
 {
     __m256 PT_probs = _mm256_sq_norm_cmplx(real, imag);
     __m256 PT_mags = _mm256_sqrt_ps(PT_probs);
     __m256 mask = _mm256_cmp_ps(PT_mags, _mm256_setzero_ps(), _CMP_EQ_OS);
     PT_mags = _mm256_or_ps(_mm256_and_ps(mask, _mm256_set1_ps(1)),  _mm256_andnot_ps(mask, PT_mags));
-    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(block_context.lambda), PT_probs);
-    __m256 uniform_probs = _mm256_gammp_ps(_mm256_set1_ps(block_context.k), Np);
+    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(lambda), PT_probs);
+    __m256 uniform_probs = _mm256_gammp_ps(_mm256_set1_ps(k), Np);
     __m256 uniform_mags = _mm256_sqrt_ps(uniform_probs);
     
     real = _mm256_mul_ps(uniform_mags, _mm256_div_ps(real, PT_mags));
@@ -148,10 +176,10 @@ CalculateCDFofErlangDist(complex<double>& amp) const
     double PT_mag = abs(amp);
     PT_mag = PT_mag > 0 ? PT_mag : 1;
     double PT_probability = PT_mag * PT_mag;
-    double Np = PT_probability * block_context.lambda;
+    double Np = PT_probability * lambda;
     double uniform_probability = 0;
     
-    for(size_t n = 0; n < block_context.k; ++n)
+    for(size_t n = 0; n < k; ++n)
         uniform_probability += (1/Factorial(n)) * pow(Np, n) * exp(-Np);
     
     double uniform_mag = sqrt(1 - uniform_probability);
@@ -162,18 +190,18 @@ CalculateCDFofErlangDist(complex<double>& amp) const
 
 inline __m256 Cramer::
 CalculateCDFofErlangDistAVX(__m256& real,
-                            __m256& imag ) const
+                            __m256& imag) const
 {
     __m256 PT_probs = _mm256_sq_norm_cmplx(real, imag);
     __m256 PT_mags = _mm256_sqrt_ps(PT_probs);
     __m256 mask = _mm256_cmp_ps(PT_mags, _mm256_setzero_ps(), _CMP_EQ_OS);
     PT_mags = _mm256_or_ps(_mm256_and_ps(mask, _mm256_set1_ps(1)),  _mm256_andnot_ps(mask, PT_mags));
-    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(block_context.lambda), PT_probs);
+    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(lambda), PT_probs);
     __m256 neg_NP = _mm256_sub_ps(_mm256_set1_ps(0), Np);
     
     __m256 uniform_probs = {0};
     
-    for(size_t n = 0; n < block_context.k; ++n)
+    for(size_t n = 0; n < k; ++n)
         uniform_probs = _mm256_add_ps(uniform_probs,
                                       _mm256_mul_ps(_mm256_mul_ps(_mm256_set1_ps(1/Factorial(n)),
                                                                   _mm256_pow_int_ps(Np, n)), _mm256_exp_ps(neg_NP)));
@@ -192,7 +220,7 @@ CalculateCDFofExponential(complex<double>& amp) const
     double PT_mag = abs(amp);
     PT_mag = PT_mag > 0 ? PT_mag : 1;
     double PT_probability = PT_mag * PT_mag;
-    double uniform_probability = 1.0 - exp(-PT_probability * block_context.lambda);
+    double uniform_probability = 1.0 - exp(-PT_probability * lambda);
     
     double uniform_mag = sqrt(uniform_probability);
     amp = complex<double>(uniform_mag * (amp.real()/PT_mag), uniform_mag * (amp.imag()/PT_mag));
@@ -209,7 +237,7 @@ CalculateCDFofExponentialAVX(__m256& real,
     __m256 mask = _mm256_cmp_ps(PT_mags, _mm256_setzero_ps(), _CMP_EQ_OS);
     PT_mags = _mm256_or_ps(_mm256_and_ps(mask, _mm256_set1_ps(1)),  _mm256_andnot_ps(mask, PT_mags));
     __m256 neg_PT_probs = _mm256_sub_ps(_mm256_set1_ps(0), PT_probs);
-    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(block_context.lambda), neg_PT_probs);
+    __m256 Np = _mm256_mul_ps(_mm256_set1_ps(lambda), neg_PT_probs);
     __m256 uniform_probs = _mm256_sub_ps(_mm256_set1_ps(1.0), _mm256_exp_ps(Np));
     __m256 uniform_mags = _mm256_sqrt_ps(uniform_probs);
     
@@ -260,7 +288,7 @@ PTTransformMagnitudeAndAmp(complex<double> amp) const
 {
     double original_phase = atan2(amp.imag(), amp.real());
     double uniform_probability = norm(amp);
-    double PT_probability = -log(abs(1.0 - uniform_probability)) / block_context.lambda;
+    double PT_probability = -log(abs(1.0 - uniform_probability)) / lambda;
     
     double PT_mag = sqrt(PT_probability);
     amp = complex<double>(PT_mag * cos(original_phase), PT_mag * sin(original_phase));
@@ -423,13 +451,14 @@ void Cramer::
 CalcKandLambdaFromEmpiricalCDF(complex<float>* state_vector,
                                const size_t block_size)
 {
-    CalculateMeanAndVariance(block_context.mean, block_context.variance,
+    double mean = 0, variance = 1e-10;
+    CalculateMeanAndVariance(mean, variance,
                              1.0/((double)config.orig_vector_size * (double)config.orig_vector_size),
                              state_vector, block_size, config.num_threads);
     
-    block_context.k = CalcKFromMeanAndVar(block_context.mean, block_context.variance);
-    block_context.lambda = CalcLambdaFromMeanAndVar(block_context.mean, block_context.variance);
-    config.dist_type = block_context.k == 1 ? exponential : gamma;
+    k = CalcKFromMeanAndVar(mean, variance);
+    lambda = CalcLambdaFromMeanAndVar(mean, variance);
+    config.dist_type = k > 0.9 ? exponential : gamma;
 }
 
 inline unsigned short Cramer::
@@ -462,7 +491,7 @@ CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
                                        __m256 imag)
 {
     __m256 magnitudes = _mm256_abs_cmplx(real, imag);
-    __m256 phases = _mm256_atan2_ps(imag, real);
+    __m256 phases = Sleef_atan2f8_u10avx2(imag, real);
     __m256 mask_atan2 = _mm256_cmp_ps(phases, _mm256_setzero_ps(), _CMP_GE_OQ);
     __m256 mask1_atan2 = _mm256_cmp_ps(phases, _mm256_setzero_ps(), _CMP_LT_OQ);
     phases = _mm256_or_ps(_mm256_and_ps(phases, mask_atan2),
@@ -482,13 +511,7 @@ CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
     
     __m256 shifted_phase_sector = _mm256_cvtepi32_ps(_mm256_slli_epi32(_mm256_cvtps_epi32(phase_sectors),
                                                                        static_cast<int>(config.num_bits_codewords)));
-    
-    __m256 cw = _mm256_add_ps(shifted_phase_sector, codewords);
-    
-    for (size_t i = 0; i < 8; ++i) {
-        assert(cw[i] < config.num_total_codewords);
-    }
-    
+        
     return  _mm256_add_ps(shifted_phase_sector, codewords);
 }
 
@@ -507,7 +530,7 @@ CalcNearestCWToValAVX(__m256 real,
                       __m256 imag) const
 {
     const __m256 magnitudes = _mm256_abs_cmplx(real, imag);
-    __m256 phases = _mm256_atan2_ps(imag, real);
+    __m256 phases = Sleef_atan2f8_u10avx2(imag, real);
     for (size_t i = 0; i < 8; ++i)
         phases[i] = phases[i] < 0 ? phases[i] + (2 * PI) : phases[i];
     
@@ -557,6 +580,7 @@ MapValToCWAVX(__m256 real,
 __m256i Cramer::
 PackCWIn256BitsAVXReg(const unsigned int* codewords) const
 {
+    // TODO: make it work for arbitrary number of cw
     size_t iters = ceil((double)config.num_codewords_reg/(double) NUM_UI_IN_REG);
     __m256i idxs = IDXS_CW_FOR_MASKS_UI[config.num_bits_encoding];
     unsigned int idxs_iter[NUM_UI_IN_REG];
@@ -614,11 +638,11 @@ inline __m256i Cramer::
 ExtractCodewordFromAVX256Reg(__m256i& packed_codewords) const
 {
     __m256i extracted_cws = _mm256_and_si256(packed_codewords, MASKS_CW_PER_UI_REG[config.num_bits_encoding]);
-    __m256i cws_alighned_ul = _mm256_srlv_epi32(extracted_cws, BITS_TO_STARTING_OF_UI[config.num_bits_encoding]);
+    __m256i cws_aligned_ul = _mm256_srlv_epi32(extracted_cws, BITS_TO_STARTING_OF_UI[config.num_bits_encoding]);
     
     packed_codewords = _mm256_shift_right(packed_codewords, config.num_bits_encoding);
     
-    return cws_alighned_ul;
+    return cws_aligned_ul;
 }
 
 void  Cramer::
@@ -648,52 +672,37 @@ UnpackCWFrom256BitsAVX(__m256i packed_codewords,
     }
 }
 
-void Cramer::
-InitiateBlockContext(size_t block_id,
-                     bool calc_mean_var)
+__attribute__((always_inline)) inline void Cramer::
+PackCWBlocksCrossingBoundaries(__m256i* __restrict compressed_vector,
+                               const size_t xtra_leading_cw,
+                               const size_t xtra_trailing_cw,
+                               const size_t compressed_v_offset,
+                               const unsigned int* codewords)
 {
-    block_context.initialized = true;
-    block_context.calc_mean_var = calc_mean_var;
-    block_context.active_block = block_id;
-    block_context.cw_freq = new size_t[config.num_total_codewords + 1];
-    block_context.codewords_mappings = new complex<float>[config.num_total_codewords];
-    memset(block_context.cw_freq, 0, (config.num_total_codewords + 1) * sizeof(size_t));
-    block_context.codewords_all = global_context.codewords_all;
-    block_context.mean = 0;
-    block_context.variance = 1e-10;
-    block_context.k = 0;
-    block_context.lambda = 0;
+    __m256i mask1 = _mm256_shift_left({ALL_ONES_REG}, xtra_leading_cw * config.num_bits_encoding);
+    __m256i mask2 = _mm256_shift_right({ALL_ONES_REG}, xtra_trailing_cw * config.num_bits_encoding);
+    __m256i mask = _mm256_and_ps(mask1, mask2);
     
-//    if (!block_context.codewords_mappings) {
-//        block_context.codewords_mappings = new complex<float>[config.num_total_codewords];
-//        float* __restrict codeword_mappings = (float*)__builtin_assume_aligned(global_context.codewords_mappings, 64);
-//        float* __restrict block_codeword_mappings = (float*)__builtin_assume_aligned(block_context.codewords_mappings, 64);
-//        size_t iters = 2 * config.num_total_codewords;
-//    #pragma omp parallel for num_threads(config.num_threads)
-//        for (size_t i = 0; i < iters; i+=8) {
-//            const __m256 temp_amp = _mm256_load_ps(&codeword_mappings[i]);
-//            _mm256_store_ps(&block_codeword_mappings[i], temp_amp);
-//        }
-//        for (size_t i = 0; i < config.num_total_codewords; ++i) {
-//            block_context.codewords_mappings[i] = global_context.codewords_mappings[i];
-//        }
-//    }
-}
-
-void Cramer::
-UpdateActiveBlock(size_t block_id)
-{
-    block_context.active_block = block_id;
+    __m256i packed_cw = PackCWIn256BitsAVXReg(codewords);
+  
+#pragma omp critical
+    {
+        __m256i compressed_reg = _mm256_load_ps((float*)(compressed_vector + compressed_v_offset));
+        compressed_reg = _mm256_and_ps(~mask, compressed_reg);
+        packed_cw = _mm256_and_ps(mask, packed_cw);
+        compressed_reg = _mm256_or_ps(compressed_reg, packed_cw);
+        _mm256_store_ps((float*)(compressed_vector + compressed_v_offset), compressed_reg);
+    }
 }
 
 complex<float>* Cramer::
 CramerBlockCompress(complex<float>* compressed_vector,
                     /* If bigger than a block then pointer should be initial_address + block_begin */
                     complex<float>* state_vector,
-                    const size_t block_idx, // Needed for calculating indices in compressed state
+                    const size_t block_offset, // Needed for calculating indices in compressed state
                     const size_t block_size)
 {
-    if (block_context.calc_mean_var) CalcKandLambdaFromEmpiricalCDF(state_vector, block_size);
+    assert(kAndLambdaInitialized.load());
     
     if (compressed_vector == nullptr) {
         // Compressed vector is always allocated in full so that it occupies contiguous memory
@@ -703,16 +712,18 @@ CramerBlockCompress(complex<float>* compressed_vector,
         memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
     }
     
-    if (block_size < 8 * config.num_codewords_reg)
-        throw "Compression not supported for very small block sizes.\n";
+    assert(block_size >= 8 * config.num_codewords_reg);
     
-    
-    unsigned int codewords[block_size];
-    memset(codewords, 0, sizeof(unsigned int) * block_size);
-    
-    //Find all the codewords
+    const size_t leaked_cw = (block_offset % config.num_codewords_reg);
+    const size_t total_cw = leaked_cw + block_size;
+    const size_t total_cw_byte_multiple = total_cw + (total_cw % NUM_UI_IN_REG);
+    unsigned int codewords[total_cw_byte_multiple];
+    memset(codewords, 0, sizeof(unsigned int) * total_cw_byte_multiple);
+        
+    // Find all the codewords
+    // Start from zero instead of leaked_cw because alignment causes bad memory access
     for (size_t j = 0; j < block_size; j += 8) {
-        if (block_idx + j >= config.orig_vector_size)
+        if (block_offset + j >= config.orig_vector_size)
             break;
         
         //Load 8 amps
@@ -725,28 +736,32 @@ CramerBlockCompress(complex<float>* compressed_vector,
         imag = _mm256_permutevar8x32_ps(imag, _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5 , 4));
         __m256 cws = MapValToCWAVX(real, imag);
         
-        _mm256_storeu_ps((float*)&codewords[j], (__m256)_mm256_cvtps_epi32(cws));
+        _mm256_storeu_ps((float*)&codewords[leaked_cw + j], (__m256)_mm256_cvtps_epi32(cws));
         
         for (size_t k = 0; k < 8; ++k) {
-            assert(codewords[j + k] < config.num_total_codewords);
-            assert(block_idx + j + k < config.orig_vector_size);
-#pragma omp critical
-            {
-                block_context.codewords_mappings[codewords[j + k]] += state_vector[j + k];
-                ++block_context.cw_freq[codewords[j + k]] ;
-            }
+            assert(codewords[leaked_cw + j + k] < config.num_total_codewords);
+            assert(block_offset + j + k < config.orig_vector_size);
+            new_global_context.codewords_mappings[codewords[leaked_cw + j + k]]
+                    .store(new_global_context.codewords_mappings[codewords[leaked_cw + j + k]].load() + state_vector[j + k]);
+            ++new_global_context.cw_freq[codewords[leaked_cw + j + k]];
         }
     }
-    //Pack all the codewords
-    for (size_t j = 0; j < block_size; j += config.num_codewords_reg) {
-        size_t idx = ((block_idx + j)/config.num_codewords_reg) * NUM_UL_IN_REG;
-        __m256i pack_cw = PackCWIn256BitsAVXReg(&codewords[j]);
-        if (block_idx + j >= config.orig_vector_size)
-            break;
-        assert(idx < config.compressed_vector_UL_size);
-        _mm256_store_ps((float*)&compressed_vector[idx], (__m256)pack_cw);
-    }
     
+    //Pack all the codewords
+    // Overlapping codewords
+    // ________------|---------|------_______
+    const size_t num_256_in_block = CalcNum256RegForSizeOfBlock(block_size + leaked_cw);
+    const size_t compressed_idx = (block_offset - leaked_cw)/config.num_codewords_reg;
+    size_t xtra_trailing_cw = 0, xtra_leading_cw = leaked_cw, remaining_cw = leaked_cw + block_size;
+
+    for (size_t i = 0,  j = 0; i < num_256_in_block; ++i, j += config.num_codewords_reg) {
+        if (remaining_cw < config.num_codewords_reg)
+            xtra_trailing_cw = config.num_codewords_reg - remaining_cw;
+        PackCWBlocksCrossingBoundaries((__m256i *)compressed_vector, xtra_leading_cw, xtra_trailing_cw, compressed_idx + i, &codewords[j]);
+        xtra_leading_cw = 0;
+        remaining_cw -= config.num_codewords_reg;
+    }
+   
     return compressed_vector;
 }
 
@@ -754,9 +769,10 @@ complex<float>* Cramer::
 CramerBlockDecompress( /* If bigger than a block then pointer should be initial_address + block_begin */
                       complex<float>* decompressed_vector,
                       const complex<float>* state_vector,
-                      const size_t block_idx,
+                      const size_t block_offset,
                       const size_t block_size)
 {
+    // TODO: unauthorized memory access because num_reg_in_block x num_cw_in_reg > block_size
     if (state_vector == nullptr) throw "No compressed input";
         
     if (decompressed_vector == nullptr) {
@@ -766,47 +782,37 @@ CramerBlockDecompress( /* If bigger than a block then pointer should be initial_
         memset(decompressed_vector, 0, sizeof(complex<float>) * block_size);
     }
     
-    const complex<float>* codewords_mappings = global_context.codewords_mappings;
-    int codewords_all = global_context.codewords_all;
-    if (block_context.active_block == block_idx) {
-        codewords_all = block_context.codewords_all;
-    }
-    
-    size_t num_256_in_block = CalcNum256RegForSizeOfBlock(block_size);
-    
+    int codeword_for_all = global_context.codeword_all_amps;
+      
     __m256i* __restrict compressed_vector = (__m256i*)__builtin_assume_aligned(state_vector, 64);
     size_t num_zero_amps = 0;
-    const size_t starting_cw_reg = (block_idx % config.num_codewords_reg);
-    const size_t compressed_idx = (block_idx - starting_cw_reg)/config.num_codewords_reg;
-    const size_t starting_idxs = block_idx - starting_cw_reg;
+    size_t starting_cw_reg = block_offset % config.num_codewords_reg;
+    const size_t compressed_idx = (block_offset - starting_cw_reg)/config.num_codewords_reg;
+    const size_t end_offset = block_offset + block_size;
     
-    if (starting_cw_reg + block_size > num_256_in_block * config.num_codewords_reg)
-        ++num_256_in_block;
-    
-#pragma omp parallel for reduction(+:num_zero_amps) num_threads(config.num_threads)
+    size_t num_256_in_block = CalcNum256RegForSizeOfBlock(block_size + starting_cw_reg);
+    size_t k = block_offset;
+
+    unsigned int unpacked_codewords[config.num_codewords_reg + 1];
+    memset(unpacked_codewords, 0, sizeof(unsigned int) * config.num_codewords_reg);
     for (size_t i = 0; i < num_256_in_block; ++i) {
-        unsigned int unpacked_codewords[config.num_codewords_reg + 1];
-        memset(unpacked_codewords, 0, sizeof(unsigned int) * config.num_codewords_reg);
-        if (codewords_all == -1)
+        if (codeword_for_all == -1)
             UnpackCWFrom256BitsAVX(compressed_vector[compressed_idx + i], unpacked_codewords);
         
-        for (size_t j = 0; j < config.num_codewords_reg; ++j) {
-            size_t k = starting_idxs + (i * config.num_codewords_reg) + j;
-            if (k >= (block_idx + block_size))
-                break;
-            else if (k >= block_idx){
-                assert(k < block_idx + block_size);
-                assert(k < config.orig_vector_size);
-                if (codewords_all == -1) {
-                    assert(unpacked_codewords[j] < config.num_total_codewords);
-                    
-                    if (unpacked_codewords[j] == 0) ++num_zero_amps;
-                    decompressed_vector[k - block_idx] = codewords_mappings[unpacked_codewords[j]];
-                }
-                else
-                    decompressed_vector[k - block_idx] = codewords_mappings[codewords_all];
+        for (size_t j = starting_cw_reg; j < config.num_codewords_reg && k < end_offset; ++j, ++k) {
+            assert(k - block_offset < block_size);
+            assert(k < config.orig_vector_size);
+            if (codeword_for_all == -1) {
+                assert(unpacked_codewords[j] < config.num_total_codewords);
+                
+                if (unpacked_codewords[j] == 0) ++num_zero_amps;
+                decompressed_vector[k - block_offset] = global_context.codewords_mappings[unpacked_codewords[j]].load();
+            }
+            else {
+                decompressed_vector[k - block_offset] = global_context.codewords_mappings[codeword_for_all].load();
             }
         }
+        starting_cw_reg = 0;
     }
         
     config.num_zero_amps = num_zero_amps;
@@ -817,84 +823,72 @@ CramerBlockDecompress( /* If bigger than a block then pointer should be initial_
 void Cramer::
 CramerBlockSectorSwitch(complex<float>* state_vector,
                         const unsigned short* volatile sectors,
-                        const size_t block_idx,
+                        const size_t block_offset,
                         const size_t block_size)
 {
     if (state_vector == nullptr) throw "No compressed input";
     
-    int codewords_all = global_context.codewords_all;
-    if (block_context.active_block == block_idx) {
-        codewords_all = block_context.codewords_all;
-    }
-   
-    size_t num_256_in_block = CalcNum256RegForSizeOfBlock(block_size);
-    
+    int codewords_all = global_context.codeword_all_amps;
+        
     __m256i* __restrict compressed_vector = (__m256i *)state_vector;
     size_t sector_count = 0;
-    const size_t starting_cw_reg = (block_idx % config.num_codewords_reg);
-    const size_t compressed_idx = (block_idx - starting_cw_reg)/config.num_codewords_reg;
-    const size_t starting_idxs = block_idx - starting_cw_reg;
+    size_t starting_cw_reg = block_offset % config.num_codewords_reg;
+    const size_t starting_idxs = block_offset - starting_cw_reg;
+    const size_t compressed_idx = starting_idxs/config.num_codewords_reg;
     
-    if (starting_cw_reg + block_size > num_256_in_block * config.num_codewords_reg)
-        ++num_256_in_block;
-        
-#pragma omp parallel for reduction(+:sector_count) num_threads(config.num_threads)
-    for (size_t i = 0; i < num_256_in_block; ++i) {
-        
-        unsigned int unpacked_codewords[config.num_codewords_reg + 1];
-        memset(unpacked_codewords, 0, sizeof(unsigned int) * config.num_codewords_reg);
+    size_t num_256_in_block = CalcNum256RegForSizeOfBlock(block_size + starting_cw_reg);
+         
+    unsigned int unpacked_codewords[config.num_codewords_reg + 1];
+    memset(unpacked_codewords, 0, sizeof(unsigned int) * config.num_codewords_reg);
 
+    for (size_t i = 0; i < num_256_in_block; ++i) {
         UnpackCWFrom256BitsAVX(compressed_vector[compressed_idx + i], unpacked_codewords);
         
-        for (size_t j = 0; j < config.num_codewords_reg; ++j) {
-            size_t k = starting_idxs + (i * config.num_codewords_reg) + j;
-            if (k >= (block_idx + block_size))
-                break;
-            else if (k >= block_idx){
-                if (codewords_all != -1)
-                    unpacked_codewords[j] = codewords_all;
-                
-                // Do not need to update mapping because if no value mapped to a particular codeword
-                // previously then CZT leave that amp to 0 anyways.
-                unpacked_codewords[j] &= config.num_codewords_sector - 1;
-//                cout << j << ":" << sectors[sector_count] << ", ";
-                unpacked_codewords[j] |= sectors[sector_count] << config.num_bits_codewords;
-                ++sector_count;
-            }
+        size_t cw_reg = 0;
+        // Codewords from entire registers are unpacked but only the ones that belong
+        // to the amplitude block are modified
+        for (size_t j = starting_cw_reg; j < config.num_codewords_reg && sector_count < block_size; ++j) {
+            if (codewords_all != -1)
+                unpacked_codewords[j] = codewords_all;
+            
+            // Do not need to update mapping because CZT don't change amps. K and Lambda are only relevant for compression.
+            unpacked_codewords[j] &= config.num_codewords_sector - 1;
+            //                cout << j << ":" << sectors[sector_count] << ", ";
+            unpacked_codewords[j] |= sectors[sector_count] << config.num_bits_codewords;
+            ++sector_count;
+            ++cw_reg;
         }
-        _mm256_store_ps((float*)(compressed_vector + compressed_idx + i),
-                        PackCWIn256BitsAVXReg(unpacked_codewords));
+        
+        size_t xtra_trailing_cw = 0;
+        if (sector_count >= block_size)
+            xtra_trailing_cw = config.num_codewords_reg - (starting_cw_reg + cw_reg);
+        
+        PackCWBlocksCrossingBoundaries(compressed_vector, starting_cw_reg, xtra_trailing_cw, compressed_idx + i, unpacked_codewords);
+        
+        starting_cw_reg = 0;
     }
     
-    block_context.codewords_all = -1;
+    global_context.codeword_all_amps = -1;
 }
 
 void Cramer::
-CommitBlockContext()
+CommitGlobalContext()
 {
-    //    #pragma omp parallel for num_threads(num_threads)
+    #pragma omp parallel for num_threads(num_threads)
     for (size_t i = 0; i < config.num_total_codewords; ++i) {
-        if (block_context.cw_freq[i] > 0)
-            if (block_context.cw_freq[i] > 0) {
-//                block_context.codewords_mappings[i] *= block_context.rescaling_factor;
-                block_context.codewords_mappings[i] /= block_context.cw_freq[i];
-            }
-        global_context.codewords_mappings[i] = block_context.codewords_mappings[i];
-        cout << global_context.codewords_mappings[i] << endl;
+        if (new_global_context.cw_freq[i] > 0) {
+            auto real_avg = new_global_context.codewords_mappings[i].load().real() / new_global_context.cw_freq[i];
+            auto imag_avg = new_global_context.codewords_mappings[i].load().imag() / new_global_context.cw_freq[i];
+            global_context.codewords_mappings[i].store({real_avg, imag_avg});
+            global_context.cw_freq[i] = 0;
+        }
     }
-    block_context.active_block = 0;
-    //    block_context.mean = 0;
-    //    block_context.variance = 0;
-    //    block_context.k = 0;
-    //    block_context.lambda = 0;
-    //
-    delete [] block_context.cw_freq;
-    block_context.cw_freq = nullptr;
     
     // TODO: Figure out how to set this for QFT
-    global_context.codewords_all = -1;
-    block_context.initialized = false;
-    block_context.calc_mean_var = false;
+    global_context.codeword_all_amps = -1;
+    kAndLambdaInitialized.store(false);
+    memset(new_global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_total_codewords);
+    memset(new_global_context.cw_freq, 0, sizeof(size_t) * config.num_total_codewords);
 }
 
 complex<float>* Cramer::
@@ -903,23 +897,38 @@ CramerCompress(complex<float>* compressed_vector,
 {
     if (config.projection_vector)
         CalcKandLambdaFromEmpiricalCDF(state_vector, config.orig_vector_size);
-    
+    else {
+        lambda = config.orig_vector_size;
+        k = 1;
+        config.dist_type = exponential;
+    }
+    kAndLambdaInitialized.store(true);
+
     if (compressed_vector == nullptr) {
         if (posix_memalign((void**)&compressed_vector, 64, sizeof(complex<float>) * config.compressed_vector_UL_size) != 0)
             throw "Unable to allocate space for compressed vector";
-        
+
         memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
     }
-    
-    size_t block_size = 8 * config.num_codewords_reg;
+
+    vector<vector<complex<float>>> cw_map_plots(config.num_total_codewords + 1);
+    vector<vector<float>>error_bins(2, vector<float>(config.num_codewords_reg, 0));
+    vector<vector<pair<short, size_t>>> cw_idx;
+    vector<float> phase_error_per_cw(config.num_total_codewords + 1, 0);
+    vector<float> plot_displacements(config.num_total_codewords + 1, 0);
+
+    size_t block_size = config.num_threads * config.num_codewords_reg;
     size_t num_blocks = ceil((double)config.orig_vector_size/(double)block_size);
-    
+
 #pragma omp parallel for num_threads(config.num_threads)
-    for (size_t i = 0; i < num_blocks; ++i)
-        CramerBlockCompress(compressed_vector, state_vector, i * block_size, block_size);
-    
-    CommitBlockContext();
-    
+    for (size_t i = 0; i < num_blocks; ++i) {
+        size_t block_idx = i * block_size;
+
+        CramerBlockCompress(compressed_vector, state_vector + block_idx, block_idx, block_size);
+    }
+
+    CommitGlobalContext();
+
     return compressed_vector;
 }
 
@@ -927,7 +936,7 @@ complex<float>* Cramer::
 CramerDecompress(complex<float>* decompressed_vector,
                  const complex<float>* state_vector)
 {
-    size_t block_size = 256;// config.num_codewords_reg * 8;
+    size_t block_size = config.num_threads * config.num_codewords_reg;
     size_t iters = config.orig_vector_size / block_size;
     
     if (decompressed_vector == nullptr) {
@@ -937,8 +946,9 @@ CramerDecompress(complex<float>* decompressed_vector,
         memset(decompressed_vector, 0, sizeof(complex<float>) * config.orig_vector_size);
     }
     
+#pragma omp parallel for num_threads(config.num_threads)
     for (size_t i = 0; i < iters; ++i)
-        CramerBlockDecompress(decompressed_vector, state_vector, i * block_size, block_size);
+        CramerBlockDecompress(decompressed_vector + (i * block_size), state_vector, (i * block_size), block_size);
     
     return decompressed_vector;
 }
@@ -946,7 +956,7 @@ CramerDecompress(complex<float>* decompressed_vector,
 complex<float>* Cramer::
 SetAllAmpsToZero(complex<float>* state_vector)
 {
-    global_context.codewords_all = 0;
+    global_context.codeword_all_amps = 0;
     
     if (state_vector == nullptr) {
         if (posix_memalign((void**)&state_vector, 64, sizeof(complex<float>) * config.compressed_vector_UL_size) != 0)
@@ -965,10 +975,10 @@ SetAllAmpsToOne(complex<float>* state_vector)
     const double phi = 2.0 * PI / config.num_sectors;
     
     for (size_t i = 0; i < config.num_sectors; ++i) {
-        unsigned int cw_sector = (i << config.num_bits_codewords);
+        size_t cw_sector = (i << config.num_bits_codewords);
         global_context.codewords_mappings[cw_sector] = complex<float>(cos(phi * i), sin(phi * i));
     }
-    global_context.codewords_all = 0;
+    global_context.codeword_all_amps = 0;
     
     // Delay writing of codewords.
     if (state_vector == nullptr) {
@@ -985,24 +995,13 @@ void Cramer::
 Rescale(const __m256 rescaling)
 {
     float* __restrict t_cw_map = (float*)__builtin_assume_aligned(global_context.codewords_mappings, 64);
-    float* __restrict t_block_cw_map = (float*)__builtin_assume_aligned(block_context.codewords_mappings, 64);
 
  #pragma omp parallel for num_threads(config.num_threads)
      for (size_t i = 0; i < config.num_total_codewords; i += 4) {
          __m256 t = _mm256_load_ps(t_cw_map + (2 * i));
          t = _mm256_mul_ps(t, rescaling);
          _mm256_store_ps(t_cw_map + (2 * i), t);
-         
-         __m256 t1 = _mm256_load_ps(t_block_cw_map + (2 * i));
-         t1 = _mm256_mul_ps(t1, rescaling);
-         _mm256_store_ps(t_block_cw_map + (2 * i), t1);
      }
-}
-
-bool Cramer::
-IsBlockInitialized() const
-{
-    return block_context.initialized;
 }
 
 size_t Cramer::
@@ -1035,6 +1034,12 @@ GetNumValsMappedToZero() const
     return config.num_zero_amps;
 }
 
+size_t Cramer::
+GetGlobalCodeword() const
+{
+    return global_context.codeword_all_amps;
+}
+
 double Cramer::
 GetFactorOfDistBetweenTurns() const
 {
@@ -1046,16 +1051,3 @@ GetDistBetweenCW() const
 {
     return config.codewords_spacing;
 }
-
-double Cramer:: GetLog2Lambda() const
-{
-    return log2(block_context.lambda);
-}
-
-double Cramer::
-GetKForGammaDist() const
-{
-    return block_context.k;
-}
-
-

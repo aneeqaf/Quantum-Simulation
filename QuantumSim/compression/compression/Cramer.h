@@ -56,6 +56,7 @@ constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};
 constexpr __m256i MASK_1ST_SET_UI = {(1ul << 32) - 1, (1ul << 32) - 1,(1ul << 32) - 1, (1ul << 32) - 1};
 constexpr __m256i MASK_2ND_SET_UI = {~(1ll << 32), ~(1ll << 32), ~(1ll << 32), ~(1ll << 32)};
+const     __m256i ALL_ONES_REG = _mm256_set1_epi64x(-1);
 
 constexpr __m256i MASK_8_4xCW_UL = {(1ull << 8) - 1, (1ull << 8) - 1, (1ull << 8) - 1, (1ull << 8) - 1};
 constexpr __m256i MASK_9_4xCW_UL = {(1ull << 9) - 1, ((1ull << 9) - 1) << 8, ((1ull << 9) - 1) << 7, ((1ull << 9) - 1) << 6};
@@ -109,6 +110,8 @@ constexpr __m256i  BITS_TO_STARTING_OF_UI[17] = {{0}, {0}, {0}, {0}, {0}, {0}, {
 
 class Cramer {
     
+private:
+    
     enum Distribution: unsigned int {exponential, erlang, gamma};
     
     struct Config {
@@ -124,52 +127,41 @@ class Cramer {
         size_t num_turnings;
         size_t num_codewords_reg;
         size_t compressed_vector_UL_size;
+        size_t num_codewords_sector;
         double magnitude_r;
         double A;
         double spiral_length_r;
         double codewords_spacing;
         bool projection_vector;
         Distribution dist_type;
-        vector<short> map_codewords_sector;
     };
     
     struct GlobalContext {
-        complex<float>* codewords_mappings; 
-        int codewords_all;
-    };
-    
-    struct BlockContext {
-        double mean;
-        double variance;
-        double lambda;
-        size_t active_block;
-        complex<float>* codewords_mappings;
-        size_t* cw_freq;
-        float k; //k -> shape in Gamma dist
-        int codewords_all;
-        bool initialized;
-        bool calc_mean_var;
+        atomic<complex<float>>* codewords_mappings;
+        atomic<size_t>* cw_freq;
+        int codeword_all_amps;
     };
     
     Config config;
     GlobalContext global_context;
-    BlockContext block_context;
+    GlobalContext new_global_context;
+    double lambda;
+    float k; //k -> shape in Gamma dist
     
     double CalculateCDFofExponential(complex<double>& amp) const;
     __m256 CalculateCDFofExponentialAVX(__m256& real,
-                                        __m256& imag ) const;
+                                        __m256& imag) const;
     double CalculateCDFofGammaDist(complex<double>& amp) const;
     __m256 CalculateCDFofGammaDistAVX(__m256& real,
-                                      __m256& imag ) const;
+                                      __m256& imag) const;
     double CalculateCDFofErlangDist(complex<double>& amp) const;
     __m256 CalculateCDFofErlangDistAVX(__m256& real,
-                                       __m256& imag ) const;
+                                       __m256& imag) const;
     double UniformTransformMagnitudeAndAmp(complex<double>& amp) const;
     __m256 UniformTransformMagnitudeAndAmpAVX(__m256& real,
                                               __m256& imag) const;
     complex<double> PTTransformMagnitudeAndAmp(complex<double> amp) const;
     
-    //Polar equation: r = BTheta = BcPi
     //Polar equation: r = B * a * theta
     double CalcSizeParameterInUniformSpiral(double radius, double theta) const;
     double CalcThetaForMagnitude(double magnitude) const;
@@ -196,8 +188,6 @@ class Cramer {
                                double variance) const;
     double CalcLambdaFromMeanAndVar(double mean,
                                     double variance) const;
-    void CalcKandLambdaFromEmpiricalCDF(const complex<float>* state_vector,
-                                        const size_t block_size);
     
     unsigned short ShiftCWToNearestPhase(double phase,
                                          double codeword) const;
@@ -221,41 +211,56 @@ class Cramer {
     __m256i ExtractCodewordFromAVX256Reg(__m256i& packed_codewords) const;
     void UnpackCWFrom256BitsAVX(__m256i packed_codewords,
                                 unsigned int* unpacked_codewords) const;
+    void PackCWBlocksCrossingBoundaries(__m256i* __restrict compressed_vector,
+                                        const size_t xtra_leading_cw,
+                                        const size_t xtra_trailing_cw,
+                                        const size_t compressed_v_offset,
+                                        const unsigned int* codewords);
     
 public:
-    
+    atomic<bool> kAndLambdaInitialized;
+
     Cramer(size_t vector_size,
            size_t num_codewords,
            size_t num_threads,
            double probabilty_rejection,
            size_t num_sectors = 1 /* Cannot be 0 and should be powers of 2*/,
            bool projection_v = true);
-    Cramer(const Cramer& rhs) = delete;
+    Cramer(const Cramer& rhs);
+    Cramer& operator=(const Cramer& rhs);
     ~Cramer();
     
     complex<float>* CramerCompress(complex<float>* compressed_v,
-                                   const complex<float>* state_vector);
+                                   complex<float>* state_vector);
     complex<float>* CramerDecompress(complex<float>* decompressed_v,
                                      const complex<float>* state_vector);
     
-    void InitiateBlockContext(size_t block_id,
-                              bool calc_mean_var);
     complex<float>* CramerBlockCompress(complex<float>* compressed_vector,
                                         unsigned int* codewords,
-                                        const complex<float>* state_vector,
+                                        complex<float>* state_vector,
                                         const size_t block_idx,
                                         const size_t block_size);
     complex<float>* CramerBlockDecompress(complex<float>* decompressed_v,
                                           const complex<float>* state_vector,
                                           const size_t block_idx,
                                           const size_t block_size);
-    void CommitBlockContext();
+    void CommitGlobalContext();
+    void CramerBlockSectorSwitch(complex<float>* state_vector,
+                                 const unsigned short* volatile sectors,
+                                 const size_t block_idx,
+                                 const size_t block_size);
+    complex<float>* SetAllAmpsToZero(complex<float>* state_vector);
+    complex<float>* SetAllAmpsToOne(complex<float>* state_vector);
+    void Rescale(const __m256 rescaling);
+    void CalcKandLambdaFromEmpiricalCDF(complex<float>* state_vector,
+                                        const size_t block_size);
     
     size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;
     double GetMaxOuterRadius() const;
     size_t GetNumOfCW() const;
     size_t GetNumValsMappedToZero() const;
+    size_t GetGlobalCodeword() const;
     double GetFactorOfDistBetweenTurns() const;
     double GetDistBetweenCW() const;
     double GetLog2Lambda() const;

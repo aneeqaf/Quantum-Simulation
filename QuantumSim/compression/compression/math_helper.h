@@ -22,7 +22,7 @@ using Packed128Bits = unsigned long long[2];
 constexpr unsigned long long MASK_64_ONES = ~0ull;
 constexpr unsigned int MASK_FLOAT_SIGN_EXP = ~((1u << 23) - 1);
 constexpr unsigned int FLOAT_MANTISSA_BITS = 23;
-constexpr unsigned int NGAU = 20;
+constexpr unsigned int NGAU = 18;
 constexpr unsigned int ASWITCH = 100;
 const float EPS = numeric_limits<float>::epsilon();
 const float FPMIN = numeric_limits<float>::min()/EPS;
@@ -69,7 +69,7 @@ ApproxAtan(double z)
 
 static inline double
 ApproxAtan2(double y,
-            double x) 
+            double x)
 {
     double ay = fabs(y), ax = fabs(x);
     int invert = ay > ax;
@@ -78,60 +78,77 @@ ApproxAtan2(double y,
     if(invert) th = M_PI_2 - th;       // [0,π/2]
     if(x < 0) th = M_PI - th;          // [0,π]
     th = copysign(th, y);              // [-π,π]
-    th = th < 0 ? th + (2 * M_PI) : th;
     return th;
 }
 
 static inline __m256i _mm256_shift_right(__m256i A,
-                                         unsigned int count) {
+                                         size_t count)
+{
+    if (count >= 64) {
+        if (count < 128) {
+            count -= 64;
+            A[0] = 0;
+            A = _mm256_permute4x64_epi64 (A,  0b00111001);
+        }
+        else if (count < 192) {
+            count -= 128;
+            A[0] = 0;
+            A = _mm256_permute4x64_epi64 (A,  0b00001110);
+        }
+        else if (count < 256) {
+            count -= 192;
+            A[0] = 0;
+            A = _mm256_permute4x64_epi64 (A,  0b00000011);
+        }
+        else return {0};
+    }
     
-    unsigned int m = (1u << count) - 1;
+    long long m = (1ul << count) - 1;
     __m256i mask = {0, m, m, m};
     
     __m256i last_bits = _mm256_and_si256(A, mask);
-    last_bits = _mm256_slli_epi64(last_bits, 64 - count);
+    last_bits = _mm256_slli_epi64(last_bits, 64 - static_cast<int>(count));
     last_bits = _mm256_permute4x64_epi64 (last_bits,  0b00111001);
     last_bits[3] = 0;
     
-    __m256i shift_bits = _mm256_srli_epi64(A, count);
+    __m256i shift_bits = _mm256_srli_epi64(A, static_cast<int>(count));
     
     return _mm256_or_si256(last_bits, shift_bits);
 }
 
 static inline __m256i _mm256_shift_left(__m256i A,
-                                        unsigned int count)
+                                        size_t count)
 {
-    unsigned long long m = ((1ul << count) - 1) << (64 - count);
-    __m256i mask = {(long long)m, (long long)m, (long long)m, 0};
+    if (count >= 64) {
+        if (count < 128) {
+            count -= 64;
+            A[3] = 0;
+            A = _mm256_permute4x64_epi64 (A,  0b10010011);
+        }
+        else if (count < 192) {
+            count -= 128;
+            A[3] = 0;
+            A = _mm256_permute4x64_epi64 (A,  0b01001111);
+        }
+        else if (count < 256) {
+            count -= 192;
+            A[3] = 0;
+            A = _mm256_permute4x64_epi64 (A,  0b00111111);
+        }
+        else return {0};
+    }
+    
+    long long m = ((1ul << count) - 1) << (64 - count);
+    __m256i mask = {m, m, m, 0};
     
     __m256i last_bits = _mm256_and_si256(A, mask);
-    last_bits = _mm256_srli_epi64(last_bits, 64 - count);
+    last_bits = _mm256_srli_epi64(last_bits, 64 - static_cast<int>(count));
     last_bits = _mm256_permute4x64_epi64 (last_bits,  0b10010000);
     last_bits[0] = 0;
     
-    __m256i shift_bits = _mm256_slli_epi64(A, count);
+    __m256i shift_bits = _mm256_slli_epi64(A, static_cast<int>(count));
     
     return _mm256_or_si256(last_bits, shift_bits);
-}
-
-template  <unsigned int N> __m256i _mm256_shift_right(__m256i A)
-{
-    return _mm256_alignr_epi8(_mm256_permute2x128_si256(A, A, _MM_SHUFFLE(2, 0, 0, 1)), A, N);
-}
-
-template <unsigned int N> __m256i _mm256_shift_left0To16(__m256i A)
-{
-    return _mm256_alignr_epi8(A, _mm256_permute2x128_si256(A, A, _MM_SHUFFLE(0, 0, 2, 0)), 16 - N);
-}
-
-template <unsigned int N> __m256i _mm256_shift_left16(__m256i A)
-{
-    return _mm256_permute2x128_si256(A, A, _MM_SHUFFLE(0, 0, 2, 0));
-}
-
-template <unsigned int N> __m256i _mm256_shift_left16To32(__m256i A)
-{
-    return _mm256_slli_si256(_mm256_permute2x128_si256(A, A, _MM_SHUFFLE(0, 0, 2, 0)), N - 16);
 }
 
 static inline __m256 _mm256_sq_norm_cmplx(__m256 real,
@@ -219,9 +236,9 @@ static inline __m256 _mm256_exp_ps(__m256 x)
     // with an argument that is so negative it cannot be converted to an integer
     // after being multiplied by argscale.
     
-     x = _mm256_max_ps(x, _mm256_set1_ps(std::numeric_limits<std::int32_t>::lowest())/argscale);
+    x = _mm256_max_ps(x, _mm256_set1_ps(std::numeric_limits<std::int32_t>::lowest())/argscale);
     
-     y = _mm256_mul_ps(x, argscale);
+    y = _mm256_mul_ps(x, argscale);
     
     
     fexppart  = ldexp(one,  _mm256_cvtps_epi32(y));
@@ -252,7 +269,7 @@ static inline __m256 _mm256_mul_128_unsigned(__m256 x,
                                              bitset<128> y)
 {
     const unsigned int most_sig_bit = find_most_sig_set_bit(y);
-   
+    
     __m256 mantissas = (__m256)_mm256_and_si256((__m256i)x, (__m256i)MASK_FLOAT_MANTISSA);
     __m256 exponents = (__m256)_mm256_srli_epi32(_mm256_and_si256((__m256i)x, (__m256i)MASK_FLOAT_EXP), FLOAT_MANTISSA_BITS);
     
@@ -271,71 +288,6 @@ static inline __m256 _mm256_maskzInv_ps(__m256 x,
     lu = _mm256_mul_ps(lu, _mm256_sub_ps(_mm256_set1_ps(2.0f), _mm256_mul_ps(lu,x)));
     
     return lu;
-}
-
-static inline __m256 _mm256_atan_ps(__m256 x)
-{
-    const static __m256 halfpi = _mm256_set1_ps(static_cast<float>(M_PI/2.0f));
-    const static __m256 CA17 = _mm256_set1_ps(0.002823638962581753730774f);
-    const static __m256 CA15 = _mm256_set1_ps(-0.01595690287649631500244f);
-    const static __m256 CA13 = _mm256_set1_ps(0.04250498861074447631836f);
-    const static __m256 CA11 = _mm256_set1_ps(-0.07489009201526641845703f);
-    const static __m256 CA9 = _mm256_set1_ps(0.1063479334115982055664f);
-    const static __m256 CA7 = _mm256_set1_ps (-0.1420273631811141967773f);
-    const static __m256 CA5 = _mm256_set1_ps(0.1999269574880599975585f);
-    const static __m256 CA3 = _mm256_set1_ps(-0.3333310186862945556640f);
-    const static __m256 one = _mm256_set1_ps(1.0f);
-    __m256       x2, x3, x4, pA, pB;
-    __m256       m, m2;
-    
-    m     =  _mm256_cmp_ps(x, _mm256_set1_ps(0), _CMP_LT_OQ);
-    x     = _mm256_andnot_ps( _mm256_set1_ps(GMX_FLOAT_NEGZERO), x);
-    m2    =  _mm256_cmp_ps(one, x, _CMP_LT_OQ);
-    x     = _mm256_blendv_ps(x, _mm256_maskzInv_ps(x, m2), m2);
-    
-    x2    = _mm256_mul_ps(x, x);
-    x3    = _mm256_mul_ps(x2, x);
-    x4    = _mm256_mul_ps(x2, x2);
-    pA    = fma(CA17, x4, CA13);
-    pB    = fma(CA15, x4, CA11);
-    pA    = fma(pA, x4, CA9);
-    pB    = fma(pB, x4, CA7);
-    pA    = fma(pA, x4, CA5);
-    pB    = fma(pB, x4, CA3);
-    pA    = fma(pA, x2, pB);
-    pA    = fma(pA, x3, x);
-    
-    pA    = _mm256_blendv_ps(pA, halfpi-pA, m2);
-    pA    = _mm256_blendv_ps(pA, -pA, m);
-    
-    return pA;
-}
-
-static inline __m256 _mm256_atan2_ps(__m256 y,
-                                     __m256 x)
-{
-    const __m256 pi = _mm256_set1_ps(static_cast<float>(M_PI));
-    const __m256 halfpi = _mm256_set1_ps(static_cast<float>(M_PI/2.0));
-    __m256       xinv, p, aoffset;
-    __m256       mask_xnz, mask_ynz, mask_xlt0, mask_ylt0;
-    
-    mask_xnz  = _mm256_cmp_ps(x, _mm256_set1_ps(0), _CMP_NEQ_OQ);
-    mask_ynz  = _mm256_cmp_ps(y, _mm256_set1_ps(0), _CMP_NEQ_OQ);
-    mask_xlt0 = _mm256_cmp_ps(x, _mm256_set1_ps(0), _CMP_LT_OQ);
-    mask_ylt0 = _mm256_cmp_ps(y, _mm256_set1_ps(0), _CMP_LT_OQ);
-    
-    aoffset   = _mm256_andnot_ps(mask_xnz, halfpi);
-    aoffset   = _mm256_andnot_ps(mask_ynz, aoffset);
-    
-    aoffset   = _mm256_blendv_ps(aoffset, pi, mask_xlt0);
-    aoffset   = _mm256_blendv_ps(aoffset, -aoffset, mask_ylt0);
-    
-    xinv      = _mm256_maskzInv_ps(x, mask_xnz);
-    p         = _mm256_mul_ps(y, xinv);
-    p         = _mm256_atan_ps(p);
-    p         = _mm256_add_ps(p, aoffset);
-    
-    return p;
 }
 
 static inline __m256 _mm256_frexp_ps(__m256 value,
@@ -462,14 +414,14 @@ static inline __m256 _mm256_gamm_ps(__m256 x)
     const __m256 c4 = _mm256_div_ps( _mm256_set1_ps(-1.231739572450155), _mm256_add_ps(x, _mm256_set1_ps(4)));
     const __m256 c5 = _mm256_div_ps( _mm256_set1_ps(1.208650973866179e-3), _mm256_add_ps(x, _mm256_set1_ps(5)));
     const __m256 c6 = _mm256_div_ps( _mm256_set1_ps(-5.395239384953e-6), _mm256_add_ps(x, _mm256_set1_ps(6)));
-
+    
     __m256 ret = _mm256_add_ps(c1, c0);
     ret = _mm256_add_ps(_mm256_add_ps(c2, c3), ret);
     ret = _mm256_add_ps(_mm256_add_ps(c4, c5), ret);
     ret = _mm256_add_ps(c6, ret);
     
     return _mm256_mul_ps(_mm256_mul_ps(_mm256_mul_ps(ret,  _mm256_div_ps(_mm256_sqrt_ps(_mm256_set1_ps(2 * M_PI)), x)),
-                         _mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_set1_ps(0), x), _mm256_set1_ps(5.5)))),
+                                       _mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_set1_ps(0), x), _mm256_set1_ps(5.5)))),
                          _mm256_pow_ps(_mm256_add_ps(x, _mm256_set1_ps(5.5)), _mm256_add_ps(x, _mm256_set1_ps(1))));
 }
 
@@ -513,11 +465,11 @@ static inline __m256 _mm256_gammln_ps(__m256 xx)
     return _mm256_sub_ps(_mm256_log_ps(_mm256_mul_ps(rand, ser)), tmp);
 }
 
-static inline float gser(const double a,
-                          const double x)
+static inline float gser(const float a,
+                         const float x)
 {
-    double gln = gammln(a);
-    double ap = a, del = 1.0 / a, sum = del;
+    float gln = gammln(a);
+    float ap = a, del = 1.0 / a, sum = del;
     for (;;) {
         ++ap;
         del *= x / ap;
@@ -528,7 +480,6 @@ static inline float gser(const double a,
     }
 }
 
-// Gamma series approximation
 static inline __m256 _mm256_gser_ps(__m256 a,
                                     __m256 x,
                                     __m256 mask)
@@ -546,29 +497,28 @@ static inline __m256 _mm256_gser_ps(__m256 a,
         del = _mm256_mul_ps(_mm256_div_ps(x, ap), del);
         sum = _mm256_add_ps(sum, del);
     } while(_mm256_movemask_ps(_mm256_and_ps(
-            _mm256_cmp_ps(_mm256_abs_ps(del), _mm256_mul_ps(_mm256_abs_ps(sum), eps), _CMP_LT_OQ), mask)) != _mm256_movemask_ps(mask));
+                                             _mm256_cmp_ps(_mm256_abs_ps(del), _mm256_mul_ps(_mm256_abs_ps(sum), eps), _CMP_LT_OQ), mask)) != _mm256_movemask_ps(mask));
     
     return _mm256_mul_ps(sum, _mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_mul_ps(a, _mm256_log_ps(x)), x), gln)));
 }
 
-// Gamma continued fractions
-static inline float gcf(const double a,
-                         const double x)
+static inline float gcf(const float a,
+                        const float x)
 {
-    double gln = gammln(a);
-    double b = x + 1.0 - a;
-    double c = 1.0 / FPMIN;
-    double d = 1.0 / b;
-    double h = d;
+    float gln = gammln(a);
+    float b = x + 1.0 - a;
+    float c = 1.0 / FPMIN;
+    float d = 1.0 / b;
+    float h = d;
     for (int i = 1; ; i++) {
-        double an = -i * (i - a);
+        float an = -i * (i - a);
         b += 2.0;
         d = an * d + b;
         if (fabs(d) < FPMIN) { cout<< "!"; d = FPMIN;}
         c = b + an / c;
         if (fabs(c) < FPMIN) { cout<< "!"; c = FPMIN;}
         d = 1.0/d;
-        double del = d * c;
+        float del = d * c;
         h *= del;
         if (fabs(del - 1.0) <= EPS) break;
     }
@@ -590,7 +540,7 @@ static inline __m256 _mm256_gcf_ps(__m256 a,
     __m256 d = _mm256_div_ps(one, b);
     __m256 h = d;
     
-    for (int i = 1; i < 1000  ; ++i) {
+    for (size_t i = 1; i < 1000  ; ++i) {
         __m256 i_t = _mm256_set1_ps(i);
         __m256 an = _mm256_mul_ps(i_t, _mm256_sub_ps(a, i_t));
         b = _mm256_add_ps(b, two);
@@ -604,23 +554,22 @@ static inline __m256 _mm256_gcf_ps(__m256 a,
         __m256 del = _mm256_mul_ps(d, c);
         h = _mm256_mul_ps(h, del);
         if (_mm256_movemask_ps(_mm256_and_ps(
-            _mm256_cmp_ps(_mm256_abs_ps(_mm256_sub_ps(del, one)), eps, _CMP_LE_OQ), mask)) == _mm256_movemask_ps(mask)) break;
+                                             _mm256_cmp_ps(_mm256_abs_ps(_mm256_sub_ps(del, one)), eps, _CMP_LE_OQ), mask)) == _mm256_movemask_ps(mask)) break;
     }
-   
+    
     return _mm256_mul_ps(_mm256_exp_ps(_mm256_sub_ps(_mm256_sub_ps(_mm256_mul_ps(a, _mm256_log_ps(x)), x), gln)), h);
 }
 
-// lower incomplete gamma approx
-static inline float gammpapprox(double a,
-                                 double x)
+static inline float gammpapprox(float a,
+                                float x)
 {
-    double xu,t,sum,ans;
-    double a1 = a - 1.0, lna1 = log(a1), sqrta1 = sqrt(a1);
-    double gln = gammln(a);
+    float xu,t,sum,ans;
+    float a1 = a - 1.0, lna1 = log(a1), sqrta1 = sqrt(a1);
+    float gln = gammln(a);
     if (x > a1) xu = max(a1 + 11.5 * sqrta1, x + 6.0 * sqrta1);
     else xu = max(0., min(a1 - 7.5 * sqrta1, x - 5.0 * sqrta1));
     sum = 0;
-    for (int j = 0; j < NGAU; j++) {
+    for (size_t j = 0; j < NGAU; j++) {
         t = x + (xu - x) * GAMMA_Y[j];
         sum += GAMMA_Y[j] * exp(-(t - a1) + a1 * (log(t) - lna1));
     }
@@ -637,7 +586,7 @@ static inline __m256 _mm256_gammpapprox_ps(__m256 a,
     static const  __m256 six = _mm256_set1_ps(6);
     static const  __m256 five = _mm256_set1_ps(5);
     static const  __m256 seven_5 = _mm256_set1_ps(7.5);
-
+    
     const __m256 gln = _mm256_gammln_ps(a);
     const __m256 a1 = _mm256_sub_ps(a, one);
     const __m256 lna1 = _mm256_log_ps(a1);
@@ -654,7 +603,7 @@ static inline __m256 _mm256_gammpapprox_ps(__m256 a,
                                           _mm256_sub_ps(x, _mm256_mul_ps(sqrta1, five))));
     
     __m256 sum = _mm256_setzero_ps();
-    for (int j = 0; j < NGAU; j++) {
+    for (size_t j = 0; j < NGAU; j++) {
         const __m256 t = _mm256_add_ps(_mm256_mul_ps(_mm256_set1_ps(GAMMA_Y[j]),  _mm256_sub_ps(xu, x)), x);
         const __m256 e_val = _mm256_exp_ps(_mm256_sub_ps(_mm256_mul_ps(a1, _mm256_sub_ps(_mm256_log_ps(t), lna1)), _mm256_sub_ps(t, a1)));
         sum = _mm256_add_ps(sum, _mm256_mul_ps(_mm256_set1_ps(GAMMA_Y[j]), e_val));
@@ -672,12 +621,12 @@ static inline __m256 _mm256_gammpapprox_ps(__m256 a,
     return ans;
 }
 
-static inline float gammp(const double a,
-                          const double x)
+static inline float gammp(const float a,
+                          const float x)
 {
     if (x < 0.0 || a <= 0.0) throw("bad args in gammp");
     if (x == 0.0) return 0.0;
-    else if ((int)a >= ASWITCH) return gammpapprox(a,x);
+    else if ((size_t)a >= ASWITCH) return gammpapprox(a,x);
     else if (x < a + 1.0) return gser(a,x);
     else return 1.0 - gcf(a,x);
 }
@@ -686,10 +635,10 @@ static inline __m256 _mm256_gammp_ps(__m256 a,
                                      __m256 x)
 {
     static const  __m256 one = _mm256_set1_ps(1);
-
+    
     if (_mm256_movemask_ps(_mm256_cmp_ps(x, _mm256_setzero_ps(), _CMP_EQ_OQ)) == 255)
         return _mm256_setzero_ps();
-
+    
     __m256 mask2 = _mm256_cmp_ps(x, _mm256_add_ps(a, one), _CMP_LT_OQ);
     __m256 mask3 = _mm256_andnot_ps(mask2, (__m256)_mm256_set1_epi32(~0));
     __m256 second = _mm256_setzero_ps(), third = _mm256_setzero_ps();
@@ -698,20 +647,67 @@ static inline __m256 _mm256_gammp_ps(__m256 a,
         second = _mm256_gser_ps(a, x, mask2);
     if (_mm256_movemask_ps(mask3) != 0)
         third = _mm256_sub_ps(one,  _mm256_gcf_ps(a, x, mask3));
-//    float result_test[8] = {0};
-//    for (int i = 0; i < 8; ++i) {
-//        result_test[i] = gammp(a[i], x[i]);
-//    }
+    //    float result_test[8] = {0};
+    //    for (int i = 0; i < 8; ++i) {
+    //        result_test[i] = gammp(a[i], x[i]);
+    //    }
     
     
     __m256 result = _mm256_or_ps(_mm256_and_ps(second, mask2), _mm256_and_ps(third, mask3));
     
-//    cout << "test:" << endl;
-//    for (int i = 0; i < 8; ++i) {
-//        cout << result_test[i] << " : " << result[i] << endl;
-//    }
-
+    //    cout << "test:" << endl;
+    //    for (int i = 0; i < 8; ++i) {
+    //        cout << result_test[i] << " : " << result[i] << endl;
+    //    }
+    
     return result;
+}
+
+static inline void
+CalculateMeanAndVariance(double& mean,
+                         double& variance,
+                         const double threshold,
+                         const atomic<complex<float>>* input /* pointer to beginning of input block */,
+                         const size_t input_size,
+                         const size_t num_threads)
+{
+    size_t non_zero_amps = 0;
+#pragma omp parallel for reduction(+:non_zero_amps, mean) num_threads(num_threads)
+    for (size_t i = 0; i < input_size; ++i) {
+        double p = norm(input[i].load());
+        if (p > threshold) {
+            ++non_zero_amps;
+            mean += p;
+        }
+        if (mean > ULONG_MAX - 100) {
+            mean /= non_zero_amps;
+            non_zero_amps = 1;
+        }
+    }
+    assert(mean != NAN);
+    assert(mean < INFINITY);
+    
+    mean /= non_zero_amps;
+
+    variance = 0;
+    non_zero_amps = 1;
+#pragma omp parallel for reduction(+:variance) num_threads(num_threads)
+    for (size_t i = 0; i < input_size; ++i) {
+        double p = norm(input[i].load());
+        if (p > threshold) {
+            ++non_zero_amps;
+            variance += ((p - mean) * (p - mean));
+        }
+        if (variance > ULONG_MAX - 100) {
+            variance /= non_zero_amps;
+            non_zero_amps = 1;
+        }
+    }
+    assert(variance != NAN);
+    assert(variance < INFINITY);
+    assert(variance != 0);
+    
+    variance /= (non_zero_amps - 1);
 }
 
 static inline void
@@ -720,22 +716,19 @@ CalculateMeanAndVariance(double& mean,
                          const double threshold,
                          const complex<float>* input /* pointer to beginning of input block */,
                          const size_t input_size,
-                         const size_t num_threads = 4)
+                         const size_t num_threads)
 {
-    size_t non_zero_amps = 1;
+    size_t non_zero_amps = 0;
 #pragma omp parallel for reduction(+:non_zero_amps, mean) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i) {
-        if (mean >  ULONG_MAX - 100000) {
-            mean /= non_zero_amps;
-            non_zero_amps = 1;
-        }
         double p = norm(input[i]);
-        assert(mean != NAN);
-        assert(p < INFINITY);
-
         if (p > threshold) {
             ++non_zero_amps;
             mean += p;
+        }
+        if (mean > ULONG_MAX - 100) {
+            mean /= non_zero_amps;
+            non_zero_amps = 1;
         }
     }
     assert(mean != NAN);
@@ -743,21 +736,18 @@ CalculateMeanAndVariance(double& mean,
     
     mean /= non_zero_amps;
 
-    // Setting it to 2 so that Bessel's formula does not lead to division by 0
-    non_zero_amps = 2;
+    variance = 0;
+    non_zero_amps = 1;
 #pragma omp parallel for reduction(+:variance) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i) {
-        if (variance > ULONG_MAX - 100000) {
-            variance /= non_zero_amps;
-            non_zero_amps = 1;
-        }
         double p = norm(input[i]);
-        assert(mean != NAN);
-        assert(p < INFINITY);
-        
         if (p > threshold) {
             ++non_zero_amps;
             variance += ((p - mean) * (p - mean));
+        }
+        if (variance > ULONG_MAX - 100) {
+            variance /= non_zero_amps;
+            non_zero_amps = 1;
         }
     }
     assert(variance != NAN);
