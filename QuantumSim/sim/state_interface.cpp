@@ -17,11 +17,11 @@ bool GenericQuantumState::book_keep = true;
 Config::SimType GenericQuantumState::sim_type = Config::SimType::FullState;
 char GenericQuantumState::partition_to_sim = 'x';
 
-#ifdef Parallel
-int GenericQuantumState::num_threads = omp_get_num_procs();
-#else
+//#ifdef Parallel
+//int GenericQuantumState::num_threads = omp_get_num_procs();
+//#else
 int GenericQuantumState::num_threads = 8;
-#endif
+//#endif
 
 ostream& operator<<(ostream& o, const vector<int>& v) {
     for (auto k : v) o << k << " ";

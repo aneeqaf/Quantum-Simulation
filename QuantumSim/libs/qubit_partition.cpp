@@ -294,7 +294,7 @@ Project1QBitmask(bitset<128> gate_bitmask,
             int local_q_idx = qp.globalToLocal(global_q_idx);
             if (is_zero_least_sig)
                 local_q_idx = num_qb1 - local_q_idx;
-            assert(local_q_idx < 64);
+//            assert(local_q_idx < 64);
             projected_bitmask |= 1ull << local_q_idx;
         }
         

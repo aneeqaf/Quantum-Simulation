@@ -8,14 +8,14 @@
 #include "state_autoconv.h"
 
 AdaptiveStateVector::
-AdaptiveStateVector(const int qubits,
-                    const Config::SimType type,
-                    const Config* config,
-                    const int hcut,
-                    const int vcut,
-                    const bool row_major,
-                    const bool first_part_small,
-                    const int verb) : full_state(nullptr), total_q(qubits)
+    AdaptiveStateVector(const int qubits,
+                        const Config::SimType type,
+                        const Config *config,
+                        const int hcut,
+                        const int vcut,
+                        const bool row_major,
+                        const bool first_part_small,
+                        const int verb) : full_state(nullptr), total_q(qubits)
 {
     sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, config,
                                                        hcut, vcut, row_major,
@@ -23,140 +23,145 @@ AdaptiveStateVector(const int qubits,
 }
 
 AdaptiveStateVector::
-AdaptiveStateVector(const AdaptiveStateVector& rhs)
+    AdaptiveStateVector(const AdaptiveStateVector &rhs)
 {
-    if (rhs.full_state) {
+    if (rhs.full_state)
+    {
         full_state = new FullAmpStateVector(*(rhs.full_state));
         sumOfTensors = nullptr;
     }
-    else {
+    else
+    {
         full_state = nullptr;
         sumOfTensors = new SumOfTensorsProductsStateVector(*(rhs.sumOfTensors));
     }
-    
+
     compressed = rhs.compressed;
     total_q = rhs.total_q;
 }
 
-AdaptiveStateVector& AdaptiveStateVector::
-operator=(const AdaptiveStateVector& rhs)
+AdaptiveStateVector &AdaptiveStateVector::
+operator=(const AdaptiveStateVector &rhs)
 {
     AdaptiveStateVector temp(rhs);
     if (rhs.full_state)
         swap(full_state, temp.full_state);
     else
         swap(sumOfTensors, temp.sumOfTensors);
-    
+
     compressed = rhs.compressed;
     total_q = rhs.total_q;
     return *this;
 }
 
 AdaptiveStateVector::
-~AdaptiveStateVector()
+    ~AdaptiveStateVector()
 {
-    if (full_state != nullptr) delete full_state;
-    if (sumOfTensors != nullptr) delete sumOfTensors;
+    if (full_state != nullptr)
+        delete full_state;
+    if (sumOfTensors != nullptr)
+        delete sumOfTensors;
 }
 
 void AdaptiveStateVector::
-ApplyNonCGate(const idx_size gate_qubit,
-              const Gate::Type gate_type)
+    ApplyNonCGate(const idx_size gate_qubit,
+                  const Gate::Type gate_type)
 {
     if (full_state)
-        full_state -> ApplyNonCGate(gate_qubit, gate_type);
+        full_state->ApplyNonCGate(gate_qubit, gate_type);
     else
-        sumOfTensors -> ApplyNonCGate(gate_qubit, gate_type);
+        sumOfTensors->ApplyNonCGate(gate_qubit, gate_type);
 }
 
 void AdaptiveStateVector::
-ApplyHGateOnAllAmps(bool cycle_0)
+    ApplyHGateOnAllAmps(bool cycle_0)
 {
     if (full_state)
-        full_state -> ApplyHGateOnAllAmps(cycle_0);
+        full_state->ApplyHGateOnAllAmps(cycle_0);
     else
-        sumOfTensors -> ApplyHGateOnAllAmps(cycle_0);
+        sumOfTensors->ApplyHGateOnAllAmps(cycle_0);
 }
 
-//TODO
+// TODO
 void AdaptiveStateVector::
-ApplyCGate(const idx_size num_controls,
-           const vector<idx_size>& gate_qubits,
-           const Gate& g,
-           const Gate::Type gate_type)
+    ApplyCGate(const idx_size num_controls,
+               const vector<idx_size> &gate_qubits,
+               const Gate &g,
+               const Gate::Type gate_type)
 {
-    
 }
 
 void AdaptiveStateVector::
-ApplyMergedXYGate(const Gate& gate1,
-                  const Gate& gate2)
-{
-    if (full_state)
-        full_state -> ApplyMergedXYGate(gate1, gate2);
-    else
-        sumOfTensors -> ApplyMergedXYGate(gate1, gate2);
-}
-
-void AdaptiveStateVector::
-ApplyXYRecursiveTransform(bitset<128> X_bitmask,
-                          bitset<128> Y_bitmask,
-                          int th)
+    ApplyMergedXYGate(const Gate &gate1,
+                      const Gate &gate2)
 {
     if (full_state)
-        full_state -> ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
+        full_state->ApplyMergedXYGate(gate1, gate2);
     else
-        sumOfTensors -> ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
-    
+        sumOfTensors->ApplyMergedXYGate(gate1, gate2);
+}
+
+void AdaptiveStateVector::
+    ApplyXYRecursiveTransform(bitset<128> X_bitmask,
+                              bitset<128> Y_bitmask,
+                              int th)
+{
+    if (full_state)
+        full_state->ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
+    else
+        sumOfTensors->ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
 }
 
 int AdaptiveStateVector::
-ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
-                           idx_size& cz_path,
-                           const idx_size cz_path_len,
-                           const idx_size suffix_size,
-                           const bitset<128>& X_bitmask,
-                           const bitset<128>& Y_bitmask,
-                           const bitset<128>& H_bitmask,
-                           const bitset<128>* __restrict CZ_bitmasks,
-                           const bitset<128> T_bitmasks[2],
-                           int th)
+    ApplyLoXYHAndCZTInSamePass(int &remaining_cz_bits,
+                               idx_size &cz_path,
+                               const idx_size cz_path_len,
+                               const idx_size suffix_size,
+                               const bitset<128> &X_bitmask,
+                               const bitset<128> &Y_bitmask,
+                               const bitset<128> &H_bitmask,
+                               const bitset<128> *__restrict CZ_bitmasks,
+                               const bitset<128> T_bitmasks[2],
+                               int th)
 {
     int xCZ_applied_in_cycle = -1;
-    if (full_state) {
+    if (full_state)
+    {
         //        if (book_keep) {
         //            data_per_cycles.xCZ_H.push_back(0);
         //            data_per_cycles.xCZ_V.push_back(0);
         //            data_per_cycles.addends.push_back(0);
         //            data_per_cycles.memory.push_back(GetMemUsage());
         //        }
-        full_state -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
-                                                 cz_path_len, suffix_size,
-                                                 X_bitmask,Y_bitmask,
-                                                 H_bitmask, CZ_bitmasks,
-                                                 T_bitmasks, th);
+        full_state->ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                               cz_path_len, suffix_size,
+                                               X_bitmask, Y_bitmask,
+                                               H_bitmask, CZ_bitmasks,
+                                               T_bitmasks, th);
     }
-    else {
+    else
+    {
         if (cz_path_len == 0)
-            sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
-                                                       cz_path_len, suffix_size,
-                                                       X_bitmask, Y_bitmask,
-                                                       H_bitmask, CZ_bitmasks,
-                                                       T_bitmasks, th);
+            sumOfTensors->ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
+                                                     cz_path_len, suffix_size,
+                                                     X_bitmask, Y_bitmask,
+                                                     H_bitmask, CZ_bitmasks,
+                                                     T_bitmasks, th);
         else
-            xCZ_applied_in_cycle = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
-                                                                              suffix_size, X_bitmask, Y_bitmask,
-                                                                              H_bitmask, CZ_bitmasks,
-                                                                              T_bitmasks, th);
-        
-        if (sumOfTensors -> GetNumAddends() > 10) {
+            xCZ_applied_in_cycle = sumOfTensors->ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+                                                                            suffix_size, X_bitmask, Y_bitmask,
+                                                                            H_bitmask, CZ_bitmasks,
+                                                                            T_bitmasks, th);
+
+        if (sumOfTensors->GetNumAddends() > 10)
+        {
             Time time;
             time.StartTime();
-            
-            full_state = sumOfTensors -> ConvertSumOfTensorsToState();
-            
+
+            full_state = sumOfTensors->ConvertSumOfTensorsToState();
+
             time_by_category.conversion += time.GetElapsedTime();
-            
+
             delete sumOfTensors;
             sumOfTensors = nullptr;
         }
@@ -174,314 +179,313 @@ operator[](bitset<128> i)
 }
 
 cmplx AdaptiveStateVector::
-GetGlobalAmpAtInterestingIdx(idx_size i)
+    GetGlobalAmpAtInterestingIdx(idx_size i)
 {
     if (full_state)
-        return full_state -> GetGlobalAmpAtInterestingIdx(i);
+        return full_state->GetGlobalAmpAtInterestingIdx(i);
     else
-        return sumOfTensors -> GetGlobalAmpAtInterestingIdx(i);
-    
-}
-
-
-double AdaptiveStateVector::
-GetMinProb() 
-{
-    if (full_state)
-        return full_state -> GetMinProb();
-    else
-        return sumOfTensors -> GetMinProb();
+        return sumOfTensors->GetGlobalAmpAtInterestingIdx(i);
 }
 
 double AdaptiveStateVector::
-GetMaxProb()
+    GetMinProb()
 {
     if (full_state)
-        return full_state -> GetMaxProb();
+        return full_state->GetMinProb();
     else
-        return sumOfTensors -> GetMaxProb();
+        return sumOfTensors->GetMinProb();
 }
 
 double AdaptiveStateVector::
-GetAvgProb() const
+    GetMaxProb()
 {
     if (full_state)
-        return full_state -> GetAvgProb();
+        return full_state->GetMaxProb();
     else
-        return sumOfTensors -> GetAvgProb();
+        return sumOfTensors->GetMaxProb();
 }
 
 double AdaptiveStateVector::
-GetMemUsage() const
+    GetAvgProb() const
 {
     if (full_state)
-        return full_state -> GetMemUsage();
+        return full_state->GetAvgProb();
     else
-        return sumOfTensors -> GetMemUsage();
+        return sumOfTensors->GetAvgProb();
+}
+
+double AdaptiveStateVector::
+    GetMemUsage() const
+{
+    if (full_state)
+        return full_state->GetMemUsage();
+    else
+        return sumOfTensors->GetMemUsage();
 }
 
 idx_size AdaptiveStateVector::
-GetSize() const
+    GetSize() const
 {
     if (full_state)
-        return full_state -> GetSize();
+        return full_state->GetSize();
     else
-        return sumOfTensors -> GetSize();
+        return sumOfTensors->GetSize();
 }
 
 idx_size AdaptiveStateVector::
-GetFullStateVectorSize() const
+    GetFullStateVectorSize() const
 {
     if (full_state)
-        return full_state -> GetFullStateVectorSize();
+        return full_state->GetFullStateVectorSize();
     else
-        return sumOfTensors -> GetFullStateVectorSize();
+        return sumOfTensors->GetFullStateVectorSize();
 }
 
 int AdaptiveStateVector::
-GetNumQInBlock(idx_size block) const
+    GetNumQInBlock(idx_size block) const
 {
     if (full_state)
-        return full_state -> GetNumQInBlock(block);
+        return full_state->GetNumQInBlock(block);
     else
-        return sumOfTensors -> GetNumQInBlock(block);
+        return sumOfTensors->GetNumQInBlock(block);
 }
 
 idx_size AdaptiveStateVector::
-GetGlobalFactorPower() const
+    GetGlobalFactorPower() const
 {
     if (full_state)
-        return full_state -> GetGlobalFactorPower();
+        return full_state->GetGlobalFactorPower();
     else
-        return sumOfTensors -> GetGlobalFactorPower();
+        return sumOfTensors->GetGlobalFactorPower();
 }
 
 idx_size AdaptiveStateVector::
-GetNumAddends() const
+    GetNumAddends() const
 {
     if (full_state)
         return 0;
     else
-        return sumOfTensors -> GetNumAddends();
+        return sumOfTensors->GetNumAddends();
 }
 
 double AdaptiveStateVector::
-CalculateNormSquared()
+    CalculateNormSquared()
 {
     if (full_state)
-        return full_state -> CalculateNormSquared();
+        return full_state->CalculateNormSquared();
     else
-        return sumOfTensors -> CalculateNormSquared();
+        return sumOfTensors->CalculateNormSquared();
 }
 
 double AdaptiveStateVector::
-CalculateAverageInaccuracy(double norm) const
+    CalculateAverageInaccuracy(double norm) const
 {
     if (full_state)
-        return full_state -> CalculateAverageInaccuracy(norm);
+        return full_state->CalculateAverageInaccuracy(norm);
     else
-        return sumOfTensors -> CalculateAverageInaccuracy(norm);
+        return sumOfTensors->CalculateAverageInaccuracy(norm);
 }
 
 double AdaptiveStateVector::
-CalculateMeanEntropy() const
+    CalculateMeanEntropy() const
 {
     if (full_state)
-        return full_state -> CalculateMeanEntropy();
+        return full_state->CalculateMeanEntropy();
     else
-        return sumOfTensors -> CalculateMeanEntropy();
+        return sumOfTensors->CalculateMeanEntropy();
 }
 
 void AdaptiveStateVector::
-ResetAmpVector()
+    ResetAmpVector()
 {
     if (full_state)
-        return full_state -> ResetAmpVector();
+        return full_state->ResetAmpVector();
     else
-        return sumOfTensors -> ResetAmpVector();
+        return sumOfTensors->ResetAmpVector();
 }
 
 void AdaptiveStateVector::
-Normalize()
+    Normalize()
 {
     if (full_state)
-        full_state -> Normalize();
+        full_state->Normalize();
     else
-        sumOfTensors -> Normalize();
+        sumOfTensors->Normalize();
 }
 
 double AdaptiveStateVector::
-CalculateCrossEntropy(int range) const
+    CalculateCrossEntropy(int range) const
 {
     if (full_state)
-        return full_state -> CalculateCrossEntropy(range);
+        return full_state->CalculateCrossEntropy(range);
     else
-        return sumOfTensors -> CalculateCrossEntropy(range);
+        return sumOfTensors->CalculateCrossEntropy(range);
 }
 
 void AdaptiveStateVector::
-Rescale()
+    Rescale()
 {
     if (full_state)
-        return full_state -> Rescale();
+        return full_state->Rescale();
     else
-        return sumOfTensors -> Rescale();
+        return sumOfTensors->Rescale();
 }
 
 void AdaptiveStateVector::
-RescaleAndApplyGlobalICounter()
+    RescaleAndApplyGlobalICounter()
 {
     if (full_state)
-        return full_state -> RescaleAndApplyGlobalICounter();
+        return full_state->RescaleAndApplyGlobalICounter();
     else
-        return sumOfTensors -> RescaleAndApplyGlobalICounter();
+        return sumOfTensors->RescaleAndApplyGlobalICounter();
 }
 
 double AdaptiveStateVector::
-CountZeroAmpPercentage() const
+    CountZeroAmpPercentage() const
 {
     if (full_state)
-        return full_state -> CountZeroAmpPercentage();
+        return full_state->CountZeroAmpPercentage();
     else
-        return sumOfTensors -> CountZeroAmpPercentage();
+        return sumOfTensors->CountZeroAmpPercentage();
 }
 
 idx_size AdaptiveStateVector::
-CountZerosInBlock(int block) const
+    CountZerosInBlock(int block) const
 {
     if (full_state)
-        return full_state -> CountZerosInBlock(block);
+        return full_state->CountZerosInBlock(block);
     else
-        return sumOfTensors -> CountZerosInBlock(block);
+        return sumOfTensors->CountZerosInBlock(block);
 }
 
 bool AdaptiveStateVector::
-AreAllAmpsZero() const
+    AreAllAmpsZero() const
 {
     if (full_state)
-        return full_state -> AreAllAmpsZero();
+        return full_state->AreAllAmpsZero();
     else
-        return sumOfTensors -> AreAllAmpsZero();
+        return sumOfTensors->AreAllAmpsZero();
 }
 
 void AdaptiveStateVector::
-ApplyGlobalICounter()
+    ApplyGlobalICounter()
 {
     if (full_state)
-        return full_state -> ApplyGlobalICounter();
+        return full_state->ApplyGlobalICounter();
     else
-        return sumOfTensors -> ApplyGlobalICounter();
+        return sumOfTensors->ApplyGlobalICounter();
 }
 
 void AdaptiveStateVector::
-PrintStateVector(const string& outfile,
-                 const int cycle_num)
+    PrintStateVector(const string &outfile,
+                     const int cycle_num)
 {
     if (sumOfTensors)
-        sumOfTensors -> PrintStateVector(outfile, cycle_num);
+        sumOfTensors->PrintStateVector(outfile, cycle_num);
     else
-        full_state -> PrintStateVector(outfile, cycle_num);
+        full_state->PrintStateVector(outfile, cycle_num);
 }
 
 void AdaptiveStateVector::
-PrintStateVector() 
+    PrintStateVector(const string extension)
 {
     if (sumOfTensors)
-        sumOfTensors -> PrintStateVector();
+        sumOfTensors->PrintStateVector();
     else
-        full_state -> PrintStateVector();
+        full_state->PrintStateVector();
 }
 
 void AdaptiveStateVector::
-PrintProbabilities(const string& out_file,
-                   const int cycle_num)
+    PrintProbabilities(const string &out_file,
+                       const int cycle_num)
 {
     if (sumOfTensors)
-        sumOfTensors -> PrintProbabilities(out_file, cycle_num);
+        sumOfTensors->PrintProbabilities(out_file, cycle_num);
     else
-        full_state -> PrintProbabilities(out_file, cycle_num);
+        full_state->PrintProbabilities(out_file, cycle_num);
 }
 
 void AdaptiveStateVector::
-WriteAmpToDisk(const string& filename)
+    WriteAmpToDisk(const string &filename)
 {
     if (full_state)
-        full_state -> WriteAmpToDisk(filename);
+        full_state->WriteAmpToDisk(filename);
     else
-        sumOfTensors -> WriteAmpToDisk(filename);
+        sumOfTensors->WriteAmpToDisk(filename);
 }
 
 void AdaptiveStateVector::
-ReadFromDisk(const string& filename)
+    ReadFromDisk(const string &filename)
 {
     if (full_state)
-        full_state -> ReadFromDisk(filename);
+        full_state->ReadFromDisk(filename);
     else
-        sumOfTensors -> ReadFromDisk(filename);
+        sumOfTensors->ReadFromDisk(filename);
 }
 
 void AdaptiveStateVector::
-CopyState(const GenericQuantumState& rhs)
+    CopyState(const GenericQuantumState &rhs)
 {
-    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
-    if (t_rhs.full_state) {
-        full_state -> CopyState(*t_rhs.full_state);
+    const AdaptiveStateVector &t_rhs = (const AdaptiveStateVector &)rhs;
+    if (t_rhs.full_state)
+    {
+        full_state->CopyState(*t_rhs.full_state);
         sumOfTensors = nullptr;
     }
-    else {
+    else
+    {
         full_state = nullptr;
-        sumOfTensors -> CopyState(*(t_rhs.sumOfTensors));
+        sumOfTensors->CopyState(*(t_rhs.sumOfTensors));
     }
-    
+
     total_q = t_rhs.total_q;
 }
 
 void AdaptiveStateVector::
-CopyMemberVars(const GenericQuantumState& rhs)
+    CopyMemberVars(const GenericQuantumState &rhs)
 {
-    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    const AdaptiveStateVector &t_rhs = (const AdaptiveStateVector &)rhs;
     total_q = t_rhs.total_q;
     compressed = rhs.compressed;
-    
+
     if (full_state)
-        full_state -> CopyMemberVars(*t_rhs.full_state);
+        full_state->CopyMemberVars(*t_rhs.full_state);
     else
-        sumOfTensors -> CopyMemberVars(*t_rhs.sumOfTensors);
+        sumOfTensors->CopyMemberVars(*t_rhs.sumOfTensors);
 }
 
 void AdaptiveStateVector::
-CompressStateVector(idx_size num_codewords,
-                    double p_rejection)
+    CompressStateVector()
 {
     if (full_state)
-        full_state -> CompressStateVector(num_codewords, p_rejection);
+        full_state->CompressStateVector();
     else
-        sumOfTensors -> CompressStateVector(num_codewords, p_rejection);
-    
+        sumOfTensors->CompressStateVector();
+
     compressed = true;
 }
 
 void AdaptiveStateVector::
-DecompressStateVector()
+    DecompressStateVector()
 {
     if (full_state)
-        full_state -> DecompressStateVector();
+        full_state->DecompressStateVector();
     else
-        sumOfTensors -> DecompressStateVector();
-    
+        sumOfTensors->DecompressStateVector();
+
     compressed = false;
 }
 
 void AdaptiveStateVector::
-DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+    DecompressAndCopyAnotherState(const GenericQuantumState &rhs)
 {
-    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    const AdaptiveStateVector &t_rhs = (const AdaptiveStateVector &)rhs;
     total_q = t_rhs.total_q;
-    
+
     if (full_state)
-        full_state -> DecompressAndCopyAnotherState(*t_rhs.full_state);
+        full_state->DecompressAndCopyAnotherState(*t_rhs.full_state);
     else
-        sumOfTensors -> DecompressAndCopyAnotherState(*t_rhs.sumOfTensors);
-    
+        sumOfTensors->DecompressAndCopyAnotherState(*t_rhs.sumOfTensors);
+
     compressed = false;
 }

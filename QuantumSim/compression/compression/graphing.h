@@ -84,7 +84,7 @@ static void ApplyPTTransformToStateVector(complex<float>* state_vector,
     }
 }
 
-static void PlotCWFrequency(const size_t* codewords_freq,
+static void PlotCWFrequency(const atomic<size_t>* codewords_freq,
                             const size_t num_codewords,
                             size_t num_qubits)
 {
@@ -92,25 +92,25 @@ static void PlotCWFrequency(const size_t* codewords_freq,
     Gnuplot gp;
     
     vector<pair<unsigned short,size_t>> codewords_freq_idx;
-    for (size_t i = 20; i <= num_codewords; ++i)
-        codewords_freq_idx.push_back(make_pair(i, codewords_freq[i]));
+    for (size_t i = 0; i < num_codewords; ++i)
+        codewords_freq_idx.push_back(make_pair(i, codewords_freq[i].load()));
     
     size_t freq_max = 0;
-    for (size_t i = 20; i <= num_codewords; ++i) {
-        if(codewords_freq[i] > freq_max)
-            freq_max = codewords_freq[i];
+    for (size_t i = 0; i < num_codewords; ++i) {
+        if(codewords_freq[i].load() > freq_max)
+            freq_max = codewords_freq[i].load();
     }
     
     string filename = to_string(num_codewords + 1) + "_codewords_freq";
     
     gp << "reset\nset nokey\n";
-    gp << "set title \"" << num_qubits << "q: " << num_codewords + 1 << " Codewords Frequency\" font \",14\"\n";
+    gp << "set title \"" << num_qubits << "q: " << num_codewords << " Codewords Frequency\" font \",14\"\n";
     //    gp << "set ylabel 'Amplitude frequency'\n";
     //    gp << "set xlabel 'Codewords'\n";
 //    gp << "set term png\n";
     gp << "set output '" << filename + to_string(num_qubits) << ".png'\n";
     gp << "set tics font 'Times New Roman,12'\n";
-    gp << "cw=" << num_codewords + 1 << "\nmax_f=" << freq_max << "\n";
+    gp << "cw=" << num_codewords << "\nmax_f=" << freq_max << "\n";
     gp << "title(c) = sprintf(\"\\nAmplitudes to %i Codewords Frequency\"" << ", cw) \n";
     
     gp << "set xr[0:cw]\nset yr[0:max_f]\n";

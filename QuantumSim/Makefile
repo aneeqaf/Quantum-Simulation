@@ -1,4 +1,4 @@
-CC := g++
+CC := clang
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
 SZPATH := /usr/local
@@ -7,13 +7,13 @@ TARGETDIR := bin
 OUTPUT := output/amp_vectors output/probabilities output/log output/reports output/misc
 INPUT := input/random_circuits_google
 TARGET := bin/rr
-LIBS = -lm -lstdc++ -lomp -lsleef
+LIBS = -lm -lstdc++ -lsleef /usr/local/opt/libomp/lib/libomp.a
 SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a
-INC = -I libs -I sim -I sim/kernels 
-CFLAGS = -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -ffast-math -m64 -mavx -mavx2 \
--march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel -g
+INC = -I libs -I sim -I sim/kernels -I /usr/local/opt/libomp/include
+# CFLAGS = -g -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -ffast-math -m64 -mavx -mavx2 \
+# -march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel
 # -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled -DFidelityDoubled
-# CFLAGS = -g -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i
+CFLAGS = -g -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i
 .PHONY: clean all
 
 default: $(TARGET)
@@ -21,7 +21,8 @@ all: default
 
 SIMOBJECTS = $(patsubst %.cpp, %.o, $(wildcard sim/*.cpp))
 KERNELSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard sim/kernels/*.cpp))
-LIBSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard libs/*.cpp))
+# LIBSOBJECTS = $(patsubst %.cpp, %.o, $(wildcard libs/*.cpp))
+LIBSOBJECTS = $(filter-out libs/SZ_helper.cpp, $(patsubst %.cpp, %.o, $(wildcard libs/*.cpp)))
 EXE = $(patsubst %.cpp, %.o, vector_state_sim/main.cpp)
 BM = $(patsubst %.cpp, %.o, benchmark/XYmicroBM.cpp)
 KERNELHEADERS = $(wildcard sim/kernels/*.h)

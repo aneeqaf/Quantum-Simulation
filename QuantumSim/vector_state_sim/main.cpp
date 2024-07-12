@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
     int sim_type = -1;
     Config::Verbose verbose = Config::Default;
     vector<int> num_qubits, num_gates;
-    num_threads = 1ull << static_cast<int>(floor(log2(omp_get_num_procs())));
+    num_threads = 8; // 1ull << static_cast<int>(floor(log2(omp_get_num_procs())));
     
     while ((c = getopt_long(argc, argv, "a:i:o:ut:d:s:|:v:_:x:q:c:nh:e:m:pfr:0z:Q:CT", longopts, &idx)) != -1)
     {

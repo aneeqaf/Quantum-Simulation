@@ -35,8 +35,8 @@ QuantumSim/python_scripts/__pycache__/*
 ProjectQ/
 ~*
 Quantum
-ProjectQ/
-qiskit-terra/
+ProjectQ
+qiskit-terra
 ../ai.pem
 compression/compression.xcodeproj
 *.png
