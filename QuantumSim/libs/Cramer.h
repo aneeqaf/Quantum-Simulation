@@ -174,6 +174,7 @@ private:
     double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
     double CalcThetaForCW(unsigned short codeword) const;
     __m256 CalcThetaForCWAVX(__m256 codewords) const;
+    complex<float> CalcValForCW(unsigned short codeword) const;
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;

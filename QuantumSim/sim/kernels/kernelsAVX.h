@@ -626,7 +626,7 @@ void ApplyQftCRkGatesAVX(cmplx *__restrict amp,
                          const idx_size idx_end,
                          const idx_size *CRk_bitmasks /* num qubits */);
 
-pair<idx_size, int>
+pair<idx_size, idx_size>
 XYFastTransformLowQ(cmplx *__restrict amp,
                     idx_size X_bitmask,
                     idx_size Y_bitmask,
@@ -652,8 +652,8 @@ void ApplyBlockOfCZTGatesAVXSeq(cmplx *__restrict amp,
                                 const idx_size *volatile __restrict CZ_bitmasks,
                                 const idx_size *volatile __restrict T_bitmasks);
 
-pair<idx_size, int>
-ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *__restrict amp,
+pair<idx_size, idx_size>
+ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
                                   Cramer *cramer,
                                   const int num_qubits_amp,
                                   const idx_size *volatile __restrict CZ_bitmasks,
@@ -664,5 +664,10 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *__restrict amp,
                                   const int num_threads,
                                   const int num_high_qubits,
                                   const ZeroOptMask &zero_opt_mask);
+
+void RescaleAndApplyGlobalICounter(cmplx *__restrict amp,
+                                   idx_size &global_factor_power,
+                                   idx_size &global_i_counter,
+                                   const size_t amp_size);
 
 #endif /* kernelsAVX_h */

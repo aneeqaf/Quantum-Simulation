@@ -244,8 +244,8 @@ void ApplyBlockOfCZTGatesAVXSeq(cmplx *__restrict amp,
 
 ofstream out("compressed.txt");
 
-pair<idx_size, int>
-ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *amp,
+pair<idx_size, idx_size>
+ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
                                   Cramer *cramer,
                                   const int num_qubits_amp,
                                   const idx_size *volatile __restrict CZ_bitmasks,
@@ -266,9 +266,10 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *amp,
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits_amp;
     float *t_amp = (float *)__builtin_assume_aligned(amp, 64);
 
-    pair<idx_size, int> phases;
+    pair<idx_size, idx_size> phases;
     cmplx *active_block_amps[num_threads];
 
+    cmplx *decompressed_vector = nullptr;
     if (cramer)
     {
         for (size_t t = 0; t < num_threads; ++t)
@@ -278,6 +279,9 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *amp,
 
             memset(active_block_amps[t], 0, sizeof(complex<float>) * block_size);
         }
+
+        if (posix_memalign((void **)&decompressed_vector, 64, sizeof(complex<float>) * amp_size) != 0)
+            throw "Unable to allocate space for decompressed vector";
     }
 
 #pragma omp parallel for schedule(guided) num_threads(1)
@@ -320,12 +324,9 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *amp,
                 ApplyHGatesIteratively(active_amp, block_bits,
                                        num_threads, new_lo_H_bitmask);
 
-            if (cramer && !cramer->kAndLambdaInitialized.exchange(true))
-                cramer->CalcKandLambdaFromEmpiricalCDF(active_amp, block_size);
-
-#pragma omp critical
+            if (cramer)
             {
-                amp = cramer ? cramer->CramerBlockCompress(amp, active_amp, block_begin, block_size) : amp;
+                memcpy(decompressed_vector + block_begin, active_amp, sizeof(complex<float>) * block_size);
             }
         }
         //        else {
@@ -338,21 +339,20 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *amp,
         //        }
     }
 
-    if (cramer)
-    {
-        cramer->CommitGlobalContext();
-        //        global_factor_power = 0;
-    }
-
     phases.second += __builtin_popcountll(new_lo_H_bitmask);
 
     if (cramer)
     {
         for (idx_size i = 0; i < num_threads; ++i)
+        {
             delete[] active_block_amps[i];
+        }
+        auto t_amp = amp;
+        amp = decompressed_vector;
+        free(t_amp);
     }
 
-    return pair<idx_size, int>(phases.first, phases.second);
+    return pair<idx_size, idx_size>(phases.first, phases.second);
 }
 
 double
@@ -747,5 +747,38 @@ void ApplyCRzGatesAVX(cmplx *__restrict amp,
 
         if (!phases_idx.second)
             ApplyRzPhasesAVX(t_amp, phases_idx.first, reg_idx);
+    }
+}
+
+void RescaleAndApplyGlobalICounter(cmplx *__restrict amp,
+                                   idx_size &global_factor_power,
+                                   idx_size &global_i_counter,
+                                   const size_t amp_size)
+{
+    float rescaling_factor = 1.0 / pow(2, (global_factor_power / 2));
+    if ((global_factor_power % 2) == 1)
+        rescaling_factor *= 1.0 / sqrt(2.0);
+    global_factor_power = 0;
+
+    const auto i_multiplier = cmplx(pow(ki, global_i_counter));
+    global_i_counter = 0;
+
+    //    for (idx_size i = 0; i < amp_size; ++i)
+    //        amp[i] *= rescaling_factor * i_multiplier;
+
+    float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
+    const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
+                              rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor};
+
+#pragma omp parallel for num_threads(num_threads)
+    for (idx_size i = 0; i < amp_size; i += 4)
+    {
+        amp[i] *= i_multiplier;
+        amp[i + 1] *= i_multiplier;
+        amp[i + 2] *= i_multiplier;
+        amp[i + 3] *= i_multiplier;
+        __m256 t = _mm256_load_ps(t_amp + (2 * i));
+        t = _mm256_mul_ps(t, rescaling);
+        _mm256_store_ps(t_amp + (2 * i), t);
     }
 }
