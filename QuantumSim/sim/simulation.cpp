@@ -874,7 +874,9 @@ void SequentialSimulation::
     }
 
 #ifdef Print
-//    amp.PrintStateVector();
+    if (config->compress)
+        amp.compressed = true;
+    amp.PrintStateVector();
 #endif
 #ifdef CosineSimilarity
     amp.PrintProbabilities(config->prob_outfile, circuit.GetNumCycles() - 1);
@@ -1816,7 +1818,16 @@ void SequentialSimulation::
             ss << memory_usage << " B \n";
 
         if (config->compress)
-            ss << "Compression ratio: " << (sizeof(cmplx) * amp.GetSize() * 3) / memory_usage << "\n";
+        {
+            if (amp.sim_type == Config::SimType::FullState)
+            {
+                ss << "Compression ratio: " << (sizeof(cmplx) * amp.GetSize()) / memory_usage << "\n";
+            }
+            else
+            {
+                ss << "Compression ratio: " << (sizeof(cmplx) * amp.GetSize() * 3) / memory_usage << "\n";
+            }
+        }
 
         cout << ss.str() << "\n";
     }

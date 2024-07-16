@@ -665,7 +665,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
                                   const int num_high_qubits,
                                   const ZeroOptMask &zero_opt_mask);
 
-void RescaleAndApplyGlobalICounter(cmplx *__restrict amp,
+void RescaleAndApplyGlobalICounter(cmplx *&__restrict amp,
                                    idx_size &global_factor_power,
                                    idx_size &global_i_counter,
                                    const size_t amp_size);

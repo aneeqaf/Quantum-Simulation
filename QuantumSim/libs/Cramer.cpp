@@ -45,21 +45,21 @@ Cramer::
     config.num_codewords_reg = CalcCWThatFitIn256BitsReg();
     config.compressed_vector_UL_size = CalcNumULInCompressedVector(CalcNum256RegForSizeOfVector());
 
-    global_context.codewords_mappings = new atomic<complex<float>>[config.num_total_codewords];
-    global_context.cw_freq = new atomic<size_t>[config.num_total_codewords];
+    global_context.codewords_mappings = new atomic<complex<float>>[config.num_codewords_per_sector];
+    global_context.cw_freq = new atomic<size_t>[config.num_codewords_per_sector];
     global_context.codeword_all_amps = -1;
     k = 0;
     lambda = 0;
     kAndLambdaInitialized = false;
 
-    new_global_context.codewords_mappings = new atomic<complex<float>>[config.num_total_codewords];
-    new_global_context.cw_freq = new atomic<size_t>[config.num_total_codewords];
+    new_global_context.codewords_mappings = new atomic<complex<float>>[config.num_codewords_per_sector];
+    new_global_context.cw_freq = new atomic<size_t>[config.num_codewords_per_sector];
     new_global_context.codeword_all_amps = -1;
 
-    memset(global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_total_codewords);
-    memset(global_context.cw_freq, 0, sizeof(size_t) * config.num_total_codewords);
-    memset(new_global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_total_codewords);
-    memset(new_global_context.cw_freq, 0, sizeof(size_t) * config.num_total_codewords);
+    memset(global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_codewords_per_sector);
+    memset(global_context.cw_freq, 0, sizeof(size_t) * config.num_codewords_per_sector);
+    memset(new_global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_codewords_per_sector);
+    memset(new_global_context.cw_freq, 0, sizeof(size_t) * config.num_codewords_per_sector);
 
     sector_factors = new complex<float>[num_sectors];
     memset(sector_factors, 0, sizeof(complex<float>) * num_sectors);
@@ -80,16 +80,16 @@ Cramer::
     assert(new_global_context.cw_freq != nullptr);
     assert(sector_factors != nullptr);
 
-    for (size_t i = 0; i < config.num_total_codewords; ++i)
+    for (size_t i = 0; i < config.num_codewords_per_sector; ++i)
         global_context.codewords_mappings[i].store(rhs.global_context.codewords_mappings[i].load());
 
-    for (size_t i = 0; i < config.num_total_codewords; ++i)
+    for (size_t i = 0; i < config.num_codewords_per_sector; ++i)
         new_global_context.codewords_mappings[i].store(rhs.new_global_context.codewords_mappings[i].load());
 
-    for (size_t i = 0; i < config.num_total_codewords; ++i)
+    for (size_t i = 0; i < config.num_codewords_per_sector; ++i)
         new_global_context.cw_freq[i].store(rhs.new_global_context.cw_freq[i].load());
 
-    for (size_t i = 0; i < config.num_total_codewords; ++i)
+    for (size_t i = 0; i < config.num_codewords_per_sector; ++i)
         new_global_context.cw_freq[i].store(rhs.new_global_context.cw_freq[i].load());
 
     for (size_t i = 0; i < config.num_sectors; ++i)
@@ -491,8 +491,8 @@ __m256 Cramer::
 }
 
 __m256 Cramer::
-    CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
-                                           __m256 imag)
+    CalcNearestCWToValAVX(__m256 real,
+                          __m256 imag)
 {
     __m256 magnitudes = _mm256_abs_cmplx(real, imag);
     __m256 phases = Sleef_atan2f8_u10avx2(imag, real);
@@ -500,9 +500,6 @@ __m256 Cramer::
     __m256 mask1_atan2 = _mm256_cmp_ps(phases, _mm256_setzero_ps(), _CMP_LT_OQ);
     phases = _mm256_or_ps(_mm256_and_ps(phases, mask_atan2),
                           _mm256_and_ps(mask1_atan2, _mm256_add_ps(phases, _mm256_set1_ps(2.0 * PI))));
-    __m256 size_of_sectors = _mm256_div_ps(_mm256_set1_ps(2.0 * PI), _mm256_set1_ps(config.num_sectors));
-    __m256 phase_sectors = _mm256_floor_ps(_mm256_div_ps(_mm256_fmod_ps(phases, _mm256_set1_ps(2.0 * PI)),
-                                                         size_of_sectors));
     __m256 codewords = ShiftCWToNearestPhaseAVX(phases, CalcCWForMagnitudeAVX(magnitudes));
 
     // Move the codewords so they are within range
@@ -513,10 +510,7 @@ __m256 Cramer::
     codewords = _mm256_or_ps(_mm256_and_ps(mask2, _mm256_set1_ps(num_codewords)),
                              _mm256_andnot_ps(mask12, codewords));
 
-    __m256 shifted_phase_sector = _mm256_cvtepi32_ps(_mm256_slli_epi32(_mm256_cvtps_epi32(phase_sectors),
-                                                                       static_cast<int>(config.num_bits_codewords)));
-
-    return _mm256_add_ps(shifted_phase_sector, codewords);
+    return codewords;
 }
 
 unsigned short Cramer::
@@ -554,8 +548,8 @@ unsigned short Cramer::
 
         if (codeword == 0)
             return 0;
-        else if (codeword >= config.num_total_codewords)
-            return config.num_total_codewords;
+        else if (codeword >= config.num_codewords_per_sector)
+            return config.num_codewords_per_sector;
 
         return codeword;
     }
@@ -571,12 +565,12 @@ __m256 Cramer::
         return _mm256_set1_ps(0);
     else
     {
-        __m256 codewords = CalcNearestCWToValWithEncodedSectorAVX(real, imag);
+        __m256 codewords = CalcNearestCWToValAVX(real, imag);
 
         __m256 mask1 = _mm256_cmp_ps(codewords, _mm256_setzero_ps(), _CMP_LE_OQ);
-        __m256 mask2 = _mm256_cmp_ps(_mm256_set1_ps(config.num_total_codewords - 1), codewords, _CMP_LT_OQ);
+        __m256 mask2 = _mm256_cmp_ps(_mm256_set1_ps(config.num_codewords_per_sector - 1), codewords, _CMP_LT_OQ);
         __m256 mask12 = _mm256_or_ps(mask1, mask2);
-        codewords = _mm256_or_ps(_mm256_and_ps(mask2, _mm256_set1_ps(config.num_total_codewords - 1)),
+        codewords = _mm256_or_ps(_mm256_and_ps(mask2, _mm256_set1_ps(config.num_codewords_per_sector - 1)),
                                  _mm256_andnot_ps(mask12, codewords));
 
         return codewords;
@@ -751,11 +745,12 @@ complex<float> *Cramer::
 
         for (size_t k = 0; k < 8; ++k)
         {
-            assert(codewords[leaked_cw + j + k] < config.num_total_codewords);
+            assert(codewords[leaked_cw + j + k] < config.num_codewords_per_sector);
             assert(block_offset + j + k < config.orig_vector_size);
-            new_global_context.codewords_mappings[codewords[leaked_cw + j + k]]
-                .store(new_global_context.codewords_mappings[codewords[leaked_cw + j + k]].load() + state_vector[j + k]);
-            ++new_global_context.cw_freq[codewords[leaked_cw + j + k]];
+            auto c = codewords[leaked_cw + j + k];
+            new_global_context.codewords_mappings[c]
+                .store(new_global_context.codewords_mappings[c].load() + state_vector[j + k]);
+            ++new_global_context.cw_freq[c];
         }
     }
 
@@ -820,7 +815,9 @@ complex<float> *Cramer::
 
             if (unpacked_codewords[j] == 0)
                 ++num_zero_amps;
-            decompressed_vector[k - block_offset] = global_context.codewords_mappings[unpacked_codewords[j]].load();
+            auto cw = unpacked_codewords[j] & (config.num_codewords_per_sector - 1);
+            auto sector_cw = unpacked_codewords[j] >> config.num_bits_codewords;
+            decompressed_vector[k - block_offset] = sector_factors[sector_cw] * global_context.codewords_mappings[cw].load();
         }
         starting_cw_reg = 0;
     }
@@ -866,9 +863,11 @@ void Cramer::
 
             // Do not need to update mapping because CZT don't change magnitude.
             // K and Lambda are only relevant for compression.
-            unpacked_codewords[j] &= config.num_codewords_per_sector - 1;
+            auto prev_sector = unpacked_codewords[j] >> config.num_bits_codewords;
+            unpacked_codewords[j] = (unpacked_codewords[j] & (config.num_codewords_per_sector - 1)) | (((prev_sector + sectors[sector_count]) % config.num_sectors) << config.num_bits_codewords);
+
+            // unpacked_codewords[j] &= config.num_codewords_per_sector - 1;
             //                cout << j << ":" << sectors[sector_count] << ", ";
-            unpacked_codewords[j] |= sectors[sector_count] << config.num_bits_codewords;
             ++sector_count;
             ++cw_reg;
         }
@@ -889,27 +888,22 @@ void Cramer::
 #pragma omp parallel for num_threads(config.num_threads)
     for (size_t c = 0; c < config.num_codewords_per_sector; ++c)
     {
-        for (size_t s = 0; s < config.num_sectors; ++s)
+        if (new_global_context.codewords_mappings[c].load() != complex<float>(0, 0))
         {
-            size_t cw = (s << config.num_bits_codewords) | c;
-
-            if (new_global_context.codewords_mappings[cw].load() != complex<float>(0, 0))
-            {
-                assert(new_global_context.cw_freq[cw] > 0);
-                auto new_cw_mapping = new_global_context.codewords_mappings[cw].load();
-                auto real_avg = new_cw_mapping.real() / new_global_context.cw_freq[cw];
-                auto imag_avg = new_cw_mapping.imag() / new_global_context.cw_freq[cw];
-                global_context.codewords_mappings[cw].store({real_avg, imag_avg});
-                global_context.cw_freq[cw] = 0;
-            }
+            assert(new_global_context.cw_freq[c] > 0);
+            auto new_cw_mapping = new_global_context.codewords_mappings[c].load();
+            auto real_avg = new_cw_mapping.real() / new_global_context.cw_freq[c];
+            auto imag_avg = new_cw_mapping.imag() / new_global_context.cw_freq[c];
+            global_context.codewords_mappings[c].store({real_avg, imag_avg});
+            global_context.cw_freq[c] = 0;
         }
     }
 
     // TODO: Figure out how to set this for QFT
     global_context.codeword_all_amps = -1;
     kAndLambdaInitialized.store(false);
-    memset(new_global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_total_codewords);
-    memset(new_global_context.cw_freq, 0, sizeof(size_t) * config.num_total_codewords);
+    memset(new_global_context.codewords_mappings, 0, sizeof(complex<float>) * config.num_codewords_per_sector);
+    memset(new_global_context.cw_freq, 0, sizeof(size_t) * config.num_codewords_per_sector);
 }
 
 complex<float> *Cramer::
@@ -933,12 +927,6 @@ complex<float> *Cramer::
 
         memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
     }
-
-    vector<vector<complex<float>>> cw_map_plots(config.num_total_codewords + 1);
-    vector<vector<float>> error_bins(2, vector<float>(config.num_codewords_reg, 0));
-    vector<vector<pair<short, size_t>>> cw_idx;
-    vector<float> phase_error_per_cw(config.num_total_codewords + 1, 0);
-    vector<float> plot_displacements(config.num_total_codewords + 1, 0);
 
     size_t block_size = config.num_threads * config.num_codewords_reg;
     size_t num_blocks = ceil((double)config.orig_vector_size / (double)block_size);
@@ -1003,11 +991,7 @@ complex<float> *Cramer::
 complex<float> *Cramer::
     SetAllAmpsToOne(complex<float> *state_vector)
 {
-    for (size_t i = 0; i < config.num_sectors; ++i)
-    {
-        size_t cw_sector = (i << config.num_bits_codewords) | config.num_codewords_per_sector - 1;
-        global_context.codewords_mappings[cw_sector] = sector_factors[i];
-    }
+    global_context.codewords_mappings[config.num_codewords_per_sector - 1] = 1;
     global_context.codeword_all_amps = config.num_codewords_per_sector - 1;
 
     // Delay writing of codewords.
@@ -1028,7 +1012,7 @@ void Cramer::
     float *__restrict t_cw_map = (float *)__builtin_assume_aligned(global_context.codewords_mappings, 64);
 
 #pragma omp parallel for num_threads(config.num_threads)
-    for (size_t i = 0; i < config.num_total_codewords; i += 4)
+    for (size_t i = 0; i < config.num_codewords_per_sector; i += 4)
     {
         __m256 t = _mm256_load_ps(t_cw_map + (2 * i));
         t = _mm256_mul_ps(t, rescaling);
@@ -1039,7 +1023,7 @@ void Cramer::
 size_t Cramer::
     GetCompressedVectorSize() const
 {
-    return config.compressed_vector_UL_size + config.num_total_codewords;
+    return config.compressed_vector_UL_size + config.num_codewords_per_sector;
 }
 
 double Cramer::

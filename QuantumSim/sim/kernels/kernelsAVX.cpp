@@ -242,7 +242,7 @@ void ApplyBlockOfCZTGatesAVXSeq(cmplx *__restrict amp,
     }
 }
 
-ofstream out("compressed.txt");
+// ofstream out("compressed.txt");
 
 pair<idx_size, idx_size>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
@@ -257,7 +257,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
                                   const int num_high_qubits,
                                   const ZeroOptMask &zero_opt_mask)
 {
-    out << " >>>>>>>>>>>>>>>>>>>>>>>>> ";
+    // out << " >>>>>>>>>>>>>>>>>>>>>>>>> ";
     const bool lo_H_bitmask_applicable = (lo_H_bitmask & (lo_X_bitmask | lo_Y_bitmask)) == (lo_X_bitmask | lo_Y_bitmask) && ((lo_X_bitmask | lo_Y_bitmask) != 0);
     const int bits_for_blk = num_qubits_amp - num_high_qubits;
     const idx_size amp_size = (1ull << num_qubits_amp);
@@ -299,22 +299,22 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
                                            amp, block_begin, block_size)
                                      : amp + block_begin;
 
-            out << endl;
-            for (size_t i = 0; i < block_size; ++i)
-            {
-                float real = active_amp[i].real();
-                float imag = active_amp[i].imag();
-                if (abs(active_amp[i].real()) < 1.0e-10)
-                {
-                    real = 0;
-                }
-                if (abs(active_amp[i].imag()) < 1.0e-10)
-                {
-                    imag = 0;
-                }
-                out << complex<float>(real, imag) << "\n";
-            }
-            out << endl;
+            // out << endl;
+            // for (size_t i = 0; i < block_size; ++i)
+            // {
+            //     float real = active_amp[i].real();
+            //     float imag = active_amp[i].imag();
+            //     if (abs(active_amp[i].real()) < 1.0e-10)
+            //     {
+            //         real = 0;
+            //     }
+            //     if (abs(active_amp[i].imag()) < 1.0e-10)
+            //     {
+            //         imag = 0;
+            //     }
+            //     out << complex<float>(real, imag) << "\n";
+            // }
+            // out << endl;
 
             phases = XYFastTransformLowQ(active_amp,
                                          lo_X_bitmask, lo_Y_bitmask, lo_H_bitmask,
@@ -750,7 +750,7 @@ void ApplyCRzGatesAVX(cmplx *__restrict amp,
     }
 }
 
-void RescaleAndApplyGlobalICounter(cmplx *__restrict amp,
+void RescaleAndApplyGlobalICounter(cmplx *&__restrict amp,
                                    idx_size &global_factor_power,
                                    idx_size &global_i_counter,
                                    const size_t amp_size)

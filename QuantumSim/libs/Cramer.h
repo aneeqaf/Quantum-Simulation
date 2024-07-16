@@ -190,8 +190,8 @@ private:
                                     __m256 codeword) const;
     __m256 GetAdjustedPhaseAVX(__m256 phases,
                                __m256 phase_sectors) const;
-    __m256 CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
-                                                  __m256 imag);
+    __m256 CalcNearestCWToValAVX(__m256 real,
+                                 __m256 imag);
     unsigned short CalcNearestCWToVal(complex<double> val) const;
     __m256 CalcNearestCWToValAVX(__m256 real,
                                  __m256 imag) const;

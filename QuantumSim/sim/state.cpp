@@ -17,7 +17,7 @@ FullAmpStateVector::
                                                zero_opt_mask(num_qubits), all_zeros(false)
 {
     amp_size = 1ull << qubits;
-    if (!config->compress || sim_type != Config::SimType::FullState)
+    if (!config->compress)
     {
         if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
         {
@@ -43,7 +43,7 @@ FullAmpStateVector::
         memset(amp, 0, amp_size * sizeof(amp));
         amp[0] = 1;
     }
-    if (config->compress)
+    else
     {
         cramer = new Cramer(amp_size,
                             config->cramer_num_codewords, config->num_threads,
@@ -614,11 +614,11 @@ int FullAmpStateVector::
                                                    num_threads, th, zero_opt_mask);
     if (cramer)
     {
-        compressed = true;
+        compressed = false;
     }
 
-    PrintStateVector("afterCZT");
-    compressed = false;
+    // PrintStateVector("afterCZT");
+    // compressed = false;
 
     global_i_counter += phase.first;
     global_factor_power += phase.second;
@@ -700,23 +700,23 @@ int FullAmpStateVector::
         }
     }
 
-    if (cramer)
-        compressed = true;
+    // if (cramer)
+    //     compressed = true;
 
-    PrintStateVector("afterXYH");
+    // PrintStateVector("afterXYH");
 
-    if (cramer)
-    {
-        CompressStateVector();
-    }
+    // if (cramer)
+    // {
+    //     CompressStateVector();
+    // }
 
-    if (cramer)
-    {
-        DecompressStateVector();
-        compressed = true;
-    }
+    // if (cramer)
+    // {
+    //     DecompressStateVector();
+    //     compressed = true;
+    // }
 
-    PrintStateVector("afterALL");
+    // PrintStateVector("afterALL");
 
     if (cramer)
     {
