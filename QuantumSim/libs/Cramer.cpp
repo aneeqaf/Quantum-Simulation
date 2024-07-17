@@ -688,14 +688,11 @@ __attribute__((always_inline)) inline void Cramer::
 
     __m256i packed_cw = PackCWIn256BitsAVXReg(codewords);
 
-#pragma omp critical
-    {
-        __m256i compressed_reg = _mm256_load_ps((float *)(compressed_vector + compressed_v_offset));
-        compressed_reg = _mm256_and_ps(~mask, compressed_reg);
-        packed_cw = _mm256_and_ps(mask, packed_cw);
-        compressed_reg = _mm256_or_ps(compressed_reg, packed_cw);
-        _mm256_store_ps((float *)(compressed_vector + compressed_v_offset), compressed_reg);
-    }
+    __m256i compressed_reg = _mm256_load_ps((float *)(compressed_vector + compressed_v_offset));
+    compressed_reg = _mm256_and_ps(~mask, compressed_reg);
+    packed_cw = _mm256_and_ps(mask, packed_cw);
+    compressed_reg = _mm256_or_ps(compressed_reg, packed_cw);
+    _mm256_store_ps((float *)(compressed_vector + compressed_v_offset), compressed_reg);
 }
 
 complex<float> *Cramer::

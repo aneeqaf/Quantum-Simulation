@@ -1082,7 +1082,7 @@ void FullAmpStateVector::
     Time rescale_time;
     rescale_time.StartTime();
 
-    ::RescaleAndApplyGlobalICounter(amp, global_factor_power, global_i_counter, amp_size);
+    ::RescaleAndApplyGlobalICounter(amp, global_factor_power, global_i_counter, amp_size, num_threads);
 
     time_by_category.rescale += rescale_time.GetElapsedTime();
 }

@@ -668,6 +668,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 void RescaleAndApplyGlobalICounter(cmplx *&__restrict amp,
                                    idx_size &global_factor_power,
                                    idx_size &global_i_counter,
-                                   const size_t amp_size);
+                                   const size_t amp_size,
+                                   const size_t num_threads = 8);
 
 #endif /* kernelsAVX_h */

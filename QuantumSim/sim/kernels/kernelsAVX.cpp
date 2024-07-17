@@ -127,10 +127,12 @@ ApplyCZTGatesInABlock(float *t_amp,
     bool negate_Z = false;
     idx_size prev_gc = 0;
 
+    const idx_size block_end = block_begin + block_size;
+
     // parity of gray code switches between odd and even
     if (block_begin)
     {
-        prev_gc = block_begin;
+        prev_gc = (block_begin - 1) ^ ((block_begin - 1) >> 1);
         idx_size gate_count = 0;
         for (idx_size i = 0; i < (idx_size)num_qubits_amp; ++i)
         {
@@ -142,16 +144,16 @@ ApplyCZTGatesInABlock(float *t_amp,
     }
 
     // Use `negate_Z` to enable a Gray-code optimized loop.
-    for (idx_size count = 0; count + 15 < block_size; count += 16)
+    for (idx_size count = block_begin; count + 15 < block_end; count += 16)
     {
         idx_size num_iters = count / 16;
         idx_size offset_idx = num_iters ^ (num_iters >> 1);
 
-        idx_size gc0 = block_begin + (count ^ (count >> 1));
-        idx_size gc4 = block_begin + ((count + 4) ^ ((count + 4) >> 1));
+        idx_size gc0 = count ^ (count >> 1);
+        idx_size gc4 = (count + 4) ^ ((count + 4) >> 1);
         const idx_size gc_first[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
-        gc0 = block_begin + ((count + 8) ^ ((count + 8) >> 1));
-        gc4 = block_begin + ((count + 12) ^ ((count + 12) >> 1));
+        gc0 = (count + 8) ^ ((count + 8) >> 1);
+        gc4 = (count + 12) ^ ((count + 12) >> 1);
         const idx_size gc_second[8] = {gc0, gc0 ^ 1, gc0 ^ 3, gc0 ^ 2, gc4, gc4 ^ 1, gc4 ^ 3, gc4 ^ 2};
         idx_size prev_gc1 = gc_first[7];
 
@@ -163,7 +165,6 @@ ApplyCZTGatesInABlock(float *t_amp,
 
         if (zero_opt_mask.CheckIfAllNonZeroes() || zero_opt_mask.CheckIfBlockIsNotZero(offset_idx * 16, 16))
         {
-
             if (cramer)
             {
                 if ((gc_first[0] & 8) == 0)
@@ -284,49 +285,58 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
             throw "Unable to allocate space for decompressed vector";
     }
 
-#pragma omp parallel for schedule(guided) num_threads(1)
+#pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size)
     {
+        idx_size num_iters = block_begin / block_size;
+        idx_size offset_idx = num_iters ^ (num_iters >> 1);
+        idx_size curr_block_offset = offset_idx * block_size;
+
         if (zero_opt_mask.CheckIfAllNonZeroes() ||
-            zero_opt_mask.CheckIfBlockIsNotZero(block_begin, block_size))
+            zero_opt_mask.CheckIfBlockIsNotZero(curr_block_offset, block_size))
         {
 
-            ApplyCZTGatesInABlock(t_amp, cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
-                                  num_threads, block_begin, block_size, zero_opt_mask);
+#pragma omp critical
+            {
+                ApplyCZTGatesInABlock(t_amp, cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+                                      num_threads, block_begin, block_size, zero_opt_mask);
+            }
 
             auto active_amp = cramer ? cramer->CramerBlockDecompress(
                                            active_block_amps[(block_begin / block_size) % num_threads],
-                                           amp, block_begin, block_size)
-                                     : amp + block_begin;
+                                           amp, curr_block_offset, block_size)
+                                     : amp + curr_block_offset;
 
-            // out << endl;
-            // for (size_t i = 0; i < block_size; ++i)
-            // {
-            //     float real = active_amp[i].real();
-            //     float imag = active_amp[i].imag();
-            //     if (abs(active_amp[i].real()) < 1.0e-10)
-            //     {
-            //         real = 0;
-            //     }
-            //     if (abs(active_amp[i].imag()) < 1.0e-10)
-            //     {
-            //         imag = 0;
-            //     }
-            //     out << complex<float>(real, imag) << "\n";
-            // }
-            // out << endl;
+            // #pragma omp critical
+            //             {
+            //                 out << curr_block_offset << endl;
+            //                 for (size_t i = 0; i < block_size; ++i)
+            //                 {
+            //                     float real = active_amp[i].real();
+            //                     float imag = active_amp[i].imag();
+            //                     if (abs(active_amp[i].real()) < 1.0e-10)
+            //                     {
+            //                         real = 0;
+            //                     }
+            //                     if (abs(active_amp[i].imag()) < 1.0e-10)
+            //                     {
+            //                         imag = 0;
+            //                     }
+            //                     out << complex<float>(real, imag) << "\n";
+            //                 }
+            //                 out << endl;
+            //             }
 
             phases = XYFastTransformLowQ(active_amp,
                                          lo_X_bitmask, lo_Y_bitmask, lo_H_bitmask,
                                          block_bits, num_threads);
 
             if (new_lo_H_bitmask)
-                ApplyHGatesIteratively(active_amp, block_bits,
-                                       num_threads, new_lo_H_bitmask);
+                ApplyHGatesIteratively(active_amp, block_bits, num_threads, new_lo_H_bitmask);
 
             if (cramer)
             {
-                memcpy(decompressed_vector + block_begin, active_amp, sizeof(complex<float>) * block_size);
+                memcpy(decompressed_vector + curr_block_offset, active_amp, sizeof(complex<float>) * block_size);
             }
         }
         //        else {
@@ -753,7 +763,8 @@ void ApplyCRzGatesAVX(cmplx *__restrict amp,
 void RescaleAndApplyGlobalICounter(cmplx *&__restrict amp,
                                    idx_size &global_factor_power,
                                    idx_size &global_i_counter,
-                                   const size_t amp_size)
+                                   const size_t amp_size,
+                                   const size_t num_threads)
 {
     float rescaling_factor = 1.0 / pow(2, (global_factor_power / 2));
     if ((global_factor_power % 2) == 1)

@@ -26,6 +26,7 @@
 #include <vector>
 #include <utility>
 // #include <sleef.h>
+#include "omp.h"
 #include <immintrin.h>
 #include <sleefinline_avx2.h>
 
