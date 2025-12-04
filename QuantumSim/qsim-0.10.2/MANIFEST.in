@@ -1,5 +1,0 @@
-include requirements.txt
-include CMakeLists.txt
-
-graft pybind_interface
-graft lib

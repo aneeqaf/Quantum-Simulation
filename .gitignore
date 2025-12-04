@@ -12,3 +12,10 @@ qubit_partition/
 *.png
 *.pem
 *.pdf
+test/
+msft_quantum/
+ProjectQ/
+qiskit-terra/
+.vagrant/
+Vagrantfile 
+qsim-0.10.2/
