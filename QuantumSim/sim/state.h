@@ -19,6 +19,7 @@ private:
     double max_prob;
     double min_prob;
     cmplx* amp;
+    Cramer* cramer;
     idx_size amp_size;
     idx_size global_factor_power;
     idx_size global_i_counter;
@@ -26,7 +27,7 @@ private:
     ZeroOptMask zero_opt_mask; //0 is most significant
     bool all_zeros;
 
-    bitset<128> FormBitmask(const vector<int>& qubits);
+    bitset<128> FormBitmask(const vector<idx_size>& qubits);
     void TransferOddBitsFromHiQubitsBM(int& th,
                                        idx_size& hi_q_X_bitmask,
                                        idx_size& hi_q_Y_bitmask,
@@ -59,20 +60,11 @@ private:
                                     int& num_Y_bits);
 public:
     
-    int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                              idx_size& cz_path,
-                              const idx_size cz_path_len,
-                              const idx_size suffix_size,
-                              const bitset<128>* __restrict CZ_bitmasks,
-                              const bitset<128> T_bitmasks[2],
-                              const bitset<128>& H_bitmask,
-                              const bool last_cycle = false);
-    void ApplyNonCGate(const int gate_qubit,
-                       const Gate::Type gate_type,
-                       const Gate& g = {});
+    void ApplyNonCGate(const idx_size gate_qubit,
+                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
-    void ApplyCGate(const int num_controls,
-                   const vector<int>& gate_qubits,
+    void ApplyCGate(const idx_size num_controls,
+                   const vector<idx_size>& gate_qubits,
                    const Gate& g,
                    const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,
@@ -93,13 +85,10 @@ public:
                                   const bitset<128>& H_bitmask,
                                   const bitset<128>* __restrict CZ_bitmasks,
                                   const bitset<128> T_bitmasks[2],
-                                  int th,
-                                  bool last_cycle = false);
+                                  int th);
     void ApplyCZDecompositions(const int gate_qubit,
                                const Gate::Type gate_type);
     void ApplyCZDecompositionDist(const idx_size* __restrict xCZ_bitmasks);
-    void CopyState(const FullAmpStateVector& rhs);
-    void CopyMemberVars(const FullAmpStateVector& rhs);
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
@@ -133,6 +122,12 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -141,12 +136,11 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
     FullAmpStateVector(): max_prob(numeric_limits<double>::min()),
-        min_prob(numeric_limits<double>::max()), amp(nullptr), amp_size(0),
-        global_factor_power(0), global_i_counter(0),
-        num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false) {}
+    min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr), global_factor_power(0),
+    global_i_counter(0), num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false) {}
+    
     FullAmpStateVector(const int qubits);
     FullAmpStateVector(cmplx* a, const idx_size size);
     FullAmpStateVector(const FullAmpStateVector& rhs);

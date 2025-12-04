@@ -50,17 +50,22 @@ qp(cut_type == QubitPartition::Cuts::Horizontal ? QubitPartition(cut_type, qubit
 }
 
 TensorProductStateVector::
-TensorProductStateVector(const TensorProductStateVector& rhs) : qp(rhs.qp), cut_type(rhs.cut_type),
-state_a(new FullAmpStateVector(*(rhs.state_a))), state_b(new FullAmpStateVector(*(rhs.state_b)))
+TensorProductStateVector(const TensorProductStateVector& rhs) : qp(rhs.qp), cut_type(rhs.cut_type)
 {
     sim_type = rhs.sim_type;
+    compressed = rhs.compressed;
+    
+    state_a = new FullAmpStateVector(*(rhs.state_a));
+    state_b = new FullAmpStateVector(*(rhs.state_b));
 }
 
 TensorProductStateVector::
 ~TensorProductStateVector()
 {
-    delete state_a;
-    delete state_b;
+    if (state_a != nullptr)
+        delete state_a;
+    if (state_b != nullptr)
+        delete state_b;
 }
 
 void TensorProductStateVector::
@@ -229,13 +234,13 @@ void TensorProductStateVector::
 HandleCZApprox(const bitset<128> *CZ_bitmasks)
 {
     if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D5, Gate::Type::CZ_D3);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d5, Gate::Type::cz_d3);
     else if (sim_type == Config::SimType::Approx1_101) //compute norm and divide by the norm
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D1, Gate::Type::CZ_D2);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d1, Gate::Type::cz_d2);
     else if (sim_type == Config::SimType::Approx1110)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D3, Gate::Type::CZ_D4);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d3, Gate::Type::cz_d4);
     else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::CZ_D6, Gate::Type::CZ_D7);
+        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d6, Gate::Type::cz_d7);
     else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV))
              && book_keep){
 //        idx_size count = CountXCZGates(CZ_bitmasks);
@@ -250,74 +255,6 @@ HandleCZApprox(const bitset<128> *CZ_bitmasks)
 //            data_per_cycles.xCZ_H.push_back(0);
 //        }
     }
-}
-
-int TensorProductStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    
-    const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
-    
-    if (partition_to_sim == 'a' || partition_to_sim == 'x') {
-        Time time;
-        time.StartTime();
-        
-        bitset<128> CZ_bitmasks_a[num_q_a];
-        bitset<128> T_bitmasks_a[2] = {0};
-        
-        for (int i = 0; i < num_q_a; ++i)
-            CZ_bitmasks_a[i] = 0;
-        
-        bool applyCZ_a = ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks);
-        for (int i = 0; i < 2; ++i)
-            T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
-        bitset<128> stateA_Hbitmask = Project1QBitmask(H_bitmask, qp, 0, true);
-
-        time_by_category.CZ_T += time.GetElapsedTime();
-        
-        if (applyCZ_a || T_bitmasks_a[0] != 0 || stateA_Hbitmask != 0)
-            state_a -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                             cz_path_len, suffix_size,
-                                             CZ_bitmasks_a, T_bitmasks_a,
-                                             stateA_Hbitmask, last_cycle);
-    }
-    if (partition_to_sim == 'b' || partition_to_sim == 'x') {
-        Time time;
-        time.StartTime();
-        
-        bitset<128> CZ_bitmasks_b[num_q_b];
-        bitset<128> T_bitmasks_b[2] = {0};
-        
-        for (int i = 0; i < num_q_b; ++i)
-            CZ_bitmasks_b[i] = 0;
-        
-        bool applyCZ_b = ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks);
-        for (int i = 0; i < 2; ++i)
-            T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
-        bitset<128> stateB_Hbitmask = Project1QBitmask(H_bitmask, qp, 1, true);
-
-        time_by_category.CZ_T += time.GetElapsedTime();
-
-        if (applyCZ_b || T_bitmasks_b[0] != 0 || stateB_Hbitmask != 0)
-            state_b -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                             cz_path_len, suffix_size,
-                                             CZ_bitmasks_b, T_bitmasks_b,
-                                             stateB_Hbitmask, last_cycle);
-    }
-//    state_a -> PrintStateVector() ; cout << endl;
-//    state_b -> PrintStateVector() ; cout << endl;
-//    // TODO : Fix the book keeping for approximation
-    
-    HandleCZApprox(CZ_bitmasks);
-    
-    return -1;
 }
 
 idx_size TensorProductStateVector::
@@ -390,18 +327,17 @@ ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
 }
 
 void TensorProductStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
     int block = qp.globalToBlock(gate_qubit);
     int num_q_1_partition = qp.getNumQubitsInBlock(block) - 1;
 
     const int projected_gate_q = num_q_1_partition - qp.globalToLocal(gate_qubit);
     if (qp.globalToBlock(gate_qubit) == 0)
-        state_a -> ApplyNonCGate(projected_gate_q, gate_type, g);
+        state_a -> ApplyNonCGate(projected_gate_q, gate_type);
     else
-        state_b -> ApplyNonCGate(projected_gate_q, gate_type, g);
+        state_b -> ApplyNonCGate(projected_gate_q, gate_type);
 }
 
 void TensorProductStateVector::
@@ -415,8 +351,8 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 
 //TODO
 void TensorProductStateVector::
-ApplyCGate(const int num_controls,
-           const vector<int>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {
@@ -428,8 +364,8 @@ ApplyMergedXYGate(const Gate& gate1,
                   const Gate& gate2)
 {
     bitset<128> temp1 = 0, temp2 = 0;
-    temp1[gate1.qubits[0]] = 1;
-    temp2[gate2.qubits[0]] = 1;
+    temp1[gate1.GetQubits()[0]] = 1;
+    temp2[gate2.GetQubits()[0]] = 1;
     
     const bitset<128> a_qubits_bitmask = qp.getBlockBitmask(0), b_qubits_bitmask = qp.getBlockBitmask(1);
 
@@ -439,14 +375,14 @@ ApplyMergedXYGate(const Gate& gate1,
         state_b -> ApplyMergedXYGate(gate1, gate2);
     else {
         if ((temp1 & a_qubits_bitmask) != 0)
-            state_a -> ApplyNonCGate(gate1.qubits[0], (Gate::Type)gate1.ids.back());
+            state_a -> ApplyNonCGate(gate1.GetQubits()[0], gate1.GetType());
         else
-            state_b -> ApplyNonCGate(gate1.qubits[0], (Gate::Type)gate1.ids.back());
+            state_b -> ApplyNonCGate(gate1.GetQubits()[0], gate1.GetType());
 
         if ((temp2 & b_qubits_bitmask) != 0)
-            state_a -> ApplyNonCGate(gate2.qubits[0], (Gate::Type)gate2.ids.back());
+            state_a -> ApplyNonCGate(gate2.GetQubits()[0], gate2.GetType());
         else
-            state_b -> ApplyNonCGate(gate2.qubits[0], (Gate::Type)gate2.ids.back());
+            state_b -> ApplyNonCGate(gate2.GetQubits()[0], gate2.GetType());
     }
 }
 
@@ -477,8 +413,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {
     const int num_q_a = state_a -> GetNumQubits(), num_q_b = state_b -> GetNumQubits();
 
@@ -487,13 +422,13 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, qp, 0, true);
         bitset<128> stateA_Hbitmask = Project1QBitmask(H_bitmask, qp, 0, true);
         
-        bitset<128> CZ_bitmasks_a[num_q_a];
+        bitset<128> CZ_bitmasks_a[num_q_a + 1];
         bitset<128> T_bitmasks_a[2] = {0};
         
-        for (int i = 0; i < num_q_a; ++i)
+        for (int i = 0; i <= num_q_a; ++i)
             CZ_bitmasks_a[i] = 0;
         
-        ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks);
+        CZ_bitmasks_a[num_q_a] = ProjectCZBitmask(CZ_bitmasks_a, qp, 0, CZ_bitmasks) ? 1 : 0;
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
         
@@ -501,20 +436,20 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                               cz_path_len, suffix_size,
                                               stateA_Xbitmask, stateA_Ybitmask,
                                               stateA_Hbitmask, CZ_bitmasks_a,
-                                              T_bitmasks_a, th, last_cycle);
+                                              T_bitmasks_a, th);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x') {
         bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
         bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, qp, 1, true);
         bitset<128> stateB_Hbitmask = Project1QBitmask(H_bitmask, qp, 1, true);
         
-        bitset<128> CZ_bitmasks_b[num_q_b];
+        bitset<128> CZ_bitmasks_b[num_q_b + 1];
         bitset<128> T_bitmasks_b[2] = {0};
         
-        for (int i = 0; i < num_q_b; ++i)
+        for (int i = 0; i <= num_q_b; ++i)
             CZ_bitmasks_b[i] = 0;
         
-        ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks);
+        CZ_bitmasks_b[num_q_b] = ProjectCZBitmask(CZ_bitmasks_b, qp, 1, CZ_bitmasks) ? 1 : 0;
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
         
@@ -522,32 +457,10 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                                               cz_path_len, suffix_size,
                                               stateB_Xbitmask, stateB_Ybitmask,
                                               stateB_Hbitmask, CZ_bitmasks_b,
-                                              T_bitmasks_b, th, last_cycle);
+                                              T_bitmasks_b, th);
     }
     
     return -1;
-}
-
-void TensorProductStateVector::
-CopyState(const TensorProductStateVector& rhs)
-{
-    qp = rhs.qp;
-    cut_type = rhs.cut_type;
-    sim_type = rhs.sim_type;
-    
-    state_a -> CopyState(*rhs.state_a);
-    state_b -> CopyState(*rhs.state_b);
-}
-
-void TensorProductStateVector::
-CopyMemberVars(const TensorProductStateVector& rhs)
-{
-    qp = rhs.qp;
-    cut_type = rhs.cut_type;
-    sim_type = rhs.sim_type;
-    
-    state_a -> CopyMemberVars(*rhs.state_a);
-    state_b -> CopyMemberVars(*rhs.state_b);
 }
 
 cmplx TensorProductStateVector::
@@ -669,7 +582,7 @@ CalculateAverageInaccuracy(double norm) const
 double TensorProductStateVector::
 CalculateMeanEntropy() const
 {
-    const idx_size a_size = 1ull << qp.getNumQubitsInBlock(0), b_size = 1ull << qp.getNumQubitsInBlock(1), range = sampling_factor;
+    const idx_size a_size = 1ull << qp.getNumQubitsInBlock(0), b_size = 1ull << qp.getNumQubitsInBlock(1), range = SAMPLING_FACTOR;
     auto& state_v_a = (*state_a), state_v_b = (*state_b);
     double entropy = 0.0;
     const idx_size num_ranges_a = a_size/range, num_ranges_b = b_size/range;
@@ -837,7 +750,7 @@ PrintStateVector(const string& outfile,
             file << imag(amp) << "j";
         file << "\n";
         
-        off = 1 + rand() % sampling_factor;
+        off = 1 + rand() % SAMPLING_FACTOR;
     }
 }
 
@@ -882,7 +795,7 @@ PrintProbabilities(const string& out_file,
         
         file << prob << "\n";
         
-        off = 1 + rand() % sampling_factor;
+        off = 1 + rand() % SAMPLING_FACTOR;
     }
 }
 
@@ -905,11 +818,65 @@ ReadFromDisk(const string& filename)
 }
 
 void TensorProductStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const TensorProductStateVector& amp = (const TensorProductStateVector&)rhs;
-    qp = amp.qp;
-    cut_type = amp.cut_type;
-    state_a -> SetMemberVariables(*amp.state_a);
-    state_b -> SetMemberVariables(*amp.state_b);
+    const TensorProductStateVector& t_rhs = (const TensorProductStateVector&)rhs;
+    qp = t_rhs.qp;
+    cut_type = t_rhs.cut_type;
+    sim_type = t_rhs.sim_type;
+  
+    state_a -> CopyState(*t_rhs.state_a);
+    state_b -> CopyState(*t_rhs.state_b);
+}
+
+void TensorProductStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const TensorProductStateVector& t_rhs = (const TensorProductStateVector&)rhs;
+    qp = t_rhs.qp;
+    cut_type = t_rhs.cut_type;
+    compressed = t_rhs.compressed;
+    sim_type = t_rhs.sim_type;
+    
+    state_a -> CopyMemberVars(*t_rhs.state_a);
+    state_b -> CopyMemberVars(*t_rhs.state_b);
+}
+
+void TensorProductStateVector::
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
+{
+    if (book_keep)
+        compressed_vector_ptrs.push_back({nullptr, nullptr});
+        
+    partition_to_sim = 'a';
+    state_a -> CompressStateVector(num_codewords, p_rejection);
+    partition_to_sim = 'b';
+    state_b -> CompressStateVector(num_codewords, p_rejection);
+    partition_to_sim = 'x';
+    
+    compressed = true;
+}
+
+void TensorProductStateVector::
+DecompressStateVector()
+{
+    state_a -> DecompressStateVector();
+    state_b -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void TensorProductStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    const TensorProductStateVector& t_rhs = (const TensorProductStateVector&)rhs;
+    qp = t_rhs.qp;
+    cut_type = t_rhs.cut_type;
+    sim_type = t_rhs.sim_type;
+    
+    state_a -> DecompressAndCopyAnotherState(*t_rhs.state_a);
+    state_b -> DecompressAndCopyAnotherState(*t_rhs.state_b);
+    
+    compressed = false;
 }

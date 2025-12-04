@@ -32,6 +32,7 @@ AdaptiveStateVector(const AdaptiveStateVector& rhs)
         sumOfTensors = new SumOfTensorsProductsStateVector(*(rhs.sumOfTensors));
     }
     
+    compressed = rhs.compressed;
     total_q = rhs.total_q;
 }
 
@@ -44,6 +45,7 @@ operator=(const AdaptiveStateVector& rhs)
     else
         swap(sumOfTensors, temp.sumOfTensors);
     
+    compressed = rhs.compressed;
     total_q = rhs.total_q;
     return *this;
 }
@@ -51,62 +53,13 @@ operator=(const AdaptiveStateVector& rhs)
 AdaptiveStateVector::
 ~AdaptiveStateVector()
 {
-    delete full_state;
-    delete sumOfTensors;
-}
-
-int AdaptiveStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    int last_xCZ_idx = -1;
-    if (full_state) {
-//        if (book_keep) {
-//            data_per_cycles.xCZ_H.push_back(0);
-//            data_per_cycles.xCZ_V.push_back(0);
-//            data_per_cycles.addends.push_back(0);
-//            data_per_cycles.memory.push_back(GetMemUsage());
-//        }
-        full_state -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                            cz_path_len, suffix_size,
-                                            CZ_bitmasks, T_bitmasks, last_cycle);
-    }
-    else {
-        last_xCZ_idx = sumOfTensors -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                                            cz_path_len, suffix_size, CZ_bitmasks,
-                                                            T_bitmasks, H_bitmask, last_cycle);
-        
-        if (sumOfTensors -> GetNumAddends() > 10) {
-            Time time;
-            time.StartTime();
-            
-            //Add support for finding the cut type
-
-//            if (sumOfTensors -> GetNumQInBlock(0) > 4 && sumOfTensors -> GetNumQInBlock(1) > 4
-//                && sumOfTensors -> GetSimType() != Config::SimType::LosslessV)
-//                full_state = sumOfTensors -> ConvertSumOfTensorsToStateAVX();
-//            else
-                full_state = sumOfTensors -> ConvertSumOfTensorsToState();
-           
-            time_by_category.conversion += time.GetElapsedTime();
-            
-            delete sumOfTensors;
-            sumOfTensors = nullptr;
-        }
-    }
-    return last_xCZ_idx;
+    if (full_state != nullptr) delete full_state;
+    if (sumOfTensors != nullptr) delete sumOfTensors;
 }
 
 void AdaptiveStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
     if (full_state)
         full_state -> ApplyNonCGate(gate_qubit, gate_type);
@@ -125,8 +78,8 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 
 //TODO
 void AdaptiveStateVector::
-ApplyCGate(const int num_controls,
-           const vector<int>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {
@@ -165,35 +118,34 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {
-    int last_xCZ_idx = -1;
+    int xCZ_applied_in_cycle = -1;
     if (full_state) {
-//        if (book_keep) {
-//            data_per_cycles.xCZ_H.push_back(0);
-//            data_per_cycles.xCZ_V.push_back(0);
-//            data_per_cycles.addends.push_back(0);
-//            data_per_cycles.memory.push_back(GetMemUsage());
-//        }
+        //        if (book_keep) {
+        //            data_per_cycles.xCZ_H.push_back(0);
+        //            data_per_cycles.xCZ_V.push_back(0);
+        //            data_per_cycles.addends.push_back(0);
+        //            data_per_cycles.memory.push_back(GetMemUsage());
+        //        }
         full_state -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
                                                  cz_path_len, suffix_size,
                                                  X_bitmask,Y_bitmask,
                                                  H_bitmask, CZ_bitmasks,
-                                                 T_bitmasks, th, last_cycle);
+                                                 T_bitmasks, th);
     }
     else {
         if (cz_path_len == 0)
             sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
                                                        cz_path_len, suffix_size,
                                                        X_bitmask, Y_bitmask,
-                                                        H_bitmask, CZ_bitmasks,
-                                                        T_bitmasks, th, last_cycle);
+                                                       H_bitmask, CZ_bitmasks,
+                                                       T_bitmasks, th);
         else
-            last_xCZ_idx = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
-                                                                      suffix_size, X_bitmask, Y_bitmask,
-                                                                      H_bitmask, CZ_bitmasks,
-                                                                      T_bitmasks, th, last_cycle);
+            xCZ_applied_in_cycle = sumOfTensors -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
+                                                                              suffix_size, X_bitmask, Y_bitmask,
+                                                                              H_bitmask, CZ_bitmasks,
+                                                                              T_bitmasks, th);
         
         if (sumOfTensors -> GetNumAddends() > 10) {
             Time time;
@@ -207,22 +159,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
             sumOfTensors = nullptr;
         }
     }
-    return last_xCZ_idx;
-}
-
-void AdaptiveStateVector::
-CopyState(const AdaptiveStateVector& rhs)
-{
-    if (rhs.full_state) {
-        full_state -> CopyState(*rhs.full_state);
-        sumOfTensors = nullptr;
-    }
-    else {
-        full_state = nullptr;
-        sumOfTensors -> CopyState(*(rhs.sumOfTensors));
-    }
-    
-    total_q = rhs.total_q;
+    return xCZ_applied_in_cycle;
 }
 
 cmplx AdaptiveStateVector::
@@ -482,12 +419,67 @@ ReadFromDisk(const string& filename)
 }
 
 void AdaptiveStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const AdaptiveStateVector& amp = (const AdaptiveStateVector&)rhs;
-    total_q = amp.total_q;
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    if (t_rhs.full_state) {
+        full_state -> CopyState(*t_rhs.full_state);
+        sumOfTensors = nullptr;
+    }
+    else {
+        full_state = nullptr;
+        sumOfTensors -> CopyState(*(t_rhs.sumOfTensors));
+    }
+    
+    total_q = t_rhs.total_q;
+}
+
+void AdaptiveStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    total_q = t_rhs.total_q;
+    compressed = rhs.compressed;
+    
     if (full_state)
-        full_state -> SetMemberVariables(*amp.full_state);
+        full_state -> CopyMemberVars(*t_rhs.full_state);
     else
-        sumOfTensors -> SetMemberVariables(*amp.sumOfTensors);
+        sumOfTensors -> CopyMemberVars(*t_rhs.sumOfTensors);
+}
+
+void AdaptiveStateVector::
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
+{
+    if (full_state)
+        full_state -> CompressStateVector(num_codewords, p_rejection);
+    else
+        sumOfTensors -> CompressStateVector(num_codewords, p_rejection);
+    
+    compressed = true;
+}
+
+void AdaptiveStateVector::
+DecompressStateVector()
+{
+    if (full_state)
+        full_state -> DecompressStateVector();
+    else
+        sumOfTensors -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void AdaptiveStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    const AdaptiveStateVector& t_rhs = (const AdaptiveStateVector&)rhs;
+    total_q = t_rhs.total_q;
+    
+    if (full_state)
+        full_state -> DecompressAndCopyAnotherState(*t_rhs.full_state);
+    else
+        sumOfTensors -> DecompressAndCopyAnotherState(*t_rhs.sumOfTensors);
+    
+    compressed = false;
 }

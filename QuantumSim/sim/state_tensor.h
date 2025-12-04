@@ -38,24 +38,15 @@ public:
                                         bitset<128>* __restrict xCZ_bitmasks_path0_D2D1,
                                         bitset<128>* __restrict xCZ_bitmasks_path1_D3D4,
                                         bitset<128>* __restrict xCZ_bitmasks_path1_D4D3);
-    int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                              idx_size& cz_path,
-                              const idx_size cz_path_len,
-                              const idx_size suffix_size,
-                              const bitset<128>* __restrict CZ_bitmasks,
-                              const bitset<128>  T_bitmasks[2],
-                              const bitset<128>& H_bitmask,
-                              const bool last_cycle = false);
     idx_size CountXCZGates(const bitset<128>* __restrict CZ_bitmasks);
     void ApplyXCZGateApprox(const bitset<128>* __restrict CZ_bitmasks,
                             const Gate::Type CZ_D_A,
                             const Gate::Type CZ_D_B);
-    void ApplyNonCGate(const int gate_qubit,
-                       const Gate::Type gate_type,
-                       const Gate& g = {});
+    void ApplyNonCGate(const idx_size gate_qubit,
+                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
-    void ApplyCGate(const int num_controls,
-                    const vector<int>& gate_qubits,
+    void ApplyCGate(const idx_size num_controls,
+                    const vector<idx_size>& gate_qubits,
                     const Gate& g,
                     const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,
@@ -76,13 +67,10 @@ public:
                                    const bitset<128>& H_bitmask,
                                    const bitset<128>* __restrict CZ_bitmasks,
                                    const bitset<128> T_bitmasks[2],
-                                   int th,
-                                   bool last_cycle = false);
+                                   int th);
     void PopulateGlobalToLocalMap(vector<bitset<128>>& idxs);
     void UnpopulateGlobalToLocalMap();
-    void CopyState(const TensorProductStateVector& rhs);
-    void CopyMemberVars(const TensorProductStateVector& rhs);
-
+    
     cmplx operator[](bitset<128> i);
     cmplx GetAmpFromGlobalState(const idx_size a,
                                 const idx_size b) const;
@@ -111,6 +99,12 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -119,7 +113,6 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
     TensorProductStateVector(): qp(0, 0) {
         state_a = new FullAmpStateVector();

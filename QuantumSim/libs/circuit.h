@@ -8,13 +8,18 @@
 #ifndef circuit_h
 #define circuit_h
 
+#include <algorithm>
 #include <fstream>
+#include <map>
+#include <memory>
 #include <iostream>
+#include <set>
 #include <string>
 #include <stdio.h>
-#include <valarray>
+#include <tuple>
 #include <vector>
 
+#include "circuit_kernels.h"
 #include "gates.h"
 #include "state_interface.h"
 
@@ -24,39 +29,37 @@ using idx_size = unsigned long long;
 
 class Circuit {
 private:
-    static vector<string> quiddpro_func;
+    static unordered_map<string, gate_generator_ptr> gate_funcs;
     vector<Gate> gates;
     vector<idx_size> clock_cycles;
     vector<int> classical_bits;
-    int qubits;
-    
-    void PrintGatesAndCycles() const;
-    void PrintGates() const;
+    shared_ptr<QubitPartition> qp;
+    idx_size qubits;
+    bool rearranged;
  
 public:
     bool google ;
     
     void GroupAlternateCycles();
-    int GroupSimilarGates();
-    pair<int, int> MovexCZGates(idx_size prox_prefix_bits,
-                     idx_size range_bits,
-                     idx_size branch_bits,
-                     const QubitPartition& bitmasks,
-                     const bool nearest_neigbors = true);
+    void RecalibrateGoogleClockCycles();
+    idx_size GroupSimilarGates();
+    idx_size ClusterSimilarGates();
+    void MovexCZGatesRewrite(idx_size proc_prefix_bits,
+                             idx_size range_bits,
+                             idx_size branch_bits,
+                             const bool nearest_neigbors);
+    pair<int, int> MovexCZGates(idx_size proc_prefix_bits,
+                                idx_size range_bits,
+                                idx_size branch_bits,
+                                const bool nearest_neigbors = true);
+    void CoalesceRzGates();
     int ComputeNumberOfHighValuedQubits(int num_qubits);
     void ReadGoogleCircuitFile(const string& input_file,
-                               const int depth,
-                               const int add_layer_H = 0);
-    void ReadCustomInputFiles(cmplx*& amp,
-                              idx_size& amp_size,
-                              const string& input_file,
-                              const int add_layer_H = 0);
-    void CreateGoogleCircuit(int qubits,
-                             int clock_cycles);
-    void WriteGeneratedCircuitFile(const string& out_file,
-                                   const idx_size size_q);
-    void CreateQuiddProScript(const string& out_file,
-                              int layers_last_H = 0);
+                               const idx_size depth,
+                               const idx_size add_layer_H = 0);
+    void WriteCircuitToFile(const string& out_file);
+    void OptimizeCircuitArrangement(const Config* config);
+    void InitializeCircuitConfig(const Config* config);
     
     int GetNumQubits() const;
     idx_size GetTotalNumGates() const;
@@ -66,8 +69,12 @@ public:
     Gate& GetGateFromIndex(idx_size i);
     const vector<Gate>& GetGates() const;
     int GetCycleNumForGateIdx(idx_size gate_idx) const;
+    idx_size CalculateTotalNumCycles(const Config* config);
+    pair<int, int> GetTwoQGateCount() const;
+    bool IsRearranged() const;
+    bool IsCrossingGate(idx_size gate_idx) const;
     
-    Circuit();
+    Circuit(const string input_filename, idx_size num_q, idx_size depth);
     Circuit(const Circuit& rhs);
     Circuit& operator=(const Circuit& rhs);
 };

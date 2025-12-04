@@ -12,8 +12,8 @@ import os
 @click.option("--num_threads", nargs=1, required=False, default=8)
 def main(circuit_file, depth, backend, num_threads):
 
-	input_file = circuit_file
-	output_file = circuit_file.replace(".txt", "") + ".py"
+	input_file = os.path.join("input", "random_circuits_google", circuit_file)
+	output_file = os.path.join("qiskit-terra", "ibm-bm", circuit_file.replace(".txt", "") + ".py")
 	print(output_file)
 	
 	with open(output_file, "w") as outfile:
@@ -83,7 +83,7 @@ def main(circuit_file, depth, backend, num_threads):
 				outfile.write("\nprint(\"Time Taken (s): \", result_sim.time_taken)")
 
 			if backend == "state_vector" :
-				outfile.write("\n\nstate_v = job_sim.result().get_statevector(circuit)")
+				outfile.write("\n\nstate_v = result_sim.get_statevector(circuit)")
 				outfile.write("\nprint(\"amp[3] = \" + str(state_v[3]))")
 				outfile.write("\nprint(\"amp[1/4] = \" + str(state_v[int(math.pow(2, " + num_q + ")/4)]) )")
 				outfile.write("\nprint(\"amp[1/2] = \" + str(state_v[int(math.pow(2, " + num_q + ")/2)]) )")

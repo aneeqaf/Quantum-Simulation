@@ -88,6 +88,7 @@ SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector& rhs)
 {
     sim_type = rhs.sim_type;
     num_addends = rhs.num_addends;
+    compressed = rhs.compressed;
     
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends.push_back(new TensorProductStateVector(*rhs.tensor_addends[i]));
@@ -100,6 +101,8 @@ operator=(const SumOfTensorsProductsStateVector& rhs)
     swap(tensor_addends, temp.tensor_addends);
     sim_type = rhs.sim_type;
     num_addends = rhs.num_addends;
+    compressed = rhs.compressed;
+    
     return *this;
 }
 
@@ -107,8 +110,10 @@ SumOfTensorsProductsStateVector::
 ~SumOfTensorsProductsStateVector()
 {
     for (auto& t : tensor_addends) {
-        delete t;
-        t = nullptr;
+        if (t != nullptr) {
+            delete t;
+            t = nullptr;
+        }
     }
 }
 
@@ -133,15 +138,15 @@ HandlexCZApplication(int& remaining_cz_bits,
                      const idx_size suffix_size,
                      const bitset<128>* __restrict CZ_bitmasks)
 {
-    int last_xCZ_idx = -1;
+    int xCZ_applied_in_cycle = -1;
     
     if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::LosslessV
         || sim_type == Config::SimType::ApproxCZPathH2011 || sim_type == Config::SimType::ApproxCZPathV2011) {
         if (remaining_cz_bits != -1)
-            last_xCZ_idx = ApplyXCZGatesForDist(remaining_cz_bits, cz_path, cz_path_len,
+            xCZ_applied_in_cycle = ApplyXCZGatesForDist(remaining_cz_bits, cz_path, cz_path_len,
                                                 suffix_size, CZ_bitmasks);
         else
-            last_xCZ_idx = ApplyXCZGatesExact(CZ_bitmasks);
+            xCZ_applied_in_cycle = ApplyXCZGatesExact(CZ_bitmasks);
     }
     
 //    else if (book_keep &&
@@ -156,30 +161,7 @@ HandlexCZApplication(int& remaining_cz_bits,
 //        data_per_cycles.addends.push_back(GetNumAddends());
 //    }
     
-    return last_xCZ_idx;
-}
-
-int SumOfTensorsProductsStateVector::
-ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                      idx_size& cz_path,
-                      const idx_size cz_path_len,
-                      const idx_size suffix_size,
-                      const bitset<128>* __restrict CZ_bitmasks,
-                      const bitset<128> T_bitmasks[2],
-                      const bitset<128>& H_bitmask,
-                      const bool last_cycle)
-{
-    int last_xCZ_idx = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
-    
-    if (last_xCZ_idx == -1) {
-        for (auto& t : tensor_addends)
-            t -> ApplyBlockOfDiagGates(remaining_cz_bits, cz_path,
-                                       cz_path_len, suffix_size,
-                                       CZ_bitmasks, T_bitmasks,
-                                       H_bitmask, last_cycle);
-    }
-    
-    return last_xCZ_idx;
+    return xCZ_applied_in_cycle;
 }
 
 inline int SumOfTensorsProductsStateVector::
@@ -212,9 +194,9 @@ ApplyXCZGatesExact(const bitset<128>* __restrict CZ_bitmasks)
                 ++count_of_category.decomposed_CZ;
             for (idx_size n = 0; n < num_addends; ++n) {
                 TensorProductStateVector* new_t = new TensorProductStateVector(*tensor_addends[n]);
-                tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D1, Gate::Type::CZ_D2,
+                tensor_addends[n] -> ApplyCZGateAcrossTensorFactors(Gate::Type::cz_d1, Gate::Type::cz_d2,
                                                                     (int)i, modified_num_q_B - q);
-                new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::CZ_D3, Gate::Type::CZ_D4,
+                new_t -> ApplyCZGateAcrossTensorFactors(Gate::Type::cz_d3, Gate::Type::cz_d4,
                                                         (int)i, modified_num_q_B - q);
                 tensor_addends.push_back(new_t);
             }
@@ -266,11 +248,11 @@ ApplyXCZGatesForDist(int& remaining_cz_bits,
         xCZ_bitmasks_path0_D2D1[i] = 0;
         xCZ_bitmasks_path1_D4D3[i] = 0;
     }
-    const int last_xCZ_idx = FormGatesBitmaskXCZ(terminate, remaining_cz_bits, cz_path,
+    const int xCZ_applied_in_cycle = FormGatesBitmaskXCZ(terminate, remaining_cz_bits, cz_path,
                                                  xCZ_bitmasks_path0_D1D2, xCZ_bitmasks_path0_D2D1,
                                                  xCZ_bitmasks_path1_D3D4,xCZ_bitmasks_path1_D4D3,
                                                  cz_path_len, suffix_size, CZ_bitmasks);
-    if (last_xCZ_idx != -1)
+    if (xCZ_applied_in_cycle > 0)
         tensor_addends[0] -> ApplyCZGateAcrossTensorFactors(xCZ_bitmasks_path0_D1D2,
                                                             xCZ_bitmasks_path0_D2D1,
                                                             xCZ_bitmasks_path1_D3D4,
@@ -278,7 +260,7 @@ ApplyXCZGatesForDist(int& remaining_cz_bits,
       
     time_by_category.decomposed_CZ += time.GetElapsedTime();
     
-//    if (last_xCZ_idx && book_keep) {
+//    if (xCZ_applied_in_cycle && book_keep) {
 //        if (sim_type == Config::SimType::LosslessH || sim_type == Config::SimType::ApproxCZPathH2011) {
 //            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
 //            data_per_cycles.xCZ_V.push_back(0);
@@ -290,7 +272,7 @@ ApplyXCZGatesForDist(int& remaining_cz_bits,
 //    }
     
     if (terminate)
-        return last_xCZ_idx;
+        return xCZ_applied_in_cycle;
     return  -1;
 }
 
@@ -309,7 +291,7 @@ FormGatesBitmaskXCZ(bool& terminate,
     static const QubitPartition qp = tensor_addends[0] -> GetQp();
     static const int num_q_a = qp.getNumQubitsInBlock(0);
     bitset<128> xCZ_bitmask[num_q_a];
-    int last_xCZ_idx = 0;
+    int xCZ_applied_in_cycle = 0;
     
     for (int i = 0; i < num_q_a; ++i)
         xCZ_bitmask[i] = 0;
@@ -324,7 +306,7 @@ FormGatesBitmaskXCZ(bool& terminate,
                 break;
             }
             
-            ++last_xCZ_idx;
+            ++xCZ_applied_in_cycle;
             const idx_size first_half = ((xCZ_bitmask[i] << 64) >> 64).to_ulong();
             const idx_size second_half = (xCZ_bitmask[i] >> 64).to_ulong();
             const int q = first_half ? __builtin_ctzl(first_half)
@@ -366,17 +348,16 @@ FormGatesBitmaskXCZ(bool& terminate,
         if (terminate)
             break;
     }
-    return last_xCZ_idx;
+    return xCZ_applied_in_cycle;
 }
 
 void SumOfTensorsProductsStateVector::
-ApplyNonCGate(const int gate_qubit,
-              const Gate::Type gate_type,
-              const Gate& g)
+ApplyNonCGate(const idx_size gate_qubit,
+              const Gate::Type gate_type)
 {
     const int num_q_1 = tensor_addends[0] -> GetNumQInBlock(0) + tensor_addends[0] -> GetNumQInBlock(1) - 1;
     for (auto& t : tensor_addends)
-        t -> ApplyNonCGate(num_q_1 - gate_qubit, gate_type, g);
+        t -> ApplyNonCGate(num_q_1 - gate_qubit, gate_type);
 }
 
 void SumOfTensorsProductsStateVector::
@@ -388,8 +369,8 @@ ApplyHGateOnAllAmps(bool not_cycle_0)
 
 //TODO
 void SumOfTensorsProductsStateVector::
-ApplyCGate(const int num_controls,
-           const vector<int>& gate_qubits,
+ApplyCGate(const idx_size num_controls,
+           const vector<idx_size>& gate_qubits,
            const Gate& g,
            const Gate::Type gate_type)
 {
@@ -433,18 +414,17 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
                            const bitset<128>& H_bitmask,
                            const bitset<128>* __restrict CZ_bitmasks,
                            const bitset<128> T_bitmasks[2],
-                           int th,
-                           bool last_cycle)
+                           int th)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
-    int last_xCZ_idx = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
+    int xCZ_applied_in_cycle = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
     
-    if (last_xCZ_idx == -1)
+    if (xCZ_applied_in_cycle == -1)
         for (auto& t : tensor_addends)
             t -> ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
                                             cz_path_len, suffix_size,
                                             X_bitmask, Y_bitmask, H_bitmask,
-                                            CZ_bitmasks, T_bitmasks, th, last_cycle);
+                                            CZ_bitmasks, T_bitmasks, th);
     
     if (book_keep) {
         if (count_of_category.X1_2 - prev_X_count)
@@ -455,27 +435,7 @@ ApplyLoXYHAndCZTInSamePass(int& remaining_cz_bits,
             /(num_addends);
     }
     
-    return last_xCZ_idx;
-}
-
-void SumOfTensorsProductsStateVector::
-CopyState(const SumOfTensorsProductsStateVector& rhs)
-{
-    sim_type = rhs.sim_type;
-    num_addends = rhs.num_addends;
-    
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CopyState(*rhs.tensor_addends[i]);
-}
-
-void SumOfTensorsProductsStateVector::
-CopyMemberVars(const SumOfTensorsProductsStateVector& rhs)
-{
-    sim_type = rhs.sim_type;
-    num_addends = rhs.num_addends;
-    
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> CopyMemberVars(*rhs.tensor_addends[i]);
+    return xCZ_applied_in_cycle;
 }
 
 FullAmpStateVector* SumOfTensorsProductsStateVector::
@@ -785,7 +745,7 @@ CalculateMeanEntropy2Cuts() const
     double entropy = 0.0;
     
     auto& t0 = *tensor_addends[0], t1 = *tensor_addends[1];
-    idx_size range = sampling_factor , num_ranges = amp_size / range;
+    idx_size range = SAMPLING_FACTOR , num_ranges = amp_size / range;
     for (idx_size i = 0; i < num_ranges; ++i) {
         idx_size idx = (i * range) + (rand() % range);
         cmplx ampl =  t0[idx] + t1[idx];
@@ -910,7 +870,7 @@ PrintStateVector(const string& outfile,
                 file << imag(amp) << "j";
             file << "\n";
             
-            off = 1 + rand() % sampling_factor;
+            off = 1 + rand() % SAMPLING_FACTOR;
         }
     }
     else {
@@ -961,7 +921,7 @@ PrintProbabilities(const string& out_file,
             
             file << prob << "\n";
             
-            off = 1 + rand() % sampling_factor;
+            off = 1 + rand() % SAMPLING_FACTOR;
         }
     }
     else {
@@ -984,10 +944,55 @@ ReadFromDisk(const string& filename)
 }
 
 void SumOfTensorsProductsStateVector::
-SetMemberVariables(const GenericQuantumState& rhs)
+CopyState(const GenericQuantumState& rhs)
 {
-    const SumOfTensorsProductsStateVector& amp = (const SumOfTensorsProductsStateVector&)rhs;
-    num_addends = amp.num_addends;
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.GetNumAddends();
+    
     for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i] -> SetMemberVariables(*amp.tensor_addends[i]);
+        tensor_addends[i] -> CopyState(*t_rhs.tensor_addends[i]);
+}
+
+void SumOfTensorsProductsStateVector::
+CopyMemberVars(const GenericQuantumState& rhs)
+{
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.num_addends;
+    compressed = t_rhs.compressed;
+    sim_type = t_rhs.sim_type;
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CopyMemberVars(*t_rhs.tensor_addends[i]);
+}
+
+void SumOfTensorsProductsStateVector::
+CompressStateVector(idx_size num_codewords,
+                    double p_rejection)
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> CompressStateVector(num_codewords, p_rejection);
+    
+    compressed = true;
+}
+
+void SumOfTensorsProductsStateVector::
+DecompressStateVector()
+{
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> DecompressStateVector();
+    
+    compressed = false;
+}
+
+void SumOfTensorsProductsStateVector::
+DecompressAndCopyAnotherState(const GenericQuantumState& rhs)
+{
+    const SumOfTensorsProductsStateVector& t_rhs = (const SumOfTensorsProductsStateVector&)rhs;
+    num_addends = t_rhs.num_addends;
+    sim_type = t_rhs.sim_type;
+    
+    for (idx_size i = 0; i < num_addends; ++i)
+        tensor_addends[i] -> DecompressAndCopyAnotherState(*t_rhs.tensor_addends[i]);
+    
+    compressed = false;
 }

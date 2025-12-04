@@ -13,7 +13,7 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
                        const int q,
                        const int num_qubits_amp,
                        const Gate::Type gate_type,
-                       const Gate& g)
+                       const Gate custom_gate)
 {
     const idx_size amp_size = 1ull << num_qubits_amp;
     idx_size iter_count = 0, idx = 0, gate_bitmask = 0;
@@ -31,7 +31,8 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
             for (idx_size i = 0; i < num_indices; ++i)
                 temp_indices[i] = indices[i] + idx;
             
-            ApplyGateOnAmps(amp, temp_indices.data(), num_indices, gate_type, g);
+            ApplyGateOnAmps(amp, temp_indices.data(),
+                            num_indices, gate_type, custom_gate);
             
             ++idx;
         }
@@ -44,7 +45,7 @@ ApplyNonControl1QGates(cmplx* __restrict amp,
 void
 ApplyControlGate(cmplx* __restrict amp,
                  const int num_controls,
-                 const vector<int>& gate_qubits,
+                 const vector<idx_size>& gate_qubits,
                  const int num_qubits_amp,
                  const Gate& g,
                  const Gate::Type gate_type)
@@ -172,7 +173,7 @@ ApplyFWHT(cmplx* __restrict amp,
             for (idx_size i = 0; i < slice_size; ++i)
                 amp_slice[i] = amp[indices[i] + idx];
             
-            if (gate_type == Gate::Type::X_1_2)
+            if (gate_type == Gate::Type::x_1_2)
                 ApplyManyXOnSlice(amp_slice, num_qubits);
             else
                 ApplyManyYOnSlice(amp_slice, num_qubits);

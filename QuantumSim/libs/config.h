@@ -68,8 +68,11 @@ public:
     string amp_outfile;
     string report_outfile;
     string misc_outfile;
+    string temp_dir;
     idx_size cz_path;
     idx_size approx_epsilon;
+    idx_size cramer_num_codewords;
+    double cramer_p_rejection;
     float norm_perc;
     int norm_depth;
     int ranges_bits;
@@ -80,6 +83,8 @@ public:
     int num_threads;
     int vcut;
     int hcut;
+    int last_layers_H;
+    int save_cp_file;
     bool google;
     bool print_amp;
     bool print_idx;
@@ -88,11 +93,9 @@ public:
     bool nearest_neighbors;
     bool row_major;
     bool count_zeros;
-    int last_layers_H;
     bool store_checkpoint_range;
     bool first_part_smaller;
-    int save_cp_file;
-    string temp_dir;
+    bool compress;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
@@ -103,12 +106,13 @@ public:
                                const __int128 amp_size);
     
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""),
-    amp_outfile(""), report_outfile(""), misc_outfile(""),
-    cz_path(0), approx_epsilon(0),  norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
-    dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), google(true), print_amp(false),
-    print_idx(false), ascii(false), approx(true), nearest_neighbors(true), row_major(true), count_zeros(false),
-    last_layers_H(0), store_checkpoint_range(true), first_part_smaller(false), save_cp_file(0), temp_dir(""),
-    sim_type(FullState), verbose(Default), curr_mode(ProcPrefix) {}
+    amp_outfile(""), report_outfile(""), misc_outfile(""), temp_dir(""),
+    cz_path(0), approx_epsilon(0), cramer_num_codewords(0), cramer_p_rejection(0),
+    norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
+    dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), last_layers_H(0), save_cp_file(0),
+    google(true), print_amp(false), print_idx(false), ascii(false), approx(true), nearest_neighbors(true),
+    row_major(true), count_zeros(false), store_checkpoint_range(true), first_part_smaller(false), compress(false),
+    sim_type(FullState), verbose(Default), curr_mode(ProcPrefix){}
     Config(const bitset<128>& amp_size,
            const string ifile,
            const string pfile,
@@ -140,7 +144,10 @@ public:
            const bool checkpoint_r = true,
            const bool first_part_small = false,
            const bool count_0 = false,
-           const int sv_cp_file = 0);
+           const int sv_cp_file = 0,
+           const bool compress = false,
+           const idx_size cramer_num_cw = 0,
+           const double cramer_p_reject = 0);
     Config(const Config& rhs);
     Config& operator=(const Config& rhs);
     ~Config();

@@ -7,10 +7,32 @@
 
 #include "kernels.h"
 
+idx_size
+Form1QGatesBitmask(unordered_map<Gate::Type, bitset<128>>& bitmasks,
+                   idx_size gate_i,
+                   idx_size end_idx,
+                   const vector<Gate>& all_gates,
+                   const vector<Gate::Type>& gate_type)
+{
+    idx_size num_1Q_gates = 0;
+    
+    for (auto g_type : gate_type)
+        bitmasks[g_type] = bitset<128>(0);
+    
+    for (; gate_i < end_idx; ++gate_i) {
+        if (bitmasks.count(all_gates[gate_i].GetType()) != 0) {
+            ++num_1Q_gates;
+            bitmasks[all_gates[gate_i].GetType()][all_gates[gate_i].GetQubits()[0]] = 1;
+        }
+    }
+    
+    return num_1Q_gates;
+}
+
 void
 GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
              const int num_qubits_amp,
-             const vector<int>& gate_qubits)
+             const vector<idx_size>& gate_qubits)
 {
     bitset<128> bits = 0;
     const int new_q = num_qubits_amp - 1;
@@ -26,28 +48,17 @@ GroupCZGates(bitset<128>* __restrict qubits_CZ_bitmasks,
 void
 GroupTGates(bitset<128>* __restrict T_bitmasks,
             const int num_qubits_amp,
-            const vector<int>& gate_qubits)
+            const vector<idx_size>& gate_qubits)
 {
     //Better way to do this? What if more than 2 T_gates incident on a qubit within a cycle.
     bitset<128> t_mask;
     t_mask[(num_qubits_amp - 1) - gate_qubits[0]] = 1;
     if ((T_bitmasks[0] & t_mask) != t_mask)
         T_bitmasks[0] |= t_mask;
-    
-    else {
-        if ((T_bitmasks[1] & t_mask) == t_mask)
-            throw "More than 2 T gates incident on a qubit.";
-        
-        bool found = false;
-        for (int t = 0; t < 2; ++t)
-            if ((T_bitmasks[t] & t_mask) != t_mask) {
-                T_bitmasks[t] |= t_mask;
-                found = true;
-            }
-        if (!found) {
-            T_bitmasks[1] = t_mask;
-        }
-    }
+    else if ((T_bitmasks[1] & t_mask) != t_mask)
+        T_bitmasks[1] |= t_mask;
+    else
+        throw "More than 2 T gates incident on a qubit.";
 }
 
 void
@@ -74,35 +85,45 @@ ExtractIndicesForAmp(idx_size* strides,
     }
 }
 
-void
-FormBlockOfCZTGates(idx_size& gate_i,
+idx_size
+FormCZTGatesBitmask(idx_size gate_i,
+                    idx_size end_idx,
                     bitset<128>* __restrict CZ_bitmasks,
                     bitset<128>* __restrict T_bitmasks /*2*/,
                     const vector<Gate>& cluster,
                     const int num_qubits_amp)
 {
-    for(;gate_i < cluster.size(); ++gate_i) {
-        const auto gt = cluster[gate_i].ids.back();
-        
-        if (gt == Gate::Type::Z)
-            GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].qubits);
-        else if (gt == Gate::Type::T)
-            GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].qubits);
-        else break;
+    idx_size num_CZT_gates = 0;
+    bool any_CZ = false;
+    for(; gate_i < end_idx; ++gate_i) {
+        if (cluster[gate_i].GetType() == Gate::Type::cz) {
+            ++num_CZT_gates;
+            any_CZ = true;
+            GroupCZGates(CZ_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
+        }
+        else if (cluster[gate_i].GetType() == Gate::Type::t) {
+            ++num_CZT_gates;
+            GroupTGates(T_bitmasks, num_qubits_amp, cluster[gate_i].GetQubits());
+        }
     }
+    
+    if (any_CZ)
+        CZ_bitmasks[num_qubits_amp] = 1;
+    
+    return num_CZT_gates;
 }
 
-vector<int>
+vector<idx_size>
 FormBlockOfXYHGates(idx_size& gate_i,
                     const Gate::Type gate_type,
                     const vector<Gate>& all_gates)
 {
-    vector<int> qubits_in_cluster;
+    vector<idx_size> qubits_in_cluster;
     for(;gate_i < all_gates.size(); ++gate_i) {
         const auto& gt = all_gates[gate_i];
         
-        if(gt.ids.back() == gate_type)
-            qubits_in_cluster.push_back(gt.qubits.back());
+        if(gt.GetType() == gate_type)
+            qubits_in_cluster.push_back(gt.GetQubits().back());
         else break;
     }
     return qubits_in_cluster;
@@ -117,7 +138,7 @@ FormBlockOfXYHGates(vector<Gate>& cluster,
     for(;gate_i < all_gates.size() && cluster.size() < 2; ++gate_i) {
         const auto& gt = all_gates[gate_i];
 
-        if(gt.ids.back() == Gate::Type::X_1_2 ||  gt.ids.back() == Gate::Type::Y_1_2)
+        if(gt.GetType() == Gate::Type::x_1_2 ||  gt.GetType() == Gate::Type::y_1_2)
             cluster.push_back(all_gates[gate_i]);
         else break;
     }
@@ -168,25 +189,25 @@ ApplyCZDecomposition(cmplx* __restrict amp,
     idx_size count = 0, q = (int)gate_bitmask;
     cmplx multiplier1 = 0, multiplier2 = 1;
     
-    if (gate_type == Gate::Type::CZ_D1 || gate_type == Gate::Type::CZ_D6)
+    if (gate_type == Gate::Type::cz_d1 || gate_type == Gate::Type::cz_d6)
         multiplier1 = cmplx(-1, 0);
-    else if (gate_type == Gate::Type::CZ_D6)
+    else if (gate_type == Gate::Type::cz_d6)
         multiplier1 = cmplx(1, 0);
-    else if (gate_type == Gate::Type::CZ_D7)
+    else if (gate_type == Gate::Type::cz_d7)
         multiplier1 = cmplx(0, 1);
 
-    if (gate_type == Gate::Type::CZ_D5)
+    if (gate_type == Gate::Type::cz_d5)
         multiplier2 = 2;
-    else if (gate_type == Gate::Type::CZ_D6)
+    else if (gate_type == Gate::Type::cz_d6)
         multiplier2 = cmplx(0, -1);
 
-    if (gate_type == Gate::Type::CZ_D2)
+    if (gate_type == Gate::Type::cz_d2)
         q = 0;
     
     while (count < amp_size) {
         if ((count & gate_bitmask) == q)
             amp[count++] *= multiplier1;
-        else if (gate_type == Gate::Type::CZ_D5 || gate_type == Gate::Type::CZ_D6)
+        else if (gate_type == Gate::Type::cz_d5 || gate_type == Gate::Type::cz_d6)
             amp[count++] *= multiplier2;
         else
             count += gate_bitmask;
@@ -274,14 +295,15 @@ Apply2QGatesToCachedAmps(cmplx* __restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyHighQGatesInBlocksTask(cmplx* __restrict amp,
-                        idx_size idx,
-                        const idx_size num_iters,
-                        const idx_size reverse_t_block,
-                        const idx_size gate_bitmask,
-                        const idx_size* indices,
-                        const idx_size starting_idx,
-                        const int num_indices,
-                        void (*gate_func)(cmplx*, const idx_size*))
+                            idx_size idx,
+                            const idx_size num_iters,
+                            const idx_size reverse_t_block,
+                            const idx_size gate_bitmask,
+                            const idx_size* indices,
+                            const idx_size starting_idx,
+                            const int num_indices,
+                            const idx_size iter_add,
+                            void (*gate_func)(cmplx*, const idx_size*))
 {
     constexpr int max_indices = 4;
 //    const idx_size idx_add = num_indices == 2 ? 128 : 64,
@@ -302,7 +324,7 @@ ApplyHighQGatesInBlocksTask(cmplx* __restrict amp,
             //cache_efficient_func(amp, temp_indices.data(), gate_func);
             gate_func(amp, temp_indices.data());
             
-            idx += 4;
+            idx += iter_add;
             applied_block = true;
         }
         else {
@@ -373,7 +395,7 @@ Apply1QXYHGates(cmplx* __restrict amp,
     
      //AVX functions handles 4 amps at a time.
      void (*gate_func)(cmplx* __restrict, const idx_size*) ;
-     if (gate_type == Gate::Type::X_1_2) {
+     if (gate_type == Gate::Type::x_1_2) {
          if (q < num_qubits - 2) {
              gate_func = ApplyX12GateAVX;
              add = 4;
@@ -381,7 +403,7 @@ Apply1QXYHGates(cmplx* __restrict amp,
          else
              gate_func = ApplyX12Gate;
      }
-     else if (gate_type == Gate::Type::Y_1_2) {
+     else if (gate_type == Gate::Type::y_1_2) {
          if (q < num_qubits - 2) {
              gate_func = ApplyY12GateAVX;
              add = 4;
@@ -398,14 +420,16 @@ Apply1QXYHGates(cmplx* __restrict amp,
              gate_func = ApplyHGate;
      }
     
-    idx_size block_size = indices[1] / num_threads;
+    const idx_size block_size = indices[1] / num_threads;
     if (block_size > 128) {
         const idx_size num_iters = amp_size/(num_indices * num_threads * add);
         vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
         #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t) {
             parallel_starting_idxs[t][0] = indices[0] + t * block_size;
-            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], num_indices, gate_func);
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters,
+                                        indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask,
+                                        indices.data(), parallel_starting_idxs[t][0], num_indices, add, gate_func);
         }
     }
     else{
@@ -481,7 +505,9 @@ ApplyHighQ2MergedGatesInParallel(cmplx* __restrict amp,
         #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t) {
             parallel_starting_idxs[t][0] = indices[0] + t * block_size;
-            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters, indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask, indices.data(), parallel_starting_idxs[t][0], num_indices, gate_func);
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters,
+                                        indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask,
+                                        indices.data(), parallel_starting_idxs[t][0], num_indices, add, gate_func);
         }
     }
     else {
@@ -510,21 +536,21 @@ Apply2MergedXY12Gates(Gate gate1,
                       cmplx* __restrict amp,
                       const int num_qubits_amp)
 {
-    const idx_size qubits = (1ull << gate1.qubits.back()) | (1ull << gate2.qubits.back());
+    const idx_size qubits = (1ull << gate1.GetQubits().back()) | (1ull << gate2.GetQubits().back());
 
-    const Gate::Type g1t = (Gate::Type)gate1.ids.back();
-    const Gate::Type g2t = (Gate::Type)gate2.ids.back();
+    const Gate::Type g1t = (Gate::Type)gate1.GetType();
+    const Gate::Type g2t = (Gate::Type)gate2.GetType();
 
-    if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::X_1_2)
+    if(g1t == Gate::Type::x_1_2 && g2t == Gate::Type::x_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyXX12Gate);
 
-    else if(g1t == Gate::Type::X_1_2 && g2t == Gate::Type::Y_1_2)
+    else if(g1t == Gate::Type::x_1_2 && g2t == Gate::Type::y_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyXY12Gate);
 
-    else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::Y_1_2)
+    else if(g1t == Gate::Type::y_1_2 && g2t == Gate::Type::y_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyYY12Gate);
 
-    else if(g1t == Gate::Type::Y_1_2 && g2t == Gate::Type::X_1_2)
+    else if(g1t == Gate::Type::y_1_2 && g2t == Gate::Type::x_1_2)
         Apply2MergedGatesHelper(amp, qubits, num_qubits_amp, ApplyYX12Gate);
     
 }
@@ -710,7 +736,7 @@ ApplyXYHIterativelyInParallel(cmplx* __restrict amp,
     int factor_power = 0;
     while (X_bitmask || Y_bitmask) {
         auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask, H_bitmask,
-                                               num_qubits, num_threads, true);
+                                                  num_qubits, num_threads, true);
         i_count += phases.first;
         factor_power += phases.second;
     }
@@ -744,18 +770,22 @@ XYFastTransformLowQ(cmplx* __restrict amp,
 //        ApplyMergedXYFT(amp, gate_bitmasks[i], gate_types[i], num_qubits, zero_opt_mask);
 //
 //    return i_count;
+    const bool H_bitmask_applicable = (H_bitmask & (X_bitmask | Y_bitmask)) == (X_bitmask | Y_bitmask)
+                                        && ((X_bitmask | Y_bitmask) != 0);
     
     idx_size i_count = 0;
     int factor_power = 0;
     
-    for (int i = 0; i < num_qubits; ++i) {
-        if (X_bitmask || Y_bitmask) {
-            auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask,
-                                                      H_bitmask, num_qubits);
-            i_count += phases.first;
-            factor_power += phases.second;
+    if (X_bitmask || Y_bitmask) {
+        for (int i = 0; i < num_qubits; ++i) {
+            if (X_bitmask || Y_bitmask) {
+                auto phases = XYHBitmaskApplicationHelper(amp, X_bitmask, Y_bitmask,
+                                                          H_bitmask_applicable, num_qubits);
+                i_count += phases.first;
+                factor_power += phases.second;
+            }
+            else break;
         }
-        else break;
     }
     return pair<idx_size, int>(i_count, factor_power);
 }
@@ -808,7 +838,7 @@ void ApplyHighHGatesIterativelyInParallel(cmplx* __restrict amp,
         gate_bm ^= gates_bitmask;
         
         ApplyHighQ2MergedGatesInParallel(amp, num_threads, gates_bitmask, num_qubits,
-          ApplyHHGateAVX, 4);
+                                         ApplyHHGateAVX, 4);
     }
 }
 
@@ -858,8 +888,7 @@ void ApplyHGatesIteratively(cmplx* __restrict amp,
         if (parity == 1)
         {
             int q = q1 > q2 ? q1 : q2;
-            gate_bm ^= 1ull << q;
-            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::Hadamard);
+            Apply1QXYHGates(amp, num_threads, q, num_qubits, Gate::Type::h);
             return;
         }
         

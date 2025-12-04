@@ -19,20 +19,12 @@ private:
     int total_q;
      
 public:
-     int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                               idx_size& cz_path,
-                               const idx_size cz_path_len,
-                               const idx_size suffix_size,
-                               const bitset<128>* __restrict CZ_bitmasks,
-                               const bitset<128> T_bitmasks[2],
-                               const bitset<128>& H_bitmask,
-                               const bool last_cycle);
-    void ApplyNonCGate(const int gate_qubit,
-                       const Gate::Type gate_type,
-                       const Gate& g = {});
+    
+    void ApplyNonCGate(const idx_size gate_qubit,
+                       const Gate::Type gate_type);
     void ApplyHGateOnAllAmps(bool not_cycle_0 = false);
-    void ApplyCGate(const int num_controls,
-                    const vector<int>& gate_qubits,
+    void ApplyCGate(const idx_size num_controls,
+                    const vector<idx_size>& gate_qubits,
                     const Gate& g,
                     const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate& gate1,
@@ -53,9 +45,7 @@ public:
                                    const bitset<128>& H_bitmask,
                                    const bitset<128>* __restrict CZ_bitmasks,
                                    const bitset<128> T_bitmasks[2],
-                                   int th,
-                                   bool last_cycle = false);
-    void CopyState(const AdaptiveStateVector& rhs);
+                                   int th);
     
     cmplx operator[](bitset<128> i);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
@@ -81,6 +71,12 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
+    void CopyState(const GenericQuantumState& rhs);
+    void CopyMemberVars(const GenericQuantumState& rhs);
+    void CompressStateVector(idx_size num_codewords,
+                             double p_rejection);
+    void DecompressStateVector();
+    void DecompressAndCopyAnotherState(const GenericQuantumState& rhs);
     
     void PrintStateVector(const string& outfile,
                           const int cycle_num);
@@ -89,8 +85,9 @@ public:
                             const int cycle_num) ;
     void WriteAmpToDisk(const string& filename);
     void ReadFromDisk(const string& filename);
-    void SetMemberVariables(const GenericQuantumState& amp);
     
+    AdaptiveStateVector(): full_state(nullptr),
+    sumOfTensors(new SumOfTensorsProductsStateVector), total_q(0) {}
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,
                         const int hcut = 0,

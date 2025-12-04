@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 
+#include <array>
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
@@ -22,10 +23,11 @@
 #include "kernels1.h"
 #include "profile.h"
 #include "config.h"
+#include "Cramer.h"
 
 using namespace std;
 
-constexpr int sampling_factor = 1;
+constexpr int SAMPLING_FACTOR = 1;
 
 typedef struct DataPerCycle {
     vector<ul> cycles;
@@ -87,21 +89,22 @@ public:
     int GetColumns() const { return _cols; }
     int getNumQubits() const { return _rows * _cols; }
     int getNumBlocks() const { return static_cast<int>(_blocks.size()); }
-    int getNumQubitsInBlock(int i) const { return (int)_blocks[i].count(); }
+    int getNumQubitsInBlock(idx_size i) const { return (int)_blocks[i].count(); }
     int getNumX() const { return _numX; }
     bitset<128> getBlockBitmask(int i) const { return _blocks[i]; }
+    bool isBoundaryQubit(idx_size i) const { return _boundary_qubits[i]; }
     
-    int globalToBlock(int q) const { return _global_to_block[q]; }
-    int globalToLocal(int q) const { return _global_to_local[q]; }
-    int localToGlobal(int block,
-                      int q) const {
+    int globalToBlock(idx_size q) const { return _global_to_block[q]; }
+    int globalToLocal(idx_size q) const { return _global_to_local[q]; }
+    int localToGlobal(idx_size block,
+                      idx_size q) const {
         return _local_to_global[block][q];
     }
     
     // Scatters the global amp index into local amp indices.
     vector<idx_size> IndexScatter(const bitset<128>& i);
     idx_size IndexScatter(const bitset<128>& i,
-                          const int block_idx);
+                          const idx_size block_idx);
     // move up boundary qubits up front in each block
     void RenumberLocalQubits();
     
@@ -125,6 +128,8 @@ inline ostream& operator<<(ostream& o, const QubitPartition& qp) {
 
 class GenericQuantumState {    
 public:
+    static vector<array<complex<float>*, 2>> compressed_vector_ptrs;
+    
     static Data data_per_cycles;
     static vector<string> log;
     static Counts count_of_category;
@@ -133,21 +138,13 @@ public:
     static Config::SimType sim_type;
     static char partition_to_sim;
     static bool book_keep;
-    
-    virtual int ApplyBlockOfDiagGates(int& remaining_cz_bits,
-                                      idx_size& cz_path,
-                                      const idx_size cz_path_len,
-                                      const idx_size suffix_size,
-                                      const bitset<128>* __restrict CZ_bitmasks,
-                                      const bitset<128> T_bitmasks[2],
-                                      const bitset<128>& H_bitmask,
-                                      const bool last_cycle = false) = 0;
-    virtual void ApplyNonCGate(const int gate_qubit,
-                               const Gate::Type gate_type,
-                               const Gate& g = {}) = 0;
+    bool compressed;
+  
+    virtual void ApplyNonCGate(const idx_size gate_qubit,
+                               const Gate::Type gate_type) = 0;
     virtual void ApplyHGateOnAllAmps(bool not_cycle_0 = false) = 0;
-    virtual void ApplyCGate(const int num_controls,
-                            const vector<int>& gate_qubits,
+    virtual void ApplyCGate(const idx_size num_controls,
+                            const vector<idx_size>& gate_qubits,
                             const Gate& g,
                             const Gate::Type gate_type) = 0;
     virtual void ApplyMergedXYGate(const Gate& gate1,
@@ -168,16 +165,7 @@ public:
                                            const bitset<128>& H_bitmask,
                                            const bitset<128>* __restrict CZ_bitmasks,
                                            const bitset<128> T_bitmasks[2],
-                                           int th,
-                                           bool last_cycle = false) = 0;
-    virtual bitset<128> FormXYHGatesBitmask(idx_size& gate_i,
-                                        const vector<Gate>& all_gates,
-                                        const Gate::Type gate_type);
-    virtual void FormCZTGatesBitmask(bitset<128>* __restrict CZ_bitmasks,
-                                     bitset<128> T_bitmasks[2],
-                                     idx_size& gate_i,
-                                     const vector<Gate>& all_gates,
-                                     const int total_circuit_qubits);
+                                           int th) = 0;
     
     virtual cmplx operator[](bitset<128> i) = 0;
     virtual cmplx GetGlobalAmpAtInterestingIdx(idx_size i) = 0;
@@ -203,6 +191,12 @@ public:
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
     virtual void RescaleAndApplyGlobalICounter() = 0;
+    virtual void CopyState(const GenericQuantumState& rhs) = 0;
+    virtual void CopyMemberVars(const GenericQuantumState& rhs) = 0;
+    virtual void CompressStateVector(idx_size num_codewords,
+                                     double p_rejection) = 0;
+    virtual void DecompressStateVector() = 0;
+    virtual void DecompressAndCopyAnotherState(const GenericQuantumState& rhs) = 0;
     
     virtual void PrintStateVector(const string& outfile,
                                   const int cycle_num) = 0;
@@ -211,9 +205,8 @@ public:
                                     const int cycle_num)  = 0;
     virtual void WriteAmpToDisk(const string& filename) = 0;
     virtual void ReadFromDisk(const string& filename) = 0;
-    virtual void SetMemberVariables(const GenericQuantumState& amp) = 0;
         
-    GenericQuantumState(){}
+    GenericQuantumState(): compressed(false){}
     GenericQuantumState(int n_threads);
     virtual ~GenericQuantumState(){}
 };

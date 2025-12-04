@@ -27,4 +27,5 @@ static inline void print_u128_u(__int128 u128,
     uint64_t trailing = u128 % 10;
     bit128_str += to_string(trailing);
 }
+
 #endif /* utility_h */
