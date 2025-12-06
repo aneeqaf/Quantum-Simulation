@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "clang++",
+            "args": [
+                "-std=c++17",
+                "main.cpp",
+                "Cramer.cpp",
+                "compression.cpp",
+                "-o",
+                "program",
+
+                // --- link flags go here ---
+                "-fopenmp",
+                "-latomic",
+                "-Wall",
+                "-m64",
+                "-mavx",
+                "-mavx2",
+                "-DRT",
+                "-mfma",
+                "-g",
+                "-O0",
+                "-fno-omit-frame-pointer" 
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}

@@ -46,9 +46,9 @@ void SequentialSimulation::
                                       cmplx(-5.53118e-06, 1.13912e-05), cmplx(1.60148e-05, -1.06845e-06), cmplx(1.77797e-05, 9.72003e-06)};
     benchmark["inst_7_5_100_5_26"] = {cmplx(-3.07386e-06, 2.53827e-06), cmplx(-6.51143e-06, -2.31236e-06),
                                       cmplx(-1.1414e-06, -7.2411e-06), cmplx(2.26241e-06, -2.0497e-06), cmplx(4.57272e-06, -8.47909e-07)};
-    benchmark["inst_5x5_21_0_22"] = {cmplx(9.21374e-05, 6.59681e-05), cmplx(-1.35506e-05, 0.000152743),
+    benchmark["inst_5x5_21_0_10"] = {cmplx(9.21374e-05, 6.59681e-05), cmplx(-1.35506e-05, 0.000152743),
                                      cmplx(-2.26996e-05, -4.063e-06), cmplx(0.000146145, 3.12126e-06), cmplx(-8.68663e-06, -7.95167e-05)};
-    benchmark["inst_5x6_21_0_22"] = {cmplx(-1.141978e-05, 8.101054e-06), cmplx(-2.860430e-05, -4.218435e-05),
+    benchmark["inst_5x6_21_0_11"] = {cmplx(-1.141978e-05, 8.101054e-06), cmplx(-2.860430e-05, -4.218435e-05),
                                      cmplx(-2.930546e-05, 4.713042e-06), cmplx(1.8098e-12, -1.160662e-06), cmplx(-1.208545e-05, -2.048368e-07)};
     benchmark["inst_5x5_27_5_435"] = {cmplx(9.59515e-05, 0.000183951), cmplx(0.000163744, 2.90668e-05),
                                       cmplx(6.16249e-05, -0.000169552), cmplx(-3.86031e-05, -7.94697e-05), cmplx(0.000110518, -9.92812e-05)};
@@ -557,11 +557,10 @@ void SequentialSimulation::
         auto &idx = config->indices;
         Time amp_st_time;
         amp_st_time.StartTime();
-        if (!amp.block_compression)
+        if (!amp.compressed)
         {
             for (idx_size i = 0; i < idx.size(); ++i)
             {
-                assert(amp.compressed == false);
                 amps_of_interest[i] += amp[idx[i]];
             }
         }
@@ -862,7 +861,7 @@ void SequentialSimulation::
     ReportingAfterSim(GenericQuantumState &amp,
                       Circuit &circuit)
 {
-    if (amp.block_compression)
+    if (amp.compressed)
     {
         amp.DecompressStateVector();
         auto &idx = config->indices;
@@ -1084,7 +1083,7 @@ void SequentialSimulation::
 void SequentialSimulation::
     PrintSystemReport() const
 {
-    cout << "\n(C) Igor L. Markov and Aneeqa Fatima  2018 - 2021\n";
+    cout << "\n(C)Aneeqa Fatima and Igor L. Markov\n";
     cout << "Entangled Simulator ver 1.0 - a quantum circuit simulator\n\n";
 
     //    char hostname[30] = {};

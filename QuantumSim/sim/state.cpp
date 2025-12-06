@@ -17,52 +17,48 @@ FullAmpStateVector::
                                                zero_opt_mask(num_qubits), all_zeros(false)
 {
     amp_size = 1ull << qubits;
-    if (!config->compress)
+    // if (!config->compress)
+    // {
+    if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
     {
-        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30))
         {
-            idx_size memory = sizeof(cmplx) * amp_size;
-            cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-            if (memory >= (1 << 30))
-            {
-                cerr << memory / (1 << 30) << " GiB \n";
-            }
-            else if (memory >= (1 << 20))
-            {
-                cerr << memory / (1 << 20) << " MiB \n";
-            }
-            else if (memory >= (1 << 10))
-            {
-                cerr << memory / (1 << 10) << " KiB \n";
-            }
-            else
-                cerr << memory << " B \n";
-            free(amp);
-            exit(err);
+            cerr << memory / (1 << 30) << " GiB \n";
         }
-        memset(amp, 0, amp_size * sizeof(amp));
-        amp[0] = 1;
+        else if (memory >= (1 << 20))
+        {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10))
+        {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
+        free(amp);
+        exit(err);
     }
-    else
-    {
-        cramer = new Cramer(amp_size,
-                            config->cramer_num_codewords, config->num_threads,
-                            config->cramer_p_rejection, 8, sim_type != Config::FullState);
+    memset(amp, 0, amp_size * sizeof(amp));
+    amp[0] = 1;
+    // }
+    // else
+    // {
+    //     cramer = new Cramer(amp_size,
+    //                         config->cramer_num_codewords, config->num_threads,
+    //                         config->cramer_p_rejection, 8, sim_type != Config::FullState);
 
-        if (sim_type == Config::SimType::FullState)
-        {
-            block_compression = true;
-            compressed = true;
-            amp = cramer->SetAllAmpsToZero(amp);
-        }
-    }
+    //     compressed = true;
+    //     amp = cramer->SetAllAmpsToZero(amp);
+    // }
 }
 
 FullAmpStateVector::
     FullAmpStateVector(cmplx *a,
                        const idx_size size) : max_prob(numeric_limits<double>::min()),
-                                              min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr), amp_size(size),
-                                              global_factor_power(0), global_i_counter(0), num_qubits(__builtin_log2l(size)),
+                                              min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr),
+                                              amp_size(size), global_factor_power(0), global_i_counter(0), num_qubits(__builtin_log2l(size)),
                                               zero_opt_mask(num_qubits), all_zeros(false)
 {
     if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
@@ -91,16 +87,17 @@ FullAmpStateVector::
 }
 
 FullAmpStateVector::
-    FullAmpStateVector(const FullAmpStateVector &rhs) : max_prob(rhs.max_prob), min_prob(rhs.min_prob), cramer(nullptr), amp_size(rhs.amp_size),
-                                                        global_factor_power(rhs.global_factor_power), global_i_counter(rhs.global_i_counter),
-                                                        num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask), all_zeros(rhs.all_zeros)
+    FullAmpStateVector(const FullAmpStateVector &rhs) : max_prob(rhs.max_prob), min_prob(rhs.min_prob), cramer(nullptr),
+                                                        amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
+                                                        global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask),
+                                                        all_zeros(rhs.all_zeros)
 {
     compressed = rhs.compressed;
 
     if (rhs.cramer != nullptr)
     {
         if (cramer != nullptr)
-            *cramer = Cramer(*cramer);
+            *cramer = Cramer(*rhs.cramer);
         else
             cramer = new Cramer(*rhs.cramer);
     }
@@ -210,7 +207,7 @@ void FullAmpStateVector::
 
     if (initialize_amp)
     {
-        if (block_compression)
+        if (cramer)
         {
             amp = cramer->SetAllAmpsToOne(amp);
         }
@@ -592,33 +589,10 @@ int FullAmpStateVector::
         }
     }
 
-    // if (cramer)
-    // {
-    //     auto prev_amp = amp;
-    //     amp = cramer->CramerDecompress(nullptr, amp);
-    //     free(prev_amp);
-    // }
-
-    // PrintStateVector("beforeALL");
-
-    // if (cramer)
-    // {
-    //     auto prev_amp = amp;
-    //     amp = cramer->CramerCompress(nullptr, amp);
-    //     free(prev_amp);
-    // }
-
-    auto phase = ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, cramer, num_qubits, CZ_bitmasks_64,
-                                                   T_bitmasks_64, loq_X_bitmask >> th,
-                                                   loq_Y_bitmask >> th, loq_H_bitmask >> th,
-                                                   num_threads, th, zero_opt_mask);
-    if (cramer)
-    {
-        compressed = false;
-    }
-
-    // PrintStateVector("afterCZT");
-    // compressed = false;
+    pair<idx_size, idx_size> phase = ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, cramer, num_qubits, CZ_bitmasks_64,
+                                                                       T_bitmasks_64, loq_X_bitmask >> th,
+                                                                       loq_Y_bitmask >> th, loq_H_bitmask >> th,
+                                                                       num_threads, th, zero_opt_mask);
 
     global_i_counter += phase.first;
     global_factor_power += phase.second;
@@ -698,29 +672,6 @@ int FullAmpStateVector::
             count_of_category.H_merged_lo += __builtin_popcountll(loq_H_bitmask);
             count_of_category.last_H += __builtin_popcountll(hiq_H_bitmask) + single_H;
         }
-    }
-
-    // if (cramer)
-    //     compressed = true;
-
-    // PrintStateVector("afterXYH");
-
-    // if (cramer)
-    // {
-    //     CompressStateVector();
-    // }
-
-    // if (cramer)
-    // {
-    //     DecompressStateVector();
-    //     compressed = true;
-    // }
-
-    // PrintStateVector("afterALL");
-
-    if (cramer)
-    {
-        CompressStateVector();
     }
 
     return -1;
@@ -1056,7 +1007,7 @@ void FullAmpStateVector::
     const __m256 rescaling = {rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor,
                               rescaling_factor, rescaling_factor, rescaling_factor, rescaling_factor};
 
-    if (compressed || block_compression)
+    if (compressed)
     {
         cramer->Rescale(rescaling);
     }
@@ -1141,10 +1092,10 @@ void FullAmpStateVector::
     RescaleAndApplyGlobalICounter();
     static int count = 0;
     ofstream file;
-    if (compressed)
-        file.open("compression/Test_decompressed" + extension + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
+    if (cramer)
+        file.open("compression/compression/input/Test_decompressed" + extension + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
     else
-        file.open("compression/Test_original" + extension + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
+        file.open("compression/compression/input/Test_original" + extension + to_string(num_qubits) + "_" + to_string(count++) + ".txt");
 
     for (idx_size i = 0; i < amp_size; ++i)
     {
@@ -1309,7 +1260,8 @@ void FullAmpStateVector::
     if (global_i_counter || global_factor_power)
         RescaleAndApplyGlobalICounter();
 
-    cmplx *compressed_amp = cramer->CramerCompress(nullptr, amp);
+    cmplx *compressed_amp = nullptr;
+    compressed_amp = cramer->CramerCompress(compressed_amp, amp);
 
     if (amp)
     {

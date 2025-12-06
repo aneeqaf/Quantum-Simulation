@@ -25,7 +25,10 @@
 #include <unordered_map>
 #include <vector>
 #include <utility>
-#include <sleef.h>
+// #include <sleef.h>
+#include "omp.h"
+#include <immintrin.h>
+#include <sleefinline_avx2.h>
 
 #include "math_helper.h"
 
@@ -52,11 +55,7 @@ constexpr size_t SAMPLING_SIZE = 1 << 10;
 // Hardcoding for now from experiments. Don't have a good way of calculating for now
 constexpr size_t NUM_TURNINGS_CW[16] = {0, 1, 5, 5, 10, 25, 20, 20, 20, 25, 50, 100, 150, 200, 200};
 
-constexpr __m256i ZERO_INT_REG = {0, 0, 0, 0};
-constexpr __m256 ONE_FLOAT_REG = {1, 1, 1, 1, 1, 1, 1, 1};
-constexpr __m256 ZERO_FLOAT_REG = {0, 0, 0, 0, 0, 0, 0, 0};
-constexpr __m256 TWO_FLOAT_REG = {2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0};
-constexpr __m256 TWO_PI_REG = {2.0 * PI, 2.0 * PI, 2.0 * PI, 2.0 * PI, 2.0 * PI, 2.0 * PI, 2.0 * PI, 2.0 * PI};
+constexpr __m256i ZERO_REG = {0, 0, 0, 0};
 constexpr __m256i INCREMENT_1_UI = {1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32, 1 | 1ull << 32};
 constexpr __m256i MASK_1ST_SET_UI = {(1ul << 32) - 1, (1ul << 32) - 1, (1ul << 32) - 1, (1ul << 32) - 1};
 constexpr __m256i MASK_2ND_SET_UI = {~(1ll << 32), ~(1ll << 32), ~(1ll << 32), ~(1ll << 32)};
@@ -82,11 +81,11 @@ constexpr __m256i MASK_12_4xCW_UI = {((1ull << 12) - 1) | (((1ull << 12) - 1) <<
 constexpr __m256i MASK_13_4xCW_UI = {((1ull << 13) - 1) | (((1ull << 13) - 1) << 39), (((1ull << 13) - 1) << 1) | (((1ull << 13) - 1) << 40),
                                      (((1ull << 13) - 1) << 2) | (((1ull << 13) - 1) << 41), (((1ull << 13) - 1) << 3) | (((1ull << 13) - 1) << 42)};
 
-constexpr __m256i MASKS_CW_PER_UL_REG[17] = {ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG,
-                                             MASK_8_4xCW_UL, MASK_9_4xCW_UL, MASK_10_4xCW_UL, MASK_11_4xCW_UL, MASK_12_4xCW_UL, MASK_13_4xCW_UL, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG};
+constexpr __m256i MASKS_CW_PER_UL_REG[17] = {ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG,
+                                             MASK_8_4xCW_UL, MASK_9_4xCW_UL, MASK_10_4xCW_UL, MASK_11_4xCW_UL, MASK_12_4xCW_UL, MASK_13_4xCW_UL, ZERO_REG, ZERO_REG, ZERO_REG};
 
-constexpr __m256i MASKS_CW_PER_UI_REG[17] = {ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG,
-                                             MASK_8_4xCW_UI, MASK_9_4xCW_UI, MASK_10_4xCW_UI, MASK_11_4xCW_UI, MASK_12_4xCW_UI, MASK_13_4xCW_UI, ZERO_INT_REG, ZERO_INT_REG, ZERO_INT_REG};
+constexpr __m256i MASKS_CW_PER_UI_REG[17] = {ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG, ZERO_REG,
+                                             MASK_8_4xCW_UI, MASK_9_4xCW_UI, MASK_10_4xCW_UI, MASK_11_4xCW_UI, MASK_12_4xCW_UI, MASK_13_4xCW_UI, ZERO_REG, ZERO_REG, ZERO_REG};
 
 constexpr __m256i IDXS_CW_FOR_MASKS_UL[17] = {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0, 8, 16, 24}, {0, 8, 15, 22}, {0, 7, 13, 20}, {0, 6, 12, 18}, {0, 6, 11, 16}, {0, 5, 10, 15}, {0}, {0}, {0}};
 
@@ -126,22 +125,8 @@ private:
         double A;
         double spiral_length_r;
         double codewords_spacing;
-        double per_sector_phase;
         bool projection_vector;
         Distribution dist_type;
-    };
-
-    struct ConfigReg
-    {
-        __m256 A_reg;
-        __m256 spiral_length_r_reg;
-        __m256 codewords_spacing_reg;
-        __m256 sp_reg;
-        __m256 num_sectors_reg;
-        __m256 all_codewords_bits_set_reg;
-        __m256 all_encoding_bits_set_reg;
-        __m256 magnitude_r_reg;
-        __m256 size_of_sectors_reg;
     };
 
     struct GlobalContext
@@ -152,7 +137,6 @@ private:
     };
 
     Config config;
-    ConfigReg configReg;
     GlobalContext global_context;
     GlobalContext new_global_context;
     complex<float> *sector_factors;
@@ -191,6 +175,7 @@ private:
     double CalcApproxThetaForSpiralLen(double spiral_lenth) const;
     double CalcThetaForCW(unsigned short codeword) const;
     __m256 CalcThetaForCWAVX(__m256 codewords) const;
+    complex<float> CalcValForCW(unsigned short codeword) const;
     size_t CalcCWThatFitIn256BitsReg() const;
     size_t CalcNumULInCompressedVector(size_t num_256_reg) const;
     size_t CalcNum256RegForSizeOfVector() const;
@@ -199,22 +184,21 @@ private:
                                double variance) const;
     double CalcLambdaFromMeanAndVar(double mean,
                                     double variance) const;
-    __m256 CalcCWForThetaInASectorAVX(__m256 thetas) const;
 
     unsigned short ShiftCWToNearestPhase(double phase,
                                          double codeword) const;
-    __m256 CalcCWToNearestPhaseAVX(__m256 phases,
-                                   __m256 magnitudes) const;
+    __m256 ShiftCWToNearestPhaseAVX(__m256 phase,
+                                    __m256 codeword) const;
     __m256 GetAdjustedPhaseAVX(__m256 phases,
                                __m256 phase_sectors) const;
-    pair<__m256, __m256> CalcNearestCWToValWithEncodedSectorAVX(__m256 real,
-                                                                __m256 imag);
+    __m256 CalcNearestCWToValAVX(__m256 real,
+                                 __m256 imag);
     unsigned short CalcNearestCWToVal(complex<double> val) const;
     __m256 CalcNearestCWToValAVX(__m256 real,
                                  __m256 imag) const;
     unsigned short MapValToCW(complex<double> val);
-    pair<__m256, __m256> MapValToCWAVX(__m256 real,
-                                       __m256 imag);
+    __m256 MapValToCWAVX(__m256 real,
+                         __m256 imag);
     __m256i PackCWIn256BitsAVXReg(const unsigned int *codewords) const;
     void UnpackCWFrom256Bits(bitset<REG_SIZE> packed_codewords,
                              unsigned short *unpacked_codewords) const;
@@ -223,7 +207,7 @@ private:
     __m256i ExtractCodewordFromAVX256Reg(__m256i &packed_codewords) const;
     void UnpackCWFrom256BitsAVX(__m256i packed_codewords,
                                 unsigned int *unpacked_codewords) const;
-    void PackCWBlocksCrossingBoundaries(__m256i *__restrict compressed_vector,
+    void PackCWBlocksCrossingBoundaries(__m256i *volatile compressed_vector,
                                         const size_t xtra_leading_cw,
                                         const size_t xtra_trailing_cw,
                                         const size_t compressed_v_offset,
@@ -248,8 +232,7 @@ public:
                                      const complex<float> *state_vector);
 
     complex<float> *CramerBlockCompress(complex<float> *compressed_vector,
-                                        unsigned int *codewords,
-                                        complex<float> *state_vector,
+                                        const complex<float> *state_vector,
                                         const size_t block_idx,
                                         const size_t block_size);
     complex<float> *CramerBlockDecompress(complex<float> *decompressed_v,

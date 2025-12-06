@@ -713,7 +713,7 @@ complex<float> *Cramer::
         memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
     }
 
-    assert(block_size >= 8 * config.num_codewords_reg);
+    assert(block_size % 8 == 0 && block_size >= config.num_codewords_reg);
 
     const size_t leaked_cw = (block_offset % config.num_codewords_reg);
     const size_t total_cw = leaked_cw + block_size;
@@ -760,6 +760,7 @@ complex<float> *Cramer::
 
     for (size_t i = 0, j = 0; i < num_256_in_block; ++i, j += config.num_codewords_reg)
     {
+        assert(compressed_idx + i < ceil((double)config.compressed_vector_UL_size / 4.0)); // 256 bit reg hold four 64 bit UL
         if (remaining_cw < config.num_codewords_reg)
             xtra_trailing_cw = config.num_codewords_reg - remaining_cw;
         PackCWBlocksCrossingBoundaries((__m256i *)compressed_vector, xtra_leading_cw, xtra_trailing_cw, compressed_idx + i, &codewords[j]);
@@ -925,8 +926,8 @@ complex<float> *Cramer::
         memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
     }
 
-    size_t block_size = config.num_threads * config.num_codewords_reg;
-    size_t num_blocks = ceil((double)config.orig_vector_size / (double)block_size);
+    size_t block_size = config.num_threads >= 8 ? config.num_threads * config.num_codewords_reg : 8 * config.num_codewords_reg;
+    size_t num_blocks = config.orig_vector_size / block_size;
 
 #pragma omp parallel for num_threads(config.num_threads)
     for (size_t i = 0; i < num_blocks; ++i)
@@ -934,6 +935,10 @@ complex<float> *Cramer::
         size_t block_idx = i * block_size;
         CramerBlockCompress(compressed_vector, state_vector + block_idx, block_idx, block_size);
     }
+
+    size_t remaining_block_size = config.orig_vector_size - (num_blocks * block_size);
+    if (remaining_block_size > 0)
+        CramerBlockCompress(compressed_vector, state_vector + (num_blocks * block_size), (num_blocks * block_size), remaining_block_size);
 
     CommitGlobalContext();
 
@@ -944,7 +949,7 @@ complex<float> *Cramer::
     CramerDecompress(complex<float> *decompressed_vector,
                      const complex<float> *state_vector)
 {
-    size_t block_size = config.num_threads * config.num_codewords_reg;
+    size_t block_size = config.num_threads >= 8 ? config.num_threads * config.num_codewords_reg : 8 * config.num_codewords_reg;
     size_t num_blocks = config.orig_vector_size / block_size;
 
     if (decompressed_vector == nullptr)
@@ -953,6 +958,15 @@ complex<float> *Cramer::
             throw "Unable to allocate space for decompressed vector";
 
         memset(decompressed_vector, 0, sizeof(complex<float>) * config.orig_vector_size);
+    }
+
+    if (global_context.codeword_all_amps != -1)
+    {
+        for (size_t i = 0; i < config.orig_vector_size; ++i)
+        {
+            decompressed_vector[i] = global_context.codewords_mappings[global_context.codeword_all_amps].load();
+        }
+        return decompressed_vector;
     }
 
 #pragma omp parallel for num_threads(config.num_threads)
@@ -973,6 +987,7 @@ complex<float> *Cramer::
     SetAllAmpsToZero(complex<float> *state_vector)
 {
     global_context.codeword_all_amps = 0;
+    global_context.codewords_mappings[global_context.codeword_all_amps] = 0;
 
     if (state_vector == nullptr)
     {
@@ -988,8 +1003,8 @@ complex<float> *Cramer::
 complex<float> *Cramer::
     SetAllAmpsToOne(complex<float> *state_vector)
 {
-    global_context.codewords_mappings[config.num_codewords_per_sector - 1] = 1;
     global_context.codeword_all_amps = config.num_codewords_per_sector - 1;
+    global_context.codewords_mappings[global_context.codeword_all_amps] = 1;
 
     // Delay writing of codewords.
     if (state_vector == nullptr)

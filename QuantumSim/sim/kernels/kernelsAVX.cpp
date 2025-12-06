@@ -265,12 +265,10 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
     const idx_size block_size = amp_size > (1ull << bits_for_blk) ? (1ull << bits_for_blk) : amp_size;
     const idx_size new_lo_H_bitmask = lo_H_bitmask_applicable ? lo_H_bitmask ^ (lo_H_bitmask & (lo_X_bitmask | lo_Y_bitmask)) : lo_H_bitmask;
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits_amp;
-    float *t_amp = (float *)__builtin_assume_aligned(amp, 64);
 
     pair<idx_size, idx_size> phases;
     cmplx *active_block_amps[num_threads];
 
-    cmplx *decompressed_vector = nullptr;
     if (cramer)
     {
         for (size_t t = 0; t < num_threads; ++t)
@@ -280,9 +278,6 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 
             memset(active_block_amps[t], 0, sizeof(complex<float>) * block_size);
         }
-
-        if (posix_memalign((void **)&decompressed_vector, 64, sizeof(complex<float>) * amp_size) != 0)
-            throw "Unable to allocate space for decompressed vector";
     }
 
 #pragma omp parallel for schedule(guided) num_threads(num_threads)
@@ -298,7 +293,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 
 #pragma omp critical
             {
-                ApplyCZTGatesInABlock(t_amp, cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+                ApplyCZTGatesInABlock((float *)__builtin_assume_aligned(amp, 64), cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                       num_threads, block_begin, block_size, zero_opt_mask);
             }
 
@@ -334,9 +329,12 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
             if (new_lo_H_bitmask)
                 ApplyHGatesIteratively(active_amp, block_bits, num_threads, new_lo_H_bitmask);
 
+#pragma omp critical
             if (cramer)
             {
-                memcpy(decompressed_vector + curr_block_offset, active_amp, sizeof(complex<float>) * block_size);
+                // This will probably not work ... not sure how the codeword updates work in parallel
+                cramer->CramerBlockCompress(amp, active_block_amps[(block_begin / block_size) % num_threads],
+                                            curr_block_offset, block_size);
             }
         }
         //        else {
@@ -355,11 +353,8 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
     {
         for (idx_size i = 0; i < num_threads; ++i)
         {
-            delete[] active_block_amps[i];
+            free(active_block_amps[i]);
         }
-        auto t_amp = amp;
-        amp = decompressed_vector;
-        free(t_amp);
     }
 
     return pair<idx_size, idx_size>(phases.first, phases.second);

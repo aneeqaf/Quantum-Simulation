@@ -1,19 +1,19 @@
-CC := clang
+CC := clang++
 #/usr/local/gcc7/bin/
 # CC := clang --analyze # and comment out the linker last line for sanity
-SZPATH := /usr/local
+# SZPATH := /usr/local
 SRCDIR := vector_state_sim
 TARGETDIR := bin
 OUTPUT := output/amp_vectors output/probabilities output/log output/reports output/misc
 INPUT := input/random_circuits_google
 TARGET := bin/rr
-LIBS = -lm -lstdc++ -lsleef /usr/local/opt/libomp/lib/libomp.a
-SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a
-INC = -I libs -I sim -I sim/kernels -I /usr/local/opt/libomp/include
-CFLAGS = -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -ffast-math -m64 -mavx -mavx2 \
--march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel -DPrint
+LIBS = -lm -lstdc++ -lsleef -lomp -latomic
+# SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a
+INC = -I libs -I sim -I sim/kernels
+# CFLAGS = -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -ffast-math -m64 -mavx -mavx2 \
+# -march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel -DPrint 
 # -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled -DFidelityDoubled
-# CFLAGS = -g -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i -DPrint
+CFLAGS = -g  -fno-omit-frame-pointer -O0 -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i -DPrint
 .PHONY: clean all
 
 default: $(TARGET)

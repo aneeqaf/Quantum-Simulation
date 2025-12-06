@@ -58,7 +58,6 @@ public:
     static char partition_to_sim;
     static bool book_keep;
     bool compressed;
-    bool block_compression;
 
     virtual void ApplyNonCGate(const idx_size gate_qubit,
                                const Gate::Type gate_type) = 0;
