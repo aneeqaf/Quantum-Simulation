@@ -10,10 +10,10 @@ TARGET := bin/rr
 LIBS = -lm -lstdc++ -lsleef -lomp -latomic
 # SZFLAG 	= $(SZPATH)/lib/libSZ.a $(SZPATH)/lib/libzlib.a $(SZPATH)/lib/libzstd.a
 INC = -I libs -I sim -I sim/kernels
-# CFLAGS = -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -ffast-math -m64 -mavx -mavx2 \
-# -march=core-avx-i -mtune=core-avx-i  -DRT  -Xpreprocessor -fopenmp -mfma  -DParallel -DPrint 
-# -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled -DFidelityDoubled
-CFLAGS = -g  -fno-omit-frame-pointer -O0 -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i -DPrint
+CFLAGS = -O3 -Otime -Wall -std=c++17 -march=native -Ofast -fmerge-all-constants -m64 -mavx -mavx2 \
+-march=core-avx-i -DRT -Xpreprocessor -fopenmp -mfma  -DParallel -DPrint 
+# -DCosineSimilarity -DPorterThomas -DReportToFile -DCosineSimilarityDoubled -DFidelityDoubled  -ffast-math
+CFLAGS = -g  -fno-omit-frame-pointer -O3 -Wall -std=c++17 -m64 -mavx -mavx2 -mfma -march=core-avx-i -mtune=core-avx-i -DPrint -fopenmp
 .PHONY: clean all
 
 default: $(TARGET)

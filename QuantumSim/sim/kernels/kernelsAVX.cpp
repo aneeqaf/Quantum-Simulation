@@ -269,6 +269,7 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
     pair<idx_size, idx_size> phases;
     cmplx *active_block_amps[num_threads];
 
+    cmplx *decompressed_vector = nullptr;
     if (cramer)
     {
         for (size_t t = 0; t < num_threads; ++t)
@@ -278,6 +279,9 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 
             memset(active_block_amps[t], 0, sizeof(complex<float>) * block_size);
         }
+
+        if (posix_memalign((void **)&decompressed_vector, 64, sizeof(complex<float>) * amp_size) != 0)
+            throw "Unable to allocate space for decompressed vector";
     }
 
 #pragma omp parallel for schedule(guided) num_threads(num_threads)
@@ -332,9 +336,10 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 #pragma omp critical
             if (cramer)
             {
-                // This will probably not work ... not sure how the codeword updates work in parallel
-                cramer->CramerBlockCompress(amp, active_block_amps[(block_begin / block_size) % num_threads],
-                                            curr_block_offset, block_size);
+                // // This will probably not work ... not sure how the codeword updates work in parallel
+                // cramer->CramerBlockCompress(amp, active_block_amps[(block_begin / block_size) % num_threads],
+                //                             curr_block_offset, block_size);
+                memcpy(decompressed_vector + curr_block_offset, active_amp, sizeof(cmplx) * block_size);
             }
         }
         //        else {
@@ -355,6 +360,8 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
         {
             free(active_block_amps[i]);
         }
+        free(amp);
+        amp = decompressed_vector;
     }
 
     return pair<idx_size, idx_size>(phases.first, phases.second);
