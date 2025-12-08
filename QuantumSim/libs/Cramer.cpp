@@ -452,17 +452,42 @@ inline double Cramer::
 }
 
 void Cramer::
-    CalcKandLambdaFromEmpiricalCDF(complex<float> *state_vector,
+    CalcKandLambdaFromEmpiricalCDF(const complex<float> *state_vector,
                                    const size_t block_size)
 {
     double mean = 0, variance = 1e-10;
     CalculateMeanAndVariance(mean, variance,
-                             1.0 / ((double)config.orig_vector_size * (double)config.orig_vector_size),
+                             1.0 / (double)(block_size * block_size),
                              state_vector, block_size, config.num_threads);
 
-    k = CalcKFromMeanAndVar(mean, variance);
-    lambda = CalcLambdaFromMeanAndVar(mean, variance);
-    config.dist_type = k > 0.9 ? exponential : gamma;
+    if (variance == 0)
+    {
+        lambda = block_size;
+        k = 1;
+        config.dist_type = exponential;
+    }
+    else
+    {
+        k = CalcKFromMeanAndVar(mean, variance);
+        lambda = CalcLambdaFromMeanAndVar(mean, variance);
+        config.dist_type = k > 0.9 ? exponential : gamma;
+    }
+}
+
+void Cramer::
+    InitilizeDistributionParameters(const complex<float> *state_vector,
+                                    const size_t state_vector_size,
+                                    const bool calculate)
+{
+    if (state_vector && (config.projection_vector || calculate))
+        CalcKandLambdaFromEmpiricalCDF(state_vector, state_vector_size);
+    else
+    {
+        lambda = state_vector_size;
+        k = 1;
+        config.dist_type = exponential;
+    }
+    kAndLambdaInitialized.store(true);
 }
 
 inline unsigned short Cramer::
@@ -908,15 +933,7 @@ complex<float> *Cramer::
     CramerCompress(complex<float> *compressed_vector,
                    complex<float> *state_vector)
 {
-    if (config.projection_vector)
-        CalcKandLambdaFromEmpiricalCDF(state_vector, config.orig_vector_size);
-    else
-    {
-        lambda = config.orig_vector_size;
-        k = 1;
-        config.dist_type = exponential;
-    }
-    kAndLambdaInitialized.store(true);
+    InitilizeDistributionParameters(state_vector, config.orig_vector_size);
 
     if (compressed_vector == nullptr)
     {

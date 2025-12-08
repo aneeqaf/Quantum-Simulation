@@ -247,8 +247,11 @@ public:
     complex<float> *SetAllAmpsToZero(complex<float> *state_vector);
     complex<float> *SetAllAmpsToOne(complex<float> *state_vector);
     void Rescale(const __m256 rescaling);
-    void CalcKandLambdaFromEmpiricalCDF(complex<float> *state_vector,
+    void CalcKandLambdaFromEmpiricalCDF(const complex<float> *state_vector,
                                         const size_t block_size);
+    void InitilizeDistributionParameters(const complex<float> *state_vector,
+                                         const size_t state_vector_size,
+                                         const bool calculate = true);
 
     size_t GetCompressedVectorSize() const;
     double GetMinInnerRadius() const;

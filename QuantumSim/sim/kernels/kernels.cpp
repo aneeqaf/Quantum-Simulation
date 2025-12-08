@@ -305,12 +305,11 @@ Apply2QGatesToCachedAmps(cmplx *__restrict amp,
 
 __attribute__((always_inline)) inline void
 ApplyHighQGatesInBlocksTask(cmplx *__restrict amp,
-                            idx_size idx,
+                            const idx_size starting_idx,
                             const idx_size num_iters,
-                            const idx_size reverse_t_block,
+                            const idx_size block_offset,
                             const idx_size gate_bitmask,
                             const idx_size *indices,
-                            const idx_size starting_idx,
                             const int num_indices,
                             const idx_size data_parallelism,
                             void (*gate_func)(cmplx *, const idx_size *))
@@ -323,12 +322,13 @@ ApplyHighQGatesInBlocksTask(cmplx *__restrict amp,
     idx_size iter_count = 0;
     array<idx_size, max_indices> temp_indices;
     bool applied_block = false;
+    idx_size idx = starting_idx;
 
     auto cache_efficient_func = num_indices == 2 ? Apply1QGatesToCachedAmps : Apply2QGatesToCachedAmps;
 
     while (iter_count < num_iters)
     {
-        if (((idx + reverse_t_block) & gate_bitmask) == 0)
+        if (((idx + block_offset) & gate_bitmask) == 0)
         {
             iter_count += iter_add;
 
@@ -345,7 +345,7 @@ ApplyHighQGatesInBlocksTask(cmplx *__restrict amp,
         {
             if (applied_block)
             {
-                idx += reverse_t_block;
+                idx += block_offset;
                 idx += (idx & gate_bitmask) + starting_idx;
                 applied_block = false;
             }
@@ -446,14 +446,14 @@ void Apply1QXYHGates(cmplx *__restrict amp,
     if (block_size > 128)
     {
         const idx_size num_iters = amp_size / (num_indices * num_threads * data_parallelism);
-        vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
-#pragma omp parallel for num_threads(num_threads)
+        vector<idx_size> parallel_starting_idxs(num_threads);
+        // #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t)
         {
-            parallel_starting_idxs[t][0] = indices[0] + t * block_size;
-            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters,
-                                        indices[1] - parallel_starting_idxs[t][0] - block_size, gate_bitmask,
-                                        indices.data(), parallel_starting_idxs[t][0], num_indices, data_parallelism, gate_func);
+            parallel_starting_idxs[t] = indices[0] + t * block_size;
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t], num_iters,
+                                        indices[1] - parallel_starting_idxs[t] - block_size, gate_bitmask,
+                                        indices.data(), num_indices, data_parallelism, gate_func);
         }
     }
     else
@@ -526,15 +526,14 @@ void ApplyHighQ2MergedGatesInParallel(cmplx *__restrict amp,
 
     if (block_size > 64)
     {
-        static vector<array<idx_size, num_indices>> parallel_starting_idxs(num_threads);
+        static vector<idx_size> parallel_starting_idxs(num_threads);
 #pragma omp parallel for num_threads(num_threads)
         for (int t = 0; t < num_threads; ++t)
         {
-            parallel_starting_idxs[t][0] = indices[0] + t * block_size;
-            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t][0], num_iters,
-                                        indices[1] - parallel_starting_idxs[t][0] - block_size,
-                                        gate_bitmask, indices.data(), parallel_starting_idxs[t][0],
-                                        num_indices, data_parallelism, gate_func);
+            parallel_starting_idxs[t] = indices[0] + t * block_size;
+            ApplyHighQGatesInBlocksTask(amp, parallel_starting_idxs[t], num_iters,
+                                        indices[1] - parallel_starting_idxs[t] - block_size,
+                                        gate_bitmask, indices.data(), num_indices, data_parallelism, gate_func);
         }
     }
     else

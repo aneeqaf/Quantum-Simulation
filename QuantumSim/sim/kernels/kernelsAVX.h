@@ -654,7 +654,6 @@ void ApplyBlockOfCZTGatesAVXSeq(cmplx *__restrict amp,
 
 pair<idx_size, idx_size>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
-                                  Cramer *cramer,
                                   const int num_qubits_amp,
                                   const idx_size *volatile __restrict CZ_bitmasks,
                                   const idx_size *volatile __restrict T_bitmasks,

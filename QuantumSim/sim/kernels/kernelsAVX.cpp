@@ -247,7 +247,6 @@ void ApplyBlockOfCZTGatesAVXSeq(cmplx *__restrict amp,
 
 pair<idx_size, idx_size>
 ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
-                                  Cramer *cramer,
                                   const int num_qubits_amp,
                                   const idx_size *volatile __restrict CZ_bitmasks,
                                   const idx_size *volatile __restrict T_bitmasks,
@@ -267,22 +266,6 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
     const int block_bits = block_size != amp_size ? bits_for_blk : num_qubits_amp;
 
     pair<idx_size, idx_size> phases;
-    cmplx *active_block_amps[num_threads];
-
-    cmplx *decompressed_vector = nullptr;
-    if (cramer)
-    {
-        for (size_t t = 0; t < num_threads; ++t)
-        {
-            if (posix_memalign((void **)&active_block_amps[t], 64, sizeof(complex<float>) * block_size) != 0)
-                throw "Unable to allocate space for decompressed vector";
-
-            memset(active_block_amps[t], 0, sizeof(complex<float>) * block_size);
-        }
-
-        if (posix_memalign((void **)&decompressed_vector, 64, sizeof(complex<float>) * amp_size) != 0)
-            throw "Unable to allocate space for decompressed vector";
-    }
 
 #pragma omp parallel for schedule(guided) num_threads(num_threads)
     for (idx_size block_begin = 0; block_begin < amp_size; block_begin += block_size)
@@ -297,34 +280,11 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 
 #pragma omp critical
             {
-                ApplyCZTGatesInABlock((float *)__builtin_assume_aligned(amp, 64), cramer, num_qubits_amp, CZ_bitmasks, T_bitmasks,
+                ApplyCZTGatesInABlock((float *)__builtin_assume_aligned(amp, 64), nullptr, num_qubits_amp, CZ_bitmasks, T_bitmasks,
                                       num_threads, block_begin, block_size, zero_opt_mask);
             }
 
-            auto active_amp = cramer ? cramer->CramerBlockDecompress(
-                                           active_block_amps[(block_begin / block_size) % num_threads],
-                                           amp, curr_block_offset, block_size)
-                                     : amp + curr_block_offset;
-
-            // #pragma omp critical
-            //             {
-            //                 out << curr_block_offset << endl;
-            //                 for (size_t i = 0; i < block_size; ++i)
-            //                 {
-            //                     float real = active_amp[i].real();
-            //                     float imag = active_amp[i].imag();
-            //                     if (abs(active_amp[i].real()) < 1.0e-10)
-            //                     {
-            //                         real = 0;
-            //                     }
-            //                     if (abs(active_amp[i].imag()) < 1.0e-10)
-            //                     {
-            //                         imag = 0;
-            //                     }
-            //                     out << complex<float>(real, imag) << "\n";
-            //                 }
-            //                 out << endl;
-            //             }
+            auto active_amp = amp + curr_block_offset;
 
             phases = XYFastTransformLowQ(active_amp,
                                          lo_X_bitmask, lo_Y_bitmask, lo_H_bitmask,
@@ -332,15 +292,6 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
 
             if (new_lo_H_bitmask)
                 ApplyHGatesIteratively(active_amp, block_bits, num_threads, new_lo_H_bitmask);
-
-#pragma omp critical
-            if (cramer)
-            {
-                // // This will probably not work ... not sure how the codeword updates work in parallel
-                // cramer->CramerBlockCompress(amp, active_block_amps[(block_begin / block_size) % num_threads],
-                //                             curr_block_offset, block_size);
-                memcpy(decompressed_vector + curr_block_offset, active_amp, sizeof(cmplx) * block_size);
-            }
         }
         //        else {
         //            cout << "\nZero bm : " << zero_opt_mask.print() << ", Idx :" << offset_idx * block_size
@@ -353,16 +304,6 @@ ApplyBlockOfCZTAndLowQXYHGatesAVX(cmplx *&amp,
     }
 
     phases.second += __builtin_popcountll(new_lo_H_bitmask);
-
-    if (cramer)
-    {
-        for (idx_size i = 0; i < num_threads; ++i)
-        {
-            free(active_block_amps[i]);
-        }
-        free(amp);
-        amp = decompressed_vector;
-    }
 
     return pair<idx_size, idx_size>(phases.first, phases.second);
 }

@@ -762,48 +762,47 @@ CalculateMeanAndVariance(double &mean,
                          const size_t num_threads)
 {
     size_t non_zero_amps = 0;
-#pragma omp parallel for reduction(+ : non_zero_amps, mean) num_threads(num_threads)
+    // #pragma omp parallel for reduction(+ : non_zero_amps, mean) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i)
     {
         double p = norm(input[i]);
-        if (p > threshold)
+        if (p > 0)
         {
             ++non_zero_amps;
             mean += p;
         }
-        if (mean > ULONG_MAX - 100)
+        if (mean > 1e10)
         {
             mean /= non_zero_amps;
             non_zero_amps = 1;
         }
     }
-    assert(mean != NAN);
-    assert(mean < INFINITY);
 
     mean /= non_zero_amps;
+    assert(!isnan(mean));
+    assert(!isinf(mean));
 
     variance = 0;
     non_zero_amps = 1;
-#pragma omp parallel for reduction(+ : variance) num_threads(num_threads)
+    // #pragma omp parallel for reduction(+ : variance) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i)
     {
         double p = norm(input[i]);
-        if (p > threshold)
+        if (p > 0)
         {
             ++non_zero_amps;
             variance += ((p - mean) * (p - mean));
         }
-        if (variance > ULONG_MAX - 100)
+        if (variance > 1e10)
         {
             variance /= non_zero_amps;
             non_zero_amps = 1;
         }
     }
-    assert(variance != NAN);
-    assert(variance < INFINITY);
-    assert(variance != 0);
-
     variance /= (non_zero_amps - 1);
+
+    assert(!isnan(variance));
+    assert(!isinf(variance));
 }
 
 #endif /* math_helper_h */

@@ -17,40 +17,35 @@ FullAmpStateVector::
                                                zero_opt_mask(num_qubits), all_zeros(false)
 {
     amp_size = 1ull << qubits;
-    if (!config->compress)
+    if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
     {
-        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
+        idx_size memory = sizeof(cmplx) * amp_size;
+        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+        if (memory >= (1 << 30))
         {
-            idx_size memory = sizeof(cmplx) * amp_size;
-            cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-            if (memory >= (1 << 30))
-            {
-                cerr << memory / (1 << 30) << " GiB \n";
-            }
-            else if (memory >= (1 << 20))
-            {
-                cerr << memory / (1 << 20) << " MiB \n";
-            }
-            else if (memory >= (1 << 10))
-            {
-                cerr << memory / (1 << 10) << " KiB \n";
-            }
-            else
-                cerr << memory << " B \n";
-            free(amp);
-            exit(err);
+            cerr << memory / (1 << 30) << " GiB \n";
         }
-        memset(amp, 0, amp_size * sizeof(amp));
-        amp[0] = 1;
+        else if (memory >= (1 << 20))
+        {
+            cerr << memory / (1 << 20) << " MiB \n";
+        }
+        else if (memory >= (1 << 10))
+        {
+            cerr << memory / (1 << 10) << " KiB \n";
+        }
+        else
+            cerr << memory << " B \n";
+        free(amp);
+        exit(err);
     }
+    memset(amp, 0, amp_size * sizeof(amp));
+    amp[0] = 1;
+
     if (config->compress)
     {
         cramer = new Cramer(amp_size,
                             config->cramer_num_codewords, config->num_threads,
                             config->cramer_p_rejection, 8, sim_type != Config::FullState);
-
-        compressed = true;
-        amp = cramer->SetAllAmpsToZero(amp);
     }
 }
 
@@ -207,26 +202,20 @@ void FullAmpStateVector::
 
     if (initialize_amp)
     {
-        if (cramer)
-        {
-            amp = cramer->SetAllAmpsToOne(amp);
-        }
-        else
-        {
-            float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
-            constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0, 1, 0};
+
+        float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
+        constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0, 1, 0};
 
 #pragma omp parallel for num_threads(num_threads)
-            for (idx_size i = 0; i < amp_size; i += 4)
-            {
-                __m256 t = _mm256_load_ps(t_amp + (2 * i));
-                t = _mm256_or_ps(t, re_ones);
-                _mm256_store_ps(t_amp + (2 * i), t);
-            }
-            if (book_keep)
-                count_of_category.initial_H += num_qubits;
-            time_by_category.initial_H += time.GetElapsedTime();
+        for (idx_size i = 0; i < amp_size; i += 4)
+        {
+            __m256 t = _mm256_load_ps(t_amp + (2 * i));
+            t = _mm256_or_ps(t, re_ones);
+            _mm256_store_ps(t_amp + (2 * i), t);
         }
+        if (book_keep)
+            count_of_category.initial_H += num_qubits;
+        time_by_category.initial_H += time.GetElapsedTime();
     }
     else
     {
@@ -589,12 +578,10 @@ int FullAmpStateVector::
         }
     }
 
-    pair<idx_size, idx_size> phase = ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, cramer, num_qubits, CZ_bitmasks_64,
+    pair<idx_size, idx_size> phase = ApplyBlockOfCZTAndLowQXYHGatesAVX(amp, num_qubits, CZ_bitmasks_64,
                                                                        T_bitmasks_64, loq_X_bitmask >> th,
                                                                        loq_Y_bitmask >> th, loq_H_bitmask >> th,
-                                                                       cramer ? 1 : num_threads, th, zero_opt_mask);
-
-    // PrintStateVector("LowGates");
+                                                                       1, th, zero_opt_mask);
     global_i_counter += phase.first;
     global_factor_power += phase.second;
 
@@ -662,13 +649,6 @@ int FullAmpStateVector::
     // Each merged X1/2 and Y1/2 qubit gates contribute +2 to global factor. Adding both the gate
     // qubits to the global factor satisfies that contribution.
     global_factor_power += num_lo_X_bits + num_hi_X_bits + num_hi_Y_bits + num_lo_Y_bits;
-
-    // PrintStateVector("HighGates");
-
-    if (cramer)
-    {
-        CompressStateVector();
-    }
 
     if (book_keep)
     {
