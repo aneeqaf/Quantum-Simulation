@@ -76,24 +76,37 @@ void SequentialSimulation::
 }
 
 void SequentialSimulation::
+    AmplitudeSampler(GenericQuantumState &amp)
+{
+    auto &idx = config->indices;
+    if (idx.size() > 0)
+    {
+        Time amp_st_time;
+        amp_st_time.StartTime();
+        cmplx *amps_interesting = amp.GetGlobalAmpAtInterestingIdx();
+        for (idx_size i = 0; i < idx.size(); ++i)
+            amps_of_interest[i] += amps_interesting[i];
+        delete[] amps_interesting;
+        double time_storage = amp_st_time.GetElapsedTime();
+        amp.time_by_category.amp_storage += time_storage;
+    }
+}
+
+void SequentialSimulation::
     CopyFromCheckpoint(bool branch,
                        GenericQuantumState &amp,
                        const GenericQuantumState &copy_amp)
 {
 
-    Time c_time;
-    c_time.StartTime();
-
-    if (config->compress)
+    if (config->compress && !config->keep_compressed)
     {
         amp.CopyState(copy_amp, true);
-
-        double time = c_time.GetElapsedTime();
-        amp.time_by_category.decompress += time;
-        ++amp.count_of_category.decompress;
     }
     else
     {
+        Time c_time;
+        c_time.StartTime();
+
         amp.CopyState(copy_amp);
 
         double time_copying = c_time.GetElapsedTime();
@@ -127,42 +140,16 @@ void SequentialSimulation::
 
         Phase1Simulation(amp, circuit, gate_num, remaining_cz_bits, cz_p_1, total_cz_bits);
 
-        auto &idx = config->indices;
         if (config->dfs_length == 0)
         {
-            if (amp.compressed)
-            {
-                Time decompress_time;
-                decompress_time.StartTime();
-
-                amp.DecompressStateVector();
-
-                double time_decompress = decompress_time.GetElapsedTime();
-                amp.time_by_category.decompress += time_decompress;
-                ++amp.count_of_category.decompress;
-            }
-
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            for (idx_size i = 0; i < idx.size(); ++i)
-                amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            double time_storage = amp_st_time.GetElapsedTime();
-            amp.time_by_category.amp_storage += time_storage;
-            prefix_time += time_storage;
+            AmplitudeSampler(amp);
         }
 
         if (config->norm_perc)
         {
             if (amp.compressed)
             {
-                Time decompress_time;
-                decompress_time.StartTime();
-
                 amp.DecompressStateVector();
-
-                double time_decompress = decompress_time.GetElapsedTime();
-                amp.time_by_category.decompress += time_decompress;
-                ++amp.count_of_category.decompress;
             }
 
             norms_CZ_paths[cz_p] = sqrt(amp.CalculateNormSquared());
@@ -185,8 +172,7 @@ void SequentialSimulation::
     // cout << "Simulating branches\n";
     static int exec = 0;
     ++exec;
-    static const idx_size num_CZ_paths = 1ull << config->dfs_length,
-                          idxs_len = config->indices.size();
+    static const idx_size num_CZ_paths = 1ull << config->dfs_length;
     static const int block0_th = amp.GetNumQInBlock(0) >> 1, block1_th = amp.GetNumQInBlock(1) >> 1;
 
     config->curr_mode = Config::SimMode::Branch;
@@ -201,21 +187,25 @@ void SequentialSimulation::
 
         config->th = block0_th;
         amp.partition_to_sim = 'a';
+        bool prev_compressed = amp.compressed;
+        if (prev_compressed)
+            amp.DecompressStateVector();
         SimulationLoop(amp, circuit, remaining_cz_bits, cz_p_1, config->dfs_length, 0, gate_i);
+        if (prev_compressed)
+            amp.CompressStateVector();
 
         config->th = block1_th;
         amp.partition_to_sim = 'b';
+        prev_compressed = amp.compressed;
+        if (prev_compressed)
+            amp.DecompressStateVector();
         SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_p_2, config->dfs_length, 0, gate_i);
+        if (prev_compressed)
+            amp.CompressStateVector();
+
         amp.partition_to_sim = 'x';
 
-        for (idx_size i = 0; i < idxs_len; ++i)
-        {
-            assert(amp.compressed == false);
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            amp.time_by_category.amp_storage += amp_st_time.GetElapsedTime();
-        }
+        AmplitudeSampler(amp);
 
         amp.book_keep = false;
 
@@ -267,25 +257,14 @@ void SequentialSimulation::
 
     SumOfTensorsProductsStateVector temp_amp{};
 
-    if (config->compress)
+    if (config->compress && !amp.compressed)
     {
-        Time compress_time, decompress_time;
-        compress_time.StartTime();
-
         amp.CompressStateVector();
+    }
 
-        double time_compress = compress_time.GetElapsedTime();
-        amp.time_by_category.compress += time_compress;
-
-        decompress_time.StartTime();
-
+    if (!config->keep_compressed)
+    {
         temp_amp.CopyState(amp, true);
-
-        double time_decompress = decompress_time.GetElapsedTime();
-        amp.time_by_category.decompress += time_decompress;
-
-        ++amp.count_of_category.decompress;
-        ++amp.count_of_category.compress;
     }
     else
     {
@@ -303,11 +282,6 @@ void SequentialSimulation::
         memory_usage += amp.GetMemUsage();
 
     BranchOrRanges(temp_amp);
-
-    // Should not need to decompress vector. State vector is useless at this point.
-    //    assert(amp.compressed == false);
-    //    if (config -> SZ_compress)
-    //        amp.DecompressStateVector();
 }
 
 void SequentialSimulation::
@@ -331,8 +305,13 @@ void SequentialSimulation::
         amp.partition_to_sim = 'b';
     }
 
+    bool prev_compressed = amp.compressed;
+    if (prev_compressed)
+        amp.DecompressStateVector();
     SimulationLoop(amp, circuit, remaining_cz_bits, cz_p_1,
                    config->proc_prefix_bits, config->dfs_length, 0);
+    if (prev_compressed)
+        amp.CompressStateVector();
 
     if (amp.AreAllAmpsZero())
     {
@@ -344,6 +323,7 @@ void SequentialSimulation::
                 amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
         }
         adjustment_factor = 1;
+        amp.partition_to_sim = 'x';
         return;
     }
 
@@ -358,8 +338,14 @@ void SequentialSimulation::
         amp.partition_to_sim = 'a';
     }
 
+    prev_compressed = amp.compressed;
+    if (prev_compressed)
+        amp.DecompressStateVector();
     SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_p_2,
                    config->proc_prefix_bits, config->dfs_length, 0);
+    if (prev_compressed)
+        amp.CompressStateVector();
+
     amp.partition_to_sim = 'x';
 
     if (amp.AreAllAmpsZero())
@@ -399,16 +385,9 @@ void SequentialSimulation::
         amp.ResetAmpVector();
         Phase1Simulation(amp, circuit, 0, remaining_cz_bits, cz_p_1, total_cz_bits);
 
-        auto &idx = config->indices;
         if (config->dfs_length == 0)
         {
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            for (idx_size i = 0; i < idx.size(); ++i)
-                amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            double time_storage = amp_st_time.GetElapsedTime();
-            amp.time_by_category.amp_storage += time_storage;
-            prefix_time += time_storage;
+            AmplitudeSampler(amp);
         }
 
         config->curr_mode = Config::SimMode::Ranges;
@@ -427,7 +406,7 @@ void SequentialSimulation::
     //
     PopulateBenchmarkMap();
 
-    memory_usage += amp.GetMemUsage();
+    memory_usage += amp.GetMemUsage(true);
 
     pair<int, int> twoq_gate_count = circuit.GetTwoQGateCount();
 
@@ -468,16 +447,9 @@ void SequentialSimulation::
         Phase1Simulation(amp, circuit, curr_gate, remaining_cz_bits,
                          config->cz_path, config->proc_prefix_bits);
 
-        auto &idx = config->indices;
         if (config->dfs_length == 0)
         {
-            Time amp_st_time;
-            amp_st_time.StartTime();
-            for (idx_size i = 0; i < idx.size(); ++i)
-                amps_of_interest[i] += amp.GetGlobalAmpAtInterestingIdx(i);
-            double storage_time = amp_st_time.GetElapsedTime();
-            amp.time_by_category.amp_storage += storage_time;
-            mmap_time += storage_time;
+            AmplitudeSampler(amp);
         }
     }
     else
@@ -538,14 +510,26 @@ void SequentialSimulation::
         amp.partition_to_sim = 'a';
         idx_size cz_path_copy = cz_path;
         int remaining_cz_bits_copy = remaining_cz_bits;
-        // cout << "Simulating partition a\n";
+
+        bool prev_compressed = amp.compressed;
+        if (prev_compressed)
+            amp.DecompressStateVector();
         terminate = SimulationLoop(amp, circuit, remaining_cz_bits, cz_path, cz_path_len,
                                    config->dfs_length, gate_i);
+        if (prev_compressed)
+            amp.CompressStateVector();
+
         config->th = amp.GetNumQInBlock(1) >> 1;
         amp.partition_to_sim = 'b';
-        // cout << "Simulating partition b\n";
+
+        prev_compressed = amp.compressed;
+        if (prev_compressed)
+            amp.DecompressStateVector();
         SimulationLoop(amp, circuit, remaining_cz_bits_copy, cz_path_copy, cz_path_len,
                        config->dfs_length, gate_i);
+        if (prev_compressed)
+            amp.CompressStateVector();
+
         amp.partition_to_sim = 'x';
     }
     else if (remaining_cz_bits == -1)

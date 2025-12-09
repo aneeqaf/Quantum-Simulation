@@ -84,12 +84,13 @@ public:
                                            const bitset<128> T_bitmasks[2],
                                            int th) = 0;
 
-    virtual cmplx operator[](bitset<128> i) = 0;
+    virtual cmplx operator[](bitset<128> i) const = 0;
+    virtual cmplx *GetGlobalAmpAtInterestingIdx(const idx_size *idxs = nullptr, const idx_size num_idxs = 0) = 0;
     virtual cmplx GetGlobalAmpAtInterestingIdx(idx_size i) = 0;
     virtual double GetMinProb() = 0;
     virtual double GetMaxProb() = 0;
     virtual double GetAvgProb() const = 0;
-    virtual double GetMemUsage() const = 0;
+    virtual double GetMemUsage(bool peak = false) const = 0;
     virtual idx_size GetSize() const = 0;
     virtual idx_size GetFullStateVectorSize() const = 0;
     virtual int GetNumQInBlock(idx_size block) const = 0;

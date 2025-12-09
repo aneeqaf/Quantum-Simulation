@@ -48,6 +48,7 @@ private:
   // 1ull < (global_factor_power/2) * [[global_factor_power%2 == 1]] * sqrt(2)
   // global_factor_power represents the count of H, X_1_2, and Y_1_2 gates.
 
+  void AmplitudeSampler(GenericQuantumState &amp);
   void PopulateBenchmarkMap();
   void CopyFromCheckpoint(bool branch,
                           GenericQuantumState &amp,

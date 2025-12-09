@@ -555,8 +555,8 @@ int main(int argc, char *argv[])
                                 cz_path, czp_app_len, cz_len, dfs_length, epsilon, approx, ascii,
                                 print_amp, print_idx, (Config::SimType)sim_type, verbose, vcut, hcut,
                                 depth, threshold, num_threads, true, nearest_neighbors, row_major,
-                                store_checkpoint_range, first_partition_smaller,
-                                count_zeros, save_cp_to_file, trial_mode, compress, cramer_cw, cramer_p_reject);
+                                store_checkpoint_range, first_partition_smaller, count_zeros, save_cp_to_file,
+                                trial_mode, compress, false, cramer_cw, cramer_p_reject);
 
     cir.InitializeCircuitConfig(config);
 

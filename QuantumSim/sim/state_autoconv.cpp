@@ -17,6 +17,8 @@ AdaptiveStateVector::
                         const bool first_part_small,
                         const int verb) : full_state(nullptr), total_q(qubits)
 {
+    if (config->compress && config->keep_compressed)
+        compressed = true;
     sumOfTensors = new SumOfTensorsProductsStateVector(qubits, type, config,
                                                        hcut, vcut, row_major,
                                                        first_part_small, verb);
@@ -158,12 +160,21 @@ int AdaptiveStateVector::
 }
 
 cmplx AdaptiveStateVector::
-operator[](bitset<128> i)
+operator[](bitset<128> i) const
 {
     if (full_state)
         return (*full_state)[i];
     else
         return (*sumOfTensors)[i];
+}
+
+cmplx *AdaptiveStateVector::
+    GetGlobalAmpAtInterestingIdx(const idx_size *idxs, const idx_size num_idxs)
+{
+    if (full_state)
+        return full_state->GetGlobalAmpAtInterestingIdx(idxs, num_idxs);
+    else
+        return sumOfTensors->GetGlobalAmpAtInterestingIdx(idxs, num_idxs);
 }
 
 cmplx AdaptiveStateVector::
@@ -203,12 +214,12 @@ double AdaptiveStateVector::
 }
 
 double AdaptiveStateVector::
-    GetMemUsage() const
+    GetMemUsage(bool peak) const
 {
     if (full_state)
-        return full_state->GetMemUsage();
+        return full_state->GetMemUsage(peak);
     else
-        return sumOfTensors->GetMemUsage();
+        return sumOfTensors->GetMemUsage(peak);
 }
 
 idx_size AdaptiveStateVector::

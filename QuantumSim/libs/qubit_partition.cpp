@@ -155,7 +155,7 @@ void QubitPartition::InitMappings()
 
 idx_size QubitPartition::
     IndexScatter(const bitset<128> &idx,
-                 const idx_size block_idx)
+                 const idx_size block_idx) const
 {
     idx_size local_idx = 0;
     int total_qubits = getNumQubits();

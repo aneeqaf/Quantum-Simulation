@@ -979,9 +979,19 @@ complex<float> *Cramer::
 
     if (global_context.codeword_all_amps != -1)
     {
-        for (size_t i = 0; i < config.orig_vector_size; ++i)
+        auto cw = global_context.codewords_mappings[global_context.codeword_all_amps].load();
+
+        if (cw == complex<float>(0, 0))
         {
-            decompressed_vector[i] = global_context.codewords_mappings[global_context.codeword_all_amps].load();
+            memset(decompressed_vector, 0, sizeof(complex<float>) * config.orig_vector_size);
+            decompressed_vector[0] = 1;
+        }
+        else
+        {
+            for (size_t i = 0; i < config.orig_vector_size; ++i)
+            {
+                decompressed_vector[i] = cw;
+            }
         }
         return decompressed_vector;
     }

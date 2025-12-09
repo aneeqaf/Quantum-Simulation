@@ -92,13 +92,14 @@ public:
     void ApplyCZDecompositionDist(const idx_size *__restrict xCZ_bitmasks);
     void ApplyQFT();
 
-    cmplx operator[](bitset<128> i);
+    cmplx operator[](bitset<128> i) const;
+    cmplx *GetGlobalAmpAtInterestingIdx(const idx_size *idxs, const idx_size num_idxs);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     const cmplx *const GetAmpVector() const;
     double GetMinProb();
     double GetMaxProb();
     double GetAvgProb() const;
-    double GetMemUsage() const;
+    double GetMemUsage(bool peak = false) const;
     ZeroOptMask GetZeroOptMask() const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;

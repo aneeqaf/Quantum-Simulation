@@ -72,14 +72,15 @@ public:
     void PopulateGlobalToLocalMap(vector<bitset<128>> &idxs);
     void UnpopulateGlobalToLocalMap();
 
-    cmplx operator[](bitset<128> i);
+    cmplx operator[](bitset<128> i) const;
     cmplx GetAmpFromGlobalState(const idx_size a,
                                 const idx_size b) const;
+    cmplx *GetGlobalAmpAtInterestingIdx(const idx_size *idxs = nullptr, const idx_size num_idxs = 0);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     double GetMinProb();
     double GetMaxProb();
     double GetAvgProb() const;
-    double GetMemUsage() const;
+    double GetMemUsage(bool peak = false) const;
     idx_size GetSize() const;
     idx_size GetFullStateVectorSize() const;
     int GetNumQInBlock(idx_size block) const;

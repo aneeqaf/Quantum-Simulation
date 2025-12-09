@@ -72,12 +72,13 @@ public:
     FullAmpStateVector *ConvertSumOfTensorsToState();
     FullAmpStateVector *ConvertSumOfTensorsToStateAVX();
 
-    cmplx operator[](bitset<128> i);
+    cmplx operator[](bitset<128> i) const;
+    cmplx *GetGlobalAmpAtInterestingIdx(const idx_size *idxs = nullptr, const idx_size num_idxs = 0);
     cmplx GetGlobalAmpAtInterestingIdx(idx_size i);
     double GetMinProb();
     double GetMaxProb();
     double GetAvgProb() const;
-    double GetMemUsage() const;
+    double GetMemUsage(bool peak = false) const;
     Config::SimType GetSimType() const;
     idx_size GetNumAddends() const;
     idx_size GetSize() const;

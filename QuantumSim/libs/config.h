@@ -30,39 +30,67 @@ using namespace std;
 using idx_size = unsigned long long;
 using cmplx = complex<float>;
 
-class MMapContent {
-    cmplx* map_ptr;
+class MMapContent
+{
+    cmplx *map_ptr;
     idx_size size;
     int fd;
     string filename;
-    
+
 public:
     void InitializeMemMap(const string filename,
                           idx_size size);
-    cmplx* operator[](idx_size i);
+    cmplx *operator[](idx_size i);
     void WriteToDisk();
-   
-    cmplx* GetMapPtr() { return map_ptr; }
-    
-    MMapContent(): map_ptr(nullptr), size(0), fd(0), filename("") {};
+
+    cmplx *GetMapPtr() { return map_ptr; }
+
+    MMapContent() : map_ptr(nullptr), size(0), fd(0), filename("") {};
     MMapContent(const string filename,
                 const idx_size size,
                 bool initialize = false);
-    MMapContent(const MMapContent& rhs);
-    MMapContent& operator=(const MMapContent& rhs);
+    MMapContent(const MMapContent &rhs);
+    MMapContent &operator=(const MMapContent &rhs);
     ~MMapContent();
 };
 
-class Config {
+class Config
+{
 public:
-    enum SimType : int {LosslessH, LosslessV, Approx1CutH, Approx1CutV, ApproxOWT, FullState,
-        Approx2011, Approx1_101, Approx1110, Approx2011OWT, Approx_i11i, Approx_i11iOWT,
-        ApproxCZPathH2011, ApproxCZPathV2011};
-    enum Verbose : int {None, NCCV, NCC, Default, Cycles};
-    enum SimMode : int {ProcPrefix, Ranges, Branch};
-    
+    enum SimType : int
+    {
+        LosslessH,
+        LosslessV,
+        Approx1CutH,
+        Approx1CutV,
+        ApproxOWT,
+        FullState,
+        Approx2011,
+        Approx1_101,
+        Approx1110,
+        Approx2011OWT,
+        Approx_i11i,
+        Approx_i11iOWT,
+        ApproxCZPathH2011,
+        ApproxCZPathV2011
+    };
+    enum Verbose : int
+    {
+        None,
+        NCCV,
+        NCC,
+        Default,
+        Cycles
+    };
+    enum SimMode : int
+    {
+        ProcPrefix,
+        Ranges,
+        Branch
+    };
+
     vector<bitset<128>> indices;
-    MMapContent* mmap_obj;
+    MMapContent *mmap_obj;
     string infile;
     string prob_outfile;
     string amp_outfile;
@@ -96,25 +124,26 @@ public:
     bool store_checkpoint_range;
     bool first_part_smaller;
     bool compress;
+    bool keep_compressed;
     bool trial_mode;
     SimType sim_type;
     Verbose verbose;
     SimMode curr_mode;
-    
-    void ReadIndices(const string& idx_file);
+
+    void ReadIndices(const string &idx_file);
     void GenerateRandomIndices(const int seed,
                                const int num_idx,
                                const __int128 amp_size);
-    
+
     Config() : indices({}), mmap_obj(nullptr), infile(""), prob_outfile(""),
-    amp_outfile(""), report_outfile(""), misc_outfile(""), temp_dir(""),
-    cz_path(0), approx_epsilon(0), cramer_num_codewords(0), cramer_p_rejection(0),
-    norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
-    dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), save_cp_file(0),
-    google(true), print_amp(false), print_idx(false), ascii(false), approx(true), nearest_neighbors(true),
-    row_major(true), count_zeros(false), store_checkpoint_range(true), first_part_smaller(false), compress(false),
-    trial_mode(false), sim_type(FullState), verbose(Default), curr_mode(ProcPrefix){}
-    Config(const bitset<128>& amp_size,
+               amp_outfile(""), report_outfile(""), misc_outfile(""), temp_dir(""),
+               cz_path(0), approx_epsilon(0), cramer_num_codewords(0), cramer_p_rejection(0),
+               norm_perc(0), norm_depth(0), ranges_bits(0), proc_prefix_bits(0),
+               dfs_length(0), depth(26), th(0), num_threads(1), vcut(0), hcut(0), save_cp_file(0),
+               google(true), print_amp(false), print_idx(false), ascii(false), approx(true), nearest_neighbors(true),
+               row_major(true), count_zeros(false), store_checkpoint_range(true), first_part_smaller(false), compress(false),
+               keep_compressed(false), trial_mode(false), sim_type(FullState), verbose(Default), curr_mode(ProcPrefix) {}
+    Config(const bitset<128> &amp_size,
            const string ifile,
            const string pfile,
            const string afile,
@@ -147,10 +176,11 @@ public:
            const int sv_cp_file = 0,
            const bool is_trial = false,
            const bool compress = false,
+           const bool keep_compressed = false,
            const idx_size cramer_num_cw = 0,
            const double cramer_p_reject = 0);
-    Config(const Config& rhs);
-    Config& operator=(const Config& rhs);
+    Config(const Config &rhs);
+    Config &operator=(const Config &rhs);
     ~Config();
 };
 

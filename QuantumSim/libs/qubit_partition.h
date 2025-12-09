@@ -91,7 +91,7 @@ public:
     // Scatters the global amp index into local amp indices.
     vector<idx_size> IndexScatter(const bitset<128> &i);
     idx_size IndexScatter(const bitset<128> &i,
-                          const idx_size block_idx);
+                          const idx_size block_idx) const;
     // move up boundary qubits up front in each block
     void RenumberLocalQubits();
 

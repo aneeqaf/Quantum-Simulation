@@ -17,35 +17,44 @@ FullAmpStateVector::
                                                zero_opt_mask(num_qubits), all_zeros(false)
 {
     amp_size = 1ull << qubits;
-    if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
-    {
-        idx_size memory = sizeof(cmplx) * amp_size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30))
-        {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20))
-        {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10))
-        {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        free(amp);
-        exit(err);
-    }
-    memset(amp, 0, amp_size * sizeof(amp));
-    amp[0] = 1;
 
     if (config->compress)
     {
         cramer = new Cramer(amp_size,
                             config->cramer_num_codewords, config->num_threads,
                             config->cramer_p_rejection, 1, sim_type != Config::FullState);
+    }
+
+    if (config->keep_compressed)
+    {
+        amp = cramer->SetAllAmpsToZero(amp);
+        compressed = true;
+    }
+    else
+    {
+        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
+        {
+            idx_size memory = sizeof(cmplx) * amp_size;
+            cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
+            if (memory >= (1 << 30))
+            {
+                cerr << memory / (1 << 30) << " GiB \n";
+            }
+            else if (memory >= (1 << 20))
+            {
+                cerr << memory / (1 << 20) << " MiB \n";
+            }
+            else if (memory >= (1 << 10))
+            {
+                cerr << memory / (1 << 10) << " KiB \n";
+            }
+            else
+                cerr << memory << " B \n";
+            free(amp);
+            exit(err);
+        }
+        memset(amp, 0, amp_size * sizeof(amp));
+        amp[0] = 1;
     }
 }
 
@@ -113,6 +122,7 @@ void FullAmpStateVector::
     ApplyNonCGate(const idx_size gate_qubit,
                   const Gate::Type gate_type)
 {
+    assert(!compressed);
     ApplyNonControl1QGates(amp, gate_qubit, num_qubits, gate_type);
     if (gate_type == Gate::Type::x_1_2 || gate_type == Gate::Type::y_1_2)
         global_factor_power += 2;
@@ -122,6 +132,7 @@ void FullAmpStateVector::
     ApplyCZDecompositions(const int gate_qubit,
                           const Gate::Type gate_type)
 {
+    assert(!compressed);
     if (gate_type != Gate::Type::cz_d3)
         ApplyCZDecomposition(amp, num_qubits, gate_qubit, gate_type);
     if (gate_type == Gate::Type::cz_d5)
@@ -131,6 +142,7 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     ApplyCZDecompositionDist(const idx_size *__restrict xCZ_bitmasks)
 {
+    assert(!compressed);
     /*0 : Z; 1 : 01; 2 : 10 */
     all_zeros = ApplyxCZGateAVX(amp, num_threads, num_qubits, xCZ_bitmasks, zero_opt_mask);
 
@@ -145,12 +157,13 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     ApplyHGateOnAllAmps(bool initialize_amp)
 {
+    assert(!compressed);
+
     Time time;
     time.StartTime();
 
     if (initialize_amp)
     {
-
         float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
         constexpr __m256 re_ones = {1, 0, 1, 0, 1, 0, 1, 0};
 
@@ -189,6 +202,7 @@ void FullAmpStateVector::
                const Gate &g,
                const Gate::Type gate_type)
 {
+    assert(!compressed);
     ApplyControlGate(amp, num_controls, gate_qubits, num_qubits, g, gate_type);
 }
 
@@ -196,6 +210,7 @@ void FullAmpStateVector::
     ApplyMergedXYGate(const Gate &gate1,
                       const Gate &gate2)
 {
+    assert(!compressed);
     Time time;
     time.StartTime();
 
@@ -215,6 +230,7 @@ void FullAmpStateVector::
                            idx_size &odd_Yi,
                            const vector<Gate> &all_gates)
 {
+    assert(!compressed);
     vector<idx_size> qubits_in_cluster1, qubits_in_cluster2;
 
     if ((Gate::Type)all_gates[gate_i].GetType() == Gate::Type::x_1_2)
@@ -336,6 +352,7 @@ void FullAmpStateVector::
                   int &num_X_bits,
                   int &num_Y_bits)
 {
+    assert(!compressed);
     Time time;
     time.StartTime();
 
@@ -427,6 +444,7 @@ void FullAmpStateVector::
                               bitset<128> Y_bitmask,
                               int th)
 {
+    assert(!compressed);
     Time time;
     idx_size X_bitmask_64 = X_bitmask.to_ulong(), Y_bitmask_64 = Y_bitmask.to_ulong();
 
@@ -474,6 +492,7 @@ int FullAmpStateVector::
                                const bitset<128> T_bitmasks[2],
                                int th)
 {
+    assert(!compressed);
     Time time;
     time.StartTime();
 
@@ -616,6 +635,7 @@ int FullAmpStateVector::
 void FullAmpStateVector::
     ApplyQFT()
 {
+    assert(!compressed);
     idx_size block_size = amp_size < 64 ? 8 : amp_size / num_threads > kCmplxInL1Cache / num_threads ? kCmplxInL1Cache / num_threads
                                                                                                      : amp_size / num_threads;
     idx_size block_bits = log2(block_size);
@@ -647,13 +667,28 @@ void FullAmpStateVector::
 }
 
 cmplx FullAmpStateVector::
-operator[](bitset<128> i)
+operator[](bitset<128> i) const
 {
+    assert(!compressed);
+
     const float rescaling_factor = (global_factor_power % 2) ? 1.0 / (pow(2, (global_factor_power / 2)) * sqrt(2.0)) : 1.0 / pow(2, (global_factor_power / 2));
     cmplx a = amp[i.to_ulong()] * cmplx(pow(ki, global_i_counter));
     a *= rescaling_factor;
 
     return a;
+}
+
+cmplx *FullAmpStateVector::
+    GetGlobalAmpAtInterestingIdx(const idx_size *idxs,
+                                 const idx_size num_idxs)
+{
+    cmplx *amps = new cmplx[num_idxs];
+    for (size_t i = 0; i < num_idxs; ++i)
+    {
+        amps[i] = (*this)[idxs[i]];
+    }
+
+    return amps;
 }
 
 cmplx FullAmpStateVector::
@@ -671,6 +706,8 @@ const cmplx *const FullAmpStateVector::
 double FullAmpStateVector::
     GetMinProb()
 {
+    assert(!compressed);
+
     for (idx_size i = 0; i < amp_size; ++i)
     {
         float t = norm(amp[i]);
@@ -684,6 +721,8 @@ double FullAmpStateVector::
 double FullAmpStateVector::
     GetMaxProb()
 {
+    assert(!compressed);
+
     for (idx_size i = 0; i < amp_size; ++i)
     {
         float t = norm(amp[i]);
@@ -701,9 +740,9 @@ double FullAmpStateVector::
 }
 
 double FullAmpStateVector::
-    GetMemUsage() const
+    GetMemUsage(bool peak) const
 {
-    if (compressed)
+    if (compressed && !peak)
         return sizeof(cmplx) * cramer->GetCompressedVectorSize();
     else
         return sizeof(cmplx) * amp_size;
@@ -754,6 +793,7 @@ ZeroOptMask FullAmpStateVector::
 double FullAmpStateVector::
     CalculateNormSquared()
 {
+    assert(!compressed);
     Time norm_time;
     norm_time.StartTime();
 
@@ -822,6 +862,8 @@ double FullAmpStateVector::
 double FullAmpStateVector::
     CalculateMeanEntropy() const
 {
+    assert(!compressed);
+
     float rescaling_factor = 1.0 / pow(2, (global_factor_power / 2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0 / sqrt(2.0);
@@ -841,6 +883,8 @@ double FullAmpStateVector::
 double FullAmpStateVector::
     CalculateCrossEntropy(int range) const
 {
+    assert(!compressed);
+
     float rescaling_factor = 1.0 / pow(2, (global_factor_power / 2));
     if ((global_factor_power % 2) == 1)
         rescaling_factor *= 1.0 / sqrt(2.0);
@@ -860,6 +904,8 @@ double FullAmpStateVector::
 double FullAmpStateVector::
     CountZeroAmpPercentage() const
 {
+    assert(!compressed);
+
     idx_size zero_count = 0;
 
     for (idx_size i = 0; i < amp_size; ++i)
@@ -874,6 +920,8 @@ double FullAmpStateVector::
 idx_size FullAmpStateVector::
     CountZerosInBlock(int block) const
 {
+    assert(!compressed);
+
     idx_size zero_count = 0;
 #pragma omp parallel for num_threads(num_threads) reduction(+ : zero_count)
     for (idx_size i = 0; i < amp_size; ++i)
@@ -892,6 +940,7 @@ bool FullAmpStateVector::
 void FullAmpStateVector::
     ResetAmpVector()
 {
+    assert(!compressed);
     float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
 
     idx_size size = 2 * amp_size;
@@ -909,6 +958,7 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     Normalize()
 {
+    assert(!compressed);
     double norm = sqrt(CalculateNormSquared());
     if (norm != 0)
         for (idx_size i = 0; i < amp_size; ++i)
@@ -966,6 +1016,7 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     RescaleAndApplyGlobalICounter()
 {
+    assert(!compressed);
     Time rescale_time;
     rescale_time.StartTime();
 
@@ -977,6 +1028,7 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     ApplyGlobalICounter()
 {
+    assert(!compressed);
     const auto multiplier = pow(ki, global_i_counter);
     for (idx_size i = 0; i < amp_size; ++i)
         amp[i] *= multiplier;
@@ -1005,6 +1057,7 @@ void FullAmpStateVector::
     PrintProbabilities(const string &out_file,
                        const int cycle_num)
 {
+    assert(!compressed);
     ofstream file;
     file.open(out_file + "_" + to_string(cycle_num) + ".txt");
 
@@ -1025,6 +1078,7 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     PrintStateVector(const string extension)
 {
+    assert(!compressed);
     RescaleAndApplyGlobalICounter();
     static int count = 0;
     ofstream file;
@@ -1063,6 +1117,7 @@ void FullAmpStateVector::
     PrintStateVector(const string &outfile,
                      const int cycle_num)
 {
+    assert(!compressed);
     ofstream file;
     file.open(outfile + "_" + to_string(cycle_num) + ".txt");
 
@@ -1133,7 +1188,7 @@ void FullAmpStateVector::
     if (amp && deallocate)
     {
         free(amp);
-        amp == nullptr;
+        amp = nullptr;
     }
     amp_size = t_rhs.amp_size;
 
@@ -1199,6 +1254,9 @@ void FullAmpStateVector::
 void FullAmpStateVector::
     CompressStateVector()
 {
+    Time compress_time, decompress_time;
+    compress_time.StartTime();
+
     if (global_i_counter || global_factor_power)
         RescaleAndApplyGlobalICounter();
 
@@ -1212,11 +1270,18 @@ void FullAmpStateVector::
     }
     amp = compressed_amp;
     compressed = true;
+
+    double time_compress = compress_time.GetElapsedTime();
+    time_by_category.compress += time_compress;
+    ++count_of_category.compress;
 }
 
 void FullAmpStateVector::
     DecompressStateVector()
 {
+    Time decompress_time;
+    decompress_time.StartTime();
+
     auto compressed_amp = amp;
     amp = cramer->CramerDecompress(nullptr, compressed_amp);
 
@@ -1226,4 +1291,8 @@ void FullAmpStateVector::
         compressed_amp = nullptr;
     }
     compressed = false;
+
+    double time_decompress = decompress_time.GetElapsedTime();
+    time_by_category.decompress += time_decompress;
+    ++count_of_category.decompress;
 }

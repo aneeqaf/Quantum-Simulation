@@ -34,6 +34,9 @@ TensorProductStateVector::
     state_a = new FullAmpStateVector(num_q_b0, config);
     state_b = new FullAmpStateVector(num_q_b1, config);
 
+    if (config->compress && config->keep_compressed)
+        compressed = true;
+
     if (!count_h && cut_type == QubitPartition::Cuts::Horizontal)
     {
         string data = "";
@@ -487,7 +490,7 @@ int TensorProductStateVector::
 }
 
 cmplx TensorProductStateVector::
-operator[](bitset<128> i)
+operator[](bitset<128> i) const
 {
     //    if (cut_type == QubitPartition::Cuts::Horizontal) {
     //        bitset<128> temp_i = i;
@@ -498,6 +501,36 @@ operator[](bitset<128> i)
     //    else {
     return (*state_a)[qp.IndexScatter(i, 0)] * (*state_b)[qp.IndexScatter(i, 1)];
     //    }
+}
+
+cmplx *TensorProductStateVector::
+    GetGlobalAmpAtInterestingIdx(const idx_size *idxs,
+                                 const idx_size num_idxs)
+{
+    bool prev_compressed = state_a->compressed;
+    if (prev_compressed)
+        state_a->DecompressStateVector();
+    cmplx *state_a_amps = state_a->GetGlobalAmpAtInterestingIdx(global_to_local_a, num_requested_amps);
+    if (prev_compressed)
+        state_a->CompressStateVector();
+
+    prev_compressed = state_b->compressed;
+    if (prev_compressed)
+        state_b->DecompressStateVector();
+    cmplx *state_b_amps = state_b->GetGlobalAmpAtInterestingIdx(global_to_local_b, num_requested_amps);
+    if (prev_compressed)
+        state_b->CompressStateVector();
+
+    cmplx *amps = new cmplx[num_requested_amps];
+    for (size_t i = 0; i < num_requested_amps; ++i)
+    {
+        amps[i] = state_a_amps[i] * state_b_amps[i];
+    }
+
+    delete[] state_a_amps;
+    delete[] state_b_amps;
+
+    return amps;
 }
 
 cmplx TensorProductStateVector::
@@ -532,9 +565,10 @@ double TensorProductStateVector::
 }
 
 double TensorProductStateVector::
-    GetMemUsage() const
+    GetMemUsage(bool peak) const
 {
-    return state_a->GetMemUsage() + state_b->GetMemUsage();
+    return state_a->GetMemUsage(peak && state_a->GetSize() >= state_b->GetSize()) +
+           state_b->GetMemUsage(peak && state_a->GetSize() < state_b->GetSize());
 }
 
 idx_size TensorProductStateVector::
@@ -868,11 +902,10 @@ void TensorProductStateVector::
 void TensorProductStateVector::
     CompressStateVector()
 {
-    partition_to_sim = 'a';
-    state_a->CompressStateVector();
-    partition_to_sim = 'b';
-    state_b->CompressStateVector();
-    partition_to_sim = 'x';
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a->CompressStateVector();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b->CompressStateVector();
 
     compressed = true;
 }
@@ -880,8 +913,10 @@ void TensorProductStateVector::
 void TensorProductStateVector::
     DecompressStateVector()
 {
-    state_a->DecompressStateVector();
-    state_b->DecompressStateVector();
+    if (partition_to_sim == 'a' || partition_to_sim == 'x')
+        state_a->DecompressStateVector();
+    if (partition_to_sim == 'b' || partition_to_sim == 'x')
+        state_b->DecompressStateVector();
 
     compressed = false;
 }

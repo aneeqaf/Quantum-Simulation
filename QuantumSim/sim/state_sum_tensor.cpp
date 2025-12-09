@@ -19,6 +19,8 @@ SumOfTensorsProductsStateVector::
                                     const int verb)
 {
     sim_type = type;
+    if (config->compress && config->keep_compressed)
+        compressed = true;
 
     if (type == Config::SimType::LosslessH || type == Config::SimType::Approx1CutH || type == Config::SimType::ApproxCZPathH2011)
         tensor_addends.push_back(new TensorProductStateVector(qubits,
@@ -576,12 +578,19 @@ FullAmpStateVector *SumOfTensorsProductsStateVector::
 }
 
 cmplx SumOfTensorsProductsStateVector::
-operator[](bitset<128> i)
+operator[](bitset<128> i) const
 {
     cmplx val = 0;
     for (auto &t : tensor_addends)
         val += (*t)[i];
     return val;
+}
+
+cmplx *SumOfTensorsProductsStateVector::
+    GetGlobalAmpAtInterestingIdx(const idx_size *idxs,
+                                 const idx_size num_idxs)
+{
+    return tensor_addends[0]->GetGlobalAmpAtInterestingIdx(idxs, num_idxs);
 }
 
 cmplx SumOfTensorsProductsStateVector::
@@ -617,11 +626,11 @@ double SumOfTensorsProductsStateVector::
 }
 
 double SumOfTensorsProductsStateVector::
-    GetMemUsage() const
+    GetMemUsage(bool peak) const
 {
     double mem = 0;
     for (auto &t : tensor_addends)
-        mem += t->GetMemUsage();
+        mem += t->GetMemUsage(peak);
     return mem;
 }
 

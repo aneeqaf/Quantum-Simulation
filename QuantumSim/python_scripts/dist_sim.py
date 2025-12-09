@@ -16,6 +16,8 @@ import numpy as np
 import random
 from math import sqrt, floor, ceil
 
+# The indices are sorted according to the local indices of the partitions so different cuts will give wrong fidelity during compression
+
 @click.command()
 @click.argument("circuit", nargs=1, required=True)
 @click.option("--depth", nargs=1, required=False, default=0)
