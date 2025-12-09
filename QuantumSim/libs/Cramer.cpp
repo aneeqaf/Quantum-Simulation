@@ -74,11 +74,11 @@ Cramer::
 Cramer::
     Cramer(const Cramer &rhs) : config(rhs.config)
 {
-    assert(global_context.codewords_mappings != nullptr);
-    assert(new_global_context.codewords_mappings != nullptr);
-    assert(global_context.cw_freq != nullptr);
-    assert(new_global_context.cw_freq != nullptr);
-    assert(sector_factors != nullptr);
+    global_context.codewords_mappings = new atomic<complex<float>>[config.num_codewords_per_sector];
+    global_context.cw_freq = new atomic<size_t>[config.num_codewords_per_sector];
+    new_global_context.codewords_mappings = new atomic<complex<float>>[config.num_codewords_per_sector];
+    new_global_context.cw_freq = new atomic<size_t>[config.num_codewords_per_sector];
+    sector_factors = new complex<float>[config.num_sectors];
 
     for (size_t i = 0; i < config.num_codewords_per_sector; ++i)
         global_context.codewords_mappings[i].store(rhs.global_context.codewords_mappings[i].load());
@@ -738,7 +738,7 @@ complex<float> *Cramer::
         memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
     }
 
-    assert(block_size % 8 == 0 && block_size >= config.num_codewords_reg);
+    assert(block_size % 8 == 0);
 
     const size_t leaked_cw = (block_offset % config.num_codewords_reg);
     const size_t total_cw = leaked_cw + block_size;

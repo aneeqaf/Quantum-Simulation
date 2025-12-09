@@ -124,11 +124,9 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
-    void CopyState(const GenericQuantumState &rhs);
-    void CopyMemberVars(const GenericQuantumState &rhs);
+    void CopyState(const GenericQuantumState &rhs, bool decompress = false);
     void CompressStateVector();
     void DecompressStateVector();
-    void DecompressAndCopyAnotherState(const GenericQuantumState &rhs);
 
     void PrintStateVector(const string &outfile,
                           const int cycle_num);
@@ -138,8 +136,8 @@ public:
     void WriteAmpToDisk(const string &filename);
     void ReadFromDisk(const string &filename);
 
-    FullAmpStateVector() : max_prob(numeric_limits<double>::min()),
-                           min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr), global_factor_power(0),
+    FullAmpStateVector() : max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
+                           amp(nullptr), cramer(nullptr), amp_size(0), global_factor_power(0),
                            global_i_counter(0), num_qubits(0), zero_opt_mask(num_qubits), all_zeros(false) {}
 
     FullAmpStateVector(const int qubits,

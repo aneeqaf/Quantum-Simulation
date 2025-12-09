@@ -47,8 +47,6 @@ typedef struct DataPerCycle
 class GenericQuantumState
 {
 public:
-    static vector<array<complex<float> *, 2>> compressed_vector_ptrs;
-
     static Data data_per_cycles;
     static vector<string> log;
     static Counts count_of_category;
@@ -110,11 +108,9 @@ public:
     virtual void Rescale() = 0;
     virtual void ApplyGlobalICounter() = 0;
     virtual void RescaleAndApplyGlobalICounter() = 0;
-    virtual void CopyState(const GenericQuantumState &rhs) = 0;
-    virtual void CopyMemberVars(const GenericQuantumState &rhs) = 0;
+    virtual void CopyState(const GenericQuantumState &rhs, bool decompress = false) = 0;
     virtual void CompressStateVector() = 0;
     virtual void DecompressStateVector() = 0;
-    virtual void DecompressAndCopyAnotherState(const GenericQuantumState &rhs) = 0;
 
     virtual void PrintStateVector(const string &outfile,
                                   const int cycle_num) = 0;

@@ -76,45 +76,29 @@ void SequentialSimulation::
 }
 
 void SequentialSimulation::
-    CopyOrRead(bool file_back_up,
-               bool branch,
-               GenericQuantumState &amp,
-               const GenericQuantumState &copy_amp)
+    CopyFromCheckpoint(bool branch,
+                       GenericQuantumState &amp,
+                       const GenericQuantumState &copy_amp)
 {
 
-    if (file_back_up)
+    Time c_time;
+    c_time.StartTime();
+
+    if (config->compress)
     {
-        Time file_io_time;
-        file_io_time.StartTime();
+        amp.CopyState(copy_amp, true);
 
-        amp.ReadFromDisk(config->temp_dir + "checkpoint" + to_string(branch));
-        amp.CopyMemberVars(copy_amp);
-
-        double time_file_io = file_io_time.GetElapsedTime();
-        amp.time_by_category.copying += time_file_io;
-        ++amp.count_of_category.copying;
+        double time = c_time.GetElapsedTime();
+        amp.time_by_category.decompress += time;
+        ++amp.count_of_category.decompress;
     }
     else
     {
-        Time c_time;
-        c_time.StartTime();
+        amp.CopyState(copy_amp);
 
-        if (config->compress)
-        {
-            amp.DecompressAndCopyAnotherState(copy_amp);
-
-            double time = c_time.GetElapsedTime();
-            amp.time_by_category.decompress += time;
-            ++amp.count_of_category.decompress;
-        }
-        else
-        {
-            amp.CopyState(copy_amp);
-
-            double time_copying = c_time.GetElapsedTime();
-            amp.time_by_category.copying += time_copying;
-            ++amp.count_of_category.copying;
-        }
+        double time_copying = c_time.GetElapsedTime();
+        amp.time_by_category.copying += time_copying;
+        ++amp.count_of_category.copying;
     }
 }
 
@@ -188,7 +172,7 @@ void SequentialSimulation::
         config->curr_mode = Config::SimMode::Ranges;
 
         if ((cz_p + 1) < cz_paths_ex)
-            CopyOrRead(config->save_cp_file > 0, false, amp, copy_amp);
+            CopyFromCheckpoint(false, amp, copy_amp);
     }
 }
 
@@ -236,7 +220,7 @@ void SequentialSimulation::
         amp.book_keep = false;
 
         if ((i + 1) < num_CZ_paths)
-            CopyOrRead(config->save_cp_file > 1, true, amp, copy_amp);
+            CopyFromCheckpoint(true, amp, copy_amp);
     }
 
     if (exec == 1)
@@ -254,51 +238,10 @@ void SequentialSimulation::
 }
 
 void SequentialSimulation::
-    CheckpointWithFile(bool branch,
-                       GenericQuantumState &amp,
-                       Circuit &circuit,
-                       const idx_size gate_i)
-{
-    Time copy_time;
-    copy_time.StartTime();
-    amp.WriteAmpToDisk(config->temp_dir + "checkpoint" + to_string(branch));
-    SumOfTensorsProductsStateVector temp_amp;
-    temp_amp.CopyMemberVars(amp);
-    double time_copying = copy_time.GetElapsedTime();
-    amp.time_by_category.copying += time_copying;
-    ++amp.count_of_category.copying;
-    prefix_time += time_copying;
-
-    if (branch)
-    {
-        if (config->count_zeros)
-        {
-            amp.count_of_category.zero_count_cp2_A += amp.CountZerosInBlock(0);
-            amp.count_of_category.zero_count_cp2_B += amp.CountZerosInBlock(1);
-        }
-        if (amp.book_keep)
-            memory_usage += amp.GetMemUsage();
-        MainLoopForBranching(amp, circuit, temp_amp, gate_i);
-    }
-    else
-    {
-        if (config->count_zeros)
-        {
-            amp.count_of_category.zero_count_cp1_A += amp.CountZerosInBlock(0);
-            amp.count_of_category.zero_count_cp1_B += amp.CountZerosInBlock(1);
-        }
-        MainLoopForRanges(amp, circuit, temp_amp);
-    }
-
-    string command = "rm " + config->temp_dir + "checkpoint" + to_string(branch) + "*";
-    system(command.c_str());
-}
-
-void SequentialSimulation::
-    CheckpointWithoutFile(bool branch,
-                          GenericQuantumState &amp,
-                          Circuit &circuit,
-                          const idx_size gate_i)
+    Checkpoint(bool branch,
+               GenericQuantumState &amp,
+               Circuit &circuit,
+               const idx_size gate_i)
 {
     auto BranchOrRanges = [&](SumOfTensorsProductsStateVector &temp_amp)
     {
@@ -322,10 +265,10 @@ void SequentialSimulation::
         }
     };
 
+    SumOfTensorsProductsStateVector temp_amp{};
+
     if (config->compress)
     {
-        SumOfTensorsProductsStateVector temp_amp{};
-
         Time compress_time, decompress_time;
         compress_time.StartTime();
 
@@ -336,35 +279,30 @@ void SequentialSimulation::
 
         decompress_time.StartTime();
 
-        temp_amp.DecompressAndCopyAnotherState(amp);
+        temp_amp.CopyState(amp, true);
 
         double time_decompress = decompress_time.GetElapsedTime();
         amp.time_by_category.decompress += time_decompress;
 
         ++amp.count_of_category.decompress;
         ++amp.count_of_category.compress;
-
-        if (amp.book_keep)
-            memory_usage += amp.GetMemUsage();
-
-        BranchOrRanges(temp_amp);
     }
     else
     {
         Time copy_time;
         copy_time.StartTime();
 
-        SumOfTensorsProductsStateVector temp_amp((const SumOfTensorsProductsStateVector &)amp);
+        temp_amp.CopyState(amp);
 
         double time_copying = copy_time.GetElapsedTime();
         amp.time_by_category.copying += time_copying;
         ++amp.count_of_category.copying;
-
-        if (amp.book_keep)
-            memory_usage += amp.GetMemUsage();
-
-        BranchOrRanges(temp_amp);
     }
+
+    if (amp.book_keep)
+        memory_usage += amp.GetMemUsage();
+
+    BranchOrRanges(temp_amp);
 
     // Should not need to decompress vector. State vector is useless at this point.
     //    assert(amp.compressed == false);
@@ -437,15 +375,7 @@ void SequentialSimulation::
     amp.count_of_category.cycle_p = circuit.GetCycleNumForGateIdx(curr_gate);
     prefix_time += time.GetElapsedTime();
 
-    if (config->save_cp_file > 0)
-    {
-        CheckpointWithFile(false, amp, circuit);
-
-        string command = "rm -rf " + config->temp_dir;
-        system(command.c_str());
-    }
-    else
-        CheckpointWithoutFile(false, amp, circuit);
+    Checkpoint(false, amp, circuit);
 }
 
 void SequentialSimulation::
@@ -680,17 +610,7 @@ void SequentialSimulation::
     //    ++amp.count_of_category.rescale;
     //    amp.RescaleAndApplyGlobalICounter();
 
-    if (config->save_cp_file > 1 && config->ranges_bits != 0)
-        CheckpointWithFile(true, amp, circuit, gate_i);
-    else if (config->save_cp_file > 0 && config->ranges_bits == 0)
-    {
-        CheckpointWithFile(true, amp, circuit, gate_i);
-
-        string command = "rm -rf " + config->temp_dir;
-        system(command.c_str());
-    }
-    else
-        CheckpointWithoutFile(true, amp, circuit, gate_i);
+    Checkpoint(true, amp, circuit, gate_i);
 
     branch_time += phase2_time.GetElapsedTime();
 }

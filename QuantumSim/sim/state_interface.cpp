@@ -11,30 +11,32 @@
 Times GenericQuantumState::time_by_category({});
 Counts GenericQuantumState::count_of_category({});
 vector<string> GenericQuantumState::log({});
-vector<array<complex<float>*, 2>> GenericQuantumState::compressed_vector_ptrs({});
 Data GenericQuantumState::data_per_cycles({});
 bool GenericQuantumState::book_keep = true;
 Config::SimType GenericQuantumState::sim_type = Config::SimType::FullState;
 char GenericQuantumState::partition_to_sim = 'x';
 
-//#ifdef Parallel
-//int GenericQuantumState::num_threads = omp_get_num_procs();
-//#else
+// #ifdef Parallel
+// int GenericQuantumState::num_threads = omp_get_num_procs();
+// #else
 int GenericQuantumState::num_threads = 8;
-//#endif
+// #endif
 
-ostream& operator<<(ostream& o, const vector<int>& v) {
-    for (auto k : v) o << k << " ";
+ostream &operator<<(ostream &o, const vector<int> &v)
+{
+    for (auto k : v)
+        o << k << " ";
     return o << endl;
 }
 
 GenericQuantumState::
-GenericQuantumState(int n_threads): compressed(false){
+    GenericQuantumState(int n_threads) : compressed(false)
+{
     num_threads = n_threads;
 }
 
 idx_size GenericQuantumState::
-GetNumAddends() const
+    GetNumAddends() const
 {
     return 0;
 }

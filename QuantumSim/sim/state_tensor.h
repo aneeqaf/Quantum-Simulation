@@ -100,11 +100,9 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
-    void CopyState(const GenericQuantumState &rhs);
-    void CopyMemberVars(const GenericQuantumState &rhs);
+    void CopyState(const GenericQuantumState &rhs, bool decompress = false);
     void CompressStateVector();
     void DecompressStateVector();
-    void DecompressAndCopyAnotherState(const GenericQuantumState &rhs);
 
     void PrintStateVector(const string &outfile,
                           const int cycle_num);
@@ -114,11 +112,7 @@ public:
     void WriteAmpToDisk(const string &filename);
     void ReadFromDisk(const string &filename);
 
-    TensorProductStateVector() : qp(0, 0)
-    {
-        state_a = new FullAmpStateVector();
-        state_b = new FullAmpStateVector();
-    }
+    TensorProductStateVector() : qp(0, 0), state_a(nullptr), state_b(nullptr) {}
     TensorProductStateVector(const int qubits,
                              const QubitPartition::Cuts type,
                              const Config *config,

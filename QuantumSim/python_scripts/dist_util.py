@@ -19,19 +19,19 @@ def CheckInputFile(input_file):
 			exit()
 
 def EnvCompatibility():
-	for m in pip.get_installed_distributions():
-		if m.project_name == 'click':
-			if StrictVersion(m.version) < StrictVersion("6.7"):
-				print("Please upgrade your click module version to 6.7 or above.")
-				exit()
-		if m.project_name == 'psutil':
-			if StrictVersion(m.version) < StrictVersion("5.4.2"):
-				print("Please upgrade your psutil module version to 5.4.2 or above.")
-				exit()
-		if m.project_name == 'numpy':
-			if StrictVersion(m.version) < StrictVersion("1.14.0"):
-				print("Please upgrade your numpy module version to 1.14.0 or above.")
-				exit()
+	# for m in pip.get_installed_distributions():
+	# 	if m.project_name == 'click':
+	# 		if StrictVersion(m.version) < StrictVersion("6.7"):
+	# 			print("Please upgrade your click module version to 6.7 or above.")
+	# 			exit()
+	# 	if m.project_name == 'psutil':
+	# 		if StrictVersion(m.version) < StrictVersion("5.4.2"):
+	# 			print("Please upgrade your psutil module version to 5.4.2 or above.")
+	# 			exit()
+	# 	if m.project_name == 'numpy':
+	# 		if StrictVersion(m.version) < StrictVersion("1.14.0"):
+	# 			print("Please upgrade your numpy module version to 1.14.0 or above.")
+	# 			exit()
 
 	if not os.path.isdir("output"):
 		try:

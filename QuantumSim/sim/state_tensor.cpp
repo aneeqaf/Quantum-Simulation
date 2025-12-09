@@ -52,13 +52,9 @@ TensorProductStateVector::
 }
 
 TensorProductStateVector::
-    TensorProductStateVector(const TensorProductStateVector &rhs) : qp(rhs.qp), cut_type(rhs.cut_type)
+    TensorProductStateVector(const TensorProductStateVector &rhs) : qp(rhs.qp), state_a(nullptr), state_b(nullptr)
 {
-    sim_type = rhs.sim_type;
-    compressed = rhs.compressed;
-
-    state_a = new FullAmpStateVector(*(rhs.state_a));
-    state_b = new FullAmpStateVector(*(rhs.state_b));
+    CopyState(rhs);
 }
 
 TensorProductStateVector::
@@ -852,28 +848,21 @@ void TensorProductStateVector::
 }
 
 void TensorProductStateVector::
-    CopyState(const GenericQuantumState &rhs)
+    CopyState(const GenericQuantumState &rhs, bool decompress)
 {
     const TensorProductStateVector &t_rhs = (const TensorProductStateVector &)rhs;
     qp = t_rhs.qp;
     cut_type = t_rhs.cut_type;
+    compressed = decompress ? false : rhs.compressed;
     sim_type = t_rhs.sim_type;
 
-    state_a->CopyState(*t_rhs.state_a);
-    state_b->CopyState(*t_rhs.state_b);
-}
+    if (!state_a)
+        state_a = new FullAmpStateVector();
+    if (!state_b)
+        state_b = new FullAmpStateVector();
 
-void TensorProductStateVector::
-    CopyMemberVars(const GenericQuantumState &rhs)
-{
-    const TensorProductStateVector &t_rhs = (const TensorProductStateVector &)rhs;
-    qp = t_rhs.qp;
-    cut_type = t_rhs.cut_type;
-    compressed = t_rhs.compressed;
-    sim_type = t_rhs.sim_type;
-
-    state_a->CopyMemberVars(*t_rhs.state_a);
-    state_b->CopyMemberVars(*t_rhs.state_b);
+    state_a->CopyState(*t_rhs.state_a, decompress);
+    state_b->CopyState(*t_rhs.state_b, decompress);
 }
 
 void TensorProductStateVector::
@@ -893,20 +882,6 @@ void TensorProductStateVector::
 {
     state_a->DecompressStateVector();
     state_b->DecompressStateVector();
-
-    compressed = false;
-}
-
-void TensorProductStateVector::
-    DecompressAndCopyAnotherState(const GenericQuantumState &rhs)
-{
-    const TensorProductStateVector &t_rhs = (const TensorProductStateVector &)rhs;
-    qp = t_rhs.qp;
-    cut_type = t_rhs.cut_type;
-    sim_type = t_rhs.sim_type;
-
-    state_a->DecompressAndCopyAnotherState(*t_rhs.state_a);
-    state_b->DecompressAndCopyAnotherState(*t_rhs.state_b);
 
     compressed = false;
 }

@@ -45,15 +45,15 @@ FullAmpStateVector::
     {
         cramer = new Cramer(amp_size,
                             config->cramer_num_codewords, config->num_threads,
-                            config->cramer_p_rejection, 8, sim_type != Config::FullState);
+                            config->cramer_p_rejection, 1, sim_type != Config::FullState);
     }
 }
 
 FullAmpStateVector::
     FullAmpStateVector(cmplx *a,
-                       const idx_size size) : max_prob(numeric_limits<double>::min()),
-                                              min_prob(numeric_limits<double>::max()), amp(nullptr), cramer(nullptr),
-                                              amp_size(size), global_factor_power(0), global_i_counter(0), num_qubits(__builtin_log2l(size)),
+                       const idx_size size) : max_prob(numeric_limits<double>::min()), min_prob(numeric_limits<double>::max()),
+                                              amp(nullptr), cramer(nullptr), amp_size(size), global_factor_power(0),
+                                              global_i_counter(0), num_qubits(__builtin_log2l(size)),
                                               zero_opt_mask(num_qubits), all_zeros(false)
 {
     if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
@@ -82,61 +82,9 @@ FullAmpStateVector::
 }
 
 FullAmpStateVector::
-    FullAmpStateVector(const FullAmpStateVector &rhs) : max_prob(rhs.max_prob), min_prob(rhs.min_prob), cramer(nullptr),
-                                                        amp_size(rhs.amp_size), global_factor_power(rhs.global_factor_power),
-                                                        global_i_counter(rhs.global_i_counter), num_qubits(rhs.num_qubits), zero_opt_mask(rhs.zero_opt_mask),
-                                                        all_zeros(rhs.all_zeros)
+    FullAmpStateVector(const FullAmpStateVector &rhs) : amp(nullptr), cramer(nullptr), amp_size(0)
 {
-    compressed = rhs.compressed;
-
-    if (rhs.cramer != nullptr)
-    {
-        if (cramer != nullptr)
-            *cramer = Cramer(*rhs.cramer);
-        else
-            cramer = new Cramer(*rhs.cramer);
-    }
-    else
-    {
-        if (cramer != nullptr)
-            delete cramer;
-        cramer = nullptr;
-    }
-
-    if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
-    {
-        idx_size memory = sizeof(cmplx) * amp_size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30))
-        {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20))
-        {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10))
-        {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        free(amp);
-        exit(err);
-    }
-    memset(amp, 0, amp_size * sizeof(amp));
-
-    idx_size size = 2 * rhs.GetSize();
-
-    float *__restrict rhs_t_amp = (float *)__builtin_assume_aligned(rhs.amp, 64);
-    float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
-
-#pragma omp parallel for num_threads(num_threads)
-    for (idx_size i = 0; i < size; i += NUM_FLOAT_IN_REG)
-    {
-        const __m256 temp_amp = _mm256_load_ps(&rhs_t_amp[i]);
-        _mm256_store_ps(&t_amp[i], temp_amp);
-    }
+    CopyState(rhs);
 }
 
 FullAmpStateVector::
@@ -1169,24 +1117,43 @@ void FullAmpStateVector::
 }
 
 void FullAmpStateVector::
-    CopyState(const GenericQuantumState &rhs)
+    CopyState(const GenericQuantumState &rhs, bool decompress)
 {
     const FullAmpStateVector &t_rhs = (const FullAmpStateVector &)rhs;
     global_factor_power = t_rhs.global_factor_power;
     global_i_counter = t_rhs.global_i_counter;
     zero_opt_mask = t_rhs.zero_opt_mask;
     all_zeros = t_rhs.all_zeros;
-    compressed = t_rhs.compressed;
-    amp_size = t_rhs.amp_size;
     max_prob = t_rhs.max_prob;
     min_prob = t_rhs.min_prob;
     num_qubits = t_rhs.num_qubits;
 
-    idx_size size = 2 * rhs.GetSize();
+    bool deallocate = decompress == compressed || t_rhs.amp_size != amp_size;
+
+    if (amp && deallocate)
+    {
+        free(amp);
+        amp == nullptr;
+    }
+    amp_size = t_rhs.amp_size;
+
+    idx_size copy_size = amp_size;
+    if (t_rhs.cramer != nullptr)
+    {
+        if (cramer != nullptr)
+            delete cramer;
+        cramer = new Cramer(*t_rhs.cramer);
+
+        if (t_rhs.compressed && !decompress)
+        {
+            copy_size = cramer->GetCompressedVectorSize();
+        }
+    }
+    compressed = decompress ? false : t_rhs.compressed;
 
     if (amp == nullptr)
     {
-        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
+        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * copy_size) != 0)
         {
             idx_size memory = sizeof(cmplx) * amp_size;
             cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
@@ -1207,39 +1174,26 @@ void FullAmpStateVector::
             free(amp);
             exit(err);
         }
-        memset(amp, 0, amp_size * sizeof(amp));
+        memset(amp, 0, copy_size * sizeof(amp));
     }
-    if (t_rhs.cramer != nullptr)
+
+    if (decompress && t_rhs.compressed)
     {
-        if (cramer != nullptr)
-            delete cramer;
-        cramer = new Cramer(*t_rhs.cramer);
+        amp = cramer->CramerDecompress(amp, t_rhs.amp);
     }
+    else
+    {
+        float *__restrict rhs_t_amp = (float *)__builtin_assume_aligned(t_rhs.amp, 64);
+        float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
 
-    float *__restrict rhs_t_amp = (float *)__builtin_assume_aligned(t_rhs.amp, 64);
-    float *__restrict t_amp = (float *)__builtin_assume_aligned(amp, 64);
-
+        idx_size size = 2 * copy_size;
 #pragma omp parallel for num_threads(num_threads)
-    for (idx_size i = 0; i < size; i += 8)
-    {
-        const __m256 temp_amp = _mm256_load_ps(&rhs_t_amp[i]);
-        _mm256_store_ps(&t_amp[i], temp_amp);
+        for (idx_size i = 0; i < size; i += 8)
+        {
+            const __m256 temp_amp = _mm256_load_ps(&rhs_t_amp[i]);
+            _mm256_store_ps(&t_amp[i], temp_amp);
+        }
     }
-}
-
-void FullAmpStateVector::
-    CopyMemberVars(const GenericQuantumState &rhs)
-{
-    const FullAmpStateVector &t_rhs = (const FullAmpStateVector &)rhs;
-    max_prob = t_rhs.max_prob;
-    min_prob = t_rhs.min_prob;
-    amp_size = t_rhs.amp_size;
-    num_qubits = t_rhs.num_qubits;
-    global_factor_power = t_rhs.global_factor_power;
-    global_i_counter = t_rhs.global_i_counter;
-    zero_opt_mask = t_rhs.zero_opt_mask;
-    all_zeros = t_rhs.all_zeros;
-    compressed = t_rhs.compressed;
 }
 
 void FullAmpStateVector::
@@ -1271,31 +1225,5 @@ void FullAmpStateVector::
         free(compressed_amp);
         compressed_amp = nullptr;
     }
-    compressed = false;
-}
-
-void FullAmpStateVector::
-    DecompressAndCopyAnotherState(const GenericQuantumState &rhs)
-{
-    const FullAmpStateVector &t_rhs = (const FullAmpStateVector &)rhs;
-    assert(t_rhs.global_factor_power == 0);
-    assert(t_rhs.global_i_counter == 0);
-
-    bool prev_compressed = compressed;
-    CopyMemberVars(rhs);
-    compressed = prev_compressed;
-
-    // Cannot deallocate amp. When in compressed state it is being used
-    // as a copy state in later layers.
-    if (compressed == true)
-    {
-        if (amp)
-            amp = nullptr;
-    }
-
-    // With the current logic amp is decompressed and when in decompressed state
-    // the memory is rewritten to in the decompression loop
-    // so don't deallocate.
-    amp = t_rhs.cramer->CramerDecompress(amp, t_rhs.amp);
     compressed = false;
 }

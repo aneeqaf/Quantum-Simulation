@@ -71,11 +71,9 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
-    void CopyState(const GenericQuantumState &rhs);
-    void CopyMemberVars(const GenericQuantumState &rhs);
+    void CopyState(const GenericQuantumState &rhs, bool decompress = false);
     void CompressStateVector();
     void DecompressStateVector();
-    void DecompressAndCopyAnotherState(const GenericQuantumState &rhs);
 
     void PrintStateVector(const string &outfile,
                           const int cycle_num);
@@ -85,8 +83,7 @@ public:
     void WriteAmpToDisk(const string &filename);
     void ReadFromDisk(const string &filename);
 
-    AdaptiveStateVector() : full_state(nullptr),
-                            sumOfTensors(new SumOfTensorsProductsStateVector), total_q(0) {}
+    AdaptiveStateVector() : full_state(nullptr), sumOfTensors(nullptr), total_q(0) {}
     AdaptiveStateVector(const int qubits,
                         const Config::SimType type,
                         const Config *config,

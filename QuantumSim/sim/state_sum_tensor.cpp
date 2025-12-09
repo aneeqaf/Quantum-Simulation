@@ -16,7 +16,7 @@ SumOfTensorsProductsStateVector::
                                     const int vcut,
                                     const bool row_major,
                                     const bool first_part_small,
-                                    const int verb) : num_addends(1)
+                                    const int verb)
 {
     sim_type = type;
 
@@ -62,7 +62,6 @@ SumOfTensorsProductsStateVector::
                                                               verb));
         tensor_addends[0]->state_a->IncrementGlobalFactorPower();
         tensor_addends[1]->state_a->IncrementGlobalFactorPower();
-        ++num_addends;
     }
     else
     {
@@ -86,19 +85,13 @@ SumOfTensorsProductsStateVector::
                                                               verb));
         tensor_addends[0]->state_a->IncrementGlobalFactorPower();
         tensor_addends[1]->state_a->IncrementGlobalFactorPower();
-        ++num_addends;
     }
 }
 
 SumOfTensorsProductsStateVector::
-    SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector &rhs)
+    SumOfTensorsProductsStateVector(const SumOfTensorsProductsStateVector &rhs) : tensor_addends({})
 {
-    sim_type = rhs.sim_type;
-    num_addends = rhs.num_addends;
-    compressed = rhs.compressed;
-
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends.push_back(new TensorProductStateVector(*rhs.tensor_addends[i]));
+    CopyState(rhs);
 }
 
 SumOfTensorsProductsStateVector &SumOfTensorsProductsStateVector::
@@ -107,7 +100,6 @@ operator=(const SumOfTensorsProductsStateVector &rhs)
     SumOfTensorsProductsStateVector temp(rhs);
     swap(tensor_addends, temp.tensor_addends);
     sim_type = rhs.sim_type;
-    num_addends = rhs.num_addends;
     compressed = rhs.compressed;
 
     return *this;
@@ -201,6 +193,7 @@ inline int SumOfTensorsProductsStateVector::
             const int q = first_half    ? __builtin_ctzl(first_half)
                           : second_half ? 64 + __builtin_ctzl(second_half)
                                         : 0;
+            const size_t num_addends = GetNumAddends();
 
             if (book_keep)
                 ++count_of_category.decomposed_CZ;
@@ -215,7 +208,6 @@ inline int SumOfTensorsProductsStateVector::
             }
 
             xCZ_bitmask[i][q] = 0;
-            num_addends = tensor_addends.size();
         }
     }
 
@@ -413,6 +405,7 @@ void SumOfTensorsProductsStateVector::
                               int th)
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
+    const size_t num_addends = GetNumAddends();
     for (auto &t : tensor_addends)
         t->ApplyXYRecursiveTransform(X_bitmask, Y_bitmask, th);
 
@@ -439,6 +432,7 @@ int SumOfTensorsProductsStateVector::
 {
     idx_size prev_X_count = count_of_category.X1_2, prev_Y_count = count_of_category.Y1_2;
     int xCZ_applied_in_cycle = HandlexCZApplication(remaining_cz_bits, cz_path, cz_path_len, suffix_size, CZ_bitmasks);
+    const size_t num_addends = GetNumAddends();
 
     if (xCZ_applied_in_cycle == -1)
         for (auto &t : tensor_addends)
@@ -465,6 +459,7 @@ FullAmpStateVector *SumOfTensorsProductsStateVector::
     const int num_q_b = tensor_addends[0]->GetNumQInBlock(1), num_q_a = tensor_addends[0]->GetNumQInBlock(0),
               total_q = num_q_a + num_q_b;
     const idx_size size = 1ull << total_q, a_size = 2 * (1ull << num_q_a), b_size = 2 * (1ull << num_q_b);
+    const size_t num_addends = GetNumAddends();
 
     if (total_q >= 64)
     {
@@ -547,6 +542,7 @@ FullAmpStateVector *SumOfTensorsProductsStateVector::
               total_q = num_q_A + num_q_B;
     const idx_size size = 1ull << total_q;
     //    const bitset<128> B_qubits_bitmask = tensor_addends[0] -> GetStateBBitmask();
+    const size_t num_addends = GetNumAddends();
 
     cmplx *amp = new cmplx[size];
     for (idx_size i = 0; i < size; ++i)
@@ -632,7 +628,7 @@ double SumOfTensorsProductsStateVector::
 idx_size SumOfTensorsProductsStateVector::
     GetNumAddends() const
 {
-    return num_addends;
+    return tensor_addends.size();
 }
 
 idx_size SumOfTensorsProductsStateVector::
@@ -712,6 +708,7 @@ double SumOfTensorsProductsStateVector::
                    b_size = 1ull << tensor_addends[0]->GetNumQInBlock(1);
     long double entropy = 0.0;
     const idx_size num_ranges_a = a_size / 100, num_ranges_b = b_size / 10;
+    const size_t num_addends = GetNumAddends();
 
     for (idx_size n = 0; n < num_addends; ++n)
         tensor_addends[n]->Rescale();
@@ -743,6 +740,7 @@ double SumOfTensorsProductsStateVector::
     const idx_size a_size = 1ull << tensor_addends[0]->GetNumQInBlock(0),
                    b_size = 1ull << tensor_addends[0]->GetNumQInBlock(1);
     double xe = 0.0, num_ranges_a = a_size / range, num_ranges_b = b_size / 10;
+    const size_t num_addends = GetNumAddends();
 
     for (idx_size n = 0; n < num_addends; ++n)
         tensor_addends[n]->Rescale();
@@ -769,6 +767,8 @@ double SumOfTensorsProductsStateVector::
 double SumOfTensorsProductsStateVector::
     CalculateMeanEntropy2Cuts() const
 {
+    const size_t num_addends = GetNumAddends();
+
     for (idx_size n = 0; n < num_addends; ++n)
         tensor_addends[n]->Rescale();
 
@@ -792,6 +792,8 @@ double SumOfTensorsProductsStateVector::
 double SumOfTensorsProductsStateVector::
     CalculateCrossEntropy2Cuts(int range) const
 {
+    const size_t num_addends = GetNumAddends();
+
     for (idx_size n = 0; n < num_addends; ++n)
         tensor_addends[n]->Rescale();
 
@@ -859,7 +861,7 @@ double SumOfTensorsProductsStateVector::
     //            ++zero_count;
     //    }
 
-    if (num_addends == 1)
+    if (GetNumAddends() == 1)
         return tensor_addends[0]->CountZeroAmpPercentage();
 
     return NAN;
@@ -918,6 +920,7 @@ void SumOfTensorsProductsStateVector::
     PrintStateVector(const string extension)
 {
     RescaleAndApplyGlobalICounter();
+    const size_t num_addends = GetNumAddends();
 
     idx_size amp_size = GetFullStateVectorSize();
     for (idx_size i = 0; i < amp_size; ++i)
@@ -971,6 +974,8 @@ void SumOfTensorsProductsStateVector::
 void SumOfTensorsProductsStateVector::
     WriteAmpToDisk(const string &filename)
 {
+    const size_t num_addends = GetNumAddends();
+
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i]->WriteAmpToDisk(filename + "_" + to_string(i));
 }
@@ -978,35 +983,40 @@ void SumOfTensorsProductsStateVector::
 void SumOfTensorsProductsStateVector::
     ReadFromDisk(const string &filename)
 {
+    const size_t num_addends = GetNumAddends();
+
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i]->ReadFromDisk(filename + "_" + to_string(i));
 }
 
 void SumOfTensorsProductsStateVector::
-    CopyState(const GenericQuantumState &rhs)
+    CopyState(const GenericQuantumState &rhs, bool decompress)
 {
     const SumOfTensorsProductsStateVector &t_rhs = (const SumOfTensorsProductsStateVector &)rhs;
-    num_addends = t_rhs.GetNumAddends();
-
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i]->CopyState(*t_rhs.tensor_addends[i]);
-}
-
-void SumOfTensorsProductsStateVector::
-    CopyMemberVars(const GenericQuantumState &rhs)
-{
-    const SumOfTensorsProductsStateVector &t_rhs = (const SumOfTensorsProductsStateVector &)rhs;
-    num_addends = t_rhs.num_addends;
-    compressed = t_rhs.compressed;
     sim_type = t_rhs.sim_type;
+    compressed = decompress ? false : rhs.compressed;
 
+    if (!tensor_addends.empty())
+    {
+        size_t num_addends = GetNumAddends();
+        for (idx_size i = 0; i < num_addends; ++i)
+            delete tensor_addends[i];
+        tensor_addends.clear();
+    }
+
+    size_t num_addends = t_rhs.GetNumAddends();
     for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i]->CopyMemberVars(*t_rhs.tensor_addends[i]);
+    {
+        tensor_addends.push_back(new TensorProductStateVector());
+        tensor_addends[i]->CopyState(*t_rhs.tensor_addends[i], decompress);
+    }
 }
 
 void SumOfTensorsProductsStateVector::
     CompressStateVector()
 {
+    const size_t num_addends = GetNumAddends();
+
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i]->CompressStateVector();
 
@@ -1016,21 +1026,10 @@ void SumOfTensorsProductsStateVector::
 void SumOfTensorsProductsStateVector::
     DecompressStateVector()
 {
+    const size_t num_addends = GetNumAddends();
+
     for (idx_size i = 0; i < num_addends; ++i)
         tensor_addends[i]->DecompressStateVector();
-
-    compressed = false;
-}
-
-void SumOfTensorsProductsStateVector::
-    DecompressAndCopyAnotherState(const GenericQuantumState &rhs)
-{
-    const SumOfTensorsProductsStateVector &t_rhs = (const SumOfTensorsProductsStateVector &)rhs;
-    num_addends = t_rhs.num_addends;
-    sim_type = t_rhs.sim_type;
-
-    for (idx_size i = 0; i < num_addends; ++i)
-        tensor_addends[i]->DecompressAndCopyAnotherState(*t_rhs.tensor_addends[i]);
 
     compressed = false;
 }

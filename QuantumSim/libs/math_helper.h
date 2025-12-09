@@ -761,7 +761,7 @@ CalculateMeanAndVariance(double &mean,
                          const size_t input_size,
                          const size_t num_threads)
 {
-    size_t non_zero_amps = 0;
+    double non_zero_amps = 1e-8;
     // #pragma omp parallel for reduction(+ : non_zero_amps, mean) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i)
     {
@@ -783,7 +783,7 @@ CalculateMeanAndVariance(double &mean,
     assert(!isinf(mean));
 
     variance = 0;
-    non_zero_amps = 1;
+    non_zero_amps = 1e-8;
     // #pragma omp parallel for reduction(+ : variance) num_threads(num_threads)
     for (size_t i = 0; i < input_size; ++i)
     {
@@ -799,7 +799,7 @@ CalculateMeanAndVariance(double &mean,
             non_zero_amps = 1;
         }
     }
-    variance /= (non_zero_amps - 1);
+    variance /= non_zero_amps;
 
     assert(!isnan(variance));
     assert(!isinf(variance));

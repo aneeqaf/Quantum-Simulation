@@ -17,7 +17,6 @@ class SumOfTensorsProductsStateVector : public GenericQuantumState
 {
 private:
     vector<TensorProductStateVector *> tensor_addends;
-    idx_size num_addends;
 
     int HandlexCZApplication(int &remaining_cz_bits,
                              idx_size &cz_path,
@@ -102,11 +101,9 @@ public:
     void Rescale();
     void ApplyGlobalICounter();
     void RescaleAndApplyGlobalICounter();
-    void CopyState(const GenericQuantumState &rhs);
-    void CopyMemberVars(const GenericQuantumState &rhs);
+    void CopyState(const GenericQuantumState &rhs, bool decompress = false);
     void CompressStateVector();
     void DecompressStateVector();
-    void DecompressAndCopyAnotherState(const GenericQuantumState &rhs);
 
     void PrintStateVector(const string &outfile,
                           const int cycle_num);
@@ -116,10 +113,7 @@ public:
     void WriteAmpToDisk(const string &filename);
     void ReadFromDisk(const string &filename);
 
-    SumOfTensorsProductsStateVector() : num_addends(1)
-    {
-        tensor_addends.push_back(new TensorProductStateVector());
-    }
+    SumOfTensorsProductsStateVector() : tensor_addends({}) {}
     SumOfTensorsProductsStateVector(const int qubits,
                                     const Config::SimType type,
                                     const Config *config,
