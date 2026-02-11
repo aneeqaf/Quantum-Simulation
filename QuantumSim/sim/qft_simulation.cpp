@@ -36,16 +36,23 @@ Simulate(FullAmpStateVector& amp, string idx_infile)
     idx_size amp_size = 1ull << num_qubits;
     
     amp.ApplyQFT();
-    
-    double elapsed_time = qft_time.GetElapsedTime();
-    
-    cout << "\n(C) Igor L. Markov and Aneeqa Fatima  2018 - 2021\n";
-    cout << "Entangled Simulator ver 1.0 - a quantum circuit simulator\n\n";
-    cout << "Entangled Simulator QFT time : " << elapsed_time << "s\n\n";
-    
+        
+//    cout << "\n(C) Igor L. Markov and Aneeqa Fatima  2018 - 2021\n";
+//    cout << "Entangled Simulator ver 1.0 - a quantum circuit simulator\n\n";
+//    cout << "Entangled Simulator QFT time : " << elapsed_time << "s\n\n";
+//
     if (idx_infile != "") {
-        for (idx_size i = 0; i < indices.size(); ++i)
-            cout << "amp[" << indices[i] << "] = " << amp[indices[i]] << "\n";
+        for (idx_size i = 0; i < indices.size(); ++i) {
+            //cout << "amp[" << indices[i] << "] = " << amp[indices[i]] << "\n";
+            auto a = amp[indices[i]];
+            cout << real(a) ;
+    
+            if (imag(a) >= 0)
+                cout << "+" << imag(a) << "j";
+            else if (imag(a) < 0)
+                cout << imag(a) << "j";
+            cout << "\n";
+        }
     }
     else if (num_qubits < 15) {
         cout << "amp :\n";
@@ -59,5 +66,5 @@ Simulate(FullAmpStateVector& amp, string idx_infile)
         cout << "amp[3/4] = " << amp[3 * amp_size/4] << "\n";
         cout << "amp[-3] = " << amp[amp_size - 3] << "\n";
     }
-    cout << "\n¯\\_(ツ)_/¯ \n\n";
+//    cout << "\n¯\\_(ツ)_/¯ \n\n";
 }

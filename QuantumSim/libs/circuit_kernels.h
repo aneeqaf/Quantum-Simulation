@@ -114,4 +114,8 @@ InsertNewCycleOnClusteredCircuit(idx_size gate_idx,
                                  vector<Gate>& gates_to_insert,
                                  const QubitPartition& qp);
 
+void MoveLastLayerOfHGatesForFusion(idx_size num_qubits,
+                                    vector<Gate>& gates,
+                                    vector<idx_size>& clock_cycles);
+
 #endif /* circuit_kernels_h */

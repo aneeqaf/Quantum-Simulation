@@ -52,7 +52,7 @@ constexpr cmplx CZ[4][4] = {{cmplx(1, 0), cmplx(0, 0), cmplx(0, 0), cmplx(0, 0)}
 struct Gate {
 public:
     enum Type : size_t {h, x, y, z, rx, ry, rz, ph, cz, i, t, m, x_1_2, y_1_2,
-        cz_d1, cz_d2, cz_d3, cz_d4, cz_d5, cz_d6, cz_d7
+        cz_d1, cz_d2, cz_d3, cz_d4, cz_d5, cz_d6, cz_d7, none
     };
 
 private:

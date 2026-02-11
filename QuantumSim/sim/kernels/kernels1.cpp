@@ -92,10 +92,10 @@ ApplyManyXOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
 {
     for (idx_size i = 0; i < num_qbits ; i+=2){
-        const idx_size add = 1 << (i + 2);
+        const idx_size data_parallelism = 1 << (i + 2);
         const idx_size i_offset0 = 1 << i;
         const idx_size i_offset1 = 1 << (i + 1);
-        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
+        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += data_parallelism){
             for (idx_size k = 0; k < i_offset0; ++k){
                 const auto i0 = j + k;
                 const auto i1 = i0 + i_offset0;
@@ -120,10 +120,10 @@ ApplyManyYOnSlice(cmplx* __restrict amp,
                   const idx_size num_qbits)
 {
     for (idx_size i = 0; i < num_qbits ; i+=2){
-        const idx_size add = 1 << (i + 2);
+        const idx_size data_parallelism = 1 << (i + 2);
         const idx_size i_offset0 = 1 << i;
         const idx_size i_offset1 = 1 << (i + 1);
-        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += add){
+        for (idx_size j = 0; j < (idx_size)(1 << num_qbits); j += data_parallelism){
             for (idx_size k = 0; k < i_offset0; ++k){
                 const auto i0 = j + k;
                 const auto i1 = i0 + i_offset0;

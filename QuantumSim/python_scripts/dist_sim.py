@@ -16,6 +16,8 @@ import numpy as np
 import random
 from math import sqrt, floor, ceil
 
+# The indices are sorted according to the local indices of the partitions so different cuts will give wrong fidelity during compression
+
 @click.command()
 @click.argument("circuit", nargs=1, required=True)
 @click.option("--depth", nargs=1, required=False, default=0)
@@ -117,25 +119,25 @@ def main(circuit, depth, proc_prefix_bits, branch_bits, num_idx, idx_seed, num_h
 
 	cz_bits_strings = []
 	start_string_idx = 0
-	if compress_cw_bits != 0:
-		for bit_comb in range(0, 20):
-			if branch_bits:
-				cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
-					+ "," + str(branch_bits) + " ")
-			elif ranges_bits:
-				cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) + " ")
-			else:
-				cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
-		start_string_idx = 20
+	# if compress_cw_bits != 0:
+	# 	for prefix_path_combination in range(0, 20):
+	# 		if branch_bits:
+	# 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(prefix_path_combination) + "," + str(ranges_bits) 
+	# 				+ "," + str(branch_bits) + " ")
+	# 		elif ranges_bits:
+	# 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(prefix_path_combination) + "," + str(ranges_bits) + " ")
+	# 		else:
+	# 			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(prefix_path_combination) + " ")
+	# 	start_string_idx = 20
 
-	for bit_comb in range(start_string_idx, num_bit_strings, epsilon):
+	for prefix_path_combination in range(start_string_idx, num_bit_strings, epsilon):
 		if branch_bits:
-			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) 
+			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(prefix_path_combination) + "," + str(ranges_bits) 
 				+ "," + str(branch_bits) + " ")
 		elif ranges_bits:
-			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + "," + str(ranges_bits) + " ")
+			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(prefix_path_combination) + "," + str(ranges_bits) + " ")
 		else:
-			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(bit_comb) + " ")
+			cz_bits_strings.append(str(proc_prefix_bits) + "," + str(prefix_path_combination) + " ")
 
 	if max_procs or (max_procs and approx and max_procs < approx):
 		random.shuffle(cz_bits_strings)

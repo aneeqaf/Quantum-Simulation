@@ -715,6 +715,7 @@ OptimizeCircuitArrangement(const Config* config,
         PrintGates(gates, qubits, *qp);
 #endif
         idx_size num_cycles_op2 = clock_cycles.size();
+        idx_size chosen_cycles = 0;
         
         // Decide between two options
         if (config -> sim_type  == Config::SimType::FullState) {
@@ -731,16 +732,21 @@ OptimizeCircuitArrangement(const Config* config,
                 clock_cycles = clock_cycles_op1;
                 chosen_cycles = op1_cycles;
             }
-            
-            if (write_circuit_mode) {
-                cout << "Number of memory passes in circuit : " << chosen_cycles << "\n\nCircuit:\n";
-                PrintGates(gates, qubits, *qp);
-            }
         }
         
 #ifdef PrintG
         PrintGates(gates, qubits, *qp);
 #endif
+        MoveLastLayerOfHGatesForFusion(qubits, gates, clock_cycles);
+        
+#ifdef PrintG
+        PrintGates(gates, qubits, *qp);
+#endif
+        if (write_circuit_mode) {
+            cout << "Number of memory passes in circuit : " << chosen_cycles << "\n\nCircuit:\n";
+            PrintGates(gates, qubits, *qp);
+        }
+        
         rearranged = true;
     }
 }
