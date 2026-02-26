@@ -699,10 +699,10 @@ bool SequentialSimulation::
                                                            {Gate::Type::x_1_2, Gate::Type::y_1_2, Gate::Type::h});
 
                 int xCZ_applied_in_cycle = -1;
-                xCZ_applied_in_cycle = amp.ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path, cz_path_len,
-                                                                      suffix_size, bitmasks[Gate::Type::x_1_2],
-                                                                      bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h],
-                                                                      CZ_bitmasks, T_bitmasks, config->th);
+                xCZ_applied_in_cycle = amp.ApplyGoogleCirqGatesInBlocks(remaining_cz_bits, cz_path, cz_path_len,
+                                                                        suffix_size, bitmasks[Gate::Type::x_1_2],
+                                                                        bitmasks[Gate::Type::y_1_2], bitmasks[Gate::Type::h],
+                                                                        CZ_bitmasks, T_bitmasks, config->th);
                 ++amp.count_of_category.CZT_layers;
                 if (bitmasks[Gate::Type::x_1_2] != 0 || bitmasks[Gate::Type::y_1_2] != 0)
                     ++amp.count_of_category.XY_layers;
@@ -1116,12 +1116,6 @@ void SequentialSimulation::
                     << 1.0 / float(config->approx_epsilon) << "\nApproximation type : ";
         if (config->proc_prefix_bits)
             approx_type << "pruned xCZ branches";
-        if (config->sim_type == Config::SimType::ApproxCZPathH2011 || config->sim_type == Config::SimType::ApproxCZPathV2011)
-        {
-            if (config->ranges_bits == 0)
-                approx_type << " / ";
-            approx_type << "Approx2011";
-        }
         approx_type << "\n";
     }
 
@@ -1132,7 +1126,7 @@ void SequentialSimulation::
         cout << "full state-vector  \n";
         cout << approx_type.str();
     }
-    else if (config->sim_type == Config::SimType::LosslessH || config->sim_type == Config::SimType::ApproxCZPathH2011)
+    else if (config->sim_type == Config::SimType::LosslessH)
     {
         cout << "sum of tensor products / single cut\n";
         cout << amp.log[log_count++] << " (" << twoq_gates.second << " xCZ gates)\n";
@@ -1142,7 +1136,7 @@ void SequentialSimulation::
         else
             cout << "Simulating xCZ gates : exactly\n";
     }
-    else if (config->sim_type == Config::SimType::LosslessV || config->sim_type == Config::SimType::ApproxCZPathV2011)
+    else if (config->sim_type == Config::SimType::LosslessV)
     {
         cout << "sum of tensor products / single cut\n";
         cout << amp.log[log_count++] << " (" << twoq_gates.second << " xCZ gates)\n";
@@ -1151,58 +1145,6 @@ void SequentialSimulation::
             cout << "Simulating xCZ gates : using projection-based branches\n";
         else
             cout << "Simulating xCZ gates : exactly\n";
-    }
-    else if (config->sim_type == Config::SimType::Approx1CutH)
-    {
-        cout << "tensor products / approx single cut\n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : ignored\n";
-    }
-    else if (config->sim_type == Config::SimType::Approx1CutV)
-    {
-        cout << "tensor products / approx single cut\n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : ignored\n";
-    }
-    else if (config->sim_type == Config::SimType::Approx2011)
-    {
-        cout << "tensor products / approx2011 \n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : approx\n";
-    }
-    else if (config->sim_type == Config::SimType::Approx_i11i)
-    {
-        cout << "tensor products / approx-i11i \n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : approx\n";
-    }
-    else if (config->sim_type == Config::SimType::ApproxOWT)
-    {
-        cout << "sum of tensor products / approx 2 cuts \n";
-        cout << amp.log[log_count++] << "\n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : approx\n";
-    }
-    else if (config->sim_type == Config::SimType::Approx2011OWT)
-    {
-        cout << "sum of tensor products / approx 2 cuts (2011) \n";
-        cout << amp.log[log_count++] << "\n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : approx\n";
-    }
-    else if (config->sim_type == Config::SimType::Approx_i11iOWT)
-    {
-        cout << "sum of tensor products / approx 2 cuts (-i11i) \n";
-        cout << amp.log[log_count++] << "\n";
-        cout << amp.log[log_count++];
-        cout << approx_type.str();
-        cout << "Simulating xCZ gates : approx\n";
     }
 
     if (config->sim_type == Config::SimType::FullState)
@@ -1253,9 +1195,6 @@ void SequentialSimulation::
     PrintSimReport(GenericQuantumState &amp,
                    const Circuit &circuit) const
 {
-    if (config->sim_type == Config::SimType::ApproxOWT || config->sim_type == Config::SimType::Approx2011OWT || config->sim_type == Config::SimType::Approx_i11iOWT)
-        amp.Normalize();
-
     idx_size temp_amp_size = amp.GetFullStateVectorSize();
 
     if (config->proc_prefix_bits)

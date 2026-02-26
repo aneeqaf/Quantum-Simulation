@@ -18,11 +18,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <cassert>
 
 #include "qft_simulation.h"
 #include "simulation.h"
 #include "state.h"
-#include "state_autoconv.h"
 #include "state_sum_tensor.h"
 
 using namespace std;
@@ -537,7 +537,7 @@ int main(int argc, char *argv[])
     if (sim_type == -1 && qft == 0)
     {
         if (cir.GetNumQubits() <= 32)
-            sim_type = 5;
+            sim_type = 2;
         else if (hcut != 0)
             sim_type = 0;
         else if (vcut != 0)
@@ -604,31 +604,9 @@ int main(int argc, char *argv[])
 
         sim.Simulate(amp, cir);
     }
-    else if (sim_type == Config::Approx1CutH || sim_type == Config::Approx2011 || sim_type == Config::Approx_i11i || sim_type == Config::Approx1_101 || sim_type == Config::Approx1110)
+    else if (sim_type == Config::LosslessH || sim_type == Config::LosslessV)
     {
-        TensorProductStateVector amp(cir.GetNumQubits(),
-                                     QubitPartition::Cuts::Horizontal,
-                                     config, hcut, vcut, (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                     config->verbose);
-        sim.Simulate(amp, cir);
-    }
-    else if (sim_type == Config::Approx1CutV)
-    {
-        TensorProductStateVector amp(cir.GetNumQubits(),
-                                     QubitPartition::Cuts::Vertical,
-                                     config, hcut, vcut, (Config::SimType)sim_type, row_major, first_partition_smaller,
-                                     config->verbose);
-
-        if (threshold == 0)
-        {
-            int num_q = amp.GetNumQInBlock(0) > amp.GetNumQInBlock(1) ? amp.GetNumQInBlock(1) : amp.GetNumQInBlock(0);
-            sim.SetThreshold(num_q / 2);
-        }
-
-        sim.Simulate(amp, cir);
-    }
-    else if (sim_type == Config::Approx2011OWT || sim_type == Config::Approx_i11iOWT || cz_len != 0)
-    {
+        assert(cz_len != 0);
         SumOfTensorsProductsStateVector amp(cir.GetNumQubits(), (Config::SimType)sim_type,
                                             config, hcut, vcut, row_major, first_partition_smaller,
                                             config->verbose);
@@ -647,10 +625,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        AdaptiveStateVector amp(cir.GetNumQubits(), (Config::SimType)sim_type,
-                                config, hcut, vcut, row_major, first_partition_smaller,
-                                config->verbose);
-        sim.Simulate(amp, cir);
+        assert(false);
     }
 
     delete config;

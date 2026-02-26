@@ -1,12 +1,12 @@
 //
-//  state_tensor.cpp
+//  state_tensor_product.cpp
 //  vector_state_sim
 //
 //  Created by Aneeqa Fatima on 1/16/18.
 //  Copyright © 2018 Aneeqa Fatima. All rights reserved.
 //
 
-#include "state_tensor.h"
+#include "state_tensor_product.h"
 
 idx_size *TensorProductStateVector::global_to_local_a(nullptr);
 idx_size *TensorProductStateVector::global_to_local_b(nullptr);
@@ -246,33 +246,6 @@ void TensorProductStateVector::
     }
 }
 
-void TensorProductStateVector::
-    HandleCZApprox(const bitset<128> *CZ_bitmasks)
-{
-    if (sim_type == Config::SimType::Approx2011 || sim_type == Config::SimType::Approx2011OWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d5, Gate::Type::cz_d3);
-    else if (sim_type == Config::SimType::Approx1_101) // compute norm and divide by the norm
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d1, Gate::Type::cz_d2);
-    else if (sim_type == Config::SimType::Approx1110)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d3, Gate::Type::cz_d4);
-    else if (sim_type == Config::SimType::Approx_i11i || sim_type == Config::SimType::Approx_i11iOWT)
-        ApplyXCZGateApprox(CZ_bitmasks, Gate::Type::cz_d6, Gate::Type::cz_d7);
-    else if ((sim_type == Config::SimType::Approx1CutH || (sim_type == Config::SimType::Approx1CutV)) && book_keep)
-    {
-        //        idx_size count = CountXCZGates(CZ_bitmasks);
-        //        data_per_cycles.memory.push_back(GetMemUsage());
-        //        data_per_cycles.addends.push_back(1);
-        //        if (cut_type == QubitPartition::Cuts::Horizontal) {
-        //            data_per_cycles.xCZ_H.push_back(count);
-        //            data_per_cycles.xCZ_V.push_back(0);
-        //        }
-        //        else {
-        //            data_per_cycles.xCZ_H.push_back(count);
-        //            data_per_cycles.xCZ_H.push_back(0);
-        //        }
-    }
-}
-
 idx_size TensorProductStateVector::
     CountXCZGates(const bitset<128> *__restrict CZ_bitmasks)
 {
@@ -332,20 +305,6 @@ void TensorProductStateVector::
     }
 
     time_by_category.decomposed_CZ += time.GetElapsedTime();
-
-    //    if (book_keep &&
-    //        (sim_type != Config::SimType::Approx2011OWT && sim_type != Config::SimType::Approx_i11iOWT)) {
-    //        data_per_cycles.memory.push_back(GetMemUsage());
-    //        data_per_cycles.addends.push_back(1);
-    //        if (cut_type == QubitPartition::Cuts::Horizontal) {
-    //            data_per_cycles.xCZ_H.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-    //            data_per_cycles.xCZ_V.push_back(0);
-    //        }
-    //        else {
-    //            data_per_cycles.xCZ_V.push_back(count_of_category.decomposed_CZ - prev_CZ_count);
-    //            data_per_cycles.xCZ_H.push_back(0);
-    //        }
-    //    }
 }
 
 void TensorProductStateVector::
@@ -409,35 +368,35 @@ void TensorProductStateVector::
 }
 
 void TensorProductStateVector::
-    ApplyXYRecursiveTransform(bitset<128> X_bitmask,
-                              bitset<128> Y_bitmask,
-                              int th)
+    ApplyGatheredXYGatesInBlocks(bitset<128> X_bitmask,
+                                 bitset<128> Y_bitmask,
+                                 int th)
 {
     if (partition_to_sim == 'a' || partition_to_sim == 'x')
     {
         bitset<128> stateA_Xbitmask = Project1QBitmask(X_bitmask, qp, 0, true);
         bitset<128> stateA_Ybitmask = Project1QBitmask(Y_bitmask, qp, 0, true);
-        state_a->ApplyXYRecursiveTransform(stateA_Xbitmask, stateA_Ybitmask, th);
+        state_a->ApplyGatheredXYGatesInBlocks(stateA_Xbitmask, stateA_Ybitmask, th);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x')
     {
         bitset<128> stateB_Xbitmask = Project1QBitmask(X_bitmask, qp, 1, true);
         bitset<128> stateB_Ybitmask = Project1QBitmask(Y_bitmask, qp, 1, true);
-        state_b->ApplyXYRecursiveTransform(stateB_Xbitmask, stateB_Ybitmask, th);
+        state_b->ApplyGatheredXYGatesInBlocks(stateB_Xbitmask, stateB_Ybitmask, th);
     }
 }
 
 int TensorProductStateVector::
-    ApplyLoXYHAndCZTInSamePass(int &remaining_cz_bits,
-                               idx_size &cz_path,
-                               const idx_size cz_path_len,
-                               const idx_size suffix_size,
-                               const bitset<128> &X_bitmask,
-                               const bitset<128> &Y_bitmask,
-                               const bitset<128> &H_bitmask,
-                               const bitset<128> *__restrict CZ_bitmasks,
-                               const bitset<128> T_bitmasks[2],
-                               int th)
+    ApplyGoogleCirqGatesInBlocks(int &remaining_cz_bits,
+                                 idx_size &cz_path,
+                                 const idx_size cz_path_len,
+                                 const idx_size suffix_size,
+                                 const bitset<128> &X_bitmask,
+                                 const bitset<128> &Y_bitmask,
+                                 const bitset<128> &H_bitmask,
+                                 const bitset<128> *__restrict CZ_bitmasks,
+                                 const bitset<128> T_bitmasks[2],
+                                 int th)
 {
     const int num_q_a = state_a->GetNumQubits(), num_q_b = state_b->GetNumQubits();
 
@@ -457,11 +416,11 @@ int TensorProductStateVector::
         for (int i = 0; i < 2; ++i)
             T_bitmasks_a[i] = Project1QBitmask(T_bitmasks[i], qp, 0);
 
-        state_a->ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
-                                            cz_path_len, suffix_size,
-                                            stateA_Xbitmask, stateA_Ybitmask,
-                                            stateA_Hbitmask, CZ_bitmasks_a,
-                                            T_bitmasks_a, th);
+        state_a->ApplyGoogleCirqGatesInBlocks(remaining_cz_bits, cz_path,
+                                              cz_path_len, suffix_size,
+                                              stateA_Xbitmask, stateA_Ybitmask,
+                                              stateA_Hbitmask, CZ_bitmasks_a,
+                                              T_bitmasks_a, th);
     }
     if (partition_to_sim == 'b' || partition_to_sim == 'x')
     {
@@ -479,11 +438,11 @@ int TensorProductStateVector::
         for (int i = 0; i < 2; ++i)
             T_bitmasks_b[i] = Project1QBitmask(T_bitmasks[i], qp, 1);
 
-        state_b->ApplyLoXYHAndCZTInSamePass(remaining_cz_bits, cz_path,
-                                            cz_path_len, suffix_size,
-                                            stateB_Xbitmask, stateB_Ybitmask,
-                                            stateB_Hbitmask, CZ_bitmasks_b,
-                                            T_bitmasks_b, th);
+        state_b->ApplyGoogleCirqGatesInBlocks(remaining_cz_bits, cz_path,
+                                              cz_path_len, suffix_size,
+                                              stateB_Xbitmask, stateB_Ybitmask,
+                                              stateB_Hbitmask, CZ_bitmasks_b,
+                                              T_bitmasks_b, th);
     }
 
     return -1;

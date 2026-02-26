@@ -732,10 +732,7 @@ complex<float> *Cramer::
     if (compressed_vector == nullptr)
     {
         // Compressed vector is always allocated in full so that it occupies contiguous memory
-        if (posix_memalign((void **)&compressed_vector, 64, sizeof(complex<float>) * config.compressed_vector_UL_size) != 0)
-            throw "Unable to allocate space for compressed vector";
-
-        memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
+        allocate_aligned_mem(compressed_vector, config.compressed_vector_UL_size);
     }
 
     assert(block_size % 8 == 0);
@@ -809,10 +806,7 @@ complex<float> *Cramer::
 
     if (decompressed_vector == nullptr)
     {
-        if (posix_memalign((void **)&decompressed_vector, 64, sizeof(complex<float>) * block_size) != 0)
-            throw "Unable to allocate space for decompressed vector";
-
-        memset(decompressed_vector, 0, sizeof(complex<float>) * block_size);
+        allocate_aligned_mem(decompressed_vector, block_size);
     }
 
     __m256i *__restrict compressed_vector = (__m256i *)__builtin_assume_aligned(state_vector, 64);
@@ -937,10 +931,7 @@ complex<float> *Cramer::
 
     if (compressed_vector == nullptr)
     {
-        if (posix_memalign((void **)&compressed_vector, 64, sizeof(complex<float>) * config.compressed_vector_UL_size) != 0)
-            throw "Unable to allocate space for compressed vector";
-
-        memset(compressed_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
+        allocate_aligned_mem(compressed_vector, config.compressed_vector_UL_size);
     }
 
     size_t block_size = config.num_threads >= 8 ? config.num_threads * config.num_codewords_reg : 8 * config.num_codewords_reg;
@@ -971,10 +962,7 @@ complex<float> *Cramer::
 
     if (decompressed_vector == nullptr)
     {
-        if (posix_memalign((void **)&decompressed_vector, 64, sizeof(complex<float>) * config.orig_vector_size) != 0)
-            throw "Unable to allocate space for decompressed vector";
-
-        memset(decompressed_vector, 0, sizeof(complex<float>) * config.orig_vector_size);
+        allocate_aligned_mem(decompressed_vector, config.orig_vector_size);
     }
 
     if (global_context.codeword_all_amps != -1)
@@ -1018,10 +1006,7 @@ complex<float> *Cramer::
 
     if (state_vector == nullptr)
     {
-        if (posix_memalign((void **)&state_vector, 64, sizeof(complex<float>) * config.compressed_vector_UL_size) != 0)
-            throw "Unable to allocate space for compressed vector";
-
-        memset(state_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
+        allocate_aligned_mem(state_vector, config.compressed_vector_UL_size);
     }
 
     return state_vector;
@@ -1036,10 +1021,7 @@ complex<float> *Cramer::
     // Delay writing of codewords.
     if (state_vector == nullptr)
     {
-        if (posix_memalign((void **)&state_vector, 64, sizeof(complex<float>) * config.compressed_vector_UL_size) != 0)
-            throw "Unable to allocate space for compressed vector";
-
-        memset(state_vector, 0, sizeof(complex<float>) * config.compressed_vector_UL_size);
+        allocate_aligned_mem(state_vector, config.compressed_vector_UL_size);
     }
 
     return state_vector;

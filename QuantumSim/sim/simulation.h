@@ -21,7 +21,7 @@
 #include "circuit.h"
 #include "config.h"
 #include "state_interface.h"
-#include "state_autoconv.h"
+#include "state_sum_tensor.h"
 #include "utility.h"
 
 using namespace std;

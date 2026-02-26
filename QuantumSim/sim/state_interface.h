@@ -24,6 +24,7 @@
 #include "profile.h"
 #include "config.h"
 #include "Cramer.h"
+#include "utility.h"
 
 using namespace std;
 
@@ -66,23 +67,19 @@ public:
                             const Gate::Type gate_type) = 0;
     virtual void ApplyMergedXYGate(const Gate &gate1,
                                    const Gate &gate2) = 0;
-    virtual void ApplyClusterOfXYHGates(idx_size &gate_i,
-                                        idx_size &odd_Xi,
-                                        idx_size &odd_Yi,
-                                        const vector<Gate> &all_gates) = 0;
-    virtual void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
-                                           bitset<128> Y_bitmask,
-                                           int th) = 0;
-    virtual int ApplyLoXYHAndCZTInSamePass(int &remaining_cz_bits,
-                                           idx_size &cz_path,
-                                           const idx_size cz_path_len,
-                                           const idx_size suffix_size,
-                                           const bitset<128> &X_bitmask,
-                                           const bitset<128> &Y_bitmask,
-                                           const bitset<128> &H_bitmask,
-                                           const bitset<128> *__restrict CZ_bitmasks,
-                                           const bitset<128> T_bitmasks[2],
-                                           int th) = 0;
+    virtual void ApplyGatheredXYGatesInBlocks(bitset<128> X_bitmask,
+                                              bitset<128> Y_bitmask,
+                                              int th) = 0;
+    virtual int ApplyGoogleCirqGatesInBlocks(int &remaining_cz_bits,
+                                             idx_size &cz_path,
+                                             const idx_size cz_path_len,
+                                             const idx_size suffix_size,
+                                             const bitset<128> &X_bitmask,
+                                             const bitset<128> &Y_bitmask,
+                                             const bitset<128> &H_bitmask,
+                                             const bitset<128> *__restrict CZ_bitmasks,
+                                             const bitset<128> T_bitmasks[2],
+                                             int th) = 0;
 
     virtual cmplx operator[](bitset<128> i) const = 0;
     virtual cmplx *GetGlobalAmpAtInterestingIdx(const idx_size *idxs = nullptr, const idx_size num_idxs = 0) = 0;

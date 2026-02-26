@@ -32,28 +32,7 @@ FullAmpStateVector::
     }
     else
     {
-        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
-        {
-            idx_size memory = sizeof(cmplx) * amp_size;
-            cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-            if (memory >= (1 << 30))
-            {
-                cerr << memory / (1 << 30) << " GiB \n";
-            }
-            else if (memory >= (1 << 20))
-            {
-                cerr << memory / (1 << 20) << " MiB \n";
-            }
-            else if (memory >= (1 << 10))
-            {
-                cerr << memory / (1 << 10) << " KiB \n";
-            }
-            else
-                cerr << memory << " B \n";
-            free(amp);
-            exit(err);
-        }
-        memset(amp, 0, amp_size * sizeof(amp));
+        allocate_aligned_mem(amp, amp_size);
         amp[0] = 1;
     }
 }
@@ -65,27 +44,7 @@ FullAmpStateVector::
                                               global_i_counter(0), num_qubits(__builtin_log2l(size)),
                                               zero_opt_mask(num_qubits), all_zeros(false)
 {
-    if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * amp_size) != 0)
-    {
-        idx_size memory = sizeof(cmplx) * amp_size;
-        cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-        if (memory >= (1 << 30))
-        {
-            cerr << memory / (1 << 30) << " GiB \n";
-        }
-        else if (memory >= (1 << 20))
-        {
-            cerr << memory / (1 << 20) << " MiB \n";
-        }
-        else if (memory >= (1 << 10))
-        {
-            cerr << memory / (1 << 10) << " KiB \n";
-        }
-        else
-            cerr << memory << " B \n";
-        free(amp);
-        exit(err);
-    }
+    allocate_aligned_mem(amp, amp_size);
     for (idx_size i = 0; i < size; ++i)
         amp[i] = a[i];
 }
@@ -440,9 +399,9 @@ pair<int, int> FullAmpStateVector::
 }
 
 void FullAmpStateVector::
-    ApplyXYRecursiveTransform(bitset<128> X_bitmask,
-                              bitset<128> Y_bitmask,
-                              int th)
+    ApplyGatheredXYGatesInBlocks(bitset<128> X_bitmask,
+                                 bitset<128> Y_bitmask,
+                                 int th)
 {
     assert(!compressed);
     Time time;
@@ -481,16 +440,16 @@ void FullAmpStateVector::
 }
 
 int FullAmpStateVector::
-    ApplyLoXYHAndCZTInSamePass(int &remaining_cz_bits,
-                               idx_size &cz_path,
-                               const idx_size cz_path_len,
-                               const idx_size suffix_size,
-                               const bitset<128> &X_bitmask,
-                               const bitset<128> &Y_bitmask,
-                               const bitset<128> &H_bitmask,
-                               const bitset<128> *__restrict CZ_bitmasks,
-                               const bitset<128> T_bitmasks[2],
-                               int th)
+    ApplyGoogleCirqGatesInBlocks(int &remaining_cz_bits,
+                                 idx_size &cz_path,
+                                 const idx_size cz_path_len,
+                                 const idx_size suffix_size,
+                                 const bitset<128> &X_bitmask,
+                                 const bitset<128> &Y_bitmask,
+                                 const bitset<128> &H_bitmask,
+                                 const bitset<128> *__restrict CZ_bitmasks,
+                                 const bitset<128> T_bitmasks[2],
+                                 int th)
 {
     assert(!compressed);
     Time time;
@@ -1208,28 +1167,7 @@ void FullAmpStateVector::
 
     if (amp == nullptr)
     {
-        if (int err = posix_memalign((void **)&amp, 64, sizeof(cmplx) * copy_size) != 0)
-        {
-            idx_size memory = sizeof(cmplx) * amp_size;
-            cerr << "Memory requirement exceeds availiable memory for aligned storage. Requested ";
-            if (memory >= (1 << 30))
-            {
-                cerr << memory / (1 << 30) << " GiB \n";
-            }
-            else if (memory >= (1 << 20))
-            {
-                cerr << memory / (1 << 20) << " MiB \n";
-            }
-            else if (memory >= (1 << 10))
-            {
-                cerr << memory / (1 << 10) << " KiB \n";
-            }
-            else
-                cerr << memory << " B \n";
-            free(amp);
-            exit(err);
-        }
-        memset(amp, 0, copy_size * sizeof(amp));
+        allocate_aligned_mem(amp, amp_size);
     }
 
     if (decompress && t_rhs.compressed)

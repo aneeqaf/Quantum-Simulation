@@ -9,7 +9,7 @@
 #define state_sum_tensor_h
 
 #include "config.h"
-#include "state_tensor.h"
+#include "state_tensor_product.h"
 
 using namespace std;
 
@@ -50,23 +50,19 @@ public:
                     const Gate::Type gate_type);
     void ApplyMergedXYGate(const Gate &gate1,
                            const Gate &gate2);
-    void ApplyClusterOfXYHGates(idx_size &gate_i,
-                                idx_size &odd_Xi,
-                                idx_size &odd_Yi,
-                                const vector<Gate> &all_gates) {};
-    void ApplyXYRecursiveTransform(bitset<128> X_bitmask,
-                                   bitset<128> Y_bitmask,
-                                   int th);
-    int ApplyLoXYHAndCZTInSamePass(int &remaining_cz_bits,
-                                   idx_size &cz_path,
-                                   const idx_size cz_path_len,
-                                   const idx_size suffix_size,
-                                   const bitset<128> &X_bitmask,
-                                   const bitset<128> &Y_bitmask,
-                                   const bitset<128> &H_bitmask,
-                                   const bitset<128> *__restrict CZ_bitmasks,
-                                   const bitset<128> T_bitmasks[2],
-                                   int th);
+    void ApplyGatheredXYGatesInBlocks(bitset<128> X_bitmask,
+                                      bitset<128> Y_bitmask,
+                                      int th);
+    int ApplyGoogleCirqGatesInBlocks(int &remaining_cz_bits,
+                                     idx_size &cz_path,
+                                     const idx_size cz_path_len,
+                                     const idx_size suffix_size,
+                                     const bitset<128> &X_bitmask,
+                                     const bitset<128> &Y_bitmask,
+                                     const bitset<128> &H_bitmask,
+                                     const bitset<128> *__restrict CZ_bitmasks,
+                                     const bitset<128> T_bitmasks[2],
+                                     int th);
     void PopulateGlobalToLocalMap(vector<bitset<128>> &idxs);
     void UnpopulateGlobalToLocalMap();
     FullAmpStateVector *ConvertSumOfTensorsToState();

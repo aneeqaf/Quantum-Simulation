@@ -31,6 +31,7 @@
 #include <sleefinline_avx2.h>
 
 #include "math_helper.h"
+#include "utility.h"
 
 using namespace std;
 
