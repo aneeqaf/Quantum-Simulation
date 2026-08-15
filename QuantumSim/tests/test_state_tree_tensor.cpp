@@ -66,36 +66,46 @@ void TestMultidimensionalArray()
 }
 
 // Shared verification for both CPU and GPU SVD results.
-// U is num_rows x max_dim col-major, Vt is max_dim x num_cols col-major.
+// U is num_rows x min_dim col-major (ldu=num_rows).
+// Vt is min_dim x num_cols col-major with leading dimension ldvt.
+// ldvt defaults to min_dim (the T=false case where ldvt==num_cols==min_dim).
+// When transposed=true the SVD was computed on A^T, so tensor rows/cols are swapped.
 void VerifySVDResult(float *s, complex<float> *u, complex<float> *vt,
                      MultidimensionalArray<complex<float>, 3> &tensor,
-                     int num_rows, int num_cols, int max_dim)
+                     int num_rows, int num_cols, int min_dim,
+                     int ldvt = -1, bool transposed = false)
 {
+    if (ldvt == -1)
+        ldvt = min_dim;
+
     const float eps = 1e-4f;
 
     // 1. Singular values are non-negative and in descending order
-    for (int i = 0; i < max_dim; i++)
+    for (int i = 0; i < min_dim; i++)
         assert(s[i] >= -eps);
-    for (int i = 0; i < max_dim - 1; i++)
+    for (int i = 0; i < min_dim - 1; i++)
         assert(s[i] >= s[i + 1] - eps);
 
     // 2. Reconstruction: A ≈ U * diag(s) * Vt
+    // When transposed, the decomposed matrix is A^T so tensor indices are swapped.
     for (int i = 0; i < num_rows; i++)
     {
         for (int j = 0; j < num_cols; j++)
         {
             complex<float> recon(0, 0);
-            for (int k = 0; k < max_dim; k++)
-                recon += u[k * num_rows + i] * complex<float>(s[k], 0) * vt[j * max_dim + k];
-            complex<float> orig = tensor({(uint32_t)0, (uint32_t)i, (uint32_t)j});
+            for (int k = 0; k < min_dim; k++)
+                recon += u[k * num_rows + i] * complex<float>(s[k], 0) * vt[j * ldvt + k];
+            complex<float> orig = transposed
+                                      ? tensor({(uint32_t)0, (uint32_t)j, (uint32_t)i})
+                                      : tensor({(uint32_t)0, (uint32_t)i, (uint32_t)j});
             assert(abs(orig - recon) < eps);
         }
     }
 
-    // 3. U is semi-unitary: U^H * U = I_{max_dim x max_dim}
-    for (int i = 0; i < max_dim; i++)
+    // 3. U is semi-unitary: U^H * U = I_{min_dim x min_dim}
+    for (int i = 0; i < min_dim; i++)
     {
-        for (int j = 0; j < max_dim; j++)
+        for (int j = 0; j < min_dim; j++)
         {
             complex<float> dot(0, 0);
             for (int k = 0; k < num_rows; k++)
@@ -105,14 +115,15 @@ void VerifySVDResult(float *s, complex<float> *u, complex<float> *vt,
         }
     }
 
-    // 4. Vt is unitary: Vt * Vt^H = I_{max_dim x max_dim}
-    for (int i = 0; i < max_dim; i++)
+    // 4. Vt is semi-unitary: Vt * Vt^H = I_{min_dim x min_dim}
+    // Vt is col-major with leading dimension ldvt, so Vt[k][j] = vt[j*ldvt + k].
+    for (int i = 0; i < min_dim; i++)
     {
-        for (int j = 0; j < max_dim; j++)
+        for (int j = 0; j < min_dim; j++)
         {
             complex<float> dot(0, 0);
             for (int k = 0; k < num_cols; k++)
-                dot += vt[k * max_dim + i] * conj(vt[k * max_dim + j]);
+                dot += vt[k * ldvt + i] * conj(vt[k * ldvt + j]);
             float expected = (i == j) ? 1.0f : 0.0f;
             assert(abs(dot - complex<float>(expected, 0)) < eps);
         }
@@ -126,7 +137,7 @@ void TestMultidimensionalArraySVD()
     const uint32_t m = 3;
     uint32_t d_max = 20;
 
-    const int num_rows = 20, num_cols = 16, max_dim = 16;
+    const int num_rows = 20, num_cols = 16, min_dim = min(num_rows, num_cols);
     vector<uint32_t> dims = {1, num_rows, num_cols};
     MultidimensionalArray<complex<float>, m> tensor(d_max, dims);
 
@@ -143,7 +154,7 @@ void TestMultidimensionalArraySVD()
     // CPU
     cout << "  CPU SVD..." << endl;
     auto [s_cpu, u_cpu, vt_cpu] = tensor.SVD({1, 2}, 0);
-    VerifySVDResult(s_cpu, u_cpu, vt_cpu, tensor, num_rows, num_cols, max_dim);
+    VerifySVDResult(s_cpu, u_cpu, vt_cpu, tensor, num_rows, num_cols, min_dim);
     delete[] s_cpu;
     delete[] u_cpu;
     delete[] vt_cpu;
@@ -157,7 +168,7 @@ void TestMultidimensionalArraySVD()
         cout << "  GPU SVD..." << endl;
         auto [s_gpu, u_gpu, vt_gpu] = tensor.SVD({1, 2}, 0);
 
-        VerifySVDResult(s_gpu, u_gpu, vt_gpu, tensor, num_rows, num_cols, max_dim);
+        VerifySVDResult(s_gpu, u_gpu, vt_gpu, tensor, num_rows, num_cols, min_dim);
         delete[] s_gpu;
         delete[] u_gpu;
         delete[] vt_gpu;
@@ -170,9 +181,72 @@ void TestMultidimensionalArraySVD()
     cout << "MultidimensionalArray SVD tests passed!" << endl;
 }
 
+void TestMultidimensionalArrayTransposedSVD()
+{
+    cout << "Running MultidimensionalArray Transposed SVD tests..." << endl;
+
+    const uint32_t m = 3;
+    uint32_t d_max = 20;
+
+    const int orig_rows = 16, orig_cols = 16;
+    const int num_rows_T = orig_cols;
+    const int num_cols_T = orig_rows;
+    const int min_dim_T = min(num_rows_T, num_cols_T);
+    const int ldvt_T = num_cols_T;
+
+    vector<uint32_t> dims = {1, (uint32_t)orig_rows, (uint32_t)orig_cols};
+    MultidimensionalArray<complex<float>, m> tensor(d_max, dims);
+
+    mt19937 rng(42);
+    normal_distribution<float> dist(0.0f, 10.0f);
+    for (uint32_t r = 0; r < orig_rows; r++)
+        for (uint32_t c = 0; c < orig_cols; c++)
+            tensor({0u, r, c}, complex<float>(dist(rng), dist(rng)));
+
+    // CPU transposed SVD
+    cout << "  CPU Transposed SVD..." << endl;
+    auto [s_T_cpu, u_T_cpu, vt_T_cpu] = tensor.SVD({1, 2}, 0, true);
+    VerifySVDResult(s_T_cpu, u_T_cpu, vt_T_cpu, tensor,
+                    num_rows_T, num_cols_T, min_dim_T, ldvt_T, true);
+
+    // Singular values of A and A^T must match those from the non-transposed SVD.
+    auto [s_cpu, u_cpu, vt_cpu] = tensor.SVD({1, 2}, 0, false);
+    const float eps = 1e-4f;
+    for (int k = 0; k < min_dim_T; k++)
+        assert(abs(s_cpu[k] - s_T_cpu[k]) < eps);
+    delete[] s_cpu;
+    delete[] u_cpu;
+    delete[] vt_cpu;
+
+    delete[] s_T_cpu;
+    delete[] u_T_cpu;
+    delete[] vt_T_cpu;
+
+    tensor.UpdateToGpu();
+    int device_count = 0;
+    cudaGetDeviceCount(&device_count);
+    if (device_count > 0)
+    {
+        cout << "  GPU Transposed SVD..." << endl;
+        auto [s_T_gpu, u_T_gpu, vt_T_gpu] = tensor.SVD({1, 2}, 0, true);
+        VerifySVDResult(s_T_gpu, u_T_gpu, vt_T_gpu, tensor,
+                        num_rows_T, num_cols_T, min_dim_T, ldvt_T, true);
+        delete[] s_T_gpu;
+        delete[] u_T_gpu;
+        delete[] vt_T_gpu;
+    }
+    else
+    {
+        cout << "  GPU Transposed SVD skipped (no CUDA device found)" << endl;
+    }
+
+    cout << "MultidimensionalArray Transposed SVD tests passed!" << endl;
+}
+
 int main()
 {
     TestMultidimensionalArray();
     TestMultidimensionalArraySVD();
+    TestMultidimensionalArrayTransposedSVD();
     return 0;
 }

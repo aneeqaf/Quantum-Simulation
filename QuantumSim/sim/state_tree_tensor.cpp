@@ -8,6 +8,7 @@
 #include "state_tree_tensor.h"
 #include <cuda_runtime.h>
 #include <cusolverDn.h>
+#include <cublas_v2.h>
 #include <lapacke.h>
 #include <cblas.h>
 
@@ -115,19 +116,19 @@ size_t MultidimensionalArray<dtype, m>::Size() const
     return size;
 }
 
-// Transpose a rows x cols column-major matrix into a row-major matrix
-// col-major src of shape (rows x cols) → row-major dst of shape (cols x rows)
+// Transpose a rows x cols column-major matrix into a col-major matrix of shape (cols x rows)
 template <typename dtype, uint32_t m>
-void MultidimensionalArray<dtype, m>::TransposeColToRow(const dtype *src, dtype *dst, uint32_t rows, uint32_t cols)
+void MultidimensionalArray<dtype, m>::TransposeColToRow(const dtype *src, dtype *dst, uint32_t rows, uint32_t cols) const
 {
-    const float alpha = 1.0f;
     if constexpr (std::is_same_v<dtype, std::complex<float>>)
     {
+        // cblas_comatcopy expects alpha as a pointer to two floats [real, imag].
+        const complex<float> alpha(1.0f, 0.0f);
         cblas_comatcopy(CblasColMajor,
                         CblasTrans,
                         rows,
                         cols,
-                        &alpha,
+                        reinterpret_cast<const float *>(&alpha),
                         reinterpret_cast<const float *>(src),
                         rows,
                         reinterpret_cast<float *>(dst),
@@ -135,15 +136,16 @@ void MultidimensionalArray<dtype, m>::TransposeColToRow(const dtype *src, dtype 
     }
     else
     {
-        cblas_somatcopy(CblasColMajor, // column-major ordering
-                        CblasTrans,    // transpose
-                        rows,          // number of rows in src
-                        cols,          // number of cols in src
-                        &alpha,        // alpha (scale factor)
+        const float alpha = 1.0f;
+        cblas_somatcopy(CblasColMajor,
+                        CblasTrans,
+                        rows,
+                        cols,
+                        &alpha,
                         src,
-                        rows, // leading dimension of src
+                        rows,
                         dst,
-                        cols); // leading dimension of dst
+                        cols);
     }
 }
 
@@ -182,7 +184,7 @@ void MultidimensionalArray<dtype, m>::UpdateToGpu()
 template <typename dtype, uint32_t m>
 tuple<float *, dtype *, dtype *> MultidimensionalArray<dtype, m>::SVD(const vector<uint32_t> &n,
                                                                       const uint32_t agg_dim,
-                                                                      const bool T)
+                                                                      const bool T) const
 {
     if (use_gpu)
         return GpuSVD(n, agg_dim, T);
@@ -194,12 +196,11 @@ dtype *MultidimensionalArray<dtype, m>::PrepareMatrix(const vector<uint32_t> &n,
                                                       const bool T,
                                                       int &num_rows,
                                                       int &num_cols,
-                                                      const uint32_t agg_dim)
+                                                      const uint32_t agg_dim) const
 {
     int agg = agg_dim == -1 || dims[agg_dim] == 0 ? 1 : dims[agg_dim];
 
     dtype *a_copy;
-
     if (T)
     {
         num_cols = dims[n[0]] * agg;
@@ -237,16 +238,15 @@ dtype *MultidimensionalArray<dtype, m>::PrepareMatrix(const vector<uint32_t> &n,
 template <typename dtype, uint32_t m>
 tuple<float *, dtype *, dtype *> MultidimensionalArray<dtype, m>::CpuSVD(const vector<uint32_t> &n,
                                                                          const uint32_t agg_dim,
-                                                                         const bool T)
+                                                                         const bool T) const
 {
     assert(agg_dim <= 0);
     // SVD only works on 2D matrices
     assert(n.size() == 2);
-    assert(n[1] == n[0] + 1);
     assert(!use_gpu);
 
     int num_rows, num_cols;
-    dtype *a_copy = PrepareMatrix(n, T, num_rows, num_cols, agg_dim);
+    dtype *a_copy = CpuSquareMatrix(n, agg_dim, T);
 
     float *s = new float[num_cols];
     dtype *u = new dtype[num_rows * num_cols];
@@ -279,15 +279,14 @@ tuple<float *, dtype *, dtype *> MultidimensionalArray<dtype, m>::CpuSVD(const v
 template <typename dtype, uint32_t m>
 tuple<float *, dtype *, dtype *> MultidimensionalArray<dtype, m>::GpuSVD(const vector<uint32_t> &n,
                                                                          const uint32_t agg_dim,
-                                                                         const bool T)
+                                                                         const bool T) const
 {
     assert(agg_dim <= 0);
     assert(n.size() == 2);
-    assert(n[1] == n[0] + 1);
     assert(use_gpu);
 
     int num_rows, num_cols;
-    dtype *a_col = PrepareMatrix(n, T, num_rows, num_cols, agg_dim);
+    dtype *a_col = GpuSquareMatrix(n, agg_dim, T);
 
     float *s = new float[num_cols];
     dtype *u = new dtype[num_rows * num_cols];
@@ -320,7 +319,18 @@ tuple<float *, dtype *, dtype *> MultidimensionalArray<dtype, m>::GpuSVD(const v
 
     // 'S' for thin U (num_rows x num_cols, ldu=num_rows) and thin VT (num_cols x num_cols, ldvt=num_cols)
     // Both returned in column-major by cuSOLVER
-    cusolverDnCgesvd(cusolverH, 'S', 'S', num_rows, num_cols, d_A, num_rows, d_S, d_U, num_rows, d_VT, num_cols, d_work, lwork, rwork, devInfo);
+    cusolverDnCgesvd(cusolverH,
+                     'S', 'S',
+                     num_rows, num_cols,
+                     d_A,
+                     num_rows,
+                     d_S,
+                     d_U,
+                     num_rows,
+                     d_VT,
+                     num_cols,
+                     d_work, lwork, rwork,
+                     devInfo);
 
     cudaMemcpy(s, d_S, sizeof(float) * num_cols, cudaMemcpyDeviceToHost);
 
@@ -339,4 +349,108 @@ tuple<float *, dtype *, dtype *> MultidimensionalArray<dtype, m>::GpuSVD(const v
 
     free(a_col);
     return make_tuple(s, u, vt);
+}
+
+template <typename dtype, uint32_t m>
+dtype *MultidimensionalArray<dtype, m>::SquareMatrix(const vector<uint32_t> &n,
+                                                     const uint32_t agg_dim,
+                                                     const bool T) const
+{
+    if (use_gpu)
+        return GpuSquareMatrix(n, agg_dim);
+    return CpuSquareMatrix(n, agg_dim);
+}
+
+template <typename dtype, uint32_t m>
+dtype *MultidimensionalArray<dtype, m>::CpuSquareMatrix(const vector<uint32_t> &n,
+                                                        const uint32_t agg_dim,
+                                                        const bool T) const
+{
+    int num_rows, num_cols;
+    dtype *a_data = PrepareMatrix(n, T, num_rows, num_cols, agg_dim);
+
+    dtype *c_data;
+    allocate_aligned_mem(c_data, num_rows * num_rows);
+
+    if constexpr (std::is_same_v<dtype, std::complex<float>>)
+    {
+        const complex<float> alpha(1.0f, 0.0f);
+        const complex<float> beta(0.0f, 0.0f);
+        cblas_cgemm(CblasColMajor, CblasNoTrans, CblasConjTrans,
+                    num_rows, num_rows, num_cols,
+                    reinterpret_cast<const float *>(&alpha),
+                    reinterpret_cast<const float *>(a_data), num_rows,
+                    reinterpret_cast<const float *>(a_data), num_rows,
+                    reinterpret_cast<const float *>(&beta),
+                    reinterpret_cast<float *>(c_data), num_rows);
+    }
+    else
+    {
+        const float alpha = 1.0f;
+        const float beta = 0.0f;
+        cblas_sgemm(CblasColMajor, CblasNoTrans, CblasTrans,
+                    num_rows, num_rows, num_cols,
+                    alpha,
+                    (float *)a_data, num_rows,
+                    (float *)a_data, num_rows,
+                    beta,
+                    (float *)c_data, num_rows);
+    }
+
+    free(a_data);
+    return c_data;
+}
+
+template <typename dtype, uint32_t m>
+dtype *MultidimensionalArray<dtype, m>::GpuSquareMatrix(const vector<uint32_t> &n,
+                                                        const uint32_t agg_dim,
+                                                        const bool T) const
+{
+    int num_rows, num_cols;
+    dtype *a_host = PrepareMatrix(n, T, num_rows, num_cols, agg_dim);
+
+    dtype *d_A, *d_C;
+    cudaMalloc((void **)&d_A, sizeof(dtype) * num_rows * num_cols);
+    cudaMalloc((void **)&d_C, sizeof(dtype) * num_rows * num_rows);
+
+    cudaMemcpy(d_A, a_host, sizeof(dtype) * num_rows * num_cols, cudaMemcpyHostToDevice);
+
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+
+    if constexpr (std::is_same_v<dtype, std::complex<float>>)
+    {
+        const cuComplex alpha = make_cuComplex(1.0f, 0.0f);
+        const cuComplex beta = make_cuComplex(0.0f, 0.0f);
+        cublasCgemm(handle, CUBLAS_OP_N, CUBLAS_OP_C,
+                    num_rows, num_rows, num_cols,
+                    &alpha,
+                    (cuComplex *)d_A, num_rows,
+                    (cuComplex *)d_A, num_rows,
+                    &beta,
+                    (cuComplex *)d_C, num_rows);
+    }
+    else
+    {
+        const float alpha = 1.0f;
+        const float beta = 0.0f;
+        cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T,
+                    num_rows, num_rows, num_cols,
+                    &alpha,
+                    (float *)d_A, num_rows,
+                    (float *)d_A, num_rows,
+                    &beta,
+                    (float *)d_C, num_rows);
+    }
+
+    dtype *c_host;
+    allocate_aligned_mem(c_host, num_rows * num_rows);
+    cudaMemcpy(c_host, d_C, sizeof(dtype) * num_rows * num_rows, cudaMemcpyDeviceToHost);
+
+    cublasDestroy(handle);
+    cudaFree(d_A);
+    cudaFree(d_C);
+    free(a_host);
+
+    return c_host;
 }

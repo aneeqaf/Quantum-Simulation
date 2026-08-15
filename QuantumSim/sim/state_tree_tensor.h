@@ -29,16 +29,22 @@ class MultidimensionalArray
 
     tuple<float *, dtype *, dtype *> CpuSVD(const vector<uint32_t> &n,
                                             const uint32_t agg_dim,
-                                            const bool T);
+                                            const bool T) const;
     tuple<float *, dtype *, dtype *> GpuSVD(const vector<uint32_t> &n,
                                             const uint32_t agg_dim,
-                                            const bool T);
+                                            const bool T) const;
+    dtype *GpuSquareMatrix(const vector<uint32_t> &n,
+                           const uint32_t agg_dim,
+                           const bool T) const;
+    dtype *CpuSquareMatrix(const vector<uint32_t> &n,
+                           const uint32_t agg_dim,
+                           const bool T) const;
     dtype *PrepareMatrix(const vector<uint32_t> &n,
                          const bool T,
                          int &num_rows,
                          int &num_cols,
-                         const uint32_t agg_dim = -1);
-    void TransposeColToRow(const dtype *src, dtype *dst, uint32_t rows, uint32_t cols);
+                         const uint32_t agg_dim = -1) const;
+    void TransposeColToRow(const dtype *src, dtype *dst, uint32_t rows, uint32_t cols) const;
     void CalculateStrides();
 
 public:
@@ -48,9 +54,17 @@ public:
     size_t Size() const;
     tuple<float *, dtype *, dtype *> SVD(const vector<uint32_t> &n,
                                          const uint32_t agg_dim = -1,
-                                         const bool T = false);
+                                         const bool T = false) const;
+    dtype *SquareMatrix(const vector<uint32_t> &n,
+                        const uint32_t agg_dim,
+                        const bool T = false) const;
+    void Matmul(dtype *M, const vector<uint32_t> &dims, const vector<uint32_t> &t_dims, bool left = true);
     void UpdateToGpu();
     // TODO: matmul, normalization because of svd error
+    /*
+    Backward Stability: Numerical SVD algorithms (like those in LAPACK, used by numpy) are backward stable.
+    This means the computed SVD matrices correspond to a matrix where is an error matrix.
+    The norm of this error is bounded by a small multiple of the machine epsilon times the spectral norm of where is a polynomial function of the matrix dimensions.*/
 
     MultidimensionalArray() : data(nullptr), dims({}), strides({}), d_max(0), use_gpu(false) {}
     MultidimensionalArray(uint32_t d_max,
@@ -62,9 +76,6 @@ public:
     ~MultidimensionalArray();
 };
 
-/*
-    value_type in a hybrid approach can be full state vector, sum of tensors state vector, or a D^m flattened multidimensional array
-*/
 template <uint32_t m, typename value_type>
 class TtnNode
 {
